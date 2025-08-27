@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <title>Close Card – Smart Living</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"/>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet"/>
+  <style>
+    :root{ --ink:#0f172a; --muted:#64748b; --line:#e2e8f0; --bg:#fff; --soft:#f8fafc; --brand:#0d6efd }
+    body{ background:var(--soft); color:var(--ink) }
+    .card{ border:1px solid var(--line); box-shadow:0 6px 18px rgba(2,6,23,.06) }
+    .muted{ color:var(--muted) }
+    .pill{ background:#e7f1ff; color:#0b63d1; border-radius:999px; padding:.2rem .6rem; font-size:.8rem }
+    .prod-card{ cursor:pointer; transition:transform .1s ease }
+    .prod-card:hover{ transform:translateY(-2px) }
+    .selected{ outline:2px solid #0d6efd; outline-offset:2px }
+    .totals small{ color:var(--muted) }
+    .totals .v{ font-weight:700 }
+    .btn-wide{ min-width: 220px }
+    .search-empty{ color:var(--muted); font-style:italic }
+    .suggest-img{ width:56px; height:56px; border-radius:10px; object-fit:cover; background:#f1f1f1 }
+    @media (prefers-reduced-motion: reduce){ .prod-card{ transition:none } }
+  </style>
+</head>
+<body>
+    {% include 'inventory_sidebar.html' %}
+
+<div class="container py-4">
+  <div class="d-flex align-items-center mb-3">
+    <h3 class="me-2 mb-0">Close Card</h3>
+    <span class="pill">Agent</span>
+  </div>
+
+  <!-- Search -->
+  <div class="card p-3 mb-3">
+    <div class="row g-2 align-items-center">
+      <div class="col-12 col-md-8">
+        <label class="form-label mb-1">Search customer by name or phone</label>
+        <input id="q" class="form-control form-control-lg" placeholder="e.g. Gifty or 0503..." autocomplete="off"/>
+      </div>
+      <div class="col-12 col-md-4 d-grid">
+        <button id="btnSearch" class="btn btn-primary btn-lg">
+          <i class="bi bi-search"></i> Search
+        </button>
+      </div>
+    </div>
+    <div class="small muted mt-2">Only your customers are searchable (session-scoped).</div>
+  </div>
+
+  <!-- Results -->
+  <div id="results"></div>
+
+  <!-- Close panel -->
+  <div id="closePanel" class="card p-3 mt-3 d-none">
+    <div class="row g-3">
+      <div class="col-12 col-lg-6">
+        <label class="form-label">Product to stop</label>
+        <select id="prodSelect" class="form-select form-select-lg"></select>
+      </div>
+      <div class="col-12 col-lg-6 totals">
+        <div class="row g-2">
+          <div class="col-6">
+            <div class="form-label">2/3 Budget (kept)</div>
+            <div class="form-control form-control-lg bg-light" id="twoThirds">GHS 0.00</div>
+          </div>
+          <div class="col-6">
+            <div class="form-label">1/3 Forfeited</div>
+            <div class="form-control form-control-lg bg-light" id="oneThird">GHS 0.00</div>
+          </div>
+        </div>
+        <div class="small muted mt-1">Budget is 2/3 × total paid on the selected product.</div>
+      </div>
+
+      <div class="col-12 d-flex gap-2">
+        <button id="btnSuggest" class="btn btn-outline-primary btn-wide" disabled>
+          <i class="bi bi-lightbulb"></i> Suggest Products
+        </button>
+        <button id="btnClose" class="btn btn-danger btn-wide" disabled>
+          <i class="bi bi-x-octagon"></i> Close Card
+        </button>
+        <div id="execMsg" class="ms-2"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Suggestions -->
+  <div id="suggestionsWrap" class="card p-3 mt-3 d-none">
+    <h6 class="mb-3">Products you can buy with the budget</h6>
+    <div id="suggestions"></div>
+  </div>
+</div>
+
+<!-- Confirm Modal -->
+<div class="modal fade" id="confirmModal" tabindex="-1" aria-labelledby="confirmLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h6 class="modal-title" id="confirmLabel">Confirm Close</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body" id="confirmBody"></div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" id="btnConfirm" class="btn btn-danger">Yes, Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+  let current = null; // {customer_id, name, phone_number, purchases[]}
+  let picks = { product_index: null, target_product_id: null };
+  const fmt = v => 'GHS ' + Number(v||0).toFixed(2);
+
+  const $q = document.getElementById('q');
+  const $btnSearch = document.getElementById('btnSearch');
+  const $results = document.getElementById('results');
+  const $panel = document.getElementById('closePanel');
+  const $prod = document.getElementById('prodSelect');
+  const $two = document.getElementById('twoThirds');
+  const $one = document.getElementById('oneThird');
+  const $btnSuggest = document.getElementById('btnSuggest');
+  const $btnClose = document.getElementById('btnClose');
+  const $execMsg = document.getElementById('execMsg');
+
+  const $sWrap = document.getElementById('suggestionsWrap');
+  const $sugs = document.getElementById('suggestions');
+
+  async function searchCustomers(){
+    const q = $q.value.trim();
+    $results.innerHTML = ''; $panel.classList.add('d-none'); $sWrap.classList.add('d-none');
+    current = null; picks = {product_index:null, target_product_id:null};
+    if(!q) return;
+    const res = await fetch(`/close_card/search_customers?q=${encodeURIComponent(q)}`, {headers:{'X-Requested-With':'XMLHttpRequest'}});
+    const data = await res.json();
+    if(!data.ok){ $results.innerHTML = `<div class="alert alert-danger">${data.message||'Search failed'}</div>`; return; }
+    if(!data.results.length){ $results.innerHTML = `<div class="text-muted fst-italic">No customers found.</div>`; return; }
+
+    const html = data.results.map((c, i)=>{
+      const pic = c.image_url ? `<img src="${c.image_url}" class="rounded me-3" style="width:56px;height:56px;object-fit:cover">` : `<div class="rounded me-3 bg-light" style="width:56px;height:56px"></div>`;
+      const prods = c.purchases.map(p=>`${p.name} · Paid ${fmt(p.paid)} / Total ${fmt(p.total)}`).join('<br>');
+      return `
+        <div class="card p-3 mb-2">
+          <div class="d-flex align-items-center">
+            ${pic}
+            <div class="flex-grow-1">
+              <div><strong>${c.name}</strong> <span class="text-muted">${c.phone_number||''}</span></div>
+              <div class="small muted mt-1">${prods || 'No purchases'}</div>
+            </div>
+            <div><button class="btn btn-outline-primary btn-sm" data-pick="${i}"><i class="bi bi-check2-circle"></i> Select</button></div>
+          </div>
+        </div>`;
+    }).join('');
+    $results.innerHTML = html;
+
+    $results.querySelectorAll('[data-pick]').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const i = Number(btn.getAttribute('data-pick'));
+        current = data.results[i];
+        hydrateUI(current);
+      });
+    });
+  }
+
+  function hydrateUI(cust){
+    const opts = cust.purchases.map((p,i)=>`<option value="${i}">${p.name} — Paid ${fmt(p.paid)} / Total ${fmt(p.total)}</option>`).join('');
+    $prod.innerHTML = `<option value="" disabled selected>Choose product to stop</option>` + opts;
+    $panel.classList.remove('d-none');
+    $two.textContent = 'GHS 0.00'; $one.textContent = 'GHS 0.00';
+    $btnSuggest.disabled = true; $btnClose.disabled = true; $sWrap.classList.add('d-none');
+    picks = {product_index:null, target_product_id:null};
+
+    $prod.onchange = async ()=>{
+      const idx = Number($prod.value);
+      picks.product_index = Number.isNaN(idx) ? null : idx;
+      $btnSuggest.disabled = (picks.product_index === null);
+      $btnClose.disabled = (picks.product_index === null);
+      if (picks.product_index !== null) {
+        // fetch budget
+        const url = `/close_card/suggest_products?customer_id=${encodeURIComponent(current.customer_id)}&product_index=${picks.product_index}`;
+        const res = await fetch(url, {headers:{'X-Requested-With':'XMLHttpRequest'}});
+        const data = await res.json();
+        if(!data.ok){ $two.textContent='GHS 0.00'; $one.textContent='GHS 0.00'; return; }
+        $two.textContent = fmt(data.budget);
+        $one.textContent = fmt(data.forfeited);
+        // Preload suggestions area (without forcing display yet)
+        renderSuggestions(data);
+      }
+    };
+  }
+
+  function renderSuggestions(data){
+    if(!data || !Array.isArray(data.suggestions)) return;
+    if(!data.suggestions.length){
+      $sugs.innerHTML = `<div class="text-muted">No products fit the budget (${fmt(data.budget)}).</div>`;
+      return;
+    }
+    const rows = data.suggestions.map(s=>{
+      const img = s.image_url ? `<img src="${s.image_url}" class="suggest-img me-2">` : `<div class="suggest-img me-2"></div>`;
+      return `
+        <label class="list-group-item d-flex align-items-center">
+          <input class="form-check-input me-2" type="radio" name="suggestPick" value="${s._id}">
+          ${img}
+          <div>
+            <div><strong>${s.name}</strong></div>
+            <div class="small text-muted">${s.category||''}</div>
+          </div>
+          <div class="ms-auto fw-bold">${fmt(s.price)}</div>
+        </label>`;
+    }).join('');
+    $sugs.innerHTML = `<div class="list-group">${rows}</div>`;
+    $sugs.querySelectorAll('input[name="suggestPick"]').forEach(r=>{
+      r.addEventListener('change', ()=>{ picks.target_product_id = r.value; });
+    });
+  }
+
+  document.getElementById('btnSuggest').addEventListener('click', async ()=>{
+    if(!current || picks.product_index===null) return;
+    const url = `/close_card/suggest_products?customer_id=${encodeURIComponent(current.customer_id)}&product_index=${picks.product_index}`;
+    const res = await fetch(url, {headers:{'X-Requested-With':'XMLHttpRequest'}});
+    const data = await res.json();
+    if(!data.ok){ $sWrap.classList.remove('d-none'); $sugs.innerHTML = `<div class="text-danger">${data.message||'Failed'}</div>`; return; }
+    renderSuggestions(data);
+    $sWrap.classList.remove('d-none');
+  });
+
+  // Close with confirm
+  document.getElementById('btnClose').addEventListener('click', async ()=>{
+    if(!current || picks.product_index===null) return;
+    const body = `
+      <div class="mb-2"><strong>Customer:</strong> ${current.name} <span class="text-muted">(${current.phone_number||''})</span></div>
+      <div class="mb-2"><strong>Stopping:</strong> ${current.purchases[picks.product_index].name}</div>
+      <div class="mb-2"><strong>Budget (2/3):</strong> ${document.getElementById('twoThirds').textContent}</div>
+      <div class="mb-2"><strong>Forfeited (1/3):</strong> ${document.getElementById('oneThird').textContent}</div>
+      <div class="small text-muted">This will delete ALL payments for this customer and archive their record.</div>`;
+    document.getElementById('confirmBody').innerHTML = body;
+    const modal = new bootstrap.Modal('#confirmModal'); modal.show();
+    document.getElementById('btnConfirm').onclick = async ()=>{
+      modal.hide();
+      await executeClose();
+    };
+  });
+
+  async function executeClose(){
+    $execMsg.innerHTML = '<span class="text-muted">Processing…</span>';
+    const payload = {
+      customer_id: current.customer_id,
+      product_index: picks.product_index,
+      note: '',
+      target_product_id: picks.target_product_id || null
+    };
+    const res = await fetch('/close_card/execute', {
+      method:'POST',
+      headers:{'Content-Type':'application/json','X-Requested-With':'XMLHttpRequest'},
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if(!data.ok){
+      $execMsg.innerHTML = `<span class="text-danger">${data.message||'Failed.'}</span>`;
+      return;
+    }
+    $execMsg.innerHTML = `<span class="text-success"><i class="bi bi-check2-circle"></i> ${data.message}</span>`;
+    // Reset UI
+    current = null; picks = {product_index:null, target_product_id:null};
+    document.getElementById('q').value = '';
+    document.getElementById('results').innerHTML = '';
+    document.getElementById('closePanel').classList.add('d-none');
+    document.getElementById('suggestionsWrap').classList.add('d-none');
+  }
+
+  // Events
+  $btnSearch.addEventListener('click', searchCustomers);
+  $q.addEventListener('keydown', e=>{ if(e.key==='Enter'){ searchCustomers(); } });
+</script>
+</body>
+</html>

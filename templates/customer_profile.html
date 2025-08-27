@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ customer.name }}'s Profile</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="icon" type="image/png" href="https://res.cloudinary.com/dljpgzbto/image/upload/v1743993646/company-logo_dksb23.jpg">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <style>
+    #map { height: 300px; width: 100%; border-radius: 10px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
+    body { font-family: Arial, sans-serif; background: #121212; color: #e0e0e0; margin: 0; padding: 0; transition: background-color .3s,color .3s; }
+    body[data-theme="light"] { background-color:#fff; color:#333; }
+
+    nav.navbar { background: transparent !important; backdrop-filter: blur(10px); transition: background-color .3s; }
+    nav .navbar-brand span, nav .navbar-nav .nav-link, .navbar-toggler { color: inherit !important; transition: color .3s; }
+    nav .navbar-nav .nav-link:hover { color: #888 !important; }
+    .navbar-toggler-icon { background-image:url("data:image/svg+xml;charset=utf8,%3Csvg viewBox='0 0 30 30' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath stroke='black' stroke-width='2' stroke-linecap='round' stroke-miterlimit='10' d='M4 7h22M4 15h22M4 23h22'/%3E%3C/svg%3E"); transition: background-image .3s; }
+    body[data-theme="dark"] .navbar-toggler-icon { background-image:url("data:image/svg+xml;charset=utf8,%3Csvg viewBox='0 0 30 30' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath stroke='white' stroke-width='2' stroke-linecap='round' stroke-miterlimit='10' d='M4 7h22M4 15h22M4 23h22'/%3E%3C/svg%3E"); }
+    body[data-theme="dark"] nav.navbar { background-color: rgba(33,33,33,.9) !important; }
+    body[data-theme="dark"] nav .navbar-brand span, body[data-theme="dark"] nav .navbar-nav .nav-link { color:#fff !important; }
+    body[data-theme="light"] nav .navbar-brand span, body[data-theme="light"] nav .navbar-nav .nav-link { color:#000 !important; }
+
+    .profile-container { width:80%; margin:auto; padding:20px; background:#fff; border-radius:10px; box-shadow:0 0 10px rgba(0,0,0,.1); margin-top:60px; color:#000; transition: background .3s, color .3s; }
+    body[data-theme="dark"] .profile-container { background:#121212; color:#e0e0e0; }
+
+    .product { background:#f9f9f9; padding:14px; margin:12px 0; border-radius:10px; display:flex; justify-content:space-between; align-items:center; gap:16px; }
+    body[data-theme="dark"] .product { background:#1e1e1e; }
+    .product-details { flex-grow:1; margin-left:10px; }
+    .product .badge { vertical-align: middle; }
+
+    .payment-history th { background-color:#f4f4f4; }
+    .debt { background:#f8d7da; color:#721c24; padding:8px 12px; border-radius:6px; margin:6px 0; }
+    .paid { font-weight:600; font-size:1.2rem; color:#1b5e20; background:#d0f0d5; padding:12px 16px; margin:20px auto; border-left:5px solid #4caf50; border-radius:6px; text-align:center; max-width:500px; box-shadow:0 2px 6px rgba(0,0,0,.1); }
+    body[data-theme="dark"] .paid { background:#1e4620; color:#a5d6a7; border-left:5px solid #66bb6a; }
+    .left { background:#fff3cd; color:#856404; padding:8px 12px; border-radius:6px; margin:6px 0; }
+
+    .add-payment-btn { display:block; width:200px; padding:10px; margin:20px auto; background:#28a745; color:#fff; text-align:center; font-weight:700; border-radius:8px; text-decoration:none; }
+    .add-payment-btn:hover { background:#218838; }
+    footer { background:#6f42c1; color:#fff; text-align:center; padding:10px; position:relative; width:100%; }
+
+    @media (max-width: 768px) {
+      .profile-container { width:95%; }
+      .product { flex-direction:column; align-items:flex-start; }
+    }
+
+    .status-tracker { display:flex; gap:10px; flex-wrap:wrap; margin-top:20px; }
+    .status-step { padding:8px 12px; border-radius:5px; color:#fff; font-weight:700; }
+    .current-step { background:#007bff; }
+    .completed-step { background:#28a745; }
+    .upcoming-step { background:#777; }
+
+    .progress-wrapper { margin-top:10px; }
+    .progress-label { font-size:.9rem; color:#aaa; margin-bottom:5px; }
+    .progress-bar-bg { width:100%; background:#444; border-radius:10px; height:10px; overflow:hidden; }
+    .progress-bar-fill { background:#28a745; height:100%; transition: width .4s ease-in-out; }
+
+    .product img { max-width:100px; height:auto; object-fit:contain; border-radius:6px; }
+    .product-img-wrapper { flex-shrink:0; margin-left: 0; }
+    .product p strong { display:inline-block; width:140px; }
+    .product .total-text { color:red; font-weight:700; }
+    .product .paid-text { color:green; font-weight:700; }
+    .product .left-text { color:#ffcc00; font-weight:700; }
+  </style>
+</head>
+<body data-theme="dark">
+
+<!-- Navbar -->
+<nav class="navbar navbar-expand-lg shadow-sm px-3 py-2">
+  <div class="container-fluid">
+    <a class="navbar-brand d-flex align-items-center" href="#">
+      <img src="https://res.cloudinary.com/dljpgzbto/image/upload/v1743993646/company-logo_dksb23.jpg"
+           alt="Logo" style="width: 40px; height: 40px; border-radius: 50%;">
+      <span class="ms-2">SMART LIVING</span>
+    </a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
+      <ul class="navbar-nav align-items-center">
+        <li class="nav-item"><a class="nav-link" href="/dashboard/agent">Dashboard</a></li>
+        <li class="nav-item"><a class="nav-link" href="/view/customers">View Customers</a></li>
+        <li class="nav-item"><button id="mode-toggle" class="btn btn-sm btn-outline-dark ms-3">🌙</button></li>
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<!-- Main Content -->
+<div class="profile-container">
+  <h2>{{ customer.name }}'s Profile</h2>
+
+  <!-- Profile Image (Clickable Upload) -->
+  <div class="text-center">
+    <label for="profile-image-input" style="cursor: pointer;" title="Click to change profile picture">
+      <img id="profile-image"
+           src="{{ customer.image_url or '/static/images/default_profile.png' }}"
+           alt="{{ customer.name }}"
+           width="150" height="150"
+           style="border-radius: 50%; object-fit: cover; box-shadow: 0 2px 10px rgba(0,0,0,0.1); transition: transform .2s;"
+           onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+    </label>
+    <input type="file" id="profile-image-input" accept="image/*" style="display: none;">
+    <small id="image-upload-status" class="text-muted mt-2 d-block"></small>
+  </div>
+
+  <!-- Generate Location -->
+  <div class="text-center mt-3">
+    <button id="generate-location-btn" class="btn btn-primary mt-3" onclick="updateCustomerLocation()">📍 Generate Location</button>
+    <p id="location-status" class="text-success mt-2"></p>
+  </div>
+
+  <p><strong>Location:</strong> {{ customer.location or "N/A" }}</p>
+  <p><strong>Occupation:</strong> {{ customer.occupation or "N/A" }}</p>
+  <p><strong>Phone Number:</strong> {{ customer.phone_number }}</p>
+  <p><strong>Comment:</strong> {{ customer.comment or "N/A" }}</p>
+
+  <div>
+    <div class="debt"><strong>Total Debt:</strong> GH₵{{ total_debt }}</div>
+    <div class="paid"><strong>Amount Paid:</strong> GH₵{{ total_paid }}</div>
+    <div class="left"><strong>Amount Left:</strong> GH₵{{ amount_left }}</div>
+    <div class="withdrawn"><strong>Withdrawn Amount:</strong> GH₵{{ withdrawn_amount }}</div>
+  </div>
+
+  <!-- Status -->
+  <div>
+    <h3>Status Progress</h3>
+    <div class="status-tracker">
+      {% set steps = ["payment_ongoing", "completed", "approved", "packaging", "delivering", "delivered"] %}
+      {% set current_index = steps.index(customer.status) if customer.status in steps else -1 %}
+      {% for step in steps %}
+        {% set step_class = "upcoming-step" %}
+        {% if step == customer.status %}
+          {% set step_class = "current-step" %}
+        {% elif steps.index(step) < current_index %}
+          {% set step_class = "completed-step" %}
+        {% endif %}
+        <div class="status-step {{ step_class }}">
+          {{ step.replace('_', ' ') | capitalize }}
+          {% if customer.status == "approved" and step == "approved" %}
+            <form method="POST" action="{{ url_for('view.agent_update_status', customer_id=customer._id, next_status='packaging') }}">
+              <button type="submit" class="btn btn-sm btn-light mt-2">Start Packaging</button>
+            </form>
+          {% elif customer.status == "packaging" and step == "packaging" %}
+            <form method="POST" action="{{ url_for('view.agent_update_status', customer_id=customer._id, next_status='delivering') }}">
+              <button type="submit" class="btn btn-sm btn-light mt-2">Start Delivery</button>
+            </form>
+          {% elif customer.status == "delivering" and step == "delivering" %}
+            <form method="POST" action="{{ url_for('view.agent_update_status', customer_id=customer._id, next_status='delivered') }}">
+              <button type="submit" class="btn btn-sm btn-light mt-2">Mark Delivered</button>
+            </form>
+          {% endif %}
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <a href="/payment/add_payment" class="add-payment-btn">Add Payment</a>
+
+  <!-- Payment History -->
+  <div class="payment-history mt-4">
+    <h3>Payment History</h3>
+    {% if payments and payments|length > 0 %}
+      <table class="table table-bordered table-striped align-middle">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Amount</th>
+            <th>Payment Method</th>
+            <th>Payment Type</th>
+            <th>Note</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for payment in payments %}
+          <tr>
+            <td>{{ payment.date[:10] }}</td>
+            <td>GH₵{{ payment.amount }}</td>
+            <td>{{ payment.method }}</td>
+            <td>{{ payment.payment_type or "N/A" }}</td>
+            <td>{{ payment.note or "N/A" }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p>No payments recorded yet.</p>
+    {% endif %}
+  </div>
+
+  <!-- Withdrawals -->
+  <div class="withdrawals-history mt-4">
+    <h3>Withdrawals</h3>
+    {% if withdrawals and withdrawals|length > 0 %}
+      <table class="table table-bordered table-striped align-middle">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Amount</th>
+            <th>Method</th>
+            <th>Note</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for withdrawal in withdrawals %}
+          <tr>
+            <td>{{ withdrawal.date[:10] }}</td>
+            <td>GH₵{{ withdrawal.amount }}</td>
+            <td>{{ withdrawal.method }}</td>
+            <td>{{ withdrawal.note or "N/A" }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p>No withdrawals recorded yet.</p>
+    {% endif %}
+  </div>
+
+  <!-- Penalties -->
+  <div class="section mt-4">
+    <h3>Penalty History</h3>
+    {% if penalties %}
+      <table class="table table-bordered table-striped align-middle">
+        <thead>
+          <tr>
+            <th>Amount (₵)</th>
+            <th>Reason</th>
+            <th>Date</th>
+            <th>New End Date</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for penalty in penalties %}
+          <tr>
+            <td>₵{{ "%.2f"|format(penalty.amount) }}</td>
+            <td>{{ penalty.reason }}</td>
+            <td>{{ penalty.date[:10] }}</td>
+            <td>{{ penalty.new_end_date or 'N/A' }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p>No penalties recorded.</p>
+    {% endif %}
+  </div>
+
+  <!-- Purchased Products -->
+  <div class="products mt-4">
+    <h3>Purchased Products</h3>
+    {% if customer.purchases and customer.purchases|length > 0 %}
+      {% for purchase in customer.purchases %}
+        <div class="product">
+          <div class="product-details">
+            {% if purchase.product %}
+              <div class="d-flex align-items-center gap-2">
+                <strong class="me-2">{{ purchase.product.name or "Unnamed Product" }}</strong>
+                {% if purchase.amount_left == 0 %}
+                  <span class="badge bg-success">Paid off</span>
+                {% endif %}
+              </div>
+
+              <p><strong>Price:</strong> GH₵{{ purchase.product.price or "N/A" }}</p>
+              <p><strong>Quantity:</strong> {{ purchase.product.quantity or "N/A" }}</p>
+              <p><strong class="total-text">Total:</strong> GH₵{{ purchase.product.total or "N/A" }}</p>
+              <p><strong class="paid-text">Amount Paid:</strong> GH₵{{ purchase.amount_paid }}</p>
+              <p><strong class="left-text">Amount Left:</strong> GH₵{{ purchase.amount_left }}</p>
+              <p><strong>Purchase Type:</strong> {{ purchase.purchase_type or "N/A" }}</p>
+              <p><strong>Purchase Date:</strong> {{ purchase.purchase_date[:10] if purchase.purchase_date else "N/A" }}</p>
+              <p><strong>End Date:</strong> {{ purchase.end_date[:10] if purchase.end_date else "N/A" }}</p>
+
+              {% if purchase.progress is not none %}
+              <div class="progress-wrapper">
+                <div class="progress-label">Time Progress</div>
+                <div class="progress-bar-bg">
+                  <div class="progress-bar-fill" data-progress="{{ purchase.progress|int }}"></div>
+                </div>
+              </div>
+              {% endif %}
+
+              <!-- Submit for packaging button (only if fully paid) -->
+              {% if purchase.can_submit %}
+              <form class="mt-3" method="POST" action="{{ url_for('view.submit_for_packaging', customer_id=customer._id, product_index=loop.index0) }}"
+                    onsubmit="return confirm('Submit this product for packaging? This will move it to Packages and delete its payments.');">
+                <button type="submit" class="btn btn-success btn-sm">
+                  ✅ Submit for packaging
+                </button>
+              </form>
+              {% endif %}
+            {% else %}
+              <p>No product details available</p>
+            {% endif %}
+          </div>
+
+          {% if purchase.product and purchase.product.image_url %}
+            <div class="product-img-wrapper">
+              <img src="{{ purchase.product.image_url }}" alt="{{ purchase.product.name }}">
+            </div>
+          {% else %}
+            <div class="product-img-wrapper text-muted small">No Image</div>
+          {% endif %}
+        </div>
+      {% endfor %}
+    {% else %}
+      <p>No products purchased yet.</p>
+    {% endif %}
+  </div>
+
+  {% if customer.coordinates %}
+    <h3>Customer Location on Map</h3>
+    <div id="map"
+        data-lat="{{ customer.coordinates.latitude }}"
+        data-lon="{{ customer.coordinates.longitude }}"
+        style="height: 300px; width: 100%; border-radius: 10px; margin-bottom: 20px;">
+    </div>
+  {% endif %}
+</div>
+
+<!-- Footer -->
+<footer>Developed by <strong>CYTECH</strong></footer>
+
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    // Progress Bar fill
+    document.querySelectorAll('.progress-bar-fill').forEach(bar => {
+      const progress = parseInt(bar.getAttribute('data-progress')) || 0;
+      bar.style.width = Math.min(100, Math.max(0, progress)) + '%';
+    });
+
+    // Theme Toggle
+    const modeToggle = document.getElementById("mode-toggle");
+    const body = document.body;
+    modeToggle.addEventListener("click", () => {
+      const current = body.getAttribute("data-theme");
+      const next = current === "dark" ? "light" : "dark";
+      body.setAttribute("data-theme", next);
+      modeToggle.textContent = next === "dark" ? "🌙" : "☀️";
+    });
+
+    // Leaflet Map (if coordinates exist)
+    const mapEl = document.getElementById("map");
+    if (mapEl && mapEl.dataset.lat && mapEl.dataset.lon) {
+      const lat = parseFloat(mapEl.dataset.lat);
+      const lon = parseFloat(mapEl.dataset.lon);
+      const map = L.map('map').setView([lat, lon], 15);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap contributors' }).addTo(map);
+      const popupContent = `<a href="https://www.google.com/maps?q=${lat},${lon}" target="_blank" style="text-decoration:none; color:#007bff; font-weight:bold;">📍 View on Google Maps</a>`;
+      L.marker([lat, lon]).addTo(map).bindPopup(popupContent).openPopup();
+    }
+  });
+
+  // Update Customer Location
+  async function updateCustomerLocation() {
+    const statusEl = document.getElementById("location-status");
+    const button = document.getElementById("generate-location-btn");
+    statusEl.textContent = "Getting current location...";
+    button.disabled = true; button.textContent = "⏳ Generating...";
+
+    if (!navigator.geolocation) {
+      statusEl.textContent = "❌ Geolocation not supported.";
+      button.disabled = false; button.textContent = "📍 Generate Location";
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(async (position) => {
+      const latitude = position.coords.latitude;
+      const longitude = position.coords.longitude;
+      try {
+        const customerId = "{{ customer._id }}";
+        const response = await fetch(`/view/customer/${customerId}/update_location`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ latitude, longitude })
+        });
+        const result = await response.json();
+        if (result.success) {
+          statusEl.textContent = "✅ Location updated successfully.";
+          button.textContent = "✅ Location Set"; button.disabled = true;
+        } else {
+          statusEl.textContent = "❌ Failed to update location.";
+          button.disabled = false; button.textContent = "📍 Generate Location";
+        }
+      } catch (err) {
+        statusEl.textContent = "❌ Error updating location.";
+        console.error(err);
+        button.disabled = false; button.textContent = "📍 Generate Location";
+      }
+    }, (error) => {
+      statusEl.textContent = "❌ Failed to get location.";
+      console.error(error);
+      button.disabled = false; button.textContent = "📍 Generate Location";
+    });
+  }
+</script>
+
+<script>
+  window.cbConfig = { chatId: "acac0de2-5c91-4eae-9354-1376e3093d91" };
+</script>
+
+<script>
+  document.getElementById('profile-image-input').addEventListener('change', async function (event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const statusEl = document.getElementById("image-upload-status");
+    statusEl.textContent = "Uploading image...";
+
+    const customerId = "{{ customer._id }}";
+    const formData = new FormData();
+    formData.append('image', file);
+
+    try {
+      const response = await fetch(`/view/customer/${customerId}/upload_image`, {
+        method: 'POST',
+        body: formData
+      });
+      const data = await response.json();
+      if (data.success && data.image_url) {
+        document.getElementById('profile-image').src = data.image_url;
+        statusEl.textContent = "✅ Image updated successfully.";
+      } else {
+        statusEl.textContent = "❌ Failed to update image.";
+        console.error('Server error:', data);
+      }
+    } catch (err) {
+      console.error(err);
+      statusEl.textContent = "❌ Upload error.";
+    }
+  });
+</script>
+
+<script src="https://app.chatbit.co/embed.min.js" defer></script>
+</body>
+</html>
