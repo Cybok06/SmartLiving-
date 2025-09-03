@@ -1,7 +1,7 @@
 # executive_sales_close.py (FAST, single-aggregation dashboard)
 from flask import Blueprint, render_template, request, jsonify, session, redirect, url_for
 from bson.objectid import ObjectId
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Dict, Any, Optional
 from db import db
 
@@ -13,6 +13,16 @@ executive_sales_close_bp = Blueprint(
 
 users_col       = db["users"]
 sales_close_col = db["sales_close"]
+
+# ---------- optional: indexes (safe to run repeatedly) ----------
+def _ensure_indexes():
+    try:
+        sales_close_col.create_index([("agent_id", 1), ("date", -1)])
+        sales_close_col.create_index([("agent_id", 1), ("updated_at", -1)])
+    except Exception:
+        pass
+
+_ensure_indexes()
 
 # -------------------------------------------------------------------
 # (You said indexes are in place; keeping here for reference)
@@ -57,10 +67,13 @@ def _ensure_executive_or_redirect():
 def _sum_ledger_all_dates(owner_id_str: str) -> float:
     """
     Sum total_amount across ALL sales_close docs for the given owner_id (agent_id in ledger).
+    (Handles string/number types safely.)
     """
     pipeline = [
         {"$match": {"agent_id": owner_id_str}},
-        {"$group": {"_id": None, "sum_amount": {"$sum": {"$toDouble": "$total_amount"}}}},
+        {"$group": {"_id": None, "sum_amount": {"$sum": {
+            "$toDouble": {"$ifNull": ["$total_amount", 0]}
+        }}}}
     ]
     agg = list(sales_close_col.aggregate(pipeline))
     if not agg:
@@ -79,103 +92,34 @@ def _group_totals_for_roles(roles: List[str]) -> List[Dict[str, Any]]:
     """
     roles = [r.lower() for r in roles]
     pipeline = [
-        {"$group": {"_id": "$agent_id", "total": {"$sum": {"$toDouble": "$total_amount"}}}},
-        {
-            "$lookup": {
-                "from": "users",
-                "let": {"aid": "$_id"},
-                "pipeline": [
-                    {"$addFields": {"_id_str": {"$toString": "$_id"}}},
-                    {
-                        "$match": {
-                            "$expr": {
-                                "$and": [
-                                    {"$eq": ["$_id_str", "$$aid"]},
-                                    {"$in": [{"$toLower": "$role"}, roles]}
-                                ]
-                            }
-                        }
-                    },
-                    {"$project": {"name": 1, "username": 1, "phone": 1, "role": 1}}
-                ],
-                "as": "user"
-            }
-        },
+        {"$group": {"_id": "$agent_id", "total": {"$sum": {
+            "$toDouble": {"$ifNull": ["$total_amount", 0]}
+        }}}},
+        {"$lookup": {
+            "from": "users",
+            "let": {"aid": "$_id"},
+            "pipeline": [
+                {"$addFields": {"_id_str": {"$toString": "$_id"}}},
+                {"$match": {"$expr": {"$and": [
+                    {"$eq": ["$_id_str", "$$aid"]},
+                    {"$in": [{"$toLower": "$role"}, roles]}
+                ]}}},
+                {"$project": {"name": 1, "username": 1, "phone": 1, "role": 1}}
+            ],
+            "as": "user"
+        }},
         {"$unwind": "$user"},
-        {
-            "$project": {
-                "_id": 0,
-                "user_id": "$_id",
-                "total": 1,
-                "name": {"$ifNull": ["$user.name", "$user.username"]},
-                "phone": "$user.phone",
-                "role": {"$toLower": "$user.role"},
-            }
-        },
+        {"$project": {
+            "_id": 0,
+            "user_id": "$_id",
+            "total": 1,
+            "name": {"$ifNull": ["$user.name", "$user.username"]},
+            "phone": "$user.phone",
+            "role": {"$toLower": "$user.role"},
+        }},
         {"$sort": {"total": -1}}
     ]
     return list(sales_close_col.aggregate(pipeline))
-
-def _attempt_debit_single_doc(owner_id_str: str, ymd_str: str, amount: float, who: Dict[str, str], note: str) -> bool:
-    """
-    Try to debit exactly the (owner_id_str, ymd_str) doc if it has enough balance.
-    Appends a withdrawal record with executive info.
-    """
-    now_utc = datetime.utcnow()
-    time_str = now_utc.strftime("%H:%M:%S")
-
-    filt = {"agent_id": owner_id_str, "date": ymd_str, "total_amount": {"$gte": amount}}
-    upd = {
-        "$inc": {"total_amount": -amount},
-        "$set": {"updated_at": now_utc, "last_withdrawal_at": now_utc},
-        "$push": {"withdrawals": {
-            "amount": amount,
-            "by_executive_id": who["id"],
-            "by_executive_name": who["name"],
-            "by_role": "executive",
-            "date": ymd_str,
-            "time": time_str,
-            "at": now_utc,
-            "note": note
-        }}
-    }
-    res = sales_close_col.update_one(filt, upd)
-    return res.modified_count > 0
-
-def _attempt_debit_latest_doc_with_funds(owner_id_str: str, amount: float, who: Dict[str, str], note: str) -> Optional[str]:
-    """
-    Find the most recent doc (by date, updated_at) that has enough balance and debit it.
-    Returns the debited date string or None if none found.
-    """
-    now_utc = datetime.utcnow()
-    time_str = now_utc.strftime("%H:%M:%S")
-
-    doc_cur = sales_close_col.find(
-        {"agent_id": owner_id_str, "total_amount": {"$gte": amount}},
-        {"date": 1}
-    ).sort([("date", -1), ("updated_at", -1)]).limit(1)
-    doc = next(doc_cur, None)
-    if not doc:
-        return None
-
-    ymd = doc.get("date")
-    filt = {"agent_id": owner_id_str, "date": ymd, "total_amount": {"$gte": amount}}
-    upd = {
-        "$inc": {"total_amount": -amount},
-        "$set": {"updated_at": now_utc, "last_withdrawal_at": now_utc},
-        "$push": {"withdrawals": {
-            "amount": amount,
-            "by_executive_id": who["id"],
-            "by_executive_name": who["name"],
-            "by_role": "executive",
-            "date": ymd,
-            "time": time_str,
-            "at": now_utc,
-            "note": note
-        }}
-    }
-    res = sales_close_col.update_one(filt, upd)
-    return ymd if res.modified_count > 0 else None
 
 # ---------- views ----------
 
@@ -235,9 +179,12 @@ def executive_close_page():
 def executive_withdraw():
     """
     POST: target_id, amount, note (optional)
-      - Try to debit TODAY's doc; if insufficient, debit the most recent doc with enough balance.
-      - Credit the EXECUTIVE'S TODAY doc.
-      - Returns refreshed numbers for target (TOTAL), unclose total, and executive close total.
+
+    Improved behavior:
+      - Debits across multiple sales_close docs of the TARGET (today first, then most recent -> older),
+        using $expr/$toDouble so both numeric and string balances are handled.
+      - Credits the EXECUTIVE'S TODAY doc with the total actually withdrawn.
+      - Returns refreshed totals (all dates) + per-date debit breakdown.
     """
     scope = _ensure_executive_or_redirect()
     if not isinstance(scope, tuple):
@@ -273,50 +220,112 @@ def executive_withdraw():
         msg = "You can only withdraw from agents, managers, or admins."
         return (jsonify(ok=False, message=msg), 403) if _is_ajax(request) else (msg, 403)
 
-    # 1) Debit TODAY or most recent doc
-    today = _today_str()
-    officer = {"id": exec_id, "name": exec_doc.get("name", "")}
-
-    debited_date: Optional[str] = None
-    if _attempt_debit_single_doc(str(target_id), today, amount, officer, note):
-        debited_date = today
-    else:
-        debited_date = _attempt_debit_latest_doc_with_funds(str(target_id), amount, officer, note)
-        if not debited_date:
-            total_all = _sum_ledger_all_dates(str(target_id))
-            msg = f"Insufficient balance. Target total across all days: GHS {total_all:,.2f}"
-            return (jsonify(ok=False, message=msg, available=f"{total_all:,.2f}"), 409) if _is_ajax(request) else (msg, 409)
-
-    # 2) Credit EXECUTIVE TODAY doc
+    # --- Build candidate docs to debit: today first, then recent->older; only with positive balance ---
+    today   = _today_str()
     now_utc = datetime.utcnow()
+    time_str = now_utc.strftime("%H:%M:%S")
+
+    pipeline = [
+        {"$match": {"agent_id": str(target_id)}},
+        {"$addFields": {
+            "bal_num": {"$toDouble": {"$ifNull": ["$total_amount", 0]}},
+            "is_today": {"$cond": [{"$eq": ["$date", today]}, 1, 0]}
+        }},
+        {"$match": {"bal_num": {"$gt": 0}}},
+        {"$sort": {"is_today": -1, "date": -1, "updated_at": -1}}
+    ]
+    docs = list(sales_close_col.aggregate(pipeline))
+
+    # Quick total across all dates
+    total_all = float(sum(float(d.get("bal_num", 0.0)) for d in docs))
+    if total_all + 1e-9 < amount:
+        msg = f"Insufficient balance. Target total across all days: GHS {total_all:,.2f}"
+        return (jsonify(ok=False, message=msg, available=f"{total_all:,.2f}"), 409) if _is_ajax(request) else (msg, 409)
+
+    remaining = amount
+    debits: List[Dict[str, Any]] = []  # breakdown: [{date, debited}]
+
+    # --- Debit across multiple docs until covered ---
+    for d in docs:
+        if remaining <= 1e-9:
+            break
+        doc_id   = d["_id"]
+        date_str = d.get("date", "")
+        available = float(d.get("bal_num", 0.0))
+        if available <= 0:
+            continue
+
+        take = min(available, remaining)
+
+        # Safe compare even if total_amount is string
+        filter_q = {
+            "_id": doc_id,
+            "$expr": {"$gte": [
+                {"$toDouble": {"$ifNull": ["$total_amount", 0]}},
+                take
+            ]}
+        }
+        update_q = {
+            "$inc": {"total_amount": -take},
+            "$set": {"updated_at": now_utc, "last_withdrawal_at": now_utc},
+            "$push": {"withdrawals": {
+                "amount": float(round(take, 2)),
+                "by_executive_id": exec_id,
+                "by_executive_name": exec_doc.get("name", ""),
+                "by_role": "executive",
+                "date": date_str,
+                "time": time_str,
+                "at": now_utc,
+                "note": note
+            }}
+        }
+        res = sales_close_col.update_one(filter_q, update_q)
+        if res.modified_count == 1:
+            debits.append({"date": date_str, "debited": take})
+            remaining -= take
+        # Else: concurrent change; try next doc.
+
+    actually_debited = amount - remaining
+    if actually_debited <= 0:
+        # Concurrency edge-case: recompute and respond
+        current_total = _sum_ledger_all_dates(str(target_id))
+        msg = f"Insufficient balance due to concurrent changes. Current total: GHS {current_total:,.2f}"
+        return (jsonify(ok=False, message=msg, available=f"{current_total:,.2f}"), 409) if _is_ajax(request) else (msg, 409)
+
+    # --- Credit EXECUTIVE TODAY doc by the amount actually debited ---
     exec_filter = {"agent_id": exec_id, "date": today}
     exec_update = {
         "$setOnInsert": {"agent_id": exec_id, "manager_id": exec_id, "date": today, "created_at": now_utc},
-        "$inc": {"total_amount": amount, "count": 1},
+        "$inc": {"total_amount": actually_debited, "count": 1},
         "$set": {"updated_at": now_utc, "last_payment_at": now_utc}
     }
     sales_close_col.update_one(exec_filter, exec_update, upsert=True)
 
-    # 3) Recompute refreshed totals (ALL dates) — minimal roundtrips
-    target_total  = _sum_ledger_all_dates(str(target_id))  # one agg
+    # --- Recompute refreshed totals (ALL dates) — minimal roundtrips ---
+    target_total  = _sum_ledger_all_dates(str(target_id))                # one agg
     grouped       = _group_totals_for_roles(["admin", "manager", "agent"])  # one agg for unclose
     unclose_total = float(sum(float(r.get("total", 0.0)) for r in grouped))
-    close_total   = _sum_ledger_all_dates(exec_id)  # one agg
+    close_total   = _sum_ledger_all_dates(exec_id)                       # one agg
 
     payload = {
         "ok": True,
-        "message": f"Withdrew GHS {amount:,.2f} from {tgt_role} and credited executive account.",
+        "message": (
+            f"Withdrew GHS {actually_debited:,.2f} across {len(debits)} day(s) "
+            f"from {tgt_role} and credited executive account."
+        ),
+        "requested": f"{amount:,.2f}",
+        "debited_breakdown": [{"date": x["date"], "amount": f"{x['debited']:,.2f}"} for x in debits],
         "target_id": str(target_id),
         "target_role": tgt_role,
         "available": f"{target_total:,.2f}",     # target TOTAL (all dates)
         "unclose_total": f"{unclose_total:,.2f}",
-        "close_total": f"{close_total:,.2f}",
-        "debited_date": debited_date
+        "close_total": f"{close_total:,.2f}"
     }
     return jsonify(payload) if _is_ajax(request) else (
-        f"OK. Target total now {payload['available']}, "
-        f"Unclose Total {payload['unclose_total']}, "
-        f"Close Total {payload['close_total']} (debited {debited_date})."
+        f"OK. Debited: {payload['requested']} | "
+        f"Target total: {payload['available']} | "
+        f"Unclose Total: {payload['unclose_total']} | "
+        f"Close Total: {payload['close_total']}"
     )
 
 @executive_sales_close_bp.route("/user/<user_id>/withdrawals", methods=["GET"])
