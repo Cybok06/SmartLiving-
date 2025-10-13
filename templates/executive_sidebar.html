@@ -9,21 +9,19 @@
     transition: left 0.3s ease-in-out; z-index: 1050;
     display: flex; flex-direction: column;
   }
-
-  .sidebar-body {
-    flex: 1 1 auto; overflow-y: auto; -webkit-overflow-scrolling: touch;
-    padding-right: 0.25rem; margin-right: -0.25rem; padding-bottom: 1rem;
-  }
-
-  .sidebar-body::-webkit-scrollbar { width: 8px; }
-  .sidebar-body::-webkit-scrollbar-thumb { background: #e0e6f6; border-radius: 8px; }
-  .sidebar-body:hover::-webkit-scrollbar-thumb { background: #c9d5fa; }
-
   .sidebar.collapsed { left: -260px; }
 
   .sidebar-header { display: flex; flex-direction: column; align-items: center; margin-bottom: 0.75rem; flex: 0 0 auto; }
   .sidebar-header img { width: 50px; height: 50px; object-fit: contain; border-radius: 50%; }
   .sidebar-header strong { margin-top: 0.5rem; font-size: 1.1rem; color: #007bff; font-weight: 600; }
+
+  .sidebar-body {
+    flex: 1 1 auto; overflow-y: auto; -webkit-overflow-scrolling: touch;
+    padding-right: 0.25rem; margin-right: -0.25rem; padding-bottom: 1rem;
+  }
+  .sidebar-body::-webkit-scrollbar { width: 8px; }
+  .sidebar-body::-webkit-scrollbar-thumb { background: #e0e6f6; border-radius: 8px; }
+  .sidebar-body:hover::-webkit-scrollbar-thumb { background: #c9d5fa; }
 
   .nav-section {
     font-size: 0.75rem; text-transform: uppercase; color: #888;
@@ -55,15 +53,14 @@
     body.sidebar-open .sidebar-toggle { left: 260px; }
   }
 
-  /* Badge for unconfirmed count */
+  /* Badges */
   .notif-badge {
-    margin-left: auto;
-    background: #dc3545; /* danger */
-    color: #fff;
-    border-radius: 999px;
-    padding: 0.2rem 0.5rem;
-    font-size: 0.75rem;
-    font-weight: 700;
+    margin-left: auto; background: #dc3545; color: #fff;
+    border-radius: 999px; padding: 0.2rem 0.5rem; font-size: 0.75rem; font-weight: 700;
+  }
+  .soft-badge {
+    margin-left: auto; background: #e7f1ff; color: #0d6efd;
+    border-radius: 999px; padding: 0.15rem 0.5rem; font-size: 0.72rem; font-weight: 700;
   }
 </style>
 
@@ -79,12 +76,22 @@
     <a href="/executive/dashboard" class="{% if request.path == '/executive/dashboard' %}text-primary fw-bold{% endif %}">
       <i class="bi bi-speedometer2"></i> Dashboard
     </a>
-<!-- NEW: Deposit Confirmations with live badge + tooltip -->
+
+    <!-- Deposits with live badge -->
     <a href="{{ url_for('executive_deposits.list_view') }}"
        class="{% if request.path.startswith('/executive/deposits') %}text-primary fw-bold{% endif %}"
        id="depositLink" title="Unconfirmed deposits">
       <i class="bi bi-bank"></i> Deposit Confirmations
       <span id="unconfBadge" class="notif-badge d-none">0</span>
+    </a>
+
+    <div class="nav-section">Expenses</div>
+    <!-- NEW: Executive Expenses with live Unapproved count -->
+    <a href="{{ url_for('executive_expense.exec_expense_page') }}"
+       class="{% if request.path.startswith('/executive-expense') %}text-primary fw-bold{% endif %}"
+       id="execExpenseLink" title="Executive overview & approvals">
+      <i class="bi bi-cash-stack"></i> Executive Expenses
+      <span id="unapprovedBadge" class="notif-badge d-none">0</span>
     </a>
 
     <div class="nav-section">Target</div>
@@ -116,13 +123,12 @@
       <i class="bi bi-cash-coin"></i> Sales Close
     </a>
 
-    
     <div style="height: 12px;"></div>
   </div>
 </div>
 
 <!-- Toggle Button -->
-<button class="sidebar-toggle" onclick="toggleSidebar()" id="sidebarToggle">
+<button class="sidebar-toggle" onclick="toggleSidebar()" id="sidebarToggle" aria-label="Toggle menu">
   <i class="bi bi-list"></i>
 </button>
 
@@ -133,32 +139,42 @@
     document.body.classList.toggle('sidebar-open');
   }
 
-  // --- Live badge updater ---
+  // --- Deposits badge (existing) ---
   async function refreshUnconfirmedBadge() {
     try {
       const res = await fetch("{{ url_for('executive_deposits.unconfirmed_count') }}", { credentials: 'same-origin' });
       if (!res.ok) throw new Error('HTTP ' + res.status);
       const data = await res.json();
       const n = Number(data.count || 0);
-
       const badge = document.getElementById('unconfBadge');
       badge.textContent = n;
-      if (n > 0) {
-        badge.classList.remove('d-none');
-      } else {
-        badge.classList.add('d-none');
-      }
-
+      badge.classList.toggle('d-none', n <= 0);
       const link = document.getElementById('depositLink');
       if (link) link.setAttribute('title', n > 0 ? n + ' unconfirmed deposit(s)' : 'No unconfirmed deposits');
-    } catch (e) {
-      // fail silently; keep previous value
-    }
+    } catch (e) { /* silent */ }
+  }
+
+  // --- NEW: Unapproved expenses badge (last 30 days, all managers) ---
+  async function refreshUnapprovedExpensesBadge() {
+    try {
+      const url = `/executive-expense/list?status=Unapproved&range=last30`;
+      const res = await fetch(url, { credentials: 'same-origin' });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const data = await res.json();
+      const n = Array.isArray(data.rows) ? data.rows.length : 0;  // list caps at 300; good enough for UI badge
+      const badge = document.getElementById('unapprovedBadge');
+      badge.textContent = n;
+      badge.classList.toggle('d-none', n <= 0);
+      const link = document.getElementById('execExpenseLink');
+      if (link) link.setAttribute('title', n > 0 ? n + ' unapproved expense(s)' : 'No unapproved expenses');
+    } catch (e) { /* silent */ }
   }
 
   document.addEventListener('DOMContentLoaded', () => {
     refreshUnconfirmedBadge();
+    refreshUnapprovedExpensesBadge();
     // poll every 30s
     setInterval(refreshUnconfirmedBadge, 30000);
+    setInterval(refreshUnapprovedExpensesBadge, 30000);
   });
 </script>
