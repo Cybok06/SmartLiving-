@@ -88,6 +88,9 @@ from assign_products import assign_bp
 from manager_deposits import manager_deposits_bp
 # app.py (relevant bits)
 from executive_deposits import executive_deposits_bp
+from manager_expense import manager_expense_bp
+
+from executive_expense import executive_expense_bp
 
 
 
@@ -155,6 +158,8 @@ app.register_blueprint(close_card_bp)
 app.register_blueprint(assign_bp)
 app.register_blueprint(manager_deposits_bp)
 app.register_blueprint(executive_deposits_bp)
+app.register_blueprint(manager_expense_bp)
+app.register_blueprint(executive_expense_bp)
 
 
 
