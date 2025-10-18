@@ -12,6 +12,9 @@ expenses_col = db["manager_expenses"]
 ALLOWED_CATEGORIES = [
     "Vehicle servicing",
     "Transportation",
+    "Creditors",
+    "Eggs",
+    "Delievery",
     "Fuel",
     "SUSU Withdrawal",
     "Marketing (Activations)",
@@ -256,4 +259,5 @@ def expense_stats():
     by_cat = [{"category": a["_id"], "total": float(a["sum_amount"])} for a in agg]
     total = sum(x["total"] for x in by_cat)
     return jsonify(ok=True, total=round(total, 2), by_category=by_cat, top5=by_cat[:5])
+
 
