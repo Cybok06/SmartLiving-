@@ -13,7 +13,7 @@ payments_collection  = db["payments"]
 users_collection     = db["users"]
 sales_close_collection = db["sales_close"]  # ✅ NEW: daily rollup per agent
 
-ARKESEL_API_KEY = 'c1JKV21keG1DdnJZQW1zc2JpVks'
+ARKESEL_API_KEY = 'b3dheEVqUWNyeVBuUGxDVWFxZ0E'
 
 
 def _is_ajax(req) -> bool:
@@ -348,3 +348,4 @@ def view_all_payments():
 
     summaries = list(grouped.values())
     return render_template('view_all_payments.html', payments=summaries, selected_date=selected_date)
+
