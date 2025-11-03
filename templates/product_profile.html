@@ -7,64 +7,35 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
   <link rel="icon" href="https://res.cloudinary.com/dljpgzbto/image/upload/v1743993646/company-logo_dksb23.jpg" type="image/png" />
   <style>
-    body {
-      font-family: 'Segoe UI', sans-serif;
-      background-color: #f8f9fc;
-      transition: background 0.3s ease, color 0.3s ease;
+    :root{
+      --ink:#0b3b52; --muted:#64748b; --ring:#e9eaf1; --soft:#f6f8fb;
+      --ok:#16a34a; --bad:#dc2626; --warn:#f59e0b;
     }
-
-    .dark-mode {
-      background-color: #1e1e1e;
-      color: #f1f1f1;
+    body{ font-family:'Segoe UI',system-ui,Arial; background:#f8f9fc; }
+    .dark-mode{ background:#1e1e1e; color:#f1f1f1; }
+    .dark-mode .card, .dark-mode .component-card{ background:#2a2a2a; color:#fff; }
+    .brand{ display:flex; align-items:center; gap:.5rem; }
+    .brand img{ width:40px; height:40px; border-radius:50%; }
+    .product-header img{ width:100%; border-radius:12px; object-fit:cover; max-height:300px; }
+    .pill{ display:inline-block; padding:.2rem .5rem; border:1px solid var(--ring); border-radius:999px; background:#fff; font-size:.8rem; color:#0f172a; }
+    .stat{ display:inline-flex; align-items:center; gap:.35rem; padding:.25rem .55rem; border:1px solid var(--ring); border-radius:8px; background:#fff; font-size:.9rem; }
+    .component-card{ background:#fff; border-radius:12px; padding:12px; box-shadow:0 2px 6px rgba(0,0,0,.06); border:1px solid var(--ring); }
+    .component-card img, .card-img-top{ border-radius:8px; width:100%; height:140px; object-fit:cover; }
+    .muted{ color:var(--muted); }
+    .section-title{ color:var(--ink); font-weight:700; }
+    .divider{ height:1px; background:var(--ring); margin:1rem 0; }
+    .btn-clean{ border-radius:10px; }
+    .search{ border-radius:10px; }
+    /* Loading overlay (pro spinner) */
+    #loadingOverlay{
+      display:none; position:fixed; inset:0; background:rgba(255,255,255,.85);
+      z-index:9999; align-items:center; justify-content:center; flex-direction:column;
     }
-
-    .dark-mode .card,
-    .dark-mode .component-card {
-      background-color: #2a2a2a;
-      color: #fff;
-    }
-
-    .product-header img {
-      width: 100%;
-      border-radius: 8px;
-      object-fit: cover;
-      max-height: 300px;
-    }
-
-    .component-card {
-      background: white;
-      border-radius: 10px;
-      padding: 12px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-    }
-
-    .component-card img,
-    .card-img-top {
-      border-radius: 6px;
-      width: 100%;
-      object-fit: cover;
-      height: 140px;
-    }
-
-    .dark-mode .btn-outline-dark {
-      border-color: #ddd;
-      color: #ddd;
-    }
-
-    .btn-close {
-      background: none;
-    }
-
-    .modal .form-control {
-      margin-bottom: 10px;
-    }
-
-    @media (max-width: 576px) {
-      .col-sm-6 {
-        flex: 0 0 50%;
-        max-width: 50%;
-      }
-    }
+    .dark-mode #loadingOverlay{ background:rgba(0,0,0,.35); }
+    .spinner-lg{ width:3rem; height:3rem; }
+    /* Toasts */
+    .toast-container{ position:fixed; top:1rem; right:1rem; z-index:1056; }
+    @media (max-width:576px){ .col-sm-6{ flex:0 0 50%; max-width:50%; } }
   </style>
 </head>
 <body>
@@ -72,13 +43,13 @@
 
   <!-- Header -->
   <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap">
-    <div class="d-flex align-items-center gap-2">
-      <img src="https://res.cloudinary.com/dljpgzbto/image/upload/v1743993646/company-logo_dksb23.jpg" width="40" height="40" class="rounded-circle" />
+    <div class="brand">
+      <img src="https://res.cloudinary.com/dljpgzbto/image/upload/v1743993646/company-logo_dksb23.jpg" alt="Logo"/>
       <h4 class="mb-0">Smart Living</h4>
     </div>
     <div class="d-flex gap-2 mt-2 mt-md-0">
-      <a href="/inventory/dashboard" class="btn btn-outline-secondary">🏠 Dashboard</a>
-      <button onclick="toggleMode()" class="btn btn-sm btn-outline-dark">🌓</button>
+      <a href="{{ url_for('login.admin_dashboard') }}" class="btn btn-outline-secondary btn-clean">🏠 Dashboard</a>
+      <button onclick="toggleMode()" class="btn btn-outline-dark btn-clean" id="modeBtn">🌓</button>
     </div>
   </div>
 
@@ -94,59 +65,61 @@
     {% endif %}
   {% endwith %}
 
-  <!-- Product Details -->
-  <!-- Action Buttons -->
-<div class="mb-4 d-flex justify-content-between align-items-center flex-wrap">
-  <a href="{{ url_for('login.admin_dashboard') }}" class="btn btn-secondary">⬅ Dashboard</a>
-  <div class="d-flex gap-2 mt-2">
-    <!-- 🆕 Change Image Button -->
-    <button class="btn btn-info" data-bs-toggle="modal" data-bs-target="#changeImageModal">🖼️ Change Image</button>
-
-    <button class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#editProductModal">✏️ Edit</button>
-    <button class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteProductModal">🗑️ Delete</button>
-  </div>
-</div>
-
-
-  <div class="row product-header mb-4">
+  <!-- Product Header -->
+  <div class="row product-header mb-4 g-3">
     <div class="col-md-6">
       <img src="{{ product.image_url }}" alt="{{ product.name }}" />
     </div>
     <div class="col-md-6">
-      <h4>{{ product.name }}</h4>
-      <p><strong>Type:</strong> {{ product.product_type }}</p>
-      <p><strong>Category:</strong> {{ product.category or '—' }}</p>
-      <p><strong>Price:</strong> GHS {{ product.price }}</p>
-      <p><strong>Cash Price:</strong> GHS {{ product.cash_price }}</p>
-      <p><strong>Package:</strong> {{ product.package_name or '—' }}</p>
-      <p><strong>Description:</strong> {{ product.description }}</p>
-      <p><strong>Manager:</strong> {{ manager.name }} ({{ manager.branch }})</p>
+      <div class="d-flex align-items-center justify-content-between">
+        <h3 class="mb-1 section-title">{{ product.name }}</h3>
+        <span class="pill">{{ product.product_type or '—' }}</span>
+      </div>
+      <p class="muted mb-2">{{ product.category or '—' }}{% if product.package_name %} • {{ product.package_name }}{% endif %}</p>
+
+      <div class="d-flex flex-wrap gap-2 mb-2">
+        <span class="stat"><strong>Price:</strong> GHS {{ '%.2f'|format(product.price|default(0.0)) }}</span>
+        <span class="stat"><strong>Cash:</strong> GHS {{ '%.2f'|format(product.cash_price|default(0.0)) }}</span>
+      </div>
+      <div class="mb-2"><strong>Manager:</strong> {{ manager.name }} ({{ manager.branch }})</div>
+      <div class="mb-3"><strong>Description:</strong> <span class="muted">{{ product.description }}</span></div>
+
+      <div class="d-flex gap-2 mt-2">
+        <button class="btn btn-info btn-clean" data-bs-toggle="modal" data-bs-target="#changeImageModal">🖼️ Change Image</button>
+        <button class="btn btn-warning btn-clean" data-bs-toggle="modal" data-bs-target="#editProductModal">✏️ Edit</button>
+        <button class="btn btn-danger btn-clean" data-bs-toggle="modal" data-bs-target="#deleteProductModal">🗑️ Delete</button>
+      </div>
     </div>
   </div>
 
-  <!-- Components Section -->
-  <h5 class="mb-3">Component Products</h5>
+  <!-- Components -->
+  <div class="d-flex align-items-center justify-content-between mb-2">
+    <h5 class="mb-0 section-title">Component Products</h5>
+    <span class="muted">{{ components|length }} item(s)</span>
+  </div>
   <div class="row">
     {% for comp in components %}
     <div class="col-sm-6 col-lg-4">
       <div class="component-card mb-3">
         <img src="{{ comp.image_url }}" alt="{{ comp.name }}">
-        <h6 class="mt-2">{{ comp.name }}</h6>
-        <p>Qty: {{ comp.qty }}</p>
-        <p>Price: GHS {{ comp.price }}</p>
-        <p>Description: {{ comp.description }}</p>
-        <form method="POST" action="{{ url_for('product_profile.delete_component', product_id=product._id, comp_id=comp.id) }}" onsubmit="return confirm('Delete this component?')">
-          <button type="submit" class="btn btn-sm btn-outline-danger w-100">Remove</button>
+        <h6 class="mt-2 mb-1">{{ comp.name }}</h6>
+        <div class="d-flex flex-wrap gap-2 mb-2">
+          <span class="stat"><strong>Qty:</strong> {{ comp.qty }}</span>
+          <span class="stat"><strong>Price:</strong> GHS {{ comp.price }}</span>
+        </div>
+        <p class="muted mb-2">{{ comp.description }}</p>
+<form method="POST" action="{{ url_for('product_profile.add_components', product_id=product._id) }}">
+          <button type="submit" class="btn btn-sm btn-outline-danger w-100 btn-clean">Remove</button>
         </form>
       </div>
     </div>
     {% endfor %}
   </div>
 
-  <!-- Add Inventory -->
-  <hr class="my-4" />
-  <h5>Add More Components from Inventory</h5>
-  <input type="text" id="searchInput" class="form-control mb-3" placeholder="Search inventory...">
+  <!-- Add from Inventory -->
+  <div class="divider"></div>
+  <h5 class="mb-3 section-title">Add More Components from Inventory</h5>
+  <input type="text" id="searchInput" class="form-control search mb-3" placeholder="Search inventory by name...">
 
   <form method="POST" action="{{ url_for('product_profile.add_components', product_id=product._id) }}">
     <div class="row" id="inventoryContainer">
@@ -166,7 +139,7 @@
       </div>
       {% endfor %}
     </div>
-    <button type="submit" class="btn btn-primary mt-3">Add Selected Components</button>
+    <button type="submit" class="btn btn-primary mt-2 btn-clean">Add Selected Components</button>
   </form>
 </div>
 
@@ -179,16 +152,25 @@
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body">
-        <input type="text" name="name" class="form-control" value="{{ product.name }}" required>
-        <input type="text" name="product_type" class="form-control" value="{{ product.product_type }}">
-        <input type="text" name="category" class="form-control" value="{{ product.category }}">
-        <input type="text" name="package_name" class="form-control" value="{{ product.package_name }}">
-        <input type="number" step="0.01" name="price" class="form-control" value="{{ product.price }}" required>
-        <input type="number" step="0.01" name="cash_price" class="form-control" value="{{ product.cash_price }}" required>
+        <input type="text" name="name" class="form-control mb-2" value="{{ product.name }}" required>
+        <input type="text" name="product_type" class="form-control mb-2" value="{{ product.product_type }}">
+        <input type="text" name="category" class="form-control mb-2" value="{{ product.category }}">
+        <input type="text" name="package_name" class="form-control mb-2" value="{{ product.package_name }}">
+        <div class="row g-2">
+          <div class="col-md-6">
+            <label class="form-label">Price (GHS)</label>
+            <input type="number" step="0.01" name="price" class="form-control" value="{{ product.price }}" required>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Cash Price (GHS)</label>
+            <input type="number" step="0.01" name="cash_price" class="form-control" value="{{ product.cash_price }}" required>
+          </div>
+        </div>
+        <label class="form-label mt-2">Description</label>
         <textarea name="description" class="form-control" rows="3">{{ product.description }}</textarea>
       </div>
       <div class="modal-footer">
-        <button type="submit" class="btn btn-primary">Save Changes</button>
+        <button type="submit" class="btn btn-primary btn-clean">Save Changes</button>
       </div>
     </form>
   </div>
@@ -205,9 +187,9 @@
         </div>
         <div class="modal-body">
           <p>Are you sure you want to delete <strong>{{ product.name }}</strong>?</p>
-          <p class="text-muted">Optionally select other managers:</p>
-          <button type="button" class="btn btn-sm btn-outline-primary mb-2" onclick="toggleAllManagers()">Select All</button>
-          <div class="mb-3" id="managerCheckboxes" style="max-height: 200px; overflow-y: auto;">
+          <p class="text-muted">Optionally apply to other managers:</p>
+          <button type="button" class="btn btn-sm btn-outline-primary mb-2 btn-clean" onclick="toggleAllManagers()">Select All</button>
+          <div class="mb-3" id="managerCheckboxes" style="max-height: 220px; overflow-y: auto;">
             {% for mgr in all_managers %}
               {% if mgr._id != product.manager_id %}
               <div class="form-check">
@@ -219,61 +201,123 @@
           </div>
         </div>
         <div class="modal-footer">
-          <button type="submit" class="btn btn-danger">Yes, Delete</button>
+          <button type="submit" class="btn btn-danger btn-clean">Yes, Delete</button>
         </div>
       </div>
     </form>
   </div>
 </div>
-<!-- Change Image Modal -->
+
+<!-- Change Image Modal (with pro spinner) -->
 <div class="modal fade" id="changeImageModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
-    <form method="POST" action="{{ url_for('product_profile.change_image', product_id=product._id) }}"
-          class="modal-content" enctype="multipart/form-data">
+    <form method="POST"
+          action="{{ url_for('product_profile.change_image', product_id=product._id) }}"
+          class="modal-content" enctype="multipart/form-data" id="changeImageForm">
       <div class="modal-header">
         <h5 class="modal-title">Change Product Image</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body">
         <div class="text-center mb-3">
-          <img src="{{ product.image_url }}" alt="Current Image" class="img-fluid rounded" style="max-height: 200px;">
+          <img src="{{ product.image_url }}" alt="Current Image" class="img-fluid rounded" style="max-height: 220px;">
         </div>
-        <input type="file" name="image" class="form-control" accept="image/*" required>
+        <input type="file" name="image" class="form-control" accept="image/*" required id="newImageInput">
         <div class="form-text">This will update the image for all products with the same name and price.</div>
+
+        <div class="mt-3" id="previewWrap" style="display:none;">
+          <div class="text-muted mb-1">Preview</div>
+          <img id="previewImg" class="img-fluid rounded border" style="max-height:200px;" alt="Preview">
+        </div>
       </div>
       <div class="modal-footer">
-        <button type="submit" class="btn btn-success">Upload New Image</button>
+        <button id="uploadBtn" type="submit" class="btn btn-success btn-clean">Upload New Image</button>
       </div>
     </form>
   </div>
 </div>
 
-<!-- Scripts -->
+<!-- Global Loading Overlay -->
+<div id="loadingOverlay">
+  <div class="spinner-border text-primary spinner-lg" role="status"></div>
+  <div class="mt-3 fw-semibold">Uploading image...</div>
+</div>
+
+<!-- Toasts -->
+<div class="toast-container" id="toastArea"></div>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-  function toggleMode() {
+  const $ = (s)=>document.querySelector(s);
+
+  function toggleMode(){
     document.body.classList.toggle("dark-mode");
+    const btn = $("#modeBtn");
+    if(btn) btn.textContent = document.body.classList.contains("dark-mode") ? "🌞" : "🌓";
   }
-
-  function toggleAllManagers() {
-    const checkboxes = document.querySelectorAll('.delete-manager-checkbox');
-    const allChecked = Array.from(checkboxes).every(cb => cb.checked);
-    checkboxes.forEach(cb => cb.checked = !allChecked);
+  function toggleAllManagers(){
+    const boxes = document.querySelectorAll('.delete-manager-checkbox');
+    const allChecked = Array.from(boxes).every(cb => cb.checked);
+    boxes.forEach(cb => cb.checked = !allChecked);
   }
-
-  document.getElementById('searchInput').addEventListener('input', function () {
-    const query = this.value.toLowerCase();
-    document.querySelectorAll('.inventory-item').forEach(item => {
-      const name = item.querySelector('.card-title').textContent.toLowerCase();
-      item.style.display = name.includes(query) ? '' : 'none';
+  // Inventory search
+  const search = $("#searchInput");
+  if(search){
+    search.addEventListener('input', function(){
+      const q = this.value.toLowerCase();
+      document.querySelectorAll('.inventory-item').forEach(card=>{
+        const name = card.querySelector('.card-title')?.textContent.toLowerCase() || '';
+        card.style.display = name.includes(q) ? '' : 'none';
+      });
+    });
+  }
+  // Qty -> auto-check
+  document.querySelectorAll('.qty-input').forEach(input=>{
+    input.addEventListener('input', function(){
+      const cb = this.closest('.card-body').querySelector('.component-checkbox');
+      if(Number(this.value) > 0) cb.checked = true;
     });
   });
 
-  document.querySelectorAll('.qty-input').forEach(input => {
-    input.addEventListener('input', function () {
-      const checkbox = this.closest('.card-body').querySelector('.component-checkbox');
-      if (this.value > 0) checkbox.checked = true;
+  // Change Image: live preview + pro spinner (no URL shown)
+  const newImageInput = $("#newImageInput");
+  if(newImageInput){
+    newImageInput.addEventListener('change', function(){
+      const file = this.files && this.files[0];
+      if(!file){ $("#previewWrap").style.display = 'none'; return; }
+      const url = URL.createObjectURL(file);
+      $("#previewImg").src = url;
+      $("#previewWrap").style.display = 'block';
     });
+  }
+
+  const changeImageForm = $("#changeImageForm");
+  if(changeImageForm){
+    changeImageForm.addEventListener('submit', function(){
+      // show overlay spinner; button disabled automatically by browser after submit
+      const overlay = $("#loadingOverlay");
+      if(overlay) overlay.style.display = "flex";
+    });
+  }
+
+  // Helper toast
+  function makeToast(text, variant="primary"){
+    const id = "t"+Math.random().toString(36).slice(2);
+    const html = `
+      <div class="toast align-items-center text-bg-${variant} border-0 show" id="${id}" role="alert">
+        <div class="d-flex">
+          <div class="toast-body">${text}</div>
+          <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+        </div>
+      </div>`;
+    const area = $("#toastArea");
+    area.insertAdjacentHTML('beforeend', html);
+    setTimeout(()=>{ const el = $("#"+id); if(el){ const t = bootstrap.Toast.getOrCreateInstance(el); t.hide(); } }, 4000);
+  }
+
+  // Hide overlay on bfcache restore
+  window.addEventListener("pageshow", function(){
+    const overlay = $("#loadingOverlay"); if(overlay) overlay.style.display = "none";
   });
 </script>
 </body>
