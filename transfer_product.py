@@ -20,6 +20,9 @@ def _oid(v):
     except Exception:
         return None
 
+def _digits_only(s: str) -> str:
+    return "".join(ch for ch in (s or "") if ch.isdigit())
+
 def _session_actor():
     """
     Resolve the current actor purely from Flask session (no Flask-Login).
@@ -46,22 +49,25 @@ def _session_actor():
 
 def _scoped_filter(base=None, branch=None):
     """
-    Build a role-aware filter for customers using ONLY the session.
-      - agent: customers where agent_id == actor _id (string)
-      - manager: customers where manager_id == actor _id (string)
-      - inventory/admin/executive: all customers (optional branch)
-      - no session: allow wide search (public read)
+    Merge caller's filter with role/branch scope using $and (never overwrite).
+    Tolerate agent_id/manager_id stored as string or ObjectId.
     """
     base = dict(base or {})
     actor, role = _session_actor()
 
+    scope_clauses = []
     if role == "agent":
-        base["agent_id"] = str(actor["_id"])
+        aid_str = str(actor["_id"])
+        scope_clauses.append({"$or": [{"agent_id": aid_str}, {"agent_id": actor["_id"]}]})
     elif role == "manager":
-        base["manager_id"] = str(actor["_id"])
+        mid = actor["_id"]
+        scope_clauses.append({"$or": [{"manager_id": mid}, {"manager_id": str(mid)}]})
     else:
         if branch:
-            base["branch"] = branch
+            scope_clauses.append({"branch": branch})
+
+    if scope_clauses:
+        base = {"$and": [base] + scope_clauses}
 
     return base, actor, role
 
@@ -77,11 +83,20 @@ def _ensure_customer_in_scope(customer_id: str):
     return customer
 
 def _sum_paid_for_product(customer_oid: ObjectId, product_index: int) -> float:
+    """
+    Sum ALL payments for this customer's selected product, regardless of payment_type.
+    Also tolerate product_index stored as int or string in legacy rows.
+    """
+    idx = int(product_index)
+    query = {
+        "customer_id": customer_oid,
+        "$or": [
+            {"product_index": idx},
+            {"product_index": str(idx)}
+        ]
+    }
     total = 0.0
-    for p in payments_col.find(
-        {"customer_id": customer_oid, "payment_type": "PRODUCT", "product_index": int(product_index)},
-        {"amount": 1}
-    ):
+    for p in payments_col.find(query, {"amount": 1}):
         try:
             total += float(p.get("amount", 0) or 0)
         except Exception:
@@ -102,9 +117,13 @@ def transfer_product_search():
     Works even without session so the Inventory page is always usable.
     Supports ?q= and ?limit=&page=&branch=
     """
-    q = (request.args.get("q") or "").strip()
-    if not q:
+    raw_q = (request.args.get("q") or "").strip()
+    if not raw_q:
         return jsonify(ok=True, results=[])
+
+    # normalize phone
+    q_digits = _digits_only(raw_q)
+    phone_regex = q_digits if q_digits else raw_q
 
     try:
         limit = max(1, min(int(request.args.get("limit", 8)), 25))
@@ -119,12 +138,13 @@ def transfer_product_search():
     branch = (request.args.get("branch") or "").strip() or None
 
     # Role-aware / anonymous filter
-    filt, _actor, _role = _scoped_filter({
+    base_filter = {
         "$or": [
-            {"name": {"$regex": q, "$options": "i"}},
-            {"phone_number": {"$regex": q, "$options": "i"}},
+            {"name": {"$regex": raw_q, "$options": "i"}},
+            {"phone_number": {"$regex": phone_regex}},
         ]
-    }, branch=branch)
+    }
+    filt, _actor, _role = _scoped_filter(base_filter, branch=branch)
 
     projection = {"name": 1, "phone_number": 1, "image_url": 1, "purchases": 1}
     cursor = customers_col.find(filt, projection).skip(skip).limit(limit)
@@ -200,7 +220,7 @@ def transfer_product_execute():
 
     cust_oid   = customer["_id"]
     actor_id   = str(actor["_id"])
-    manager_id = actor.get("manager_id") or customer.get("manager_id") or ""
+    manager_id = customer.get("manager_id") or actor.get("manager_id") or ""
 
     # Compute totals + transfer amount (2/3 of total paid on FROM)
     total_paid_from = _sum_paid_for_product(cust_oid, from_index)
@@ -211,8 +231,12 @@ def transfer_product_execute():
     time_str  = now_utc.strftime("%H:%M:%S")
 
     # 1) Apply transfer to the LATEST payment on TO (or create if none)
+    #    Ignore payment_type, match product_index as int or string, and sort by created_at/date/time
     latest_to = payments_col.find_one(
-        {"customer_id": cust_oid, "payment_type": "PRODUCT", "product_index": to_index},
+        {
+            "customer_id": cust_oid,
+            "$or": [{"product_index": to_index}, {"product_index": str(to_index)}]
+        },
         sort=[("created_at", -1), ("date", -1), ("time", -1)]
     )
 
@@ -245,7 +269,7 @@ def transfer_product_execute():
             "amount": transfer_amount,
             "date": today_str,
             "time": time_str,
-            "payment_type": "PRODUCT",
+            "payment_type": "PRODUCT",  # keep for new rows (legacy reads are tolerant)
             "product_index": to_index,
             "product_name": to_prod.get("name", "Unnamed Product"),
             "product_total": to_total,
@@ -254,18 +278,20 @@ def transfer_product_execute():
         })
         created_new_payment = True
 
-    # 2) DELETE all payments for the FROM product
+    # 2) DELETE all payments for the FROM product (ignore payment_type; match int or string)
+    from_match = {
+        "customer_id": cust_oid,
+        "$or": [{"product_index": from_index}, {"product_index": str(from_index)}]
+    }
     from_payments = list(payments_col.find(
-        {"customer_id": cust_oid, "payment_type": "PRODUCT", "product_index": from_index},
+        from_match,
         {"_id": 1, "amount": 1, "date": 1, "agent_id": 1}
     ))
     deleted_count = len(from_payments)
     deleted_total = round(sum(float(p.get("amount", 0) or 0) for p in from_payments), 2)
 
     if deleted_count:
-        payments_col.delete_many(
-            {"customer_id": cust_oid, "payment_type": "PRODUCT", "product_index": from_index}
-        )
+        payments_col.delete_many(from_match)
 
     # 3) Move FROM purchase out of customer's purchases[] -> stopped_products
     stopped_doc = {
