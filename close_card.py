@@ -21,6 +21,9 @@ def _oid(v):
     except Exception:
         return None
 
+def _digits_only(s: str) -> str:
+    return "".join(ch for ch in (s or "") if ch.isdigit())
+
 def _session_actor():
     key_role_map = [
         ("agent_id", "agent"),
@@ -41,15 +44,28 @@ def _session_actor():
     return None, ""
 
 def _scoped_filter(base=None, branch=None):
+    """
+    Merge the caller's filter with role/branch scope using $and so we never
+    overwrite the existing text/phone $or filter.
+    Also tolerate agent_id/manager_id stored as string or ObjectId.
+    """
     base = dict(base or {})
     actor, role = _session_actor()
+
+    scope_clauses = []
     if role == "agent":
-        base["agent_id"] = str(actor["_id"])
+        aid_str = str(actor["_id"])
+        scope_clauses.append({"$or": [{"agent_id": aid_str}, {"agent_id": actor["_id"]}]})
     elif role == "manager":
-        base["manager_id"] = str(actor["_id"])
+        mid = actor["_id"]
+        scope_clauses.append({"$or": [{"manager_id": mid}, {"manager_id": str(mid)}]})
     else:
         if branch:
-            base["branch"] = branch
+            scope_clauses.append({"branch": branch})
+
+    if scope_clauses:
+        base = {"$and": [base] + scope_clauses}
+
     return base, actor, role
 
 def _ensure_customer_in_scope(customer_id: str):
@@ -63,11 +79,20 @@ def _ensure_customer_in_scope(customer_id: str):
     return customer
 
 def _sum_paid_for_product(customer_oid: ObjectId, product_index: int) -> float:
+    """
+    Sum ALL payments for this customer's selected product, regardless of payment_type.
+    Also tolerate product_index stored as int or string in legacy rows.
+    """
+    idx = int(product_index)
+    query = {
+        "customer_id": customer_oid,
+        "$or": [
+            {"product_index": idx},
+            {"product_index": str(idx)}
+        ]
+    }
     total = 0.0
-    for p in payments_col.find(
-        {"customer_id": customer_oid, "payment_type": "PRODUCT", "product_index": int(product_index)},
-        {"amount": 1}
-    ):
+    for p in payments_col.find(query, {"amount": 1}):
         try:
             total += float(p.get("amount", 0) or 0)
         except Exception:
@@ -83,9 +108,21 @@ def close_card_page():
 
 @close_card_bp.route("/close_card/search_customers", methods=["GET"])
 def close_card_search_customers():
-    q = (request.args.get("q") or "").strip()
-    if not q:
+    raw_q = (request.args.get("q") or "").strip()
+    if not raw_q:
         return jsonify(ok=True, results=[])
+
+    # Normalize phone digits when the query looks like a phone
+    q_digits = _digits_only(raw_q)
+
+    # Base filter: name matches OR phone matches (digits if present, else raw)
+    phone_regex = q_digits if q_digits else raw_q
+    base_filter = {
+        "$or": [
+            {"name": {"$regex": raw_q, "$options": "i"}},
+            {"phone_number": {"$regex": phone_regex}}
+        ]
+    }
 
     try:
         limit = max(1, min(int(request.args.get("limit", 8)), 25))
@@ -98,13 +135,7 @@ def close_card_search_customers():
     skip = (page - 1) * limit
 
     branch = (request.args.get("branch") or "").strip() or None
-
-    filt, _actor, _role = _scoped_filter({
-        "$or": [
-            {"name": {"$regex": q, "$options": "i"}},
-            {"phone_number": {"$regex": q, "$options": "i"}},
-        ]
-    }, branch=branch)
+    filt, _actor, _role = _scoped_filter(base_filter, branch=branch)
 
     projection = {"name": 1, "phone_number": 1, "image_url": 1, "purchases": 1}
     cursor = customers_col.find(filt, projection).skip(skip).limit(limit)
@@ -144,7 +175,7 @@ def close_card_search_customers():
 def close_card_suggest_products():
     """
     Given customer_id & product_index, compute:
-      - total_paid on selected product
+      - total_paid on selected product (ALL payments; no payment_type filter)
       - two_thirds = 2/3 * total_paid
       - one_third  = 1/3 * total_paid (forfeited)
     Return a list of products that two_thirds can fully purchase.
@@ -182,7 +213,11 @@ def close_card_suggest_products():
         base_filter["category"] = category
 
     # Pull a decent window and sort in Python by effective price desc (closest to budget)
-    docs = list(products_col.find(base_filter, {"name": 1, "price": 1, "cash_price": 1, "image_url": 1, "category": 1}).limit(100))
+    docs = list(products_col.find(
+        base_filter,
+        {"name": 1, "price": 1, "cash_price": 1, "image_url": 1, "category": 1}
+    ).limit(100))
+
     def eff_price(d):
         v = d.get("cash_price")
         if v is None:
@@ -191,6 +226,7 @@ def close_card_suggest_products():
             return float(v or 0.0)
         except Exception:
             return 0.0
+
     docs.sort(key=lambda d: eff_price(d), reverse=True)
     docs = docs[:limit]
 
@@ -208,7 +244,7 @@ def close_card_suggest_products():
 def close_card_execute():
     """
     Close a card for a customer:
-      - compute 2/3 of total paid on the selected product
+      - compute 2/3 of total paid on the selected product (ALL payments; no payment_type filter)
       - (only suggest product; no new purchase is created here)
       - DELETE ALL payments of that customer (any product/type)
       - MOVE the entire customer doc to `stopped_customers`
@@ -250,10 +286,16 @@ def close_card_execute():
     if target_product_id:
         t_oid = _oid(target_product_id)
         if t_oid:
-            target_product = products_col.find_one({"_id": t_oid}, {"name": 1, "price": 1, "cash_price": 1, "category": 1, "image_url": 1})
+            target_product = products_col.find_one(
+                {"_id": t_oid},
+                {"name": 1, "price": 1, "cash_price": 1, "category": 1, "image_url": 1}
+            )
 
     # 1) Delete ALL payments for this customer
-    all_payments = list(payments_col.find({"customer_id": cust_oid}, {"_id": 1, "amount": 1, "date": 1, "payment_type": 1}))
+    all_payments = list(payments_col.find(
+        {"customer_id": cust_oid},
+        {"_id": 1, "amount": 1, "date": 1, "payment_type": 1}
+    ))
     deleted_count = len(all_payments)
     deleted_total = round(sum(float(p.get("amount", 0) or 0) for p in all_payments), 2)
     if deleted_count:
@@ -311,11 +353,15 @@ def close_card_execute():
         }
     })
 
-    return jsonify(ok=True, message="Card closed. Customer archived and all payments deleted.",
-                   data={
-                       "two_thirds_budget": two_thirds,
-                       "one_third_forfeited": one_third,
-                       "deleted_payments_count": int(deleted_count),
-                       "deleted_payments_total": float(deleted_total),
-                       "target_product_id": (str(target_product["_id"]) if target_product else None)
-                   })
+    return jsonify(
+        ok=True,
+        message="Card closed. Customer archived and all payments deleted.",
+        data={
+            "counted_for_two_thirds": float(total_paid),  # explicit, for clarity
+            "two_thirds_budget": two_thirds,
+            "one_third_forfeited": one_third,
+            "deleted_payments_count": int(deleted_count),
+            "deleted_payments_total": float(deleted_total),
+            "target_product_id": (str(target_product["_id"]) if target_product else None)
+        }
+    )
