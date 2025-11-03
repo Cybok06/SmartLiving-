@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Inventory Analysis</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" href="https://res.cloudinary.com/dljpgzbto/image/upload/v1743993646/company-logo_dksb23.jpg" type="image/png">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #f4f4f4;
+      color: #333;
+      margin: 0;
+      padding: 0;
+      transition: background 0.3s, color 0.3s;
+    }
+
+    .navbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #ffffff;
+      padding: 10px 20px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+
+    .navbar a {
+      text-decoration: none;
+      color: #007bff;
+      font-weight: bold;
+      display: flex;
+      align-items: center;
+    }
+
+    .navbar img {
+      height: 30px;
+      margin-right: 10px;
+    }
+
+    .toggle-mode {
+      font-size: 20px;
+      cursor: pointer;
+    }
+
+    h1 {
+      text-align: center;
+      color: #007bff;
+      margin-top: 20px;
+    }
+
+    .chart-container {
+      max-width: 800px;
+      margin: 40px auto;
+      background: #fff;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      transition: background 0.3s, color 0.3s;
+    }
+
+    .dark-mode {
+      background-color: #121212;
+      color: #f1f1f1;
+    }
+
+    .dark-mode .chart-container {
+      background-color: #1e1e1e;
+      color: #f1f1f1;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="navbar">
+    <a href="{{ url_for('manager_dashboard.manager_dashboard_view') }}">
+      <img src="https://res.cloudinary.com/dljpgzbto/image/upload/v1743993646/company-logo_dksb23.jpg" alt="Logo">
+      Dashboard
+    </a>
+    <span class="toggle-mode" onclick="toggleDarkMode()">🌓</span>
+  </div>
+
+  <h1>Inventory Quantity Overview</h1>
+
+  <div class="chart-container">
+    <canvas id="barChart"></canvas>
+  </div>
+
+  <!-- Embed data -->
+  <script id="data-json" type="application/json">
+    {
+      "labels": {{ labels | tojson | safe }},
+      "quantities": {{ quantities | tojson | safe }}
+    }
+  </script>
+
+  <script>
+    // Dark Mode Toggle
+    function toggleDarkMode() {
+      document.body.classList.toggle("dark-mode");
+    }
+
+    // Load Chart
+    const data = JSON.parse(document.getElementById('data-json').textContent);
+
+    const chartData = {
+      labels: data.labels,
+      datasets: [{
+        label: 'Inventory Quantity',
+        data: data.quantities,
+        backgroundColor: 'rgba(54, 162, 235, 0.6)',
+        borderColor: 'rgba(54, 162, 235, 1)',
+        borderWidth: 1
+      }]
+    };
+
+    const config = {
+      type: 'bar',
+      data: chartData,
+      options: {
+        responsive: true,
+        scales: {
+          y: {
+            beginAtZero: true
+          }
+        }
+      }
+    };
+
+    new Chart(document.getElementById('barChart'), config);
+  </script>
+
+</body>
+</html>
+

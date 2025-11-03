@@ -1,0 +1,446 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Orders Inbox</title>
+
+  <!-- Bootstrap 5 + Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"/>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet"/>
+
+  <style>
+    :root{
+      --primary:#0d6efd; --primary-600:#0b5ed7;
+      --ink:#0b3b52; --muted:#64748b;
+      --bg:#f5f8ff; --card:#ffffff; --ring:#e6eefc;
+      --warn:#f59e0b; --shadow:0 12px 28px rgba(13,110,253,.10);
+    }
+    * { box-sizing: border-box; }
+    body{ background:var(--bg); color:#0f172a; font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial; }
+    .page-header{ display:flex; align-items:center; justify-content:space-between; gap:1rem; margin-bottom:1rem; }
+    .page-title{ font-weight:700; color:var(--ink); }
+    .title-accent{ width:72px; height:4px; border-radius:999px; background: linear-gradient(90deg, var(--primary), var(--primary-600)); }
+    .header-actions .btn{ border-radius:.65rem; }
+    .kpi .card{ border:1px solid var(--ring); box-shadow: var(--shadow); border-radius: 1rem; }
+    .kpi .num{ font-size:1.9rem; font-weight:800; letter-spacing:.2px; }
+    .kpi .icon{ width:48px; height:48px; display:grid; place-items:center; border-radius:12px; background:rgba(13,110,253,.08); color:var(--primary); font-size:1.5rem; }
+    .sticky-tools{ position:sticky; top:0; z-index:10; padding:.75rem; border-radius:.75rem; background:rgba(255,255,255,.8); backdrop-filter: blur(8px); border:1px solid var(--ring); box-shadow:0 8px 18px rgba(2,6,23,.06); }
+    .filters .form-select, .filters .form-control{ min-width:150px; border-color:var(--ring); border-radius:.6rem; }
+    .filters .form-select:focus, .filters .form-control:focus{ border-color:var(--primary-600); box-shadow:0 0 0 .2rem rgba(13,110,253,.20); }
+    .card-hover{ transition: box-shadow .2s ease, transform .06s ease; }
+    .card-hover:hover{ box-shadow:0 14px 30px rgba(2,6,23,.12); transform: translateY(-1px); }
+    .order-card{ border:1px solid var(--ring); border-radius:1rem; overflow:hidden; background:var(--card); }
+    .order-head{ display:flex; align-items:center; justify-content:space-between; gap:1rem; }
+    .order-meta{ font-size:.9rem; color:var(--muted); }
+    .table-sm th, .table-sm td{ vertical-align: middle; }
+    .table thead th{ position:sticky; top:0; background:#f8faff; z-index:1; border-bottom:1px solid var(--ring); }
+    .badge-cap{ text-transform:capitalize; font-weight:600; }
+    .badge.bg-warning{ background:rgba(245,158,11,.15) !important; color:#8a5a06; }
+    .badge.bg-success{ background:rgba(22,163,74,.15) !important; color:#166534; }
+    .badge.bg-secondary{ background:rgba(2,132,199,.18) !important; color:#0b3b52; }
+    .btn{ border-radius:.6rem; }
+    .btn-primary{ background:var(--primary); border-color:var(--primary); }
+    .btn-primary:hover{ background:var(--primary-600); border-color:var(--primary-600); }
+    .btn-outline-secondary{ border-color:var(--ring); color:#0f172a; }
+    .btn-outline-secondary:hover{ border-color:var(--primary); color:var(--primary); background:#fff; }
+    .soft{ color:var(--muted); }
+    .small-muted{ font-size:.85rem; color:var(--muted); }
+    .pagination .page-link{ border-radius:.5rem; }
+  </style>
+</head>
+<body>
+      {% include 'inventory_sidebar.html' %}
+
+  <div class="container py-4">
+
+    <!-- Header -->
+    <div class="page-header">
+      <div class="page-title-wrap">
+        <h1 class="page-title h4 mb-1">Incoming Orders</h1>
+        <div class="title-accent"></div>
+      </div>
+      <div class="header-actions d-flex gap-2">
+        <button class="btn btn-outline-secondary" id="refresh">
+          <i class="bi bi-arrow-clockwise me-1" aria-hidden="true"></i>Refresh
+        </button>
+      </div>
+    </div>
+
+    <!-- KPIs -->
+    <div class="row g-3 kpi mb-3">
+      <div class="col-12 col-md-6">
+        <div class="card card-hover">
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center">
+              <div>
+                <div class="soft">Outstanding delivery lines</div>
+                <div class="num" id="kpiOutstanding">0</div>
+              </div>
+              <div class="icon" aria-hidden="true"><i class="bi bi-truck"></i></div>
+            </div>
+            <div class="small-muted mt-2">Lines not fully delivered (qty_remaining &gt; 0).</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-12 col-md-6">
+        <div class="card card-hover">
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center">
+              <div>
+                <div class="soft">Postponed lines</div>
+                <div class="num" id="kpiPostponed">0</div>
+              </div>
+              <div class="icon" style="background:rgba(245,158,11,.12); color:#f59e0b;" aria-hidden="true">
+                <i class="bi bi-calendar-x"></i>
+              </div>
+            </div>
+            <div class="small-muted mt-2">Lines with status = postponed.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="sticky-tools mb-3">
+      <div class="row g-2 align-items-end filters filters-grid">
+        <div class="col-auto">
+          <label class="form-label mb-1" for="status">Status</label>
+          <select id="status" class="form-select form-select-sm">
+            <option value="">All</option>
+            <option value="open">Open</option>
+            <option value="partially_delivered">Partially delivered</option>
+            <option value="closed">Closed</option>
+          </select>
+        </div>
+        <div class="col-auto">
+          <label class="form-label mb-1" for="branch">Branch</label>
+          <select id="branch" class="form-select form-select-sm">
+            <option value="">All</option>
+          </select>
+        </div>
+        <div class="col-auto">
+          <label class="form-label mb-1" for="manager">Manager</label>
+          <select id="manager" class="form-select form-select-sm">
+            <option value="">All</option>
+          </select>
+        </div>
+        <div class="col-auto">
+          <label class="form-label mb-1" for="dateFrom">Date from</label>
+          <input id="dateFrom" type="date" class="form-control form-control-sm">
+        </div>
+        <div class="col-auto">
+          <label class="form-label mb-1" for="dateTo">Date to</label>
+          <input id="dateTo" type="date" class="form-control form-control-sm">
+        </div>
+        <div class="col-auto">
+          <label class="form-label mb-1" for="sort">Sort</label>
+          <select id="sort" class="form-select form-select-sm">
+            <option value="desc">Newest → Oldest</option>
+            <option value="asc">Oldest → Newest</option>
+          </select>
+        </div>
+        <div class="col-auto">
+          <button class="btn btn-primary btn-sm" id="apply">
+            <i class="bi bi-funnel me-1" aria-hidden="true"></i>Apply
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Results -->
+    <div id="list" class="vstack gap-3"></div>
+
+    <!-- Last deliveries (visible when branch filter chosen) -->
+    <div id="lastDeliveriesWrap" class="mt-4" style="display:none">
+      <h2 class="h5 mb-2">Last Deliveries in <span id="ldBranch"></span></h2>
+      <div class="table-responsive">
+        <table class="table table-sm table-striped align-middle">
+          <thead>
+            <tr>
+              <th>Date/Time</th>
+              <th>Order</th>
+              <th>Manager</th>
+              <th>Item</th>
+              <th class="text-end">Qty</th>
+            </tr>
+          </thead>
+          <tbody id="lastDeliveries"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- HISTORY (Closed orders) -->
+    <div class="mt-5">
+      <div class="d-flex align-items-center justify-content-between mb-2">
+        <h2 class="h5 mb-0">Closed Orders (History)</h2>
+        <div class="d-flex gap-2">
+          <select id="histPageSize" class="form-select form-select-sm" style="width:auto;">
+            <option value="10">10 / page</option>
+            <option value="20" selected>20 / page</option>
+            <option value="50">50 / page</option>
+          </select>
+          <button id="histApply" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-funnel me-1"></i>Apply Filters
+          </button>
+        </div>
+      </div>
+
+      <div class="row g-2 mb-2">
+        <div class="col-auto">
+          <label class="form-label mb-1" for="histBranch">Branch</label>
+          <select id="histBranch" class="form-select form-select-sm"><option value="">All</option></select>
+        </div>
+        <div class="col-auto">
+          <label class="form-label mb-1" for="histManager">Manager</label>
+          <select id="histManager" class="form-select form-select-sm"><option value="">All</option></select>
+        </div>
+        <div class="col-auto">
+          <label class="form-label mb-1" for="histFrom">Closed from</label>
+          <input id="histFrom" type="date" class="form-control form-control-sm">
+        </div>
+        <div class="col-auto">
+          <label class="form-label mb-1" for="histTo">Closed to</label>
+          <input id="histTo" type="date" class="form-control form-control-sm">
+        </div>
+        <div class="col-auto">
+          <label class="form-label mb-1" for="histSort">Sort</label>
+          <select id="histSort" class="form-select form-select-sm">
+            <option value="desc">Newest → Oldest</option>
+            <option value="asc">Oldest → Newest</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="table-responsive">
+        <table class="table table-sm align-middle table-striped">
+          <thead>
+            <tr>
+              <th>Closed At</th>
+              <th>Order</th>
+              <th>Manager</th>
+              <th>Branch</th>
+              <th>Items</th>
+            </tr>
+          </thead>
+          <tbody id="histTable"></tbody>
+        </table>
+      </div>
+
+      <nav>
+        <ul id="histPager" class="pagination pagination-sm mb-0"></ul>
+      </nav>
+    </div>
+  </div>
+
+  <script>
+  let META = { branches: [], managers: [] };
+
+  function qs() {
+    const p = new URLSearchParams();
+    const status = document.getElementById('status').value;
+    const branch = document.getElementById('branch').value;
+    const manager = document.getElementById('manager').value;
+    const dateFrom = document.getElementById('dateFrom').value;
+    const dateTo = document.getElementById('dateTo').value;
+    const sort = document.getElementById('sort').value;
+    if (status) p.set('status', status);
+    if (branch) p.set('branch', branch);
+    if (manager) p.set('manager_id', manager);
+    if (dateFrom) p.set('date_from', dateFrom);
+    if (dateTo) p.set('date_to', dateTo);
+    if (sort) p.set('sort', sort);
+    return p.toString();
+  }
+
+  async function loadMeta() {
+    const r = await fetch(`/inventory/orders/meta`);
+    const j = await r.json();
+    META = j || {};
+    const branchEls = [document.getElementById('branch'), document.getElementById('histBranch')];
+    const mgrEls = [document.getElementById('manager'), document.getElementById('histManager')];
+    (META.branches || []).forEach(b=>{
+      branchEls.forEach(el=>{
+        const o = document.createElement('option'); o.value=b; o.textContent=b; el.appendChild(o);
+      });
+    });
+    (META.managers || []).forEach(m=>{
+      mgrEls.forEach(el=>{
+        const o = document.createElement('option'); o.value=m._id; o.textContent=`${m.name} (${m.branch||'-'})`; el.appendChild(o);
+      });
+    });
+  }
+
+  function renderKpis(stats){
+    document.getElementById('kpiOutstanding').textContent = stats?.outstanding_lines ?? 0;
+    document.getElementById('kpiPostponed').textContent = stats?.postponed_lines ?? 0;
+  }
+
+  function badge(status) {
+    const map = { open:'bg-secondary', partially_delivered:'bg-warning', closed:'bg-success', cancelled:'bg-dark' };
+    return `<span class="badge ${map[status]||'bg-secondary'} badge-cap">${status||'open'}</span>`;
+  }
+
+  async function loadList() {
+    const r = await fetch(`/inventory/orders/list?` + qs());
+    const j = await r.json();
+    const root = document.getElementById('list'); root.innerHTML = '';
+    if (!j.ok) { root.innerHTML = `<div class="alert alert-danger">${j.message||'Failed to load'}</div>`; return; }
+
+    renderKpis(j.stats || {});
+
+    (j.results || []).forEach(o=>{
+      const card = document.createElement('div'); card.className="order-card card-hover";
+      const items = (o.items||[]).map(it=>{
+        const remaining = (it.qty||0) - (it.delivered_qty||0);
+        return `
+        <tr>
+          <td>${it.name}</td>
+          <td class="text-end">${it.qty}</td>
+          <td class="text-end">${it.delivered_qty||0}</td>
+          <td>${it.status||''}${remaining>0?` <span class="badge bg-secondary ms-1" title="Remaining">${remaining}</span>`:''}</td>
+          <td>${it.expected_date||''}</td>
+          <td class="text-nowrap">
+            <div class="input-group">
+              <input class="form-control form-control-sm" type="number" min="1" placeholder="qty">
+              <button class="btn btn-sm btn-success deliver">Deliver</button>
+            </div>
+            <div class="input-group mt-1">
+              <input class="form-control form-control-sm" type="date">
+              <button class="btn btn-sm btn-warning postpone">Postpone</button>
+            </div>
+          </td>
+        </tr>`;
+      }).join('');
+      card.innerHTML = `
+        <div class="card-body">
+          <div class="order-head">
+            <div><strong>Order:</strong> ${o._id} &nbsp; ${badge(o.status)}</div>
+            <div class="small text-muted">Updated: ${o.updated_at? new Date(o.updated_at).toLocaleString():''}</div>
+          </div>
+          <div class="order-meta">Manager: ${o.manager_name || o.manager_id} &middot; Branch: ${o.branch||'-'}</div>
+          <div class="table-responsive mt-3" style="max-height:60vh;">
+            <table class="table table-sm align-middle">
+              <thead><tr><th>Item</th><th class="text-end">Qty</th><th class="text-end">Delivered</th><th>Status</th><th>Expected</th><th style="width:280px">Actions</th></tr></thead>
+              <tbody>${items}</tbody>
+            </table>
+          </div>
+        </div>`;
+
+      [...card.querySelectorAll('tbody tr')].forEach((tr, idx)=>{
+        const line = o.items[idx];
+        tr.querySelector('.deliver').onclick = async ()=>{
+          const q = parseInt(tr.querySelector('input[type="number"]').value||'0',10);
+          if (!q) return alert('Enter qty');
+          const r = await fetch('/inventory/orders/line/deliver', {method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({order_id:o._id, line_id:line.line_id, qty: q})});
+          const j = await r.json(); if (!j.ok) return alert(j.message||'Failed'); loadList(); loadHistory(); // update history if closed
+        };
+        tr.querySelector('.postpone').onclick = async ()=>{
+          const d = tr.querySelector('input[type="date"]').value;
+          if (!d) return alert('Pick a date');
+          const r = await fetch('/inventory/orders/line/postpone', {method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({order_id:o._id, line_id:line.line_id, to_date:d, reason:"Rescheduled"})});
+          const j = await r.json(); if (!j.ok) return alert(j.message||'Failed'); loadList();
+        };
+      });
+
+      document.getElementById('list').appendChild(card);
+    });
+
+    const branch = document.getElementById('branch').value;
+    const wrap = document.getElementById('lastDeliveriesWrap');
+    if (branch) {
+      document.getElementById('ldBranch').textContent = branch;
+      const r2 = await fetch(`/inventory/orders/last_deliveries?branch=${encodeURIComponent(branch)}&` + qs());
+      const j2 = await r2.json();
+      const tb = document.getElementById('lastDeliveries'); tb.innerHTML='';
+      (j2.results||[]).forEach(x=>{
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${x.at ? new Date(x.at).toLocaleString() : ''}</td>
+          <td><code>${x.order_id}</code></td>
+          <td>${x.manager_name || x.manager_id}</td>
+          <td>${x.item_name}</td>
+          <td class="text-end">${x.qty}</td>`;
+        tb.appendChild(tr);
+      });
+      wrap.style.display = '';
+    } else {
+      wrap.style.display = 'none';
+    }
+  }
+
+  // --------------------------
+  // HISTORY (Closed orders)
+  // --------------------------
+  let HIST_PAGE = 1;
+
+  function histParams(){
+    const p = new URLSearchParams();
+    const br = document.getElementById('histBranch').value;
+    const mg = document.getElementById('histManager').value;
+    const df = document.getElementById('histFrom').value;
+    const dt = document.getElementById('histTo').value;
+    const so = document.getElementById('histSort').value;
+    const ps = document.getElementById('histPageSize').value;
+    if (br) p.set('branch', br);
+    if (mg) p.set('manager_id', mg);
+    if (df) p.set('date_from', df);
+    if (dt) p.set('date_to', dt);
+    p.set('sort', so || 'desc');
+    p.set('page', HIST_PAGE);
+    p.set('page_size', ps || 20);
+    return p.toString();
+  }
+
+  function renderHistPager(page, pages){
+    const ul = document.getElementById('histPager'); ul.innerHTML='';
+    const mk = (label, target, disabled=false, active=false)=>{
+      const li = document.createElement('li');
+      li.className = `page-item ${disabled?'disabled':''} ${active?'active':''}`;
+      const a = document.createElement('a'); a.className='page-link'; a.href='#'; a.textContent = label;
+      a.onclick = (e)=>{ e.preventDefault(); if (disabled || active) return; HIST_PAGE = target; loadHistory(); };
+      li.appendChild(a); ul.appendChild(li);
+    };
+    mk('«', 1, page<=1);
+    mk('‹', Math.max(1,page-1), page<=1);
+    for(let i=Math.max(1,page-2); i<=Math.min(pages,page+2); i++){
+      mk(String(i), i, false, i===page);
+    }
+    mk('›', Math.min(pages,page+1), page>=pages);
+    mk('»', pages, page>=pages);
+  }
+
+  async function loadHistory(){
+    const r = await fetch(`/inventory/orders/history?` + histParams());
+    const j = await r.json();
+    const tb = document.getElementById('histTable'); tb.innerHTML='';
+    (j.results||[]).forEach(o=>{
+      const tr = document.createElement('tr');
+      const items = (o.items||[]).map(x=>`${x.name} (${x.qty} → ${x.delivered_qty})`).join(', ');
+      tr.innerHTML = `
+        <td>${o.closed_at ? new Date(o.closed_at).toLocaleString() : ''}</td>
+        <td><code>${o._id}</code></td>
+        <td>${o.manager_name || o.manager_id}</td>
+        <td>${o.branch || '-'}</td>
+        <td>${items}</td>`;
+      tb.appendChild(tr);
+    });
+    renderHistPager(j.page || 1, j.pages || 1);
+  }
+
+  // events
+  document.getElementById('apply').onclick = loadList;
+  document.getElementById('refresh').onclick = ()=>{ loadList(); loadHistory(); };
+  document.getElementById('histApply').onclick = ()=>{ HIST_PAGE = 1; loadHistory(); };
+  document.getElementById('histPageSize').onchange = ()=>{ HIST_PAGE = 1; loadHistory(); };
+
+  (async function init(){
+    await loadMeta();
+    await loadList();
+    await loadHistory();
+  })();
+  </script>
+</body>
+</html>
