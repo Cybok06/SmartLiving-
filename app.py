@@ -34,9 +34,10 @@ from executive_view_customer import executive_view_bp
 from executive_agent_target import executive_agent_target_bp
 from sales_close_agent import sales_close_agent_bp
 from inventory_dashboard import inventory_dashboard
+from routes.inventory.profile import inventory_profile_bp
 
-
-
+# ✅ NEW: Inventory Orders blueprint
+from routes.inventory.orders import inventory_orders_bp
 
 # Manager Blueprints
 from register import register_bp
@@ -59,6 +60,9 @@ from manager_inventory_analysis import manager_inventory_analysis_bp
 from manager_view_admin_tasks import admin_task_view_bp
 from view_targets import view_targets_bp
 from executive_tasks import executive_task_bp
+
+# ✅ NEW: Manager Orders blueprint
+from routes.manager.orders import manager_orders_bp
 
 # Agent Blueprints
 from dashboard_agent import agent_dashboard_bp
@@ -89,18 +93,7 @@ from manager_deposits import manager_deposits_bp
 # app.py (relevant bits)
 from executive_deposits import executive_deposits_bp
 from manager_expense import manager_expense_bp
-
 from executive_expense import executive_expense_bp
-
-
-
-
-
-
-
-
-
-
 
 app = Flask(__name__)
 app.secret_key = 'supersecretkey'
@@ -160,13 +153,10 @@ app.register_blueprint(manager_deposits_bp)
 app.register_blueprint(executive_deposits_bp)
 app.register_blueprint(manager_expense_bp)
 app.register_blueprint(executive_expense_bp)
+app.register_blueprint(inventory_profile_bp)
 
-
-
-
-
-
-
+# ✅ Register NEW Inventory Orders routes (URLs under /inventory/orders)
+app.register_blueprint(inventory_orders_bp)
 
 # Manager Blueprints
 app.register_blueprint(transfer_bp)
@@ -188,6 +178,9 @@ app.register_blueprint(manager_inventory_analysis_bp)
 app.register_blueprint(admin_task_view_bp)
 app.register_blueprint(view_targets_bp)
 
+# ✅ Register NEW Manager Orders routes (URLs under /manager/orders)
+app.register_blueprint(manager_orders_bp)
+
 # Agent Blueprints
 app.register_blueprint(agent_dashboard_bp)
 app.register_blueprint(agent_profile_bp)
@@ -205,19 +198,15 @@ app.register_blueprint(agent_account_bp)
 app.register_blueprint(target_bp)
 app.register_blueprint(packages_bp, url_prefix="/view")   # or "" if you prefer
 
-
 # Serve uploaded images from Render Disk
-# Where to store & serve uploads (./uploads beside app.py)
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 app.config.setdefault("UPLOADS_ROOT", os.path.join(BASE_DIR, "uploads"))
 os.makedirs(app.config["UPLOADS_ROOT"], exist_ok=True)
 
-# PUBLIC: Serve uploaded files without requiring login
 @app.route('/uploads/<path:filename>')
 def serve_uploaded_file(filename):
     return send_from_directory(app.config["UPLOADS_ROOT"], filename)
 
-# Default route
 @app.route('/')
 def root():
     return redirect(url_for('login.login'))
