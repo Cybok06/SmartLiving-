@@ -8,7 +8,8 @@
   <link rel="icon" href="https://res.cloudinary.com/dljpgzbto/image/upload/v1743993646/company-logo_dksb23.jpg" type="image/png" />
   <style>
     :root{
-      --ink:#0b3b52; --muted:#64748b; --ring:#e9eaf1; --soft:#f8f9ff; --ok:#16a34a; --bad:#dc2626;
+      --ink:#0b3b52; --muted:#64748b; --ring:#e9eaf1; --soft:#f8f9ff;
+      --ok:#16a34a; --bad:#dc2626; --warn:#f59e0b;
     }
     body {
       background-color: #f3e8ff;
@@ -19,9 +20,8 @@
     .dark-mode .navbar, .dark-mode .footer, .dark-mode .card { background-color: #343a40 !important; color: white; }
     .footer { background-color: #e0c7ff; padding: 10px; text-align: center; margin-top: 40px; border-top: 1px solid #ccc; }
     .form-control, .btn { border-radius: 8px; }
-    .checkbox-group label {
-      display: flex; align-items: center; gap: 5px; background: #f8f8f8; padding: 8px 10px; border-radius: 5px; border: 1px solid #ccc;
-    }
+    .checkbox-group label { display: flex; align-items: center; gap: 5px; background: #f8f8f8; padding: 8px 10px; border-radius: 5px; border: 1px solid #ccc; }
+
     /* Pro touches */
     .card { border:1px solid var(--ring); }
     .section-title { font-weight:700; color:var(--ink); }
@@ -29,8 +29,16 @@
     .input-group-text { background:#fff; }
     .hint { font-size:.8rem; color:var(--muted); }
     .pill { display:inline-block; border:1px solid var(--ring); border-radius:999px; padding:.15rem .5rem; font-size:.8rem; color:#0f172a; background:#fff; }
-    .badge-pos { color:var(--ok); background:rgba(22,163,74,.12); }
-    .badge-neg { color:var(--bad); background:rgba(220,38,38,.12); }
+    .badge-pos { color:var(--ok); background:rgba(22,163,74,.12); border-radius:999px; padding:2px 8px; }
+    .badge-neg { color:var(--bad); background:rgba(220,38,38,.12); border-radius:999px; padding:2px 8px; }
+
+    /* Upload UI */
+    #upload-status { min-height:28px; display:flex; align-items:center; gap:10px; font-weight:600; color:#6b7280; }
+    .spinner-border { width:1.25rem; height:1.25rem; }
+    .thumb-wrap { display:flex; align-items:center; gap:12px; margin-top:6px; }
+    .thumb { width:120px; height:120px; object-fit:cover; border-radius:10px; display:none; border:1px solid #e5e7eb; box-shadow:0 4px 16px rgba(0,0,0,.08); }
+    .status-ok { color: var(--ok); }
+    .status-fail { color: var(--bad); }
   </style>
 </head>
 <body>
@@ -67,12 +75,12 @@
       </div>
       <p class="subtext mb-4">Fill in product details, upload an image, choose branches, and set pricing. <span class="d-none d-sm-inline">Margin updates automatically as you type.</span></p>
 
-      <form method="POST" enctype="multipart/form-data" onsubmit="return calculateFinalPrice();">
+      <form id="invForm" method="POST" enctype="multipart/form-data" onsubmit="return calculateFinalPrice();">
         <div class="row g-3">
           <!-- Basic -->
           <div class="col-md-6">
             <label class="form-label">Product Name</label>
-            <input type="text" name="name" class="form-control" required>
+            <input type="text" name="name" class="form-control" required autocomplete="off">
           </div>
           <div class="col-md-6">
             <label class="form-label">Quantity</label>
@@ -151,7 +159,12 @@
             <label for="image" class="form-label">Upload Image</label>
             <input type="file" id="image" name="image" class="form-control" accept="image/*" required>
             <input type="hidden" id="image_url" name="image_url">
-            <p id="upload-status" class="mt-2 text-muted"></p>
+            <input type="hidden" id="image_id" name="image_id">
+            <div id="upload-status" class="mt-2" aria-live="polite"></div>
+            <div class="thumb-wrap">
+              <img id="thumb" class="thumb" alt="Preview">
+              <div id="uploadMessage" class="small text-muted"></div>
+            </div>
           </div>
 
           <!-- Managers -->
@@ -171,7 +184,7 @@
           </div>
 
           <div class="col-12">
-            <button type="submit" class="btn btn-success w-100">Add Product</button>
+            <button id="submitBtn" type="submit" class="btn btn-success w-100" disabled>Add Product</button>
           </div>
         </div>
       </form>
@@ -213,9 +226,9 @@
       const m = s - c;
       $('margin').value = asMoney(m);
       if (m > 0) {
-        badge.innerHTML = '<span class="badge badge-pos">Profit +' + asMoney(m) + '</span>';
+        badge.innerHTML = '<span class="badge-pos">Profit +' + asMoney(m) + '</span>';
       } else if (m < 0) {
-        badge.innerHTML = '<span class="badge badge-neg">Loss ' + asMoney(m) + '</span>';
+        badge.innerHTML = '<span class="badge-neg">Loss ' + asMoney(m) + '</span>';
       } else {
         badge.innerHTML = '<span class="hint">Break-even</span>';
       }
@@ -255,12 +268,17 @@
       if ($('selling_price').value === "" && !isNaN(finalPrice)) $('selling_price').value = asMoney(finalPrice);
       computeMargin();
 
-      // optional: block negative margin (comment out if not desired)
+      // optional: block negative margin (confirm)
       const c = parseFloat($('cost_price').value), s = parseFloat($('selling_price').value);
       if (!isNaN(c) && !isNaN(s) && (s - c) < 0) {
         if (!confirm("Margin is negative. Do you still want to submit?")) return false;
       }
       return true;
+    }
+
+    function enableSubmitIfReady() {
+      const ok = !!$('image_url').value;
+      $('submitBtn').disabled = !ok;
     }
 
     // Live wiring
@@ -290,12 +308,20 @@
       });
     });
 
-    // ✅ Upload locally to Flask endpoint
+    // === Upload via backend (pro, silent) ===
     $('image').addEventListener('change', async function (event) {
       const file = event.target.files[0];
       if (!file) return;
-      const uploadStatus = $('upload-status');
-      uploadStatus.textContent = "Uploading image...";
+
+      // reset state
+      $('image_url').value = '';
+      $('image_id').value = '';
+      $('thumb').style.display = 'none';
+      $('uploadMessage').textContent = '';
+      enableSubmitIfReady();
+
+      // minimal loader
+      $('upload-status').innerHTML = '<div class="spinner-border" role="status" aria-hidden="true"></div><span>Uploading image…</span>';
 
       const formData = new FormData();
       formData.append('image', file);
@@ -305,13 +331,19 @@
         const data = await response.json();
         if (data.success) {
           $('image_url').value = data.image_url;
-          uploadStatus.textContent = "✅ Image uploaded successfully.";
+          $('image_id').value = data.image_id || '';
+          $('thumb').src = data.image_url;
+          $('thumb').style.display = 'block';
+          $('upload-status').innerHTML = '<span class="status-ok">✔ Image uploaded</span>';
+          enableSubmitIfReady();
         } else {
-          uploadStatus.textContent = "❌ Upload failed: " + (data.error || "Unknown error.");
+          $('upload-status').innerHTML = '<span class="status-fail">✖ Upload failed</span>';
+          $('uploadMessage').textContent = (data.error || 'Please try again.');
           console.error('Upload error:', data);
         }
       } catch (error) {
-        uploadStatus.textContent = "❌ Upload failed. Network error.";
+        $('upload-status').innerHTML = '<span class="status-fail">✖ Upload failed</span>';
+        $('uploadMessage').textContent = 'Network error. Please try again.';
         console.error(error);
       }
     });
