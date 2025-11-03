@@ -1,10 +1,12 @@
+# add_inventory.py
 import os
 import json
 import math
 import traceback
 from datetime import datetime
-from typing import Optional, Tuple
+from typing import Optional
 
+import requests
 from flask import (
     Blueprint, render_template, request, redirect,
     url_for, flash, jsonify, send_from_directory
@@ -18,12 +20,19 @@ add_inventory_bp = Blueprint('add_inventory', __name__)
 UPLOAD_FOLDER = os.path.join(os.getcwd(), 'uploads')
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 
-# Ensure uploads folder exists
+# ========= Cloudflare Images (hardcoded) =========
+CF_ACCOUNT_ID   = "63e6f91eec9591f77699c4b434ab44c6"
+CF_IMAGES_TOKEN = "Brz0BEfl_GqEUjEghS2UEmLZhK39EUmMbZgu_hIo"
+CF_HASH         = "h9fmMoa1o2c2P55TcWJGOg"
+DEFAULT_VARIANT = "public"   # ensure this variant exists in Cloudflare Images
+
+# Ensure uploads folder exists (legacy/local fallback route still supported)
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 # DB collections
 inventory_col = db.inventory
-users_col = db.users
+users_col     = db.users
+images_col    = db.images      # NEW: track uploaded images (provider metadata)
 
 
 # -----------------------------
@@ -32,12 +41,7 @@ users_col = db.users
 def allowed_file(filename: str) -> bool:
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-
 def parse_money(val: str) -> Optional[float]:
-    """
-    Parse a money-like string to float. Returns None for empty/invalid.
-    Accepts "123", "123.45", "  123  ".
-    """
     if val is None:
         return None
     s = str(val).strip()
@@ -47,7 +51,6 @@ def parse_money(val: str) -> Optional[float]:
         return float(s)
     except Exception:
         return None
-
 
 def parse_int(val: str) -> Optional[int]:
     if val is None:
@@ -60,12 +63,10 @@ def parse_int(val: str) -> Optional[int]:
     except Exception:
         return None
 
-
 def parse_profit(profit_input: str, initial_price: float) -> Optional[float]:
     """
     Returns the computed final price given initial_price and profit_input.
     profit_input can be '50' (amount) or '30%' (percent).
-    Returns None if invalid.
     """
     if profit_input is None:
         return None
@@ -82,16 +83,13 @@ def parse_profit(profit_input: str, initial_price: float) -> Optional[float]:
     except Exception:
         return None
 
-
 def to_object_id(val: str) -> Optional[ObjectId]:
     try:
         return ObjectId(val)
     except (InvalidId, TypeError):
         return None
 
-
 def money2(v: Optional[float]) -> Optional[float]:
-    """Round to 2dp if not None."""
     if v is None or (isinstance(v, float) and (math.isinf(v) or math.isnan(v))):
         return None
     try:
@@ -101,36 +99,82 @@ def money2(v: Optional[float]) -> Optional[float]:
 
 
 # -----------------------------
-# Image upload endpoint
+# Cloudflare upload endpoint
 # -----------------------------
 @add_inventory_bp.route('/add_inventory/upload_image', methods=['POST'])
 def upload_inventory_image():
-    if 'image' not in request.files:
-        return jsonify({'success': False, 'error': 'No image in request'})
+    """
+    Receives 'image' file, uploads it to Cloudflare Images using Direct Creator Upload,
+    stores a metadata record in db.images, and returns JSON:
+      { success, image_url, image_id, variant }
+    """
+    try:
+        if 'image' not in request.files:
+            return jsonify({'success': False, 'error': 'No image in request'}), 400
 
-    image = request.files['image']
-    if image.filename == '':
-        return jsonify({'success': False, 'error': 'No file selected'})
+        image = request.files['image']
+        if image.filename == '':
+            return jsonify({'success': False, 'error': 'No file selected'}), 400
 
-    if image and allowed_file(image.filename):
-        # sanitize + avoid overwrite
-        filename = secure_filename(image.filename)
-        save_path = os.path.join(UPLOAD_FOLDER, filename)
+        if not (image and allowed_file(image.filename)):
+            return jsonify({'success': False, 'error': 'Invalid file type'}), 400
 
-        counter = 1
-        base, ext = os.path.splitext(filename)
-        while os.path.exists(save_path):
-            filename = f"{base}_{counter}{ext}"
-            save_path = os.path.join(UPLOAD_FOLDER, filename)
-            counter += 1
+        # Step 1: one-time upload URL
+        direct_url = f"https://api.cloudflare.com/client/v4/accounts/{CF_ACCOUNT_ID}/images/v2/direct_upload"
+        headers    = {"Authorization": f"Bearer {CF_IMAGES_TOKEN}"}
+        # (optional metadata example)
+        # data = {"metadata": json.dumps({"source": "add_inventory_form", "orig": secure_filename(image.filename)})}
+        data = {}
 
-        image.save(save_path)
-        return jsonify({'success': True, 'image_url': f'/uploads/{filename}'})
+        res = requests.post(direct_url, headers=headers, data=data, timeout=20)
+        try:
+            j = res.json()
+        except Exception:
+            return jsonify({'success': False, 'error': 'Cloudflare (direct_upload) returned non-JSON'}), 502
 
-    return jsonify({'success': False, 'error': 'Invalid file type'})
+        if not j.get('success'):
+            return jsonify({'success': False, 'error': 'Cloudflare direct_upload failed', 'details': j}), 400
+
+        upload_url = j['result']['uploadURL']
+        image_id   = j['result']['id']
+
+        # Step 2: upload binary to upload_url
+        up = requests.post(
+            upload_url,
+            files={'file': (secure_filename(image.filename), image.stream, image.mimetype or 'application/octet-stream')},
+            timeout=60
+        )
+        try:
+            uj = up.json()
+        except Exception:
+            return jsonify({'success': False, 'error': 'Cloudflare (upload) returned non-JSON'}), 502
+
+        if not uj.get('success'):
+            return jsonify({'success': False, 'error': 'Cloudflare upload failed', 'details': uj}), 400
+
+        # Step 3: build delivery URL and log to DB
+        variant   = request.args.get('variant', DEFAULT_VARIANT)
+        image_url = f"https://imagedelivery.net/{CF_HASH}/{image_id}/{variant}"
+
+        images_col.insert_one({
+            'provider': 'cloudflare_images',
+            'image_id': image_id,
+            'variant': variant,
+            'url': image_url,
+            'original_filename': secure_filename(image.filename),
+            'mimetype': image.mimetype,
+            'created_at': datetime.utcnow(),
+            'module': 'add_inventory'
+        })
+
+        return jsonify({'success': True, 'image_url': image_url, 'image_id': image_id, 'variant': variant})
+
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 
-# Serve uploaded images
+# (Legacy) Serve local uploads if you still use them anywhere
 @add_inventory_bp.route('/uploads/<filename>')
 def uploaded_inventory_file(filename):
     return send_from_directory(UPLOAD_FOLDER, filename)
@@ -146,7 +190,11 @@ def add_inventory():
             # ------- Read basic fields -------
             name = (request.form.get('name') or '').strip()
             description = (request.form.get('description') or '').strip()
+
+            # image_url now expected to be a Cloudflare delivery URL from /add_inventory/upload_image
             image_url = (request.form.get('image_url') or '').strip()
+            image_id  = (request.form.get('image_id') or '').strip()  # optional, useful later (delete/variants)
+
             selected_managers = request.form.getlist('manager_ids')
 
             # legacy pricing inputs (kept)
@@ -156,7 +204,7 @@ def add_inventory():
             # new pricing inputs
             cost_price_str = (request.form.get('cost_price') or '').strip()
             selling_price_str = (request.form.get('selling_price') or '').strip()
-            margin_str = (request.form.get('margin') or '').strip()  # read but we will recompute server-side
+            margin_str = (request.form.get('margin') or '').strip()  # read but recompute server-side
 
             qty_str = (request.form.get('qty') or '').strip()
 
@@ -179,35 +227,38 @@ def add_inventory():
                 flash("❌ Quantity must be a positive integer.", "danger")
                 return redirect(url_for('add_inventory.add_inventory'))
 
-            # Final price from legacy model (server-side recalculation for safety)
+            # Final price from legacy model (server-side recalculation)
             final_price = parse_profit(profit_input, initial_price)
             if final_price is None:
                 flash("❌ Profit must be a valid amount or percentage (e.g., 50 or 30%).", "danger")
                 return redirect(url_for('add_inventory.add_inventory'))
 
-            # ------- New pricing trio logic (safe defaults) -------
-            # Default cost_price from initial_price if blank
+            # ------- New pricing trio logic -------
             cost_price = parse_money(cost_price_str)
             if cost_price is None:
                 cost_price = initial_price
 
-            # Default selling_price from final_price if blank
             selling_price = parse_money(selling_price_str)
             if selling_price is None:
                 selling_price = final_price
 
-            # Margin is always recomputed server-side to avoid tampering
             margin = (selling_price - cost_price) if (selling_price is not None and cost_price is not None) else None
 
             # Round to 2dp
             initial_price = money2(initial_price)
-            final_price = money2(final_price)
-            cost_price = money2(cost_price)
+            final_price   = money2(final_price)
+            cost_price    = money2(cost_price)
             selling_price = money2(selling_price)
-            margin = money2(margin)
+            margin        = money2(margin)
 
-            # ------- Basic image_url sanity check -------
-            if not (image_url.startswith('/uploads/') or image_url.startswith('http://') or image_url.startswith('https://')):
+            # ------- Image URL sanity check -------
+            # Accept local legacy, http(s), or Cloudflare delivery URLs for this account
+            valid_url = (
+                image_url.startswith('/uploads/')
+                or image_url.startswith('http://')
+                or image_url.startswith('https://')
+            )
+            if not valid_url:
                 flash("❌ Image URL looks invalid. Please re-upload the image.", "danger")
                 return redirect(url_for('add_inventory.add_inventory'))
 
@@ -217,20 +268,20 @@ def add_inventory():
             for manager_id in selected_managers:
                 oid = to_object_id(manager_id)
                 if not oid:
-                    # skip invalid ObjectId; continue with others
                     continue
 
                 doc = {
                     'name': name,
                     'qty': qty,
                     'description': description,
-                    'image_url': image_url,
+                    'image_url': image_url,              # Cloudflare URL stored here
+                    'image_id': image_id or None,        # optional CF image_id
                     'manager_id': oid,
 
-                    # legacy pricing (kept for compatibility)
+                    # legacy pricing (kept)
                     'initial_price': initial_price,
                     'profit_input': profit_input,
-                    'price': final_price,  # final selling price used by legacy flow
+                    'price': final_price,
 
                     # new pricing fields
                     'cost_price': cost_price,
