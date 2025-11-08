@@ -3,7 +3,7 @@ from flask_bcrypt import Bcrypt
 from flask_login import login_user, logout_user
 from bson.objectid import ObjectId
 from user_model import User  # used for agent login via Flask-Login
-from datetime import datetime
+from datetime import datetime, timedelta
 import requests
 from db import db
 
@@ -11,8 +11,9 @@ login_bp = Blueprint('login', __name__)
 bcrypt = Bcrypt()
 
 # MongoDB collections
-users_col = db.users
-logins_col = db.login_logs  # Login logs
+users_col   = db.users
+logins_col  = db.login_logs  # Login logs
+complaints_col = db.complaints  # ✅ Complaints collection for dashboard/badges
 
 # ---------------------------
 # Utilities
@@ -28,6 +29,12 @@ def get_location(ip: str):
         }
     except Exception:
         return {}
+
+def _date_to_str(d):
+    """Safe date->YYYY-MM-DD (or empty)."""
+    if isinstance(d, datetime):
+        return d.strftime("%Y-%m-%d")
+    return d or ""
 
 @login_bp.record_once
 def on_load(state):
@@ -72,11 +79,8 @@ def _set_role_session(role: str, user_data: dict) -> tuple[str, str]:
         },
         # NEW: inventory role
         'inventory': {
-            # Keep keys consistent with other roles for clarity
             'set': lambda: (session.__setitem__('inventory_id', user_id_str),
                             session.__setitem__('inventory_name', user_data.get('name', username))),
-            # Point this to your inventory dashboard blueprint endpoint
-            # Create a blueprint: inventory_dashboard with a view function inventory_dashboard_view
             'endpoint': 'inventory_dashboard.inventory_dashboard_view'
         }
     }
@@ -146,13 +150,82 @@ def login():
     return render_template('login.html')
 
 # ---------------------------
-# Admin dashboard (local route)
+# Admin dashboard (local route) ✅ UPDATED to pass admin + complaint summaries
 # ---------------------------
 @login_bp.route('/admin/dashboard')
 def admin_dashboard():
     if 'admin_id' not in session:
         return redirect(url_for('login.login'))
-    return render_template('admin_dashboard.html')
+
+    # Admin doc for hero section/profile chip
+    try:
+        admin = users_col.find_one({'_id': ObjectId(session['admin_id'])}) or {}
+    except Exception:
+        admin = {}
+
+    # Complaint summary tiles
+    now = datetime.utcnow()
+    start_today = datetime(now.year, now.month, now.day)
+    end_today = start_today + timedelta(days=1)
+
+    q_unresolved = {"status": {"$nin": ["Resolved", "Closed"]}}
+    q_breaching  = {"status": {"$nin": ["Resolved", "Closed"]}, "sla_due": {"$lte": now}}
+    q_resolved_30 = {
+        "status": {"$in": ["Resolved", "Closed"]},
+        "date_closed": {"$gte": now - timedelta(days=30)}
+    }
+
+    stats = {
+        "open": complaints_col.count_documents(q_unresolved),
+        "breaching": complaints_col.count_documents(q_breaching),
+        "resolved_30": complaints_col.count_documents(q_resolved_30),
+        "opened_today": complaints_col.count_documents({"created_at": {"$gte": start_today, "$lt": end_today}}),
+        "closed_today": complaints_col.count_documents({
+            "status": {"$in": ["Resolved", "Closed"]},
+            "date_closed": {"$gte": start_today, "$lt": end_today}
+        }),
+    }
+
+    # Top issue types (small chart/list)
+    pipeline = [
+        {"$group": {"_id": "$issue_type", "n": {"$sum": 1}}},
+        {"$sort": {"n": -1}},
+        {"$limit": 6},
+    ]
+    issue_tops_raw = list(complaints_col.aggregate(pipeline))
+    issue_tops = [{"issue": (x.get("_id") or "Uncategorized"), "count": x.get("n", 0)} for x in issue_tops_raw]
+
+    # Recent complaints (compact list)
+    recent = list(complaints_col.find({}).sort([("created_at", -1)]).limit(8))
+    for r in recent:
+        r["_id"] = str(r["_id"])
+        r["date_reported"] = _date_to_str(r.get("date_reported"))
+        r["date_closed"]   = _date_to_str(r.get("date_closed"))
+        r["sla_due"]       = _date_to_str(r.get("sla_due"))
+        r["created_at"]    = _date_to_str(r.get("created_at"))
+        r["updated_at"]    = _date_to_str(r.get("updated_at"))
+
+    # Render with rich context (admin_dashboard.html expects these now)
+    return render_template(
+        'admin_dashboard.html',
+        admin=admin,
+        stats=stats,
+        issue_tops=issue_tops,
+        recent=recent
+    )
+
+# ---------------------------
+# Admin: lightweight counts for sidebar badges ✅ NEW
+# ---------------------------
+@login_bp.route('/admin/complaints_open_count')
+def admin_complaints_open_count():
+    if 'admin_id' not in session:
+        return {"ok": False, "message": "Unauthorized"}, 401
+
+    now = datetime.utcnow()
+    open_count = complaints_col.count_documents({"status": {"$nin": ["Resolved", "Closed"]}})
+    breaching  = complaints_col.count_documents({"status": {"$nin": ["Resolved", "Closed"]}, "sla_due": {"$lte": now}})
+    return {"ok": True, "open": int(open_count), "breaching": int(breaching)}
 
 # ---------------------------
 # Manager: Agent management (unchanged)
