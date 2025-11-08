@@ -1,0 +1,109 @@
+<!doctype html><html><head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Create Order</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>.suggest-box{position:absolute; top:100%; left:0; right:0; z-index:20; max-height:200px; overflow-y:auto}</style>
+</head><body class="bg-light">
+<div class="container py-4">
+  <h1 class="h4 mb-3">New Order</h1>
+
+  <div id="alertWrap" class="mb-3" style="display:none">
+    <div id="alertBox" class="alert"></div>
+  </div>
+
+  <div class="mb-3">
+    <label class="form-label">Notes (optional)</label>
+    <textarea id="notes" class="form-control" rows="2"></textarea>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table table-bordered bg-white">
+      <thead><tr><th style="width:40%">Item</th><th style="width:15%">Qty</th><th style="width:25%">Expected Date</th><th>Notes</th><th style="width:5%"></th></tr></thead>
+      <tbody id="rows"></tbody>
+    </table>
+  </div>
+  <div class="d-flex justify-content-between">
+    <button class="btn btn-outline-secondary" id="add">+ Add item</button>
+    <button class="btn btn-primary" id="save">Submit Order</button>
+  </div>
+</div>
+
+<script>
+const rows = document.getElementById('rows');
+document.getElementById('add').onclick = () => addRow();
+
+function addRow(v={name:'',qty:1,expected_date:'',notes:''}) {
+  const tr = document.createElement('tr');
+  tr.innerHTML = `
+    <td class="position-relative">
+      <input class="form-control item-name" placeholder="Start typing… (Fan, Fridge, etc.)" value="${v.name}">
+      <div class="list-group suggest-box d-none"></div>
+    </td>
+    <td><input type="number" min="1" class="form-control qty" value="${v.qty}"></td>
+    <td><input type="date" class="form-control expected" value="${v.expected_date}"></td>
+    <td><input class="form-control notes" value="${v.notes}"></td>
+    <td><button class="btn btn-sm btn-link text-danger remove">&times;</button></td>
+  `;
+  rows.appendChild(tr);
+
+  tr.querySelector('.remove').onclick = ()=> tr.remove();
+
+  // autocomplete
+  const input = tr.querySelector('.item-name');
+  const list = tr.querySelector('.list-group');
+  let to;
+  input.addEventListener('input', async ()=>{
+    const q = input.value.trim();
+    clearTimeout(to);
+    if (!q) { list.classList.add('d-none'); list.innerHTML=''; return; }
+    to = setTimeout(async ()=>{
+      const r = await fetch(`/manager/orders/catalog?q=${encodeURIComponent(q)}`);
+      const j = await r.json();
+      list.innerHTML = '';
+      (j.results || []).forEach(name=>{
+        const a = document.createElement('a');
+        a.href="#"; a.className="list-group-item list-group-item-action";
+        a.textContent = name;
+        a.onclick = (ev)=>{ev.preventDefault(); input.value = name; list.classList.add('d-none');};
+        list.appendChild(a);
+      });
+      list.classList.toggle('d-none', list.children.length===0);
+    }, 200);
+  });
+  input.addEventListener('blur', ()=> setTimeout(()=> list.classList.add('d-none'), 150));
+}
+
+function showMessage(msg, type='success'){
+  const wrap = document.getElementById('alertWrap');
+  const box = document.getElementById('alertBox');
+  box.className = `alert alert-${type}`;
+  box.textContent = msg;
+  wrap.style.display = '';
+  setTimeout(()=> wrap.style.display='none', 4000);
+}
+
+document.getElementById('save').onclick = async ()=>{
+  const items = [...rows.querySelectorAll('tr')].map(tr=>({
+    name: tr.querySelector('.item-name').value.trim(),
+    qty: parseInt(tr.querySelector('.qty').value||'0',10),
+    expected_date: tr.querySelector('.expected').value || null,
+    notes: tr.querySelector('.notes').value.trim()
+  })).filter(x=>x.name && x.qty>0);
+  if (!items.length) return showMessage('Add at least one valid item.', 'danger');
+
+  const payload = { notes: document.getElementById('notes').value.trim(), items };
+  const r = await fetch('/manager/orders/create', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)});
+  const j = await r.json();
+  if (j.ok) {
+    rows.innerHTML = '';
+    addRow();
+    document.getElementById('notes').value = '';
+    showMessage('Order submitted successfully and sent to Inventory.', 'success');
+  } else {
+    showMessage(j.message||'Failed to create order.', 'danger');
+  }
+};
+
+addRow();
+</script>
+</body></html>

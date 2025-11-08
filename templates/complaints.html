@@ -1,0 +1,636 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <title>Complaints • Admin</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet"/>
+  <link rel="icon" href="https://res.cloudinary.com/dljpgzbto/image/upload/v1743993646/company-logo_dksb23.jpg" type="image/png">
+
+  <style>
+    :root{
+      --ink:#0b3b52; --muted:#64748b; --ring:#e9eef5; --soft:#f6f8fb; --brand:#0ea5e9; --ok:#16a34a; --warn:#f59e0b; --bad:#dc2626;
+    }
+    body{ background:#f7fbfe; color:var(--ink); }
+    .card{ border-radius:18px; box-shadow: 0 8px 24px rgba(2,12,27,.06); border:1px solid var(--ring); }
+    .req::after{ content:" *"; color:var(--bad); }
+    .badge-soft{ background:#eef2ff; color:#1e3a8a; border:1px solid #e0e7ff; }
+    .status-badge{ font-weight:600; }
+    .status-Assigned{ background:#fff7ed; color:#b45309; }
+    .status-In\ Progress{ background:#ecfeff; color:#0369a1; }
+    .status-Waiting\ for\ Customer{ background:#fef9c3; color:#854d0e; }
+    .status-Resolved{ background:#dcfce7; color:#166534; }
+    .status-Closed{ background:#e5e7eb; color:#374151; }
+    .table thead th{ background:#eef2ff; }
+    .kbd{font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono","Courier New", monospace; background:#eef2ff; padding:.1rem .4rem; border-radius:.35rem; border:1px solid #dde3ff}
+    .muted{color:var(--muted)}
+  </style>
+</head>
+<body>
+{% include 'admin_sidebar.html' %}
+
+
+<div class="container py-4" style="max-width: 1200px;">
+  <div class="d-flex justify-content-between align-items-center` mb-3">
+    <h3 class="m-0">Complaints</h3>
+    <div class="d-flex gap-2">
+      <div class="badge bg-light text-dark border">Open: {{ stats.open }}</div>
+      <div class="badge bg-warning text-dark">Breaching: {{ stats.breaching }}</div>
+      <div class="badge bg-success">Resolved: {{ stats.resolved }}</div>
+      <button class="btn btn-primary ms-2" data-bs-toggle="modal" data-bs-target="#newComplaintModal">
+        + Log Complaint
+      </button>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <form method="GET" class="card p-3 mb-3">
+    <div class="row g-2 align-items-end">
+      <div class="col-md-3">
+        <label class="form-label">Status</label>
+        <select name="status" class="form-select">
+          <option value="">All</option>
+          {% for s in statuses %}
+            <option value="{{ s }}" {{ 'selected' if filters.status==s else '' }}>{{ s }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">From</label>
+        <input type="date" name="from" class="form-control" value="{{ filters.from }}">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">To</label>
+        <input type="date" name="to" class="form-control" value="{{ filters.to }}">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">Search</label>
+        <div class="input-group">
+          <input type="text" name="q" class="form-control" placeholder="Ticket, name, phone, issue..." value="{{ filters.q }}">
+          <button class="btn btn-outline-primary">Filter</button>
+        </div>
+      </div>
+    </div>
+  </form>
+
+  <!-- Table -->
+  <div class="card p-3">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle" id="complaintsTable">
+        <thead>
+          <tr>
+            <th>Ticket</th>
+            <th>Date</th>
+            <th>Customer</th>
+            <th>Phone</th>
+            <th>Issue</th>
+            <th>Assigned</th>
+            <th>SLA Due</th>
+            <th>Status</th>
+            <th class="text-end">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="complaintsTbody">
+          {% for it in items %}
+          <tr data-id="{{ it._id }}">
+            <td><span class="fw-semibold">{{ it.ticket_no }}</span></td>
+            <td>{{ it.date_reported }}</td>
+            <td>{{ it.customer_name }}</td>
+            <td>{{ it.customer_phone }}</td>
+            <td>{{ it.issue_type }}</td>
+            <td>{{ it.assigned_to_name or '' }}</td>
+            <td>{{ it.sla_due or '' }}</td>
+            <td>
+              <span class="badge status-badge status-{{ it.status|replace(' ','\\ ') }}">{{ it.status }}</span>
+            </td>
+            <td class="text-end">
+              <div class="d-inline-flex gap-2">
+                <button class="btn btn-sm btn-primary viewBtn" data-id="{{ it._id }}">See details</button>
+                <select class="form-select form-select-sm statusSelect" style="min-width: 170px;">
+                  {% for s in statuses %}
+                    <option value="{{ s }}" {{ 'selected' if it.status==s else '' }}>{{ s }}</option>
+                  {% endfor %}
+                </select>
+                <button class="btn btn-sm btn-outline-success saveStatusBtn">Save</button>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Hidden template for status <option>s to avoid Jinja in JS strings -->
+  <template id="statusOptionsTpl">
+    {% for s in statuses %}<option value="{{ s }}">{{ s }}</option>{% endfor %}
+  </template>
+</div>
+
+<!-- New Complaint Modal -->
+<div class="modal fade" id="newComplaintModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content border-0">
+      <div class="modal-header">
+        <h5 class="modal-title">Log New Complaint</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form id="complaintForm">
+        <div class="modal-body">
+          <div class="row g-3">
+            <div class="col-md-3">
+              <label class="form-label req">Date Reported</label>
+              <input type="date" name="date_reported" class="form-control" value="{{ today }}" required>
+            </div>
+            <div class="col-md-3">
+              <label class="form-label req">Channel</label>
+              <select name="channel" class="form-select" required>
+                {% for ch in channels %}<option>{{ ch }}</option>{% endfor %}
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Branch</label>
+              <input type="text" name="branch" id="branchInput" class="form-control" placeholder="Auto-filled if customer exists">
+            </div>
+
+            <div class="col-md-4">
+              <label class="form-label req">Customer Phone</label>
+              <div class="input-group">
+                <input type="text" name="customer_phone" id="phoneInput" class="form-control" placeholder="e.g., 054xxxxxxx" required>
+                <button class="btn btn-outline-primary" type="button" id="lookupBtn">Lookup</button>
+              </div>
+              <div id="lookupHint" class="form-text text-muted">Type a phone then click Lookup to auto-fill.</div>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label req">Customer Name</label>
+              <input type="text" name="customer_name" id="nameInput" class="form-control" required>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Assigned To (Agent)</label>
+              <div class="input-group">
+                <input type="hidden" name="assigned_to_id" id="assignedIdInput">
+                <input type="text" name="assigned_to_name" id="assignedNameInput" class="form-control" placeholder="Auto-filled; editable">
+                <span class="input-group-text badge-soft" title="Agent auto-fill">Agent</span>
+              </div>
+            </div>
+
+            <div class="col-md-4">
+              <label class="form-label req">Issue Type</label>
+              <select name="issue_type" class="form-select" id="issueTypeSelect" required>
+                {% for it in issue_types %}<option>{{ it }}</option>{% endfor %}
+              </select>
+            </div>
+            <div class="col-md-2">
+              <label class="form-label req">SLA Days</label>
+              <input type="number" name="sla_days" id="slaDaysInput" class="form-control" min="0" required>
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Due Date (auto)</label>
+              <input type="date" name="due_date" id="dueDateInput" class="form-control">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">&nbsp;</label>
+              <div class="form-text">Unsolved until marked Resolved/Closed.</div>
+            </div>
+
+            <div class="col-12">
+              <label class="form-label req">Issue Description</label>
+              <textarea name="description" class="form-control" rows="3" required placeholder="Short, clear summary of the complaint"></textarea>
+            </div>
+
+            <div class="col-12">
+              <div class="form-check mt-2">
+                <input class="form-check-input" type="checkbox" id="sendSmsCreate" name="send_sms" value="yes">
+                <label class="form-check-label" for="sendSmsCreate">
+                  Send SMS acknowledgement to customer after saving
+                </label>
+              </div>
+              <div class="form-text muted">
+                Uses your default SMS template. You can send another/custom SMS later from the details modal.
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-light" data-bs-dismiss="modal" type="button">Cancel</button>
+          <button class="btn btn-primary" type="submit" id="saveComplaintBtn">
+            <span class="me-2 spinner-border spinner-border-sm d-none" id="saveSpinner"></span>
+            Save Complaint
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Details Modal -->
+<div class="modal fade" id="detailModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content border-0">
+      <div class="modal-header">
+        <h5 class="modal-title">
+          Ticket <span id="dTicket" class="kbd"></span>
+          <span class="ms-2 badge" id="dStatusBadge"></span>
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <div><span class="muted">Date Reported:</span> <strong id="dDate"></strong></div>
+            <div><span class="muted">Channel:</span> <strong id="dChannel"></strong></div>
+            <div><span class="muted">Branch:</span> <strong id="dBranch"></strong></div>
+            <div><span class="muted">SLA Due:</span> <strong id="dSlaDue"></strong>
+              <span id="dSlaBreach" class="badge bg-danger d-none ms-2">Breached</span>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div><span class="muted">Customer:</span> <strong id="dCustomer"></strong></div>
+            <div><span class="muted">Phone:</span> <strong id="dPhone"></strong></div>
+            <div><span class="muted">Issue:</span> <strong id="dIssue"></strong></div>
+            <div><span class="muted">Assigned:</span> <strong id="dAssigned"></strong></div>
+          </div>
+
+          <div class="col-12"><hr/></div>
+
+          <!-- Editable fields -->
+          <div class="col-12">
+            <label class="form-label">Description</label>
+            <textarea class="form-control" id="dDescription" rows="3" placeholder="Complaint description"></textarea>
+          </div>
+          <div class="col-12">
+            <label class="form-label">Resolution Notes</label>
+            <textarea class="form-control" id="dResolutionNotes" rows="2" placeholder="Internal notes"></textarea>
+          </div>
+          <div class="col-12">
+            <label class="form-label">Customer Feedback</label>
+            <textarea class="form-control" id="dFeedback" rows="2" placeholder="Customer comments after resolution"></textarea>
+          </div>
+
+          <div class="col-12 d-flex gap-2 mt-2">
+            <button class="btn btn-success" id="btnSaveFields">Save changes</button>
+            <span class="align-self-center text-muted" id="saveFieldsHint"></span>
+          </div>
+
+          <div class="col-12"><hr/></div>
+
+          <!-- SMS section -->
+          <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+              <h6 class="m-0">SMS to Customer</h6>
+              <small class="text-muted">Phone: <span id="smsPhone"></span></small>
+            </div>
+            <textarea class="form-control mt-2" id="smsMessage" rows="3"
+              placeholder="Write a custom SMS or leave empty to use the default template"></textarea>
+            <div class="d-flex gap-2 mt-2">
+              <button class="btn btn-outline-primary" id="btnSendSms">
+                <span class="spinner-border spinner-border-sm d-none" id="smsSpinner"></span>
+                Send SMS
+              </button>
+              <span class="align-self-center" id="smsHint"></span>
+            </div>
+            <div class="mt-3">
+              <div class="muted">History</div>
+              <ul class="list-group" id="smsHistory"></ul>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <small class="text-muted me-auto">Created/Updated: <span id="dAudit"></span></small>
+        <button class="btn btn-light" data-bs-dismiss="modal" type="button">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Library JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/axios@1.6.8/dist/axios.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+<!-- Jinja → JSON blobs -->
+<script id="sla-defaults" type="application/json">{{ sla_defaults | tojson }}</script>
+
+<!-- App JS -->
+<script>
+(function(){
+  // Parse SLA defaults safely from JSON tag
+  const slaDefaults = JSON.parse(document.getElementById('sla-defaults').textContent || '{}');
+
+  const issueSel = document.getElementById('issueTypeSelect');
+  const slaInput = document.getElementById('slaDaysInput');
+  const dueInput = document.getElementById('dueDateInput');
+  const dateReported = document.querySelector('input[name="date_reported"]');
+
+  function recalcDue(){
+    const base = new Date(dateReported.value || new Date().toISOString().slice(0,10));
+    const days = Math.max(parseInt(slaInput.value||'0'), 0);
+    const due = new Date(base);
+    due.setDate(base.getDate() + days);
+    dueInput.value = due.toISOString().slice(0,10);
+  }
+  function syncSlaFromIssue(){
+    const v = issueSel.value;
+    const def = (slaDefaults && slaDefaults[v] != null) ? slaDefaults[v] : 1;
+    slaInput.value = def;
+    recalcDue();
+  }
+  issueSel.addEventListener('change', syncSlaFromIssue);
+  slaInput.addEventListener('input', recalcDue);
+  dateReported.addEventListener('change', recalcDue);
+  syncSlaFromIssue();
+
+  // Lookup
+  const lookupBtn = document.getElementById('lookupBtn');
+  const phoneInput = document.getElementById('phoneInput');
+  const nameInput = document.getElementById('nameInput');
+  const branchInput = document.getElementById('branchInput');
+  const assignedNameInput = document.getElementById('assignedNameInput');
+  const assignedIdInput = document.getElementById('assignedIdInput');
+  const hint = document.getElementById('lookupHint');
+
+  async function doLookup(){
+    const phone = (phoneInput.value || '').trim();
+    if(!phone){ hint.textContent = "Enter a phone number first."; return; }
+    hint.textContent = "Looking up...";
+    try{
+      const res = await axios.get("/complaints/lookup_phone", { params: { phone } });
+      const data = res.data;
+      if(data.ok && data.found){
+        nameInput.value = data.customer_name || '';
+        branchInput.value = data.branch || '';
+        assignedNameInput.value = data.assigned_to_name || '';
+        assignedIdInput.value = data.assigned_to_id || '';
+        hint.textContent = "Found in system. You may edit if needed.";
+      }else{
+        hint.textContent = "No match found. Fill details manually.";
+      }
+    }catch(e){
+      hint.textContent = "Lookup failed. Fill details manually.";
+    }
+  }
+  lookupBtn.addEventListener('click', doLookup);
+
+  // Save complaint (AJAX)
+  const form = document.getElementById('complaintForm');
+  const saveBtn = document.getElementById('saveComplaintBtn');
+  const spinner = document.getElementById('saveSpinner');
+  const modalEl = document.getElementById('newComplaintModal');
+  const modal = new bootstrap.Modal(modalEl);
+  const tbody = document.getElementById('complaintsTbody');
+
+  const statusOptionsHTML = document.getElementById('statusOptionsTpl').innerHTML;
+
+  form.addEventListener('submit', async (e)=>{
+    e.preventDefault();
+    saveBtn.disabled = true; spinner.classList.remove('d-none');
+    try{
+      const fd = new FormData(form);
+      const res = await axios.post('/complaints/create', fd, { headers: { 'X-Requested-With':'XMLHttpRequest' }});
+      const d = res.data;
+      if(d && d.ok){
+        const tr = document.createElement('tr');
+        tr.setAttribute('data-id', d.id);
+        tr.innerHTML = `
+          <td><span class="fw-semibold">${d.ticket_no}</span></td>
+          <td>${d.date_reported || ''}</td>
+          <td>${(form.customer_name.value||'')}</td>
+          <td>${(form.customer_phone.value||'')}</td>
+          <td>${(form.issue_type.value||'')}</td>
+          <td>${(form.assigned_to_name.value||'')}</td>
+          <td>${d.sla_due || ''}</td>
+          <td><span class="badge status-badge status-${(d.status||'').replaceAll(' ','\\ ')}">${d.status||''}</span></td>
+          <td class="text-end">
+            <div class="d-inline-flex gap-2">
+              <button class="btn btn-sm btn-primary viewBtn" data-id="${d.id}">See details</button>
+              <select class="form-select form-select-sm statusSelect" style="min-width:170px;">
+                ${statusOptionsHTML}
+              </select>
+              <button class="btn btn-sm btn-outline-success saveStatusBtn">Save</button>
+            </div>
+          </td>`;
+        tbody.prepend(tr);
+        form.reset();
+        syncSlaFromIssue();
+        modal.hide();
+      }else{
+        alert(d.message || "Failed to save complaint");
+      }
+    }catch(err){
+      alert("Network or server error while saving.");
+    }finally{
+      saveBtn.disabled = false; spinner.classList.add('d-none');
+    }
+  });
+
+  // Inline status update
+  document.addEventListener('click', async (e)=>{
+    const btn = e.target.closest('.saveStatusBtn');
+    if(!btn) return;
+    const tr = btn.closest('tr');
+    const id = tr?.dataset?.id;
+    const select = tr.querySelector('.statusSelect');
+    if(!id || !select) return;
+    btn.disabled = true;
+    try{
+      const fd = new FormData();
+      fd.append('status', select.value);
+      const res = await fetch(`/complaints/${id}/status`, { method:'POST', body: fd, headers:{'X-Requested-With':'XMLHttpRequest'}});
+      const d = await res.json();
+      if(d.ok){
+        const badge = tr.querySelector('.status-badge');
+        badge.textContent = select.value;
+        badge.className = 'badge status-badge status-' + select.value.replaceAll(' ','\\ ');
+      }else{
+        alert(d.message || 'Update failed');
+      }
+    }catch(_){
+      alert('Network error');
+    }finally{
+      btn.disabled = false;
+    }
+  });
+
+  // ===== Details modal logic =====
+  const detailModalEl = document.getElementById('detailModal');
+  const detailModal = new bootstrap.Modal(detailModalEl);
+
+  // DOM refs
+  const dTicket = document.getElementById('dTicket');
+  const dStatusBadge = document.getElementById('dStatusBadge');
+  const dDate = document.getElementById('dDate');
+  const dChannel = document.getElementById('dChannel');
+  const dBranch = document.getElementById('dBranch');
+  const dSlaDue = document.getElementById('dSlaDue');
+  const dSlaBreach = document.getElementById('dSlaBreach');
+  const dCustomer = document.getElementById('dCustomer');
+  const dPhone = document.getElementById('dPhone');
+  const dIssue = document.getElementById('dIssue');
+  const dAssigned = document.getElementById('dAssigned');
+  const dDescription = document.getElementById('dDescription');
+  const dResolutionNotes = document.getElementById('dResolutionNotes');
+  const dFeedback = document.getElementById('dFeedback');
+  const dAudit = document.getElementById('dAudit');
+
+  const btnSaveFields = document.getElementById('btnSaveFields');
+  const saveFieldsHint = document.getElementById('saveFieldsHint');
+
+  const smsPhone = document.getElementById('smsPhone');
+  const smsMessage = document.getElementById('smsMessage');
+  const btnSendSms = document.getElementById('btnSendSms');
+  const smsHint = document.getElementById('smsHint');
+  const smsSpinner = document.getElementById('smsSpinner');
+  const smsHistory = document.getElementById('smsHistory');
+
+  let currentId = null;
+
+  function statusBadgeClass(txt){
+    const safe = (txt || '').replaceAll(' ', '\\ ');
+    return 'badge status-badge status-' + safe;
+  }
+
+  async function openDetail(id){
+    currentId = id;
+    // reset
+    dTicket.textContent = '';
+    dStatusBadge.textContent = '';
+    dStatusBadge.className = 'badge';
+    dSlaBreach.classList.add('d-none');
+    smsMessage.value = '';
+    smsHistory.innerHTML = '';
+    smsHint.textContent = '';
+    saveFieldsHint.textContent = '';
+
+    try{
+      const res = await fetch(`/complaints/${id}/detail`, { headers: {'X-Requested-With':'XMLHttpRequest'} });
+      const j = await res.json();
+      if(!j.ok){ alert(j.message || 'Not found'); return; }
+      const c = j.complaint;
+
+      dTicket.textContent = c.ticket_no || '';
+      dStatusBadge.textContent = c.status || '';
+      dStatusBadge.className = statusBadgeClass(c.status);
+      dDate.textContent = c.date_reported || '';
+      dChannel.textContent = c.channel || '';
+      dBranch.textContent = c.branch || '';
+      dSlaDue.textContent = c.sla_due || '';
+      if(c.sla_breached){ dSlaBreach.classList.remove('d-none'); }
+      dCustomer.textContent = c.customer_name || '';
+      dPhone.textContent = c.customer_phone || '';
+      dIssue.textContent = c.issue_type || '';
+      dAssigned.textContent = c.assigned_to_name || '';
+      dDescription.value = c.description || '';
+      dResolutionNotes.value = c.resolution_notes || '';
+      dFeedback.value = c.customer_feedback || '';
+      dAudit.textContent = `${c.created_at || ''} → ${c.updated_at || ''}`;
+      smsPhone.textContent = c.customer_phone || '';
+
+      // SMS history
+      const events = Array.isArray(c.sms_events) ? c.sms_events : [];
+      if(events.length === 0){
+        smsHistory.innerHTML = '<li class="list-group-item">No SMS yet.</li>';
+      }else{
+        smsHistory.innerHTML = events.map(e => {
+          const ok = e.ok ? '✅' : '❌';
+          const when = e.when || '';
+          const to = e.to || '';
+          const status = e.status || '';
+          const kind = e.kind || 'manual';
+          return `<li class="list-group-item d-flex justify-content-between">
+            <span>${ok} <strong>${kind}</strong> → ${to} <span class="text-muted">(${status})</span></span>
+            <small class="text-muted">${when}</small>
+          </li>`;
+        }).join('');
+      }
+
+      detailModal.show();
+    }catch(err){
+      alert('Failed to fetch details.');
+    }
+  }
+
+  // open modal
+  document.addEventListener('click', (e)=>{
+    const btn = e.target.closest('.viewBtn');
+    if(!btn) return;
+    const id = btn.getAttribute('data-id') || btn.closest('tr')?.dataset?.id;
+    if(!id) return;
+    openDetail(id);
+  });
+
+  // save fields (description / notes / feedback)
+  btnSaveFields.addEventListener('click', async ()=>{
+    if(!currentId) return;
+    btnSaveFields.disabled = true;
+    saveFieldsHint.textContent = 'Saving...';
+    try{
+      const fd = new FormData();
+      fd.append('description', dDescription.value);
+      fd.append('resolution_notes', dResolutionNotes.value);
+      fd.append('customer_feedback', dFeedback.value);
+      const res = await fetch(`/complaints/${currentId}/update_fields`, {
+        method: 'POST',
+        body: fd,
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+      });
+      const j = await res.json();
+      if(j.ok){
+        saveFieldsHint.textContent = 'Saved ✓';
+        setTimeout(()=> saveFieldsHint.textContent = '', 1500);
+      }else{
+        saveFieldsHint.textContent = j.message || 'Save failed';
+      }
+    }catch(_){
+      saveFieldsHint.textContent = 'Network error';
+    }finally{
+      btnSaveFields.disabled = false;
+    }
+  });
+
+  // send SMS
+  btnSendSms.addEventListener('click', async ()=>{
+    if(!currentId) return;
+    btnSendSms.disabled = true;
+    smsSpinner.classList.remove('d-none');
+    smsHint.textContent = 'Sending...';
+    try{
+      const fd = new FormData();
+      const msg = (smsMessage.value || '').trim();
+      if(msg) fd.append('message', msg);
+      const res = await fetch(`/complaints/${currentId}/notify`, {
+        method: 'POST',
+        body: fd,
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+      });
+      const j = await res.json();
+      if(j.ok){
+        smsHint.textContent = 'Sent ✓';
+        // append to history (quick)
+        const li = document.createElement('li');
+        const now = new Date().toISOString().slice(0,19).replace('T',' ');
+        li.className = 'list-group-item d-flex justify-content-between';
+        li.innerHTML = `<span>✅ <strong>manual_notify</strong> → ${smsPhone.textContent} <span class="text-muted">(${j.status})</span></span><small class="text-muted">${now}</small>`;
+        if(smsHistory.firstElementChild && smsHistory.firstElementChild.textContent === 'No SMS yet.'){
+          smsHistory.firstElementChild.remove();
+        }
+        smsHistory.prepend(li);
+        smsMessage.value = '';
+        setTimeout(()=> smsHint.textContent = '', 1500);
+      }else{
+        smsHint.textContent = j.message || ('Failed: ' + (j.status || ''));
+      }
+    }catch(_){
+      smsHint.textContent = 'Network error';
+    }finally{
+      btnSendSms.disabled = false;
+      smsSpinner.classList.add('d-none');
+    }
+  });
+
+})();
+</script>
+</body>
+</html>
