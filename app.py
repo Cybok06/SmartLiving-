@@ -17,7 +17,6 @@ from inventory_analysis import inventory_analysis_bp
 from recruitment import recruitment_bp
 from admin_topups import admin_topups_bp
 from admin_tasks import admin_task_bp
-from admin_profile import admin_profile_bp
 from admin_accountability import admin_account_bp
 from admin_close_account import admin_close_account_bp
 from account_summary_analysis import account_summary_analysis_bp
@@ -35,6 +34,8 @@ from executive_agent_target import executive_agent_target_bp
 from sales_close_agent import sales_close_agent_bp
 from inventory_dashboard import inventory_dashboard
 from routes.inventory.profile import inventory_profile_bp
+from executive_profile import executive_profile_bp
+from routes.admin_complaints import admin_complaints_bp
 
 # ✅ NEW: Inventory Orders blueprint
 from routes.inventory.orders import inventory_orders_bp
@@ -87,13 +88,18 @@ from executive_sales_close import executive_sales_close_bp
 from transfer_product import transfer_product_bp
 from close_card import close_card_bp
 from packages import packages_bp
-# app.py (or factory)
+from routes.executive_pricing import executive_pricing_bp
 from assign_products import assign_bp
 from manager_deposits import manager_deposits_bp
 # app.py (relevant bits)
 from executive_deposits import executive_deposits_bp
 from manager_expense import manager_expense_bp
 from executive_expense import executive_expense_bp
+# app.py (or wherever you create the Flask app)
+from routes.complaints import complaints_bp
+from routes.admin_profile import admin_profile_bp
+from routes.admin_dashboard import admin_dashboard_bp
+
 
 app = Flask(__name__)
 app.secret_key = 'supersecretkey'
@@ -124,7 +130,6 @@ app.register_blueprint(inventory_analysis_bp)
 app.register_blueprint(recruitment_bp)
 app.register_blueprint(admin_topups_bp)
 app.register_blueprint(admin_task_bp)
-app.register_blueprint(admin_profile_bp)
 app.register_blueprint(admin_account_bp)
 app.register_blueprint(admin_close_account_bp)
 app.register_blueprint(account_summary_analysis_bp)
@@ -154,6 +159,9 @@ app.register_blueprint(executive_deposits_bp)
 app.register_blueprint(manager_expense_bp)
 app.register_blueprint(executive_expense_bp)
 app.register_blueprint(inventory_profile_bp)
+app.register_blueprint(executive_profile_bp)
+app.register_blueprint(executive_pricing_bp)
+app.register_blueprint(complaints_bp)  # url_prefix="/complaints" is inside the blueprint
 
 # ✅ Register NEW Inventory Orders routes (URLs under /inventory/orders)
 app.register_blueprint(inventory_orders_bp)
@@ -177,6 +185,9 @@ app.register_blueprint(manager_inventory_bp)
 app.register_blueprint(manager_inventory_analysis_bp)
 app.register_blueprint(admin_task_view_bp)
 app.register_blueprint(view_targets_bp)
+app.register_blueprint(admin_profile_bp)
+app.register_blueprint(admin_complaints_bp)
+app.register_blueprint(admin_dashboard_bp)
 
 # ✅ Register NEW Manager Orders routes (URLs under /manager/orders)
 app.register_blueprint(manager_orders_bp)
