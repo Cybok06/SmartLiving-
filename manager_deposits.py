@@ -29,7 +29,7 @@ def _receipts_dir() -> str:
     """
     uploads_root = current_app.config.get("UPLOADS_ROOT")
     if not uploads_root:
-        # Fallback: local 'uploads' beside app.py if not configured
+        # Fallback: local 'uploads' beside this file (../uploads)
         uploads_root = os.path.join(os.path.abspath(os.path.dirname(__file__)), "..", "uploads")
         uploads_root = os.path.abspath(uploads_root)
     receipts = os.path.join(uploads_root, "receipts")
@@ -39,7 +39,7 @@ def _receipts_dir() -> str:
 def _save_receipt(file_storage):
     """
     Save upload to <UPLOADS_ROOT>/receipts with a unique safe name.
-    Returns the relative path used by the /uploads/<path> route, e.g. 'receipts/abc.jpg'
+    Returns the relative path used by /uploads/<path>, e.g. 'receipts/abc.jpg'
     """
     if not file_storage or not file_storage.filename.strip():
         return None
@@ -48,26 +48,30 @@ def _save_receipt(file_storage):
 
     base, ext = os.path.splitext(file_storage.filename)
     ext = ext.lower().lstrip(".")
-    safe_base = secure_filename(base)[:50] or "receipt"
+    safe_base = (secure_filename(base) or "receipt")[:50]
     unique_name = f"{safe_base}-{uuid.uuid4().hex[:8]}.{ext}"
-
     absolute_path = os.path.join(_receipts_dir(), unique_name)
     file_storage.save(absolute_path)
-
-    # Public route serves from UPLOADS_ROOT, so return a path relative to that root:
     return f"receipts/{unique_name}"
 
+# ---------- Auth helpers ----------
 def _require_manager_session():
     """
     Ensure a manager is 'logged in' via your session scheme.
     Returns (manager_id_str, manager_doc) or (None, None).
     """
     manager_id = session.get("manager_id")
-    if not manager_id or not ObjectId.is_valid(manager_id):
+    if not manager_id:
         flash("Please log in as a manager to continue.", "error")
         return None, None
 
-    manager_doc = users_collection.find_one({"_id": ObjectId(manager_id), "role": "manager"})
+    # Allow either ObjectId or string ids (be flexible)
+    try:
+        q = {"_id": ObjectId(manager_id)}
+    except Exception:
+        q = {"_id": manager_id}
+
+    manager_doc = users_collection.find_one({**q, "role": "manager"})
     if not manager_doc:
         session.clear()
         flash("Access denied. Please log in as a manager.", "error")
@@ -79,7 +83,14 @@ def _require_manager_session():
         flash("Your account is not active. Contact an administrator.", "error")
         return None, None
 
-    return manager_id, manager_doc
+    return (str(manager_doc["_id"]), manager_doc)
+
+# ---------- Normalization ----------
+_ALLOWED_METHODS = {"bank": "Bank", "mobile money": "Mobile Money", "mobile_money": "Mobile Money", "momo": "Mobile Money", "cash": "Cash"}
+
+def _normalize_method_type(val: str) -> str | None:
+    key = (val or "").strip().lower().replace("_", " ")
+    return _ALLOWED_METHODS.get(key)
 
 # ---------- Routes ----------
 @manager_deposits_bp.route("/", methods=["GET"])
@@ -114,25 +125,28 @@ def submit_deposit():
     branch_name  = manager_doc.get("branch") or manager_doc.get("branch_name") or "Unassigned"
 
     amount_raw  = (request.form.get("amount") or "").strip()
-    method_type = (request.form.get("method_type") or "").strip()     # "Bank" or "Mobile Money"
-    method_name = (request.form.get("method_name") or "").strip()     # e.g., "GCB", "MTN MoMo"
+    method_type_in = (request.form.get("method_type") or "").strip()
+    method_type = _normalize_method_type(method_type_in)  # "Bank" | "Mobile Money" | "Cash" | None
+    method_name = (request.form.get("method_name") or "").strip()
     reference   = (request.form.get("reference") or "").strip()
     notes       = (request.form.get("notes") or "").strip()
 
     errors = []
+    # Amount
     try:
-        amount = float(amount_raw)
+        amount = float(amount_raw.replace(",", ""))
         if amount <= 0:
             errors.append("Amount must be greater than zero.")
     except Exception:
         amount = None
         errors.append("Invalid amount.")
-
-    if method_type not in ("Bank", "Mobile Money"):
-        errors.append("Select a valid method: Bank or Mobile Money.")
+    # Method
+    if not method_type:
+        errors.append("Select a valid method: Bank, Mobile Money, or Cash.")
     if not method_name:
-        errors.append("Please provide the name of the method (e.g., Bank name or MoMo provider).")
+        errors.append("Please provide the name of the method (e.g., Bank name, MoMo provider, or Cash Office).")
 
+    # Receipt
     file = request.files.get("receipt")
     receipt_rel_path = None
     if not file or not file.filename.strip():
@@ -155,13 +169,13 @@ def submit_deposit():
         "manager_name": manager_name,
         "branch_name": branch_name,
         "amount": amount,
-        "method_type": method_type,    # "Bank" | "Mobile Money"
-        "method_name": method_name,    # e.g., "GCB", "MTN"
-        "reference": reference,
-        "notes": notes,
+        "method_type": method_type,    # "Bank" | "Mobile Money" | "Cash"
+        "method_name": method_name,    # e.g., "GCB", "MTN", "Cash Office"
+        "reference": reference or None,
+        "notes": notes or None,
         "receipt_path": receipt_rel_path,  # e.g., 'receipts/<file>'
         "created_at": datetime.now(timezone.utc),
-        "status": "submitted"
+        "status": "submitted",
     }
 
     manager_deposits_col.insert_one(doc)
