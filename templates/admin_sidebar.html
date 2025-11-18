@@ -65,6 +65,13 @@
       <i class="bi bi-megaphone"></i> Send Task to Managers
     </a>
 
+    <!-- 🔹 NEW SECTION: Reports -->
+    <div class="nav-section">Reports</div>
+    <a href="{{ url_for('meeting_report.overview') }}"
+       class="{% if request.path.startswith('/meeting-report') %}text-primary fw-bold{% endif %}">
+      <i class="bi bi-people"></i> Meeting Report
+    </a>
+
     <div class="nav-section">Productivity</div>
     <a href="/todo" class="{% if request.path == '/todo' %}text-primary fw-bold{% endif %}">
       <i class="bi bi-check2-circle"></i> Todo List
