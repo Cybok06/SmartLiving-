@@ -36,6 +36,10 @@ from inventory_dashboard import inventory_dashboard
 from routes.inventory.profile import inventory_profile_bp
 from executive_profile import executive_profile_bp
 from routes.admin_complaints import admin_complaints_bp
+# near the other imports
+from routes.meeting_report import meeting_report_bp
+
+# ... later, with other blueprints:
 
 # ✅ NEW: Inventory Orders blueprint
 from routes.inventory.orders import inventory_orders_bp
@@ -162,6 +166,7 @@ app.register_blueprint(inventory_profile_bp)
 app.register_blueprint(executive_profile_bp)
 app.register_blueprint(executive_pricing_bp)
 app.register_blueprint(complaints_bp)  # url_prefix="/complaints" is inside the blueprint
+app.register_blueprint(meeting_report_bp)
 
 # ✅ Register NEW Inventory Orders routes (URLs under /inventory/orders)
 app.register_blueprint(inventory_orders_bp)
