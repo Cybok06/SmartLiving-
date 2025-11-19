@@ -13,9 +13,9 @@ meeting_report_bp = Blueprint("meeting_report", __name__, url_prefix="/meeting-r
 users_col       = db["users"]
 customers_col   = db["customers"]
 payments_col    = db["payments"]
-login_logs_col  = db["login_logs"]
-leads_col       = db["leads"]          # assuming this exists
-sales_close_col = db["sales_close"]    # not strictly required here, but available
+login_logs_col  = db["login_logs"]   # still available if needed elsewhere
+leads_col       = db["leads"]        # assuming this exists
+sales_close_col = db["sales_close"]  # not strictly required here, but available
 
 
 # ---------- Helpers ----------
@@ -93,6 +93,52 @@ def _month_range(year, month):
 
 def _year_month_str(year, month, day):
     return f"{year:04d}-{month:02d}-{day:02d}"
+
+
+def _resolve_date_range(args, default_start, default_end):
+    """
+    Shared date-range resolver used by both agent_metrics and team_metrics.
+
+    Frontend behaviour:
+      - MONTH MODE:
+          - Sends year + month + start + end
+          - Backend should use year/month for the main range (full month),
+            start/end still sent but only for clarity / labels.
+      - CUSTOM RANGE MODE:
+          - Sends ONLY start + end
+          - Backend should ignore year/month and rely purely on start/end.
+
+    Rules:
+      - If both year and month are present and valid => month range wins
+      - Else => use start/end or default to this month.
+    """
+    month_param = args.get("month")
+    year_param = args.get("year")
+
+    start_dt = default_start
+    end_dt = default_end
+
+    if year_param and month_param:
+        try:
+            y = int(year_param)
+            m = int(month_param)
+            if 1 <= m <= 12:
+                start_dt, end_dt = _month_range(y, m)
+            else:
+                start_dt, end_dt = default_start, default_end
+        except Exception:
+            start_dt, end_dt = default_start, default_end
+    else:
+        # Custom range (or fallback) – use explicit start/end
+        start_str_in = args.get("start") or _date_to_str(default_start)
+        end_str_in   = args.get("end")   or _date_to_str(default_end)
+
+        start_dt = _parse_date(start_str_in, default_start)
+        end_dt   = _parse_date(end_str_in, default_end)
+        if end_dt < start_dt:
+            end_dt = start_dt
+
+    return start_dt, end_dt
 
 
 # ---------- MAIN PAGE (filters only) ----------
@@ -233,33 +279,13 @@ def agent_metrics():
     if not agent_id:
         return jsonify(ok=False, message="agent_id is required"), 400
 
-    # ----- Determine main range from month/year OR explicit start/end -----
+    # ----- Determine main range from month/year OR explicit start/end (month vs custom mode) -----
     default_start, default_end = _this_month_range()
+    start_dt, end_dt = _resolve_date_range(request.args, default_start, default_end)
 
-    month_param = request.args.get("month")
+    # Raw year/month params (for yearly-trend logic)
     year_param = request.args.get("year")
-
-    start_dt = default_start
-    end_dt = default_end
-
-    if year_param and month_param:
-        # If valid year + month are provided, they take priority
-        try:
-            y = int(year_param)
-            m = int(month_param)
-            if 1 <= m <= 12:
-                start_dt, end_dt = _month_range(y, m)
-        except Exception:
-            start_dt, end_dt = default_start, default_end
-    else:
-        # Fallback to the existing start/end behaviour
-        start_str_in = request.args.get("start") or _date_to_str(default_start)
-        end_str_in   = request.args.get("end")   or _date_to_str(default_end)
-
-        start_dt = _parse_date(start_str_in, default_start)
-        end_dt   = _parse_date(end_str_in, default_end)
-        if end_dt < start_dt:
-            end_dt = start_dt
+    month_param = request.args.get("month")
 
     start_str = _date_to_str(start_dt)
     end_str   = _date_to_str(end_dt)
@@ -270,7 +296,7 @@ def agent_metrics():
     except Exception:
         trend_year = start_dt.year
 
-    # Optional comparison range (still supported)
+    # Optional comparison range (still supported; frontend only sends this in month mode)
     compare_start_str = request.args.get("compare_start") or ""
     compare_end_str   = request.args.get("compare_end") or ""
     compare = None
@@ -292,7 +318,10 @@ def agent_metrics():
     except Exception:
         return jsonify(ok=False, message="Invalid agent_id"), 400
 
-    agent = users_col.find_one({"_id": ag_oid, "role": "agent"})
+    agent = users_col.find_one(
+        {"_id": ag_oid, "role": "agent"},
+        {"name": 1, "branch": 1, "phone": 1, "image_url": 1, "manager_id": 1}
+    )
     if not agent:
         return jsonify(ok=False, message="Agent not found"), 404
 
@@ -300,10 +329,14 @@ def agent_metrics():
     mgr_branch = ""
     manager_id = agent.get("manager_id")
     if manager_id:
-        try:
-            mgr_doc = users_col.find_one({"_id": manager_id}, {"name": 1, "branch": 1})
-        except Exception:
-            mgr_doc = None
+        # manager_id may be ObjectId or string; try ObjectId first
+        mgr_filter = {"_id": manager_id}
+        if not isinstance(manager_id, ObjectId):
+            try:
+                mgr_filter = {"_id": ObjectId(manager_id)}
+            except Exception:
+                mgr_filter = {"_id": manager_id}
+        mgr_doc = users_col.find_one(mgr_filter, {"name": 1, "branch": 1})
         if mgr_doc:
             mgr_name = mgr_doc.get("name", "")
             mgr_branch = mgr_doc.get("branch", "")
@@ -368,12 +401,22 @@ def agent_metrics():
             key=lambda kv: kv[1],
             reverse=True
         )[:5]
+        top_ids = [
+            ObjectId(cid_str)
+            for cid_str, _ in sorted_items
+            if ObjectId.is_valid(cid_str)
+        ]
+        # pre-fetch customer docs in one query for speed
+        cust_docs_map = {
+            str(c["_id"]): c
+            for c in customers_col.find(
+                {"_id": {"$in": top_ids}},
+                {"name": 1, "phone_number": 1}
+            )
+        }
+
         for cid_str, tot_amt in sorted_items:
-            try:
-                coid = ObjectId(cid_str)
-                cdoc = customers_col.find_one({"_id": coid}, {"name": 1, "phone_number": 1})
-            except Exception:
-                cdoc = None
+            cdoc = cust_docs_map.get(cid_str)
             if not cdoc:
                 continue
             top_active.append({
@@ -382,18 +425,24 @@ def agent_metrics():
                 "amount_paid": round(tot_amt, 2),
             })
 
-    # Inactive customers (no payment IN RANGE) – for drill-down (limited)
+    # Inactive customers (no payment IN RANGE) – sample list (up to 5)
     inactive = []
     if total_customers > 0:
-        all_customers = list(customers_col.find(
+        all_customers = customers_col.find(
             {"agent_id": agent_id},
             {"name": 1, "phone_number": 1}
-        ))
+        )
+
         active_id_set = {str(cid) for cid in active_customer_ids}
+
         for c in all_customers:
+            if len(inactive) >= 5:
+                break
             cid_str = str(c["_id"])
             if cid_str in active_id_set:
                 continue
+
+            # Only fetch last payment if we actually use this customer
             last_pay = payments_col.find_one(
                 {"customer_id": c["_id"], "payment_type": {"$ne": "WITHDRAWAL"}},
                 sort=[("date", -1)],
@@ -405,20 +454,13 @@ def agent_metrics():
                 "phone": c.get("phone_number", "N/A"),
                 "last_payment_date": last_date
             })
-        inactive = inactive[:5]
 
-    # Agent attendance (login logs) in date range
-    attend_q = {
-        "agent_id": agent_id,
-        "timestamp": {"$gte": start_dt, "$lte": end_dt}
-    }
-    login_docs = list(login_logs_col.find(attend_q, {"timestamp": 1}))
-    present_dates = set()
-    for log in login_docs:
-        ts = log.get("timestamp")
-        if isinstance(ts, datetime):
-            present_dates.add(ts.date())
-    present_days = len(present_dates)
+    # ---------- ATTENDANCE BASED ON PAYMENTS (>= 10 PAYMENTS = WORKED) ----------
+
+    # Present days = number of days in the range where the agent made >= 10 payments
+    present_days = sum(1 for row in payments_by_date_list if row["count"] >= 10)
+
+    # Working days in range = total calendar days in the selected date range
     working_days = (end_dt.date() - start_dt.date()).days + 1
     working_days = working_days if working_days > 0 else 0
 
@@ -461,20 +503,19 @@ def agent_metrics():
             "payment_type": {"$ne": "WITHDRAWAL"},
             "date": {"$gte": compare["start_str"], "$lte": compare["end_str"]}
         }
-        c_payments = list(
-            payments_col.find(
-                c_pay_q,
-                {"amount": 1}
-            )
+        c_payments = payments_col.find(
+            c_pay_q,
+            {"amount": 1}
         )
         c_total_sales = 0.0
+        c_payments_count = 0
         for p in c_payments:
+            c_payments_count += 1
             try:
                 c_total_sales += float(p.get("amount", 0.0))
             except Exception:
                 pass
 
-        c_payments_count = len(c_payments)
         c_active_ids = payments_col.distinct("customer_id", c_pay_q)
         c_active_customers = len(c_active_ids) if c_active_ids else 0
 
@@ -539,10 +580,11 @@ def agent_metrics():
         except Exception:
             amt = 0.0
 
-        months_info[idx]["total_amount"] += amt
-        months_info[idx]["payments_count"] += 1
+        m_info = months_info[idx]
+        m_info["total_amount"] += amt
+        m_info["payments_count"] += 1
 
-        day_counts = months_info[idx]["_day_counts"]
+        day_counts = m_info["_day_counts"]
         day_counts[d_str] = day_counts.get(d_str, 0) + 1
 
     for m_info in months_info:
@@ -583,8 +625,8 @@ def agent_metrics():
             "active_customers": active_customers,
             "inactive_customers": inactive_customers_count,
             "attendance_rate": round(attendance_rate, 1),
-            "present_days": present_days,
-            "working_days": working_days,
+            "present_days": present_days,     # now payment-based
+            "working_days": working_days,     # calendar days in range
             "leads_total": leads_total,
             "leads_converted": leads_converted,
             "conversion_rate": round(conv_rate, 1),
@@ -626,7 +668,7 @@ def team_metrics():
     Query params:
       - manager_id (optional)
       - branch (optional)
-      - month, year (optional; if present, override start/end)
+      - month, year (optional; if present, override start/end with full month)
       - start, end (date range; defaults = this month)
     """
     role, user_id = _get_current_role()
@@ -641,29 +683,7 @@ def team_metrics():
 
     # ----- Date range (month/year first, then start/end) -----
     default_start, default_end = _this_month_range()
-
-    month_param = request.args.get("month")
-    year_param = request.args.get("year")
-
-    start_dt = default_start
-    end_dt = default_end
-
-    if year_param and month_param:
-        try:
-            y = int(year_param)
-            m = int(month_param)
-            if 1 <= m <= 12:
-                start_dt, end_dt = _month_range(y, m)
-        except Exception:
-            start_dt, end_dt = default_start, default_end
-    else:
-        start_str_in = request.args.get("start") or _date_to_str(default_start)
-        end_str_in   = request.args.get("end")   or _date_to_str(default_end)
-
-        start_dt = _parse_date(start_str_in, default_start)
-        end_dt   = _parse_date(end_str_in, default_end)
-        if end_dt < start_dt:
-            end_dt = start_dt
+    start_dt, end_dt = _resolve_date_range(request.args, default_start, default_end)
 
     start_str = _date_to_str(start_dt)
     end_str   = _date_to_str(end_dt)
