@@ -200,7 +200,7 @@
     <div>
       <h3 class="mb-0 fw-semibold">Meeting Report</h3>
       <small class="text-muted">
-        Filter by branch / manager and month, then review a detailed performance profile for the selected agent.
+        Filter by branch / manager and time range (month or custom week), then review a detailed performance profile for the selected agent.
       </small>
     </div>
     <div class="d-flex align-items-center gap-2">
@@ -220,7 +220,7 @@
         <span class="badge-soft">
           <i class="bi bi-funnel me-1"></i> Filters
         </span>
-        <small class="text-muted">Month filters drive both the agent profile and team leaderboard.</small>
+        <small class="text-muted">Time filters drive both the agent profile and team leaderboard.</small>
       </div>
 
       <form class="row g-3 align-items-end" onsubmit="return false;">
@@ -268,9 +268,29 @@
           <input id="agentSearch" type="text" class="form-control" placeholder="Search by name or phone">
         </div>
 
+        <!-- Range mode -->
+        <div class="col-md-3 mt-3">
+          <label class="form-label">Time range mode</label>
+          <div class="d-flex gap-3">
+            <div class="form-check">
+              <input class="form-check-input" type="radio" name="rangeMode" id="modeMonth" value="month" checked>
+              <label class="form-check-label" for="modeMonth">
+                Month
+              </label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="radio" name="rangeMode" id="modeCustom" value="custom">
+              <label class="form-check-label" for="modeCustom">
+                Custom range
+              </label>
+            </div>
+          </div>
+          <small class="text-muted">Use custom for weekly view (e.g. 20th–27th).</small>
+        </div>
+
         <!-- Year -->
         <div class="col-md-3 mt-3">
-          <label class="form-label">Year</label>
+          <label class="form-label">Year (for month mode)</label>
           <select id="filterYear" class="form-select">
             {% for y in range(current_year - 1, current_year + 2) %}
               <option value="{{ y }}" {% if y == current_year %}selected{% endif %}>{{ y }}</option>
@@ -298,6 +318,18 @@
           </select>
         </div>
 
+        <!-- Custom start -->
+        <div class="col-md-3 mt-3">
+          <label class="form-label">Start date (custom)</label>
+          <input type="date" id="customStart" class="form-control" disabled>
+        </div>
+
+        <!-- Custom end -->
+        <div class="col-md-3 mt-3">
+          <label class="form-label">End date (custom)</label>
+          <input type="date" id="customEnd" class="form-control" disabled>
+        </div>
+
         <!-- Compare with previous month -->
         <div class="col-md-3 mt-3">
           <div class="form-check mt-4">
@@ -315,7 +347,7 @@
           </button>
         </div>
 
-        <!-- Hidden date range (kept for backend + labels) -->
+        <!-- Hidden date range (used for backend + labels) -->
         <input id="dateStart" type="hidden" value="{{ default_start }}">
         <input id="dateEnd"   type="hidden" value="{{ default_end }}">
       </form>
@@ -611,7 +643,7 @@
             <div>
               <span class="fw-semibold">Team Performance (Agents)</span><br>
               <small class="text-muted">
-                Agents under selected branch/manager in the current month
+                Agents under selected branch/manager in the selected date range
               </small>
             </div>
             <div class="d-flex align-items-center gap-2">
@@ -750,15 +782,50 @@
     document.getElementById("reportEmpty").classList.remove("d-none");
   }
 
-  /* ---- Month/year helpers ---- */
+  /* ---- Range helpers ---- */
 
+  function getRangeMode(){
+    const modeInput = document.querySelector('input[name="rangeMode"]:checked');
+    return modeInput ? modeInput.value : "month";
+  }
+
+  // This now respects month-mode OR custom range
   function setRangeFromYearMonth(){
-    const yearSel  = document.getElementById("filterYear");
-    const monthSel = document.getElementById("filterMonth");
+    const mode = getRangeMode();
     const dateStart = document.getElementById("dateStart");
     const dateEnd   = document.getElementById("dateEnd");
+    if(!dateStart || !dateEnd) return;
 
-    if(!yearSel || !monthSel || !dateStart || !dateEnd) return;
+    if(mode === "custom"){
+      const cs = document.getElementById("customStart");
+      const ce = document.getElementById("customEnd");
+      const startVal = cs?.value || "";
+      const endVal   = ce?.value || "";
+
+      if(!startVal && !endVal){
+        // no custom dates specified, keep whatever is already there
+        return;
+      }
+
+      let s = startVal || endVal;
+      let e = endVal || startVal;
+
+      // if reversed, swap
+      if(s && e && s > e){
+        const tmp = s;
+        s = e;
+        e = tmp;
+      }
+
+      dateStart.value = s;
+      dateEnd.value   = e;
+      return;
+    }
+
+    // Month mode (original behaviour)
+    const yearSel  = document.getElementById("filterYear");
+    const monthSel = document.getElementById("filterMonth");
+    if(!yearSel || !monthSel) return;
 
     const y = parseInt(yearSel.value || "0", 10);
     const m = parseInt(monthSel.value || "0", 10);
@@ -794,14 +861,25 @@
       return;
     }
 
-    const yearSel  = document.getElementById("filterYear");
-    const monthSel = document.getElementById("filterMonth");
-    const compareOn = document.getElementById("compareToggle").checked;
+    const yearSel    = document.getElementById("filterYear");
+    const monthSel   = document.getElementById("filterMonth");
+    const compareOn  = document.getElementById("compareToggle").checked;
+    const rangeMode  = getRangeMode();
 
     setRangeFromYearMonth();
 
-    const dateStart = document.getElementById("dateStart").value;
-    const dateEnd   = document.getElementById("dateEnd").value;
+    const dateStartVal = document.getElementById("dateStart").value;
+    const dateEndVal   = document.getElementById("dateEnd").value;
+
+    if(rangeMode === "custom"){
+      // For safety: require at least a start date
+      const cs = document.getElementById("customStart");
+      const ce = document.getElementById("customEnd");
+      if(!cs.value && !ce.value){
+        alert("Please select at least a start date for the custom range.");
+        return;
+      }
+    }
 
     const params = new URLSearchParams();
     params.set("agent_id", agentId);
@@ -809,15 +887,18 @@
     const yearVal  = yearSel ? yearSel.value : "";
     const monthVal = monthSel ? monthSel.value : "";
 
-    if(yearVal)  params.set("year", yearVal);
-    if(monthVal) params.set("month", monthVal);
+    // Only send year/month in MONTH mode (backend uses that first)
+    if(rangeMode === "month"){
+      if(yearVal)  params.set("year", yearVal);
+      if(monthVal) params.set("month", monthVal);
+    }
 
-    // still send explicit start/end for clarity (backend will use year/month first)
-    if(dateStart) params.set("start", dateStart);
-    if(dateEnd)   params.set("end", dateEnd);
+    // always send explicit start/end for clarity
+    if(dateStartVal) params.set("start", dateStartVal);
+    if(dateEndVal)   params.set("end", dateEndVal);
 
-    // monthly comparison based on previous month
-    if(compareOn && yearVal && monthVal){
+    // monthly comparison based on previous month (only valid for month mode)
+    if(rangeMode === "month" && compareOn && yearVal && monthVal){
       const y = parseInt(yearVal, 10);
       const m = parseInt(monthVal, 10);
       if(y && m){
@@ -1169,6 +1250,12 @@
       filterMonth.value = String(monthVal);
     }
 
+    // When user picks a month from the trend chart, switch to month mode
+    const modeMonth = document.getElementById("modeMonth");
+    if(modeMonth){
+      modeMonth.checked = true;
+    }
+
     setRangeFromYearMonth();
     updateMonthSummariesForSelectedMonth();
     loadSelectedAgentMetrics();
@@ -1236,6 +1323,7 @@
     const managerId = document.getElementById("managerFilter")?.value || "";
     const yearSel   = document.getElementById("filterYear");
     const monthSel  = document.getElementById("filterMonth");
+    const rangeMode = getRangeMode();
 
     if(!managerId && !branch){
       TEAM_AGENTS = [];
@@ -1244,8 +1332,8 @@
     }
 
     setRangeFromYearMonth();
-    const dateStart = document.getElementById("dateStart")?.value || "";
-    const dateEnd   = document.getElementById("dateEnd")?.value || "";
+    const dateStartVal = document.getElementById("dateStart")?.value || "";
+    const dateEndVal   = document.getElementById("dateEnd")?.value || "";
 
     const params = new URLSearchParams();
     if(managerId){
@@ -1256,11 +1344,15 @@
 
     const yearVal  = yearSel ? yearSel.value : "";
     const monthVal = monthSel ? monthSel.value : "";
-    if(yearVal)  params.set("year", yearVal);
-    if(monthVal) params.set("month", monthVal);
 
-    if(dateStart) params.set("start", dateStart);
-    if(dateEnd)   params.set("end", dateEnd);
+    // Only send year/month in month mode
+    if(rangeMode === "month"){
+      if(yearVal)  params.set("year", yearVal);
+      if(monthVal) params.set("month", monthVal);
+    }
+
+    if(dateStartVal) params.set("start", dateStartVal);
+    if(dateEndVal)   params.set("end", dateEndVal);
 
     setTeamLoading(true);
     fetch(`/meeting-report/team-metrics?${params.toString()}`, {
@@ -1426,6 +1518,41 @@
         }
       });
     }
+
+    // Range mode behaviour (month vs custom)
+    const modeMonth = document.getElementById("modeMonth");
+    const modeCustom = document.getElementById("modeCustom");
+    const customStart = document.getElementById("customStart");
+    const customEnd = document.getElementById("customEnd");
+    const compareToggle = document.getElementById("compareToggle");
+
+    const handleModeChange = () => {
+      const mode = getRangeMode();
+      if(mode === "custom"){
+        if(customStart) customStart.disabled = false;
+        if(customEnd) customEnd.disabled = false;
+        if(compareToggle){
+          compareToggle.checked = false;
+          compareToggle.disabled = true;
+        }
+      }else{
+        if(customStart) customStart.disabled = true;
+        if(customEnd) customEnd.disabled = true;
+        if(compareToggle){
+          compareToggle.disabled = false;
+        }
+      }
+      setRangeFromYearMonth();
+      const agentId = document.getElementById("agentSelect")?.value || "";
+      if(agentId){
+        loadSelectedAgentMetrics();
+      }else{
+        loadTeamMetrics();
+      }
+    };
+
+    if(modeMonth)  modeMonth.addEventListener("change", handleModeChange);
+    if(modeCustom) modeCustom.addEventListener("change", handleModeChange);
 
     setRangeFromYearMonth();
     initFocusMode();
