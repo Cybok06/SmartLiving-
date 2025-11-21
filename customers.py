@@ -1,122 +1,332 @@
-from flask import Blueprint, render_template, session, redirect, url_for, request, flash
-from pymongo.mongo_client import MongoClient
-from pymongo.server_api import ServerApi
-from bson.objectid import ObjectId
+from __future__ import annotations
+
 from datetime import datetime, date
+from typing import Dict, Any, List, Optional
+import re
+
+from flask import (
+    Blueprint, render_template, session, redirect,
+    url_for, request, flash
+)
+from bson.objectid import ObjectId
+
 from db import db
 
 customers_bp = Blueprint('customers', __name__)
 
-
+# Collections
 users_col = db.users
 customers_col = db.customers
 payments_col = db.payments
 deleted_col = db.deleted
 
 
+def _require_manager() -> Optional[ObjectId]:
+    """
+    Guard: ensure a manager is logged in.
+    Returns manager ObjectId or None (and redirects via caller).
+    """
+    mid = session.get("manager_id")
+    if not mid:
+        return None
+    try:
+        return ObjectId(mid)
+    except Exception:
+        return None
+
+
+def _slugify(text: str) -> str:
+    """
+    Simple slug for tag keys (lowercase, alnum + hyphen).
+    """
+    text = (text or "").strip().lower()
+    text = re.sub(r"[^a-z0-9]+", "-", text)
+    return text.strip("-") or "tag"
 
 
 @customers_bp.route('/customers')
 def customers_list():
-    if 'manager_id' not in session:
+    """
+    Manager-facing customer list with:
+      - status computation (Active / Overdue / Not Active)
+      - Not Active: last payment > 14 days ago (or never paid)
+      - search by name/phone
+      - filter by agent
+      - filter by status
+      - filter by tag
+      - agent name on each card
+      - tag palette for quick filtering
+    """
+    manager_oid = _require_manager()
+    if not manager_oid:
         return redirect(url_for('login.login'))
 
-    manager_id = ObjectId(session['manager_id'])
+    # ---------- Pagination ----------
+    page = max(int(request.args.get('page', 1) or 1), 1)
+    # lighter page: only 10 customers per page
+    per_page = 10
 
-    # Pagination
-    page = int(request.args.get('page', 1))
-    per_page = 30
-    skip = (page - 1) * per_page
+    # ---------- Filters ----------
+    search_term = (request.args.get('search') or '').strip()
+    agent_id_param = (request.args.get('agent_id') or '').strip()
+    status_filter = (request.args.get('status') or '').strip()
+    tag_filter = (request.args.get('tag') or '').strip()
 
-    # Filters
-    search_term = request.args.get('search', '').strip()
-    agent_id = request.args.get('agent_id', '').strip()
-    status_filter = request.args.get('status', '').strip()
+    # Base filter – only this manager’s customers
+    base_filter: Dict[str, Any] = {'manager_id': manager_oid}
 
-    # Base filter
-    base_filter = {'manager_id': manager_id}
-    if agent_id and agent_id != 'all':
+    # Filter by agent (handle both string and ObjectId in DB)
+    if agent_id_param and agent_id_param != 'all':
+        agent_filter_values: List[Any] = [agent_id_param]
         try:
-            base_filter['agent_id'] = ObjectId(agent_id)
-        except:
-            flash("Invalid agent ID", "warning")
+            agent_filter_values.append(ObjectId(agent_id_param))
+        except Exception:
+            # ignore if not a valid ObjectId, still match string
+            pass
+        base_filter['agent_id'] = {'$in': agent_filter_values}
 
+    # Search by name / phone
     if search_term:
         base_filter['$or'] = [
             {'name': {'$regex': search_term, '$options': 'i'}},
-            {'phone_number': {'$regex': search_term, '$options': 'i'}}
+            {'phone_number': {'$regex': search_term, '$options': 'i'}},
         ]
 
-    # Fetch all matching customers
-    all_customers = list(customers_col.find(base_filter))
+    # Filter by tag (tag key)
+    if tag_filter:
+        # tags stored as [{ key, label, color, note, ... }]
+        base_filter['tags.key'] = tag_filter
+
+    # ---------- Fetch customers (filtered by manager/agent/search/tag) ----------
+    # Projection to reduce payload (faster load)
+    projection = {
+        'name': 1,
+        'phone_number': 1,
+        'image_url': 1,
+        'purchases': 1,
+        'agent_id': 1,
+        'tags': 1,
+        'manager_id': 1,
+    }
+    all_customers: List[Dict[str, Any]] = list(customers_col.find(base_filter, projection))
+
+    # ---------- Agents list for filter dropdown ----------
+    agents = list(users_col.find(
+        {'manager_id': manager_oid, 'role': 'agent'},
+        {'_id': 1, 'name': 1}
+    ))
+
+    if not all_customers:
+        # still render page with empty stats + agent dropdown
+        return render_template(
+            'customers.html',
+            customers=[],
+            total_customers=0,
+            total_active=0,
+            total_overdue=0,
+            total_not_active=0,
+            agents=agents,
+            selected_agent=agent_id_param,
+            search_term=search_term,
+            page=page,
+            total_pages=1,
+            selected_status=status_filter,
+            available_tags=[],
+            selected_tag=tag_filter
+        )
+
+    # ---------- Pre-load agent names for these customers ----------
+    # Some customers may not have agent_id, and agent_id may be string or ObjectId
+    agent_ids_raw = [c.get('agent_id') for c in all_customers if c.get('agent_id')]
+
+    agent_oid_set = set()
+    for aid in agent_ids_raw:
+        try:
+            if isinstance(aid, ObjectId):
+                agent_oid_set.add(aid)
+            else:
+                agent_oid_set.add(ObjectId(aid))
+        except Exception:
+            # ignore invalid ids
+            continue
+
+    agent_map: Dict[str, str] = {}
+    if agent_oid_set:
+        for a in users_col.find({'_id': {'$in': list(agent_oid_set)}}, {'_id': 1, 'name': 1}):
+            agent_map[str(a['_id'])] = a.get('name', 'Agent')
+
+    # ---------- Payments for status calc ----------
     customer_ids = [c['_id'] for c in all_customers]
     payments = list(payments_col.find({'customer_id': {'$in': customer_ids}}))
 
     from collections import defaultdict
-    payment_map = defaultdict(list)
+    payment_map: Dict[ObjectId, List[Dict[str, Any]]] = defaultdict(list)
     for p in payments:
-        payment_map[p['customer_id']].append(p)
+        cid = p.get('customer_id')
+        if cid:
+            payment_map[cid].append(p)
 
+    # ---------- Build customers + compute statuses + tags summary ----------
     total_active = 0
     total_overdue = 0
-    customers_with_status = []
+    total_not_active = 0
+    customers_with_status: List[Dict[str, Any]] = []
+
+    # tag palette for top filter buttons
+    tags_summary: Dict[str, Dict[str, Any]] = {}
+
+    today = date.today()
 
     for c in all_customers:
-        cid = c['_id']
+        cid: ObjectId = c['_id']
         cust_payments = payment_map.get(cid, [])
 
-        total_debt = sum(int(p.get('product', {}).get('total', 0)) for p in c.get('purchases', []))
-        paid = sum(p.get('amount', 0) for p in cust_payments if p.get('payment_type') != 'WITHDRAWAL')
-        withdrawn = sum(p.get('amount', 0) for p in cust_payments if p.get('payment_type') == 'WITHDRAWAL')
+        # ----- Compute last payment date (for Not Active logic) -----
+        last_payment_date: Optional[date] = None
+        for p in cust_payments:
+            dt_candidate: Optional[date] = None
+
+            ts = p.get('timestamp')
+            if isinstance(ts, datetime):
+                dt_candidate = ts.date()
+            else:
+                date_str = p.get('date')
+                if isinstance(date_str, str):
+                    try:
+                        dt_candidate = datetime.strptime(date_str, "%Y-%m-%d").date()
+                    except Exception:
+                        pass
+
+            if dt_candidate:
+                if not last_payment_date or dt_candidate > last_payment_date:
+                    last_payment_date = dt_candidate
+
+        days_since_last_payment: Optional[int] = None
+        if last_payment_date:
+            days_since_last_payment = (today - last_payment_date).days
+
+        # ----- Debt & Overdue logic stays same -----
+        total_debt = sum(
+            int(purch.get('product', {}).get('total', 0))
+            for purch in c.get('purchases', [])
+        )
+        paid = sum(
+            p.get('amount', 0)
+            for p in cust_payments
+            if p.get('payment_type') != 'WITHDRAWAL'
+        )
+        withdrawn = sum(
+            p.get('amount', 0)
+            for p in cust_payments
+            if p.get('payment_type') == 'WITHDRAWAL'
+        )
         net_paid = paid - withdrawn
 
         overdue = False
-        for p in c.get('purchases', []):
-            end_str = p.get("end_date")
-            if end_str:
+        for purch in c.get('purchases', []):
+            end_str = purch.get("end_date")
+            if not end_str:
+                continue
+            try:
+                end_date = datetime.strptime(end_str, "%Y-%m-%d").date()
+            except ValueError:
                 try:
-                    end_date = datetime.strptime(end_str, "%Y-%m-%d").date()
+                    end_date = datetime.strptime(end_str, "%y-%m-%d").date()
                 except ValueError:
-                    try:
-                        end_date = datetime.strptime(end_str, "%y-%m-%d").date()
-                    except ValueError:
-                        continue  # skip if still invalid
+                    continue
 
-                if end_date < date.today() and net_paid < total_debt:
-                    overdue = True
-                    break
+            if end_date < today and net_paid < total_debt:
+                overdue = True
+                break
 
+        # ----- Status definition -----
+        # 1. Overdue: business rule based on end_date & net_paid
+        # 2. Active: has payment in last 14 days and not overdue
+        # 3. Not Active: no payment in last 14 days (including never paid)
         if overdue:
             status = "Overdue"
             total_overdue += 1
-        elif cust_payments:
-            status = "Active"
-            total_active += 1
         else:
-            status = "Not Active"
+            if last_payment_date and days_since_last_payment is not None and days_since_last_payment <= 14:
+                status = "Active"
+                total_active += 1
+            else:
+                status = "Not Active"
+                total_not_active += 1
+
+        # ----- Agent name for card -----
+        raw_agent_id = c.get('agent_id')
+        agent_name = "Unassigned"
+        if raw_agent_id:
+            try:
+                agent_name = agent_map.get(str(raw_agent_id), "Unassigned")
+            except Exception:
+                agent_name = "Unassigned"
+
+        # ----- Avatar initials (e.g., Ama -> A) -----
+        raw_name = (c.get('name') or '').strip() or "Unknown"
+        first_letter = raw_name[0].upper() if raw_name else "?"
+
+        # ----- Tags on this customer -----
+        customer_tags = c.get('tags', []) or []
+        normalized_tags: List[Dict[str, Any]] = []
+        for t in customer_tags:
+            t_key = t.get('key') or _slugify(t.get('label', 'tag'))
+            t_label = t.get('label') or t_key.title()
+            t_color = t.get('color') or "#6366f1"  # default indigo-like
+
+            normalized_tags.append({
+                "key": t_key,
+                "label": t_label,
+                "color": t_color,
+            })
+
+            # accumulate summary (count per tag)
+            if t_key not in tags_summary:
+                tags_summary[t_key] = {
+                    "key": t_key,
+                    "label": t_label,
+                    "color": t_color,
+                    "count": 0,
+                }
+            tags_summary[t_key]["count"] += 1
 
         customers_with_status.append({
             'id': str(cid),
-            'name': c.get('name', 'No Name'),
+            'name': raw_name,
             'phone': c.get('phone_number', 'N/A'),
-            'image_url': c.get('image_url', 'https://via.placeholder.com/80'),
-            'status': status
+            'image_url': c.get('image_url', ''),  # template will handle fallback
+            'status': status,
+            'agent_name': agent_name,
+            'initials': first_letter,
+            'tags': normalized_tags,
         })
 
     total_customers = len(customers_with_status)
-    total_not_active = total_customers - total_active
 
-    # ✅ Apply status filter
+    # ---------- Apply status filter (Active / Not Active / Overdue) ----------
     if status_filter:
-        customers_with_status = [c for c in customers_with_status if c['status'].lower() == status_filter.lower()]
+        status_filter_lower = status_filter.lower()
+        customers_with_status = [
+            c for c in customers_with_status
+            if c['status'].lower() == status_filter_lower
+        ]
 
-    # ✅ Paginate after filtering
+    # ---------- Pagination AFTER filtering ----------
+    filtered_count = len(customers_with_status)
+    total_pages = max((filtered_count + per_page - 1) // per_page, 1)
+    if page > total_pages:
+        page = total_pages
+
     start = (page - 1) * per_page
     end = start + per_page
     paginated_customers = customers_with_status[start:end]
-    total_pages = (len(customers_with_status) + per_page - 1) // per_page
 
-    agents = list(users_col.find({'manager_id': manager_id, 'role': 'agent'}, {'_id': 1, 'name': 1}))
+    # ---------- Tag palette for top of page ----------
+    available_tags = sorted(
+        tags_summary.values(),
+        key=lambda t: t["label"].lower()
+    )
 
     return render_template(
         'customers.html',
@@ -126,13 +336,86 @@ def customers_list():
         total_overdue=total_overdue,
         total_not_active=total_not_active,
         agents=agents,
-        selected_agent=agent_id,
+        selected_agent=agent_id_param,
         search_term=search_term,
         page=page,
         total_pages=total_pages,
-        selected_status=status_filter
+        selected_status=status_filter,
+        available_tags=available_tags,
+        selected_tag=tag_filter,
     )
 
+
+# ---------- Tagging: add / update a tag on a customer ----------
+@customers_bp.route('/customer/<customer_id>/tags', methods=['POST'])
+def add_customer_tag(customer_id):
+    """
+    Add or update a tag on a customer.
+    Expected form fields:
+      - label  (e.g. "Payment follow-up")
+      - color  (e.g. "#f97316" or any CSS color)
+      - note   (optional description / reminder text)
+    """
+    manager_oid = _require_manager()
+    if not manager_oid:
+        return redirect(url_for('login.login'))
+
+    label = (request.form.get('label') or '').strip()
+    color = (request.form.get('color') or '').strip() or "#6366f1"
+    note = (request.form.get('note') or '').strip()
+
+    if not label:
+        flash("Tag label is required.", "warning")
+        return redirect(url_for('customers.customer_profile', customer_id=customer_id))
+
+    tag_key = _slugify(label)
+
+    try:
+        cust_oid = ObjectId(customer_id)
+    except Exception:
+        flash("Invalid customer ID format.", "danger")
+        return redirect(url_for('customers.customers_list'))
+
+    # We store tags as a list; if same key exists, we update it; else we push new.
+    existing = customers_col.find_one(
+        {"_id": cust_oid, "tags.key": tag_key},
+        {"tags.$": 1}
+    )
+
+    now = datetime.utcnow()
+
+    if existing and existing.get("tags"):
+        # Update existing tag in-place (color/label/note)
+        customers_col.update_one(
+            {"_id": cust_oid, "tags.key": tag_key},
+            {"$set": {
+                "tags.$.label": label,
+                "tags.$.color": color,
+                "tags.$.note": note,
+                "tags.$.updated_at": now,
+                "tags.$.updated_by": manager_oid,
+            }}
+        )
+    else:
+        # Add a new tag
+        tag_doc = {
+            "key": tag_key,
+            "label": label,
+            "color": color,
+            "note": note,
+            "created_at": now,
+            "created_by": manager_oid,
+        }
+        customers_col.update_one(
+            {"_id": cust_oid},
+            {"$push": {"tags": tag_doc}}
+        )
+
+    flash("Tag saved successfully.", "success")
+    return redirect(url_for('customers.customer_profile', customer_id=customer_id))
+
+
+# ================== Existing routes below (unchanged) ==================
 
 
 @customers_bp.route('/customer/<customer_id>')
@@ -176,9 +459,7 @@ def customer_profile(customer_id):
     steps = ["payment_ongoing", "completed", "approved", "packaging", "delivering", "delivered"]
 
     penalties = customer.get('penalties', [])
-     
     total_penalty = round(sum(p.get("amount", 0) for p in penalties), 2)
-
 
     return render_template(
         'agent_customer_profile.html',
@@ -191,7 +472,7 @@ def customer_profile(customer_id):
         steps=steps,
         current_status=customer["status"],
         penalties=penalties,
-        total_penalty=total_penalty  # ✅ add this  
+        total_penalty=total_penalty
     )
 
 
@@ -231,7 +512,7 @@ def approve_customer_status(customer_id):
                 elapsed_days = (today - purchase_date).days
                 progress = int((elapsed_days / total_days) * 100) if total_days > 0 else 100
                 product["progress"] = max(0, min(progress, 100))
-            except:
+            except Exception:
                 product["progress"] = None
         else:
             product["progress"] = None
@@ -420,6 +701,7 @@ def withdraw_from_customer(customer_id):
 
     flash("✅ Deduction recorded successfully." if is_deduction else "✅ Withdrawal recorded successfully.", "success")
     return redirect(url_for('customers.customer_profile', customer_id=customer_id))
+
 
 @customers_bp.route('/customer/<customer_id>/add_penalty/<int:purchase_index>', methods=['POST'])
 def add_penalty(customer_id, purchase_index):
