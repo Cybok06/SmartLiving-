@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Admin Tasks</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" href="https://res.cloudinary.com/dljpgzbto/image/upload/v1743993646/company-logo_dksb23.jpg" type="image/png">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f4f4;
+      padding: 20px;
+    }
+
+    .navbar-dark-mode {
+      cursor: pointer;
+      font-size: 20px;
+    }
+
+    .task-card {
+      background: white;
+      border-left: 5px solid #007bff;
+      padding: 15px;
+      margin-bottom: 20px;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    }
+
+    .task-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .task-status {
+      font-weight: bold;
+      padding: 4px 10px;
+      border-radius: 12px;
+    }
+
+    .task-status.pending {
+      background-color: #fff3cd;
+      color: #856404;
+    }
+
+    .task-status.completed {
+      background-color: #d4edda;
+      color: #155724;
+    }
+
+    .task-img {
+      max-width: 100%;
+      border-radius: 6px;
+      margin-top: 10px;
+    }
+
+    .task-message {
+      margin-top: 10px;
+      font-size: 16px;
+    }
+
+    .btn-complete {
+      background: #28a745;
+      color: white;
+      padding: 8px 15px;
+      border: none;
+      border-radius: 5px;
+      margin-top: 10px;
+      font-weight: bold;
+    }
+
+    .btn-complete:hover {
+      background: #218838;
+    }
+
+    .flash {
+      padding: 10px;
+      margin-bottom: 15px;
+      border-radius: 5px;
+    }
+
+    .flash.success {
+      background: #d4edda;
+      color: #155724;
+    }
+
+    .dark-mode {
+      background-color: #121212;
+      color: #f1f1f1;
+    }
+
+    .dark-mode .task-card {
+      background-color: #1e1e1e;
+      color: #f1f1f1;
+    }
+
+    .dark-mode .task-status.pending {
+      background-color: #a37b00;
+      color: #fff;
+    }
+
+    .dark-mode .task-status.completed {
+      background-color: #228c52;
+      color: #fff;
+    }
+
+    .dark-mode .btn-complete {
+      background-color: #28a745;
+    }
+
+    @media (max-width: 600px) {
+      .task-header {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Navbar -->
+<nav class="navbar navbar-expand-lg bg-white shadow-sm px-3 mb-4">
+  <div class="container-fluid">
+    <a class="navbar-brand fw-bold text-dark" href="{{ url_for('manager_dashboard.manager_dashboard_view') }}">
+      <img src="https://res.cloudinary.com/dljpgzbto/image/upload/v1743993646/company-logo_dksb23.jpg" height="35" class="me-2" alt="Logo">
+      Dashboard
+    </a>
+    <div class="ms-auto">
+      <span class="navbar-dark-mode" onclick="toggleDarkMode()">🌓</span>
+    </div>
+  </div>
+</nav>
+
+<div class="container">
+  <h2 class="mb-4 text-center">Tasks from Admin</h2>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      {% for category, message in messages %}
+        <div class="flash {{ category }}">{{ message }}</div>
+      {% endfor %}
+    {% endif %}
+  {% endwith %}
+
+  {% for task in tasks %}
+    <div class="task-card">
+      <div class="task-header">
+        <span class="task-status {{ task.status }}">{{ task.status.capitalize() }}</span>
+        <small class="text-muted">{{ task.time_str }}</small>
+      </div>
+      <div class="task-message">{{ task.message }}</div>
+      {% if task.image_url %}
+        <img class="task-img" src="{{ task.image_url }}" alt="Task Image">
+      {% endif %}
+      {% if task.status == 'pending' %}
+        <form method="POST">
+          <input type="hidden" name="task_id" value="{{ task._id }}">
+          <button class="btn-complete" type="submit">Mark as Completed</button>
+        </form>
+      {% endif %}
+    </div>
+  {% endfor %}
+</div>
+
+<script>
+  function toggleDarkMode() {
+    document.body.classList.toggle('dark-mode');
+  }
+</script>
+</body>
+</html>
+

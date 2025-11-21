@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Customers - CRM System</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="icon" href="https://res.cloudinary.com/dljpgzbto/image/upload/v1743993646/company-logo_dksb23.jpg" type="image/png"/>
+
+  <!-- Bootstrap & Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet" />
+
+  <style>
+    :root {
+      --card-bg: #ffffff;
+      --card-border: rgba(148,163,184,0.45);
+      --card-shadow: 0 8px 24px rgba(15,23,42,0.06);
+      --ink: #0f172a;
+      --muted: #64748b;
+      --soft: #f5f7fa;
+    }
+
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      padding: 20px;
+      background: var(--soft);
+      color: var(--ink);
+      transition: background 0.3s, color 0.3s;
+    }
+
+    .dark-mode {
+      background-color: #050816;
+      color: #e5e7eb;
+    }
+    .dark-mode .customer-card {
+      background: #020617;
+      border-color: rgba(148,163,184,0.35);
+      box-shadow: 0 18px 40px rgba(15,23,42,0.6);
+    }
+    .dark-mode .summary div {
+      opacity: 0.95;
+    }
+    .dark-mode .navbar-light {
+      background: #020617 !important;
+    }
+    .dark-mode .status-legend,
+    .dark-mode .filters-meta {
+      color: #9ca3af;
+    }
+
+    .navbar-brand img { height: 40px; margin-right: 10px; }
+
+    /* Page loader */
+    .page-loader {
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(circle at top, rgba(59,130,246,0.12), transparent 55%),
+                  radial-gradient(circle at bottom, rgba(14,165,233,0.12), transparent 55%),
+                  rgba(15,23,42,0.8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 2000;
+    }
+    .page-loader.hidden {
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.35s ease-out;
+    }
+
+    /* Page header */
+    .page-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .page-title {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .page-title h1 {
+      font-size: 1.6rem;
+      font-weight: 700;
+      margin: 0;
+    }
+    .page-title span {
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+
+    .filters-meta {
+      font-size: 0.78rem;
+      color: var(--muted);
+    }
+
+    /* Summary pills */
+    .summary {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 12px;
+      font-weight: 600;
+      font-size: 13px;
+    }
+    .summary div {
+      background: linear-gradient(135deg, #2563eb, #4f46e5);
+      color: white;
+      padding: 6px 12px;
+      border-radius: 999px;
+      box-shadow: 0 10px 25px rgba(37,99,235,0.25);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .summary div span.value {
+      font-size: 15px;
+    }
+    .summary .pill-total { background: linear-gradient(135deg,#0f172a,#1e293b); }
+    .summary .pill-active { background: linear-gradient(135deg,#16a34a,#22c55e); }
+    .summary .pill-not-active { background: linear-gradient(135deg,#dc2626,#fb923c); }
+    .summary .pill-overdue { background: linear-gradient(135deg,#eab308,#f97316); color:#111827; }
+
+    /* Status legend */
+    .status-legend {
+      font-size: 0.78rem;
+      margin-bottom: 16px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+    .status-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      display: inline-block;
+    }
+    .status-dot-active { background: #22c55e; }
+    .status-dot-not-active { background: #ef4444; }
+    .status-dot-overdue { background: #eab308; }
+
+    .status-filters {
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+    }
+    .status-filters .btn {
+      min-width: 110px;
+      font-size: 0.82rem;
+    }
+
+    /* Tag filter bar */
+    .tag-filter-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 16px;
+      align-items: center;
+    }
+    .tag-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(148,163,184,0.6);
+      font-size: 12px;
+      background: rgba(255,255,255,0.9);
+      text-decoration: none;
+      color: var(--muted);
+      transition: all 0.15s ease;
+    }
+    .tag-chip .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      flex-shrink: 0;
+    }
+    .tag-chip.active,
+    .tag-chip:hover {
+      background: #0f172a;
+      color: #f9fafb;
+      border-color: transparent;
+      transform: translateY(-1px);
+      box-shadow: 0 6px 16px rgba(15,23,42,0.25);
+    }
+    .tag-chip-all {
+      font-weight: 600;
+    }
+
+    .customer-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+    .customer-link {
+      text-decoration: none;
+      color: inherit;
+      flex: 0 0 auto;
+    }
+
+    .customer-card {
+      background: var(--card-bg);
+      border-radius: 14px;
+      border: 1px solid var(--card-border);
+      box-shadow: var(--card-shadow);
+      padding: 14px;
+      width: 280px;
+      display: flex;
+      align-items: stretch;
+      gap: 12px;
+      transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease;
+      position: relative;
+      overflow: hidden;
+    }
+    .customer-card::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at top left, rgba(59,130,246,0.08), transparent 55%);
+      opacity: 0;
+      transition: opacity 0.2s ease;
+      pointer-events: none;
+    }
+    .customer-card:hover {
+      transform: translateY(-2px) scale(1.01);
+      box-shadow: 0 14px 40px rgba(15,23,42,0.16);
+      border-color: rgba(59,130,246,0.7);
+    }
+    .customer-card:hover::before {
+      opacity: 1;
+    }
+
+    .avatar-wrapper {
+      position: relative;
+      flex-shrink: 0;
+      width: 64px;
+      height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .avatar-img {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 2px solid rgba(59,130,246,0.9);
+      box-shadow: 0 0 0 3px rgba(59,130,246,0.15);
+      background: #e5e7eb;
+    }
+    .avatar-initials {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #0ea5e9, #6366f1);
+      color: #f9fafb;
+      font-weight: 700;
+      font-size: 24px;
+      text-transform: uppercase;
+      box-shadow: 0 0 0 3px rgba(96,165,250,0.3);
+    }
+    .avatar-initials.avatar-hidden {
+      display: none;
+    }
+
+    .customer-main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .customer-top-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 4px;
+    }
+    .customer-name {
+      font-size: 17px;
+      font-weight: 700;
+      margin: 0;
+      color: var(--ink);
+    }
+    .dark-mode .customer-name {
+      color: #f9fafb;
+    }
+
+    .customer-phone {
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 2px;
+    }
+    .customer-agent {
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .status-label {
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 11px;
+      color: white;
+      user-select: none;
+      white-space: nowrap;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .status-active { background: linear-gradient(135deg, #16a34a, #22c55e); }
+    .status-not-active { background: linear-gradient(135deg, #dc2626, #f97316); }
+    .status-overdue { background: linear-gradient(135deg, #eab308, #f97316); color: #111827; }
+
+    .customer-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      margin-top: 6px;
+    }
+    .customer-tag-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 10px;
+      background: rgba(148,163,184,0.15);
+      color: #0f172a;
+      border: 1px solid rgba(148,163,184,0.35);
+    }
+    .customer-tag-chip .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      flex-shrink: 0;
+    }
+    .dark-mode .customer-tag-chip {
+      color: #e5e7eb;
+      background: rgba(148,163,184,0.25);
+    }
+
+    .card-footer-meta {
+      margin-top: auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .pagination .page-link { color: #007bff; }
+    .pagination .active .page-link {
+      background-color: #007bff;
+      color: white;
+      border-color: #007bff;
+    }
+
+    @media (max-width: 992px) {
+      body { padding: 16px; }
+      .page-header {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+    }
+    @media (max-width: 768px) {
+      .customer-card {
+        flex-direction: row;
+        width: 100%;
+      }
+    }
+    @media (max-width: 600px) {
+      .customer-card {
+        flex-direction: row;
+        align-items: flex-start;
+        width: 100%;
+      }
+      .status-filters {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Page Loader -->
+<div id="pageLoader" class="page-loader">
+  <div class="text-center">
+    <div class="spinner-border text-light mb-3" role="status">
+      <span class="visually-hidden">Loading...</span>
+    </div>
+    <div class="text-white-50 small">Preparing customers...</div>
+  </div>
+</div>
+
+<!-- Navbar -->
+<nav class="navbar navbar-expand-lg navbar-light bg-light px-3 shadow-sm mb-4">
+  <a class="navbar-brand d-flex align-items-center" href="{{ url_for('manager_dashboard.manager_dashboard_view') }}">
+    <img src="https://res.cloudinary.com/dljpgzbto/image/upload/v1743993646/company-logo_dksb23.jpg" alt="logo">
+    Dashboard
+  </a>
+  <div class="ms-auto d-flex align-items-center gap-2">
+    <button class="btn btn-outline-dark btn-sm" onclick="toggleDarkMode()" id="modeToggle">🌙</button>
+  </div>
+</nav>
+
+<!-- Page header -->
+<div class="page-header">
+  <div class="page-title">
+    <h1>Customers</h1>
+    <span>Track active, not active (no payment &gt; 14 days), overdue and tagged customers.</span>
+  </div>
+  <div class="text-end">
+    <div class="filters-meta mb-1">
+      Showing <strong>{{ customers|length }}</strong> of <strong>{{ total_customers }}</strong> customers
+      {% if selected_status or selected_agent or selected_tag or search_term %}
+        &middot; Filters applied
+      {% endif %}
+    </div>
+    <div class="d-flex flex-wrap gap-1 justify-content-end">
+      {% if selected_status %}
+        <span class="badge rounded-pill text-bg-primary">
+          <i class="bi bi-activity me-1"></i>Status: {{ selected_status|title }}
+        </span>
+      {% endif %}
+      {% if selected_agent %}
+        <span class="badge rounded-pill text-bg-secondary">
+          <i class="bi bi-person-badge me-1"></i>Agent filter
+        </span>
+      {% endif %}
+      {% if selected_tag %}
+        <span class="badge rounded-pill text-bg-info text-dark">
+          <i class="bi bi-tag me-1"></i>Tag filter
+        </span>
+      {% endif %}
+      {% if search_term %}
+        <span class="badge rounded-pill text-bg-light">
+          <i class="bi bi-search me-1"></i>"{{ search_term }}"
+        </span>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- Filter and Search Form -->
+<form method="GET" class="row g-3 mb-3 align-items-end">
+  <!-- Agent filter -->
+  <div class="col-md-4">
+    <label for="agentSelect" class="form-label small text-muted">Filter by Agent</label>
+    <select name="agent_id" id="agentSelect" class="form-select form-select-sm">
+      <option value="">All Agents</option>
+      <option value="all" {% if selected_agent == 'all' %}selected{% endif %}>All Agents</option>
+      {% for agent in agents %}
+        <option value="{{ agent._id }}" {% if selected_agent == agent._id|string %}selected{% endif %}>
+          {{ agent.name }}
+        </option>
+      {% endfor %}
+    </select>
+  </div>
+
+  <!-- Search -->
+  <div class="col-md-4">
+    <label class="form-label small text-muted">Search</label>
+    <input
+      type="text"
+      name="search"
+      class="form-control form-control-sm"
+      placeholder="Search by name or phone..."
+      value="{{ search_term }}"
+    >
+  </div>
+
+  <div class="col-md-2 d-grid">
+    <button class="btn btn-primary btn-sm" type="submit">
+      <i class="bi bi-funnel me-1"></i>Apply
+    </button>
+  </div>
+
+  <div class="col-md-2 d-grid">
+    <a href="{{ url_for('customers.customers_list') }}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-arrow-counterclockwise me-1"></i>Reset
+    </a>
+  </div>
+
+  <!-- Preserve selected tag in form submits -->
+  {% if selected_tag %}
+    <input type="hidden" name="tag" value="{{ selected_tag }}">
+  {% endif %}
+</form>
+
+<!-- Status Filter Buttons -->
+<div class="status-filters btn-group mb-3" role="group">
+  <a
+    class="btn btn-outline-primary {% if not selected_status %}active{% endif %}"
+    href="{{ url_for('customers.customers_list', agent_id=selected_agent, search=search_term, tag=selected_tag) }}"
+  >
+    All
+  </a>
+  <a
+    class="btn btn-outline-success {% if selected_status == 'active' %}active{% endif %}"
+    href="{{ url_for('customers.customers_list', agent_id=selected_agent, search=search_term, status='active', tag=selected_tag) }}"
+  >
+    Active
+  </a>
+  <a
+    class="btn btn-outline-danger {% if selected_status == 'not active' %}active{% endif %}"
+    href="{{ url_for('customers.customers_list', agent_id=selected_agent, search=search_term, status='not active', tag=selected_tag) }}"
+  >
+    Not Active
+  </a>
+  <a
+    class="btn btn-outline-warning {% if selected_status == 'overdue' %}active{% endif %}"
+    href="{{ url_for('customers.customers_list', agent_id=selected_agent, search=search_term, status='overdue', tag=selected_tag) }}"
+  >
+    Overdue
+  </a>
+</div>
+
+<!-- Summary -->
+<div class="summary">
+  <div class="pill-total">
+    <i class="bi bi-people-fill"></i>
+    Total: <span class="value">{{ total_customers }}</span>
+  </div>
+  <div class="pill-active">
+    <i class="bi bi-check2-circle"></i>
+    Active (paid ≤ 14 days): <span class="value">{{ total_active }}</span>
+  </div>
+  <div class="pill-not-active">
+    <i class="bi bi-slash-circle"></i>
+    Not Active (&gt; 14 days): <span class="value">{{ total_not_active }}</span>
+  </div>
+  <div class="pill-overdue">
+    <i class="bi bi-exclamation-triangle-fill"></i>
+    Overdue: <span class="value">{{ total_overdue }}</span>
+  </div>
+</div>
+
+<!-- Status legend -->
+<div class="status-legend">
+  <span class="me-1 fw-semibold">Legend:</span>
+  <span><span class="status-dot status-dot-active me-1"></span>Active (recent payment)</span>
+  <span><span class="status-dot status-dot-not-active me-1"></span>Not Active (no payment &gt; 14 days)</span>
+  <span><span class="status-dot status-dot-overdue me-1"></span>Overdue (past end date & balance)</span>
+</div>
+
+<!-- Tag Filter Bar -->
+{% if available_tags and available_tags|length > 0 %}
+  <div class="tag-filter-bar">
+    <span class="small text-muted me-1">Tags:</span>
+    <a
+      href="{{ url_for('customers.customers_list', agent_id=selected_agent, search=search_term, status=selected_status) }}"
+      class="tag-chip tag-chip-all {% if not selected_tag %}active{% endif %}"
+    >
+      <span class="dot" style="background: linear-gradient(135deg,#6366f1,#0ea5e9);"></span>
+      All tags
+    </a>
+    {% for tag in available_tags %}
+      <a
+        href="{{ url_for('customers.customers_list', tag=tag.key, agent_id=selected_agent, search=search_term, status=selected_status) }}"
+        class="tag-chip {% if selected_tag == tag.key %}active{% endif %}"
+      >
+        <span class="dot" data-color="{{ tag.color }}"></span>
+        {{ tag.label }} ({{ tag.count }})
+      </a>
+    {% endfor %}
+  </div>
+{% endif %}
+
+<!-- Customer Cards -->
+<div class="customer-list">
+  {% for customer in customers %}
+    <a href="{{ url_for('customers.customer_profile', customer_id=customer.id) }}" class="customer-link">
+      <div class="customer-card">
+        <!-- Avatar -->
+        <div class="avatar-wrapper">
+          {% if customer.image_url %}
+            <img
+              src="{{ customer.image_url }}"
+              alt="{{ customer.name }}"
+              class="avatar-img"
+              loading="lazy"
+              onerror="this.classList.add('d-none'); this.parentElement.querySelector('.avatar-initials').classList.remove('avatar-hidden');"
+            >
+          {% endif %}
+          <div class="avatar-initials {% if customer.image_url %}avatar-hidden{% endif %}">
+            {{ customer.initials }}
+          </div>
+        </div>
+
+        <!-- Main info -->
+        <div class="customer-main">
+          <div class="customer-top-row">
+            <p class="customer-name mb-0">{{ customer.name }}</p>
+            <div class="status-label
+              {% if customer.status == 'Active' %}status-active
+              {% elif customer.status == 'Overdue' %}status-overdue
+              {% else %}status-not-active{% endif %}">
+              <i class="bi bi-activity"></i> {{ customer.status }}
+            </div>
+          </div>
+
+          <p class="customer-phone mb-1">
+            <i class="bi bi-telephone-outbound me-1"></i>{{ customer.phone }}
+          </p>
+          <p class="customer-agent mb-0">
+            <i class="bi bi-person-badge me-1"></i>{{ customer.agent_name }}
+          </p>
+
+          <!-- Tags on card -->
+          {% if customer.tags and customer.tags|length > 0 %}
+            <div class="customer-tags">
+              {% set max_tags = 3 %}
+              {% for t in customer.tags[:max_tags] %}
+                <span class="customer-tag-chip">
+                  <span class="dot" data-color="{{ t.color }}"></span>
+                  {{ t.label }}
+                </span>
+              {% endfor %}
+              {% if customer.tags|length > max_tags %}
+                <span class="customer-tag-chip">
+                  +{{ customer.tags|length - max_tags }}
+                </span>
+              {% endif %}
+            </div>
+          {% endif %}
+
+          <div class="card-footer-meta">
+            <span><i class="bi bi-card-text me-1"></i>View details</span>
+            <span class="text-capitalize">{{ customer.status|lower }}</span>
+          </div>
+        </div>
+      </div>
+    </a>
+  {% else %}
+    <p class="text-muted">No customers found.</p>
+  {% endfor %}
+</div>
+
+<!-- Pagination -->
+{% if total_pages > 1 %}
+  <nav aria-label="Pagination" class="mt-4">
+    <ul class="pagination justify-content-center">
+      {% if page > 1 %}
+        <li class="page-item">
+          <a
+            class="page-link"
+            href="{{ url_for('customers.customers_list',
+                             page=page-1,
+                             search=search_term,
+                             agent_id=selected_agent,
+                             status=selected_status,
+                             tag=selected_tag) }}"
+          >
+            Previous
+          </a>
+        </li>
+      {% endif %}
+
+      {% for p in range(1, total_pages + 1) %}
+        <li class="page-item {% if p == page %}active{% endif %}">
+          <a
+            class="page-link"
+            href="{{ url_for('customers.customers_list',
+                             page=p,
+                             search=search_term,
+                             agent_id=selected_agent,
+                             status=selected_status,
+                             tag=selected_tag) }}"
+          >
+            {{ p }}
+          </a>
+        </li>
+      {% endfor %}
+
+      {% if page < total_pages %}
+        <li class="page-item">
+          <a
+            class="page-link"
+            href="{{ url_for('customers.customers_list',
+                             page=page+1,
+                             search=search_term,
+                             agent_id=selected_agent,
+                             status=selected_status,
+                             tag=selected_tag) }}"
+          >
+            Next
+          </a>
+        </li>
+      {% endif %}
+    </ul>
+  </nav>
+{% endif %}
+
+<script>
+  function toggleDarkMode() {
+    const body = document.body;
+    const btn = document.getElementById('modeToggle');
+    body.classList.toggle('dark-mode');
+    btn.textContent = body.classList.contains('dark-mode') ? '🌞' : '🌙';
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    const loader = document.getElementById('pageLoader');
+    if (loader) {
+      loader.classList.add('hidden');
+      setTimeout(() => loader.remove(), 400);
+    }
+
+    // Apply dynamic tag colors from data-color attributes
+    document
+      .querySelectorAll('.tag-chip .dot[data-color], .customer-tag-chip .dot[data-color]')
+      .forEach(function (el) {
+        const color = el.getAttribute('data-color');
+        if (color) {
+          el.style.background = color;
+        }
+      });
+  });
+</script>
+
+</body>
+</html>
