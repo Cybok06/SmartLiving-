@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>My Inventory</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" href="https://res.cloudinary.com/dljpgzbto/image/upload/v1743993646/company-logo_dksb23.jpg" type="image/png">
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f4f4f4;
+      margin: 0;
+      padding: 0;
+    }
+
+    nav {
+      background-color: #fff;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      padding: 10px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    nav .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: bold;
+      font-size: 18px;
+      color: #007bff;
+      text-decoration: none;
+    }
+
+    h1 {
+      text-align: center;
+      color: #333;
+      margin: 20px 0 10px;
+    }
+
+    .top-bar {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 0 20px;
+    }
+
+    .top-bar input[type="text"] {
+      padding: 10px;
+      width: 100%;
+      max-width: 400px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      margin-bottom: 15px;
+    }
+
+    .top-bar form button {
+      padding: 10px 20px;
+      background-color: #3498db;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 20px;
+      padding: 20px;
+    }
+
+    .card {
+      background-color: white;
+      border-radius: 12px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      padding: 15px;
+      transition: transform 0.3s ease;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .card:hover {
+      transform: scale(1.02);
+    }
+
+    .card img {
+      width: 100%;
+      height: 140px;
+      object-fit: cover;
+      border-radius: 6px;
+      margin-bottom: 10px;
+      cursor: pointer;
+    }
+
+    .card h3 {
+      margin: 0 0 8px;
+      font-size: 18px;
+      color: #333;
+    }
+
+    .card p {
+      margin: 4px 0;
+      font-size: 14px;
+      color: #555;
+    }
+
+    .card form {
+      margin-top: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .card form input {
+      padding: 6px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      width: 100%;
+    }
+
+    .card form button {
+      padding: 8px 12px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      width: 100%;
+    }
+
+    .request-table {
+      width: 95%;
+      max-width: 900px;
+      margin: 30px auto;
+      background: white;
+      border-radius: 10px;
+      padding: 20px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+
+    .request-table table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .request-table th, .request-table td {
+      text-align: left;
+      padding: 10px;
+      border-bottom: 1px solid #ddd;
+    }
+
+    .request-table th {
+      background-color: #f0f0f0;
+    }
+
+    #scrollBtn {
+      position: fixed;
+      bottom: 30px;
+      right: 20px;
+      background-color: #007bff;
+      color: #fff;
+      border: none;
+      padding: 12px 16px;
+      border-radius: 50%;
+      font-size: 20px;
+      cursor: pointer;
+      display: none;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    }
+
+    #scrollBtn:hover {
+      background-color: #0056b3;
+    }
+
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 99;
+      left: 0; top: 0;
+      width: 100%;
+      height: 100%;
+      overflow: auto;
+      background-color: rgba(0,0,0,0.6);
+    }
+
+    .modal-content {
+      background-color: #fff;
+      margin: 10% auto;
+      padding: 20px;
+      border-radius: 10px;
+      max-width: 500px;
+    }
+
+    .close {
+      float: right;
+      font-size: 22px;
+      cursor: pointer;
+    }
+
+    @media screen and (max-width: 600px) {
+      .card {
+        padding: 12px;
+      }
+
+      .top-bar input[type="text"] {
+        width: 90%;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Navbar -->
+<nav>
+  <a href="{{ url_for('manager_dashboard.manager_dashboard_view') }}" class="brand">
+    <img src="https://res.cloudinary.com/dljpgzbto/image/upload/v1743993646/company-logo_dksb23.jpg" alt="Logo" height="30">
+    Dashboard
+  </a>
+</nav>
+
+<h1>My Inventory</h1>
+
+<div class="top-bar">
+  <input type="text" id="searchInput" placeholder="Search products by name..." onkeyup="filterProducts()">
+  <form method="get" action="#requests">
+    <button type="submit">View My Requests</button>
+  </form>
+</div>
+
+<div class="grid" id="productGrid">
+  {% for item in inventory_items %}
+    <div class="card" data-name="{{ item.name | lower }}">
+      <img src="{{ item.image_url }}" alt="{{ item.name }}" onclick="showPreview('{{ item.name }}', '{{ item.image_url }}', '{{ item.description }}', '{{ item.price }}', '{{ item.qty }}')">
+      <h3>{{ item.name }}</h3>
+      <p><strong>Price:</strong> GHS {{ item.price }}</p>
+      <p><strong>Quantity:</strong> {{ item.qty }}</p>
+      <p><strong>Description:</strong> {{ item.description }}</p>
+      <form action="{{ url_for('manager_inventory.request_topup', product_id=item._id) }}" method="POST">
+        <input type="number" name="requested_qty" placeholder="Qty" min="1" required>
+        <button type="submit">Request Top-up</button>
+      </form>
+    </div>
+  {% endfor %}
+</div>
+
+{% if topup_requests %}
+  <div class="request-table" id="requests">
+    <h2 style="text-align: center;">Top-up Requests</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Product</th>
+          <th>Requested Qty</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for req in topup_requests %}
+          <tr>
+            <td>{{ req.product_name }}</td>
+            <td>{{ req.requested_qty }}</td>
+            <td>{{ req.status }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endif %}
+
+<!-- Scroll to top button -->
+<button id="scrollBtn" onclick="window.scrollTo({ top: 0, behavior: 'smooth' })">↑</button>
+
+<!-- Preview Modal -->
+<div id="previewModal" class="modal">
+  <div class="modal-content">
+    <span class="close" onclick="closePreview()">&times;</span>
+    <h3 id="previewName"></h3>
+    <img id="previewImage" src="" style="width:100%; margin-bottom: 10px; border-radius: 6px;">
+    <p id="previewDescription"></p>
+    <p><strong>Price:</strong> GHS <span id="previewPrice"></span></p>
+    <p><strong>Quantity:</strong> <span id="previewQty"></span></p>
+  </div>
+</div>
+
+<script>
+  const scrollBtn = document.getElementById("scrollBtn");
+  window.onscroll = () => {
+    scrollBtn.style.display = (document.documentElement.scrollTop > 100) ? "block" : "none";
+  };
+
+  function filterProducts() {
+    const query = document.getElementById('searchInput').value.toLowerCase();
+    const cards = document.querySelectorAll('#productGrid .card');
+    cards.forEach(card => {
+      const name = card.getAttribute('data-name');
+      card.style.display = name.includes(query) ? 'block' : 'none';
+    });
+  }
+
+  function showPreview(name, image, desc, price, qty) {
+    document.getElementById("previewName").textContent = name;
+    document.getElementById("previewImage").src = image;
+    document.getElementById("previewDescription").textContent = desc;
+    document.getElementById("previewPrice").textContent = price;
+    document.getElementById("previewQty").textContent = qty;
+    document.getElementById("previewModal").style.display = "block";
+  }
+
+  function closePreview() {
+    document.getElementById("previewModal").style.display = "none";
+  }
+</script>
+
+</body>
+</html>
+

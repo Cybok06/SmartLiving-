@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Agent Profile</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="icon" type="image/png" href="https://res.cloudinary.com/dljpgzbto/image/upload/v1743993646/company-logo_dksb23.jpg">
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #f4f6f9;
+      margin: 0;
+      padding: 0;
+      overflow-x: hidden;
+      transition: background-color 0.3s, color 0.3s;
+    }
+
+    /* Dark Mode Styles */
+    body.dark-mode {
+      background-color: #121212;
+      color: #e0e0e0;
+    }
+
+    /* Navbar */
+    .navbar {
+      background: rgba(124, 18, 106, 0.5); /* Transparent background */
+      backdrop-filter: blur(10px); /* Apply blur */
+      z-index: 1000;
+    }
+
+    .navbar-brand img {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+    }
+
+    .navbar-nav .nav-link {
+      color: #fff;
+    }
+
+    .navbar-nav .nav-link:hover {
+      color: #f8f9fa;
+    }
+
+    /* Profile Container Styles */
+    .profile-container {
+      max-width: 900px;
+      margin: auto;
+      background-color: #fff;
+      border-radius: 16px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      padding: 30px;
+      margin-top: 80px;
+      animation: slideIn 0.5s forwards;
+    }
+
+    .profile-container.dark-mode {
+      background-color: #1e1e1e;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+
+    @keyframes slideIn {
+      0% {
+        transform: translateX(100%);
+      }
+      100% {
+        transform: translateX(0);
+      }
+    }
+
+    .profile-header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 25px;
+    }
+
+    .profile-header img {
+      width: 130px;
+      height: 130px;
+      object-fit: cover;
+      border-radius: 50%;
+      border: 3px solid #007BFF;
+    }
+
+    .profile-info h2 {
+      margin: 0;
+      font-size: 28px;
+    }
+
+    .profile-status {
+      padding: 5px 12px;
+      border-radius: 8px;
+      font-size: 14px;
+      display: inline-block;
+      margin-top: 8px;
+      font-weight: bold;
+    }
+
+    .status-active {
+      background-color: #d4edda;
+      color: #155724;
+    }
+
+    .status-inactive {
+      background-color: #f8d7da;
+      color: #721c24;
+    }
+
+    .profile-body {
+      margin-top: 40px;
+    }
+
+    .details-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 30px;
+    }
+
+    .details-table td {
+      padding: 10px 12px;
+      border-bottom: 1px solid #eee;
+      font-size: 15px;
+    }
+
+    .details-table td.label {
+      font-weight: bold;
+      width: 150px;
+    }
+
+    /* Violet Footer */
+    footer {
+      background-color: #8a2be2; /* Violet */
+      color: #fff;
+      padding: 20px 0;
+      text-align: center;
+      margin-top: 40px;
+    }
+
+    @media (max-width: 600px) {
+      .profile-header {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+      }
+
+      .profile-header img {
+        width: 110px;
+        height: 110px;
+      }
+
+      .details-table td.label {
+        width: auto;
+      }
+
+      .profile-container {
+        padding: 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Navbar -->
+<nav class="navbar navbar-expand-lg shadow-sm px-3 py-2">
+  <div class="container-fluid">
+    <a class="navbar-brand d-flex align-items-center" href="#">
+      <img src="https://res.cloudinary.com/dljpgzbto/image/upload/v1743993646/company-logo_dksb23.jpg" alt="Logo">
+      <span class="ms-2">SMART LIVING</span>
+    </a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
+      <ul class="navbar-nav align-items-center">
+        <li class="nav-item">
+          <a class="nav-link" href="/dashboard/agent">Dashboard</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="/view/customers">View Customers</a>
+        </li>
+        <li class="nav-item">
+          <button id="mode-toggle" class="btn-toggle-mode ms-3" title="Toggle theme">🌙</button>
+        </li>
+        <!-- Logout Button -->
+        <li class="nav-item">
+          <a class="nav-link" href="/logout" id="logout-button">Logout</a>
+        </li>
+      </ul>
+    </div>
+  </div>
+</nav>
+<!-- Profile Container -->
+<div class="profile-container">
+  <div class="profile-header">
+    <img src="{{ agent.image_url }}" alt="Agent Image" />
+    <div class="profile-info">
+      <h2>{{ agent.name }}</h2>
+      <p><strong>Phone:</strong> {{ agent.phone }}</p>
+      <p><strong>Email:</strong> {{ agent.email }}</p>
+      <span class="profile-status {% if agent.status == 'Active' %}status-active{% else %}status-inactive{% endif %}">
+        {{ agent.status }}
+      </span>
+    </div>
+  </div>
+
+  <div class="profile-body">
+    <h3>Agent Details</h3>
+    <table class="details-table">
+      <tr>
+        <td class="label">Gender:</td>
+        <td>{{ agent.gender }}</td>
+      </tr>
+      <tr>
+        <td class="label">Branch:</td>
+        <td>{{ agent.branch }}</td>
+      </tr>
+      <tr>
+        <td class="label">Position:</td>
+        <td>{{ agent.position }}</td>
+      </tr>
+      <tr>
+        <td class="label">Location:</td>
+        <td>{{ agent.location }}</td>
+      </tr>
+      <tr>
+        <td class="label">Start Date:</td>
+        <td>
+          {% if agent.start_date and agent.start_date.strftime %}
+            {{ agent.start_date.strftime('%Y-%m-%d %H:%M:%S') }}
+          {% else %}
+            {{ agent.start_date }}
+          {% endif %}
+        </td>
+      </tr>
+      <tr>
+        <td class="label">Registered On:</td>
+        <td>
+          {% if agent.date_registered and agent.date_registered.strftime %}
+            {{ agent.date_registered.strftime('%Y-%m-%d %H:%M:%S') }}
+          {% else %}
+            {{ agent.date_registered }}
+          {% endif %}
+        </td>
+      </tr>
+    </table>
+
+    <h3>Company Assets</h3>
+    <ul class="assets-list">
+      {% for item in agent.assets %}
+        <li>{{ item }}</li>
+      {% else %}
+        <li>No assets recorded.</li>
+      {% endfor %}
+    </ul>
+  </div>
+</div>
+
+
+<!-- Footer -->
+<footer>
+  <p>&copy; 2025 Your Company Name. All Rights Reserved.</p>
+</footer>
+
+<!-- Scripts -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+  // Dark mode toggle
+  const modeToggle = document.getElementById('mode-toggle');
+  const body = document.body;
+  modeToggle.addEventListener('click', () => {
+    body.classList.toggle('dark-mode');
+  });
+</script>
+<script>
+  window.cbConfig = {
+    chatId: "acac0de2-5c91-4eae-9354-1376e3093d91"
+  };
+</script>
+<script src="https://app.chatbit.co/embed.min.js" defer></script>
+</body>
+</html>
