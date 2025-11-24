@@ -96,14 +96,16 @@ from packages import packages_bp
 from routes.executive_pricing import executive_pricing_bp
 from assign_products import assign_bp
 from manager_deposits import manager_deposits_bp
-# app.py (relevant bits)
+from routes.transfer_customer import transfer_customer_bp
 from executive_deposits import executive_deposits_bp
 from manager_expense import manager_expense_bp
 from executive_expense import executive_expense_bp
-# app.py (or wherever you create the Flask app)
+from routes.admin_transfer_customer import admin_transfer_customer_bp
 from routes.complaints import complaints_bp
 from routes.admin_profile import admin_profile_bp
 from routes.admin_dashboard import admin_dashboard_bp
+from routes.admin_transfer_logs import admin_transfer_logs_bp   # <-- new
+from routes.manager_meeting_report import manager_meeting_report_bp
 
 
 app = Flask(__name__)
@@ -170,6 +172,9 @@ app.register_blueprint(complaints_bp)  # url_prefix="/complaints" is inside the 
 app.register_blueprint(meeting_report_bp)
 app.register_blueprint(agent_complaints_bp)
 app.register_blueprint(agent_sidebar_bp)
+app.register_blueprint(transfer_customer_bp)
+app.register_blueprint(admin_transfer_customer_bp)
+app.register_blueprint(manager_meeting_report_bp)
 
 # ✅ Register NEW Inventory Orders routes (URLs under /inventory/orders)
 app.register_blueprint(inventory_orders_bp)
@@ -199,6 +204,7 @@ app.register_blueprint(admin_dashboard_bp)
 
 # ✅ Register NEW Manager Orders routes (URLs under /manager/orders)
 app.register_blueprint(manager_orders_bp)
+app.register_blueprint(admin_transfer_logs_bp)
 
 # Agent Blueprints
 app.register_blueprint(agent_dashboard_bp)
