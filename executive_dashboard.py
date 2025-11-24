@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template
+from flask import Blueprint, render_template, jsonify
 from db import db
 from datetime import datetime, timedelta
 
@@ -10,8 +10,14 @@ payments_col = db["payments"]
 leads_col = db["leads"]
 users_col = db["users"]
 
+
 @executive_bp.route("/executive/dashboard")
 def executive_dashboard():
+    """
+    Lightweight initial render:
+    - Summary metrics only
+    - Heavy chart data (top_products, top_managers) is loaded via AJAX
+    """
     now = datetime.utcnow()
 
     # Time ranges
@@ -20,9 +26,13 @@ def executive_dashboard():
     start_of_week = start_of_day - timedelta(days=now.weekday())
     start_of_next_week = start_of_week + timedelta(days=7)
     start_of_month = datetime(now.year, now.month, 1)
-    start_of_next_month = datetime(now.year + 1, 1, 1) if now.month == 12 else datetime(now.year, now.month + 1, 1)
+    start_of_next_month = (
+        datetime(now.year + 1, 1, 1)
+        if now.month == 12
+        else datetime(now.year, now.month + 1, 1)
+    )
 
-    # Total customers
+    # Total customers (fast, approximate but OK for dashboard)
     total_customers = customers_col.estimated_document_count()
 
     # Total leads
@@ -46,10 +56,12 @@ def executive_dashboard():
                     "in": {
                         "$cond": [
                             {"$eq": [{"$type": "$$p.purchase_date"}, "string"]},
-                            {"$dateFromString": {
-                                "dateString": "$$p.purchase_date",
-                                "format": "%Y-%m-%d"
-                            }},
+                            {
+                                "$dateFromString": {
+                                    "dateString": "$$p.purchase_date",
+                                    "format": "%Y-%m-%d"
+                                }
+                            },
                             "$$p.purchase_date"
                         ]
                     }
@@ -109,6 +121,26 @@ def executive_dashboard():
     total_earnings = get_amount("total")
     total_withdrawals = get_amount("withdrawal")
 
+    # NOTE: charts (top_products/top_managers) are loaded via /executive/dashboard/charts
+
+    return render_template("executive_dashboard.html", data={
+        "total_earnings": total_earnings,
+        "total_withdrawals": total_withdrawals,
+        "total_customers": total_customers,
+        "total_products_sold": total_products_sold,
+        "total_leads": total_leads,
+        "customers_today": customers_today,
+        "customers_week": customers_week,
+        "customers_month": customers_month
+    })
+
+
+@executive_bp.route("/executive/dashboard/charts")
+def dashboard_charts():
+    """
+    Heavier aggregations for charts.
+    Called asynchronously from the frontend so the main page loads faster.
+    """
     # Top Products Sold
     top_products_cursor = customers_col.aggregate([
         {"$unwind": "$purchases"},
@@ -148,15 +180,8 @@ def executive_dashboard():
         top_managers["labels"].append(label)
         top_managers["values"].append(round(item["total"], 2))
 
-    return render_template("executive_dashboard.html", data={
-        "total_earnings": total_earnings,
-        "total_withdrawals": total_withdrawals,
-        "total_customers": total_customers,
-        "total_products_sold": total_products_sold,
-        "total_leads": total_leads,
-        "customers_today": customers_today,
-        "customers_week": customers_week,
-        "customers_month": customers_month,
+    return jsonify({
+        "ok": True,
         "top_products": top_products,
         "top_managers": top_managers
     })
