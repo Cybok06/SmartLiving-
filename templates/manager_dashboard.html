@@ -10,7 +10,8 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet" />
 
   <!-- Favicon -->
-  <link rel="icon" type="image/png" href="https://res.cloudinary.com/dljpgzbto/image/upload/v1743993646/company-logo_dksb23.jpg" />
+  <link rel="icon" type="image/png"
+        href="https://res.cloudinary.com/dljpgzbto/image/upload/v1743993646/company-logo_dksb23.jpg" />
   <meta name="theme-color" content="#0d6efd" />
 
   <style>
@@ -30,41 +31,75 @@
       --danger:#dc2626;
       --danger-soft:#ffecec;
     }
-    body{ background:var(--bg); color:var(--ink); font-family: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif; }
 
+    body{
+      background:var(--bg);
+      color:var(--ink);
+      font-family: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+    }
+
+    /* Page shell & fade-in */
+    .page-wrap{
+      max-width:1200px;
+      margin: 0 auto;
+      padding: 20px 16px 60px;
+    }
+    .dashboard-main{
+      opacity: 0;
+      transform: translateY(6px);
+      transition: opacity .25s ease-out, transform .25s ease-out;
+    }
+    body.page-ready .dashboard-main{
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* Topbar */
     .topbar{
-      background:#fff; border-bottom:1px solid var(--line);
-      position: sticky; top:0; z-index:100;
+      background:#fff;
+      border-bottom:1px solid var(--line);
+      position: sticky;
+      top:0;
+      z-index:100;
     }
     .brand { color: var(--brand); }
 
-    .page-wrap{ max-width:1200px; margin: 0 auto; padding: 24px 16px 64px; }
-
     /* KPI cards */
     .kpi-card{
-      border:1px solid var(--line); border-radius:14px; background:#fff;
+      border:1px solid var(--line);
+      border-radius:14px;
+      background:#fff;
       box-shadow: 0 6px 18px rgba(2,6,23,.06);
-      transition: transform .15s ease;
       position: relative;
       overflow: hidden;
+      height:100%;
     }
-    .kpi-card:hover{ transform: translateY(-2px); }
     .kpi-icon{
-      width:48px;height:48px;border-radius:12px;display:flex;align-items:center;justify-content:center;
-      font-size:1.25rem;
+      width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;
+      font-size:1.2rem;
     }
     .icon-brand{ background:var(--brand-soft); color:var(--brand); }
     .icon-success{ background:var(--success-soft); color:var(--success); }
     .icon-info{ background:var(--info-soft); color:var(--info); }
     .icon-warning{ background:var(--warning-soft); color:var(--warning); }
 
-    .stat{ font-weight:800; font-size:1.6rem; line-height:1; letter-spacing:.2px }
-    .substat{ font-size:.9rem; color:var(--muted) }
+    .stat{
+      font-weight:800;
+      font-size:1.5rem;
+      line-height:1.1;
+      letter-spacing:.2px;
+    }
+    .substat{
+      font-size:.85rem;
+      color:var(--muted);
+      text-transform:uppercase;
+      letter-spacing:.08em;
+    }
 
-    /* lightweight skeleton shimmer for lazy fields */
+    /* Skeleton shimmer */
     .skeleton {
       display:inline-block;
-      min-width: 100px;
+      min-width: 90px;
       height: 20px;
       background: linear-gradient(90deg, #eef2f7 25%, #e6edf7 37%, #eef2f7 63%);
       background-size: 400% 100%;
@@ -76,21 +111,14 @@
       100% { background-position: -100% 0; }
     }
 
+    /* Section heads */
     .section-head{
-      display:flex; align-items:center; justify-content:space-between; gap:12px;
-      margin: 12px 0 8px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      margin: 18px 0 10px;
     }
-
-    /* Target metric cards */
-    .metric-card{
-      border:1px solid var(--line); background:#fff; border-radius:14px; padding:18px;
-      box-shadow: 0 6px 18px rgba(2,6,23,.06); transition: transform .15s ease;
-    }
-    .metric-card:hover{ transform: translateY(-3px); }
-
-    .progress{ height: 12px; border-radius: 999px; background:#edf2f7 }
-    .progress-bar{ font-size:.7rem }
-    .progress-bar.auto { width: calc(var(--v, 0) * 1%); }
 
     .badge-soft{
       background: var(--brand-soft);
@@ -98,23 +126,114 @@
       border:1px solid #cfe1ff;
       font-weight:700;
       border-radius:999px;
-      padding:.25rem .6rem;
+      padding:.25rem .7rem;
+      font-size:.75rem;
+      text-transform:uppercase;
+      letter-spacing:.08em;
     }
 
-    /* Attendance cards */
-    .agent-card{
-      border:1px solid var(--line); border-radius:12px; background:#fff;
-      box-shadow: 0 3px 12px rgba(2,6,23,.05);
+    /* Target / panel cards */
+    .metric-card,
+    .panel-card{
+      border:1px solid var(--line);
+      background:#fff;
+      border-radius:14px;
+      padding:18px;
+      box-shadow: 0 6px 18px rgba(2,6,23,.06);
+    }
+    .metric-card:hover,
+    .panel-card:hover{
+      transform: translateY(-2px);
       transition: transform .15s ease;
     }
-    .agent-card:hover{ transform: translateY(-2px); }
 
-    .footer{ background:#fff; border-top:1px solid var(--line); padding:14px 0; text-align:center; color:var(--muted) }
+    .progress{
+      height: 10px;
+      border-radius: 999px;
+      background:#edf2f7;
+    }
+    .progress-bar.auto { width: calc(var(--v, 0) * 1%); }
+
+    /* Attendance panel */
+    .panel-card{
+      display:flex;
+      flex-direction:column;
+      height:100%;
+    }
+    .panel-header{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      margin-bottom:8px;
+    }
+    .panel-body-scroll{
+      margin-top:8px;
+      padding-top:4px;
+      border-top:1px dashed var(--line);
+      flex:1 1 auto;
+      max-height:360px;
+      overflow-y:auto;
+    }
+    .agent-row{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      padding:8px 4px;
+      border-radius:10px;
+    }
+    .agent-row + .agent-row{
+      margin-top:4px;
+    }
+    .agent-row:hover{
+      background:#f9fafb;
+    }
+    .agent-avatar{
+      width:42px;
+      height:42px;
+      border-radius:50%;
+      object-fit:cover;
+    }
+    .agent-name{
+      font-size:.9rem;
+      font-weight:600;
+    }
+    .agent-meta{
+      font-size:.8rem;
+      color:var(--muted);
+    }
+    .status-pill{
+      font-size:.7rem;
+      padding:.15rem .55rem;
+      border-radius:999px;
+      font-weight:600;
+      text-transform:uppercase;
+      letter-spacing:.06em;
+      white-space:nowrap;
+    }
+    .status-worked{
+      background:var(--success-soft);
+      color:var(--success);
+    }
+    .status-absent{
+      background:var(--danger-soft);
+      color:var(--danger);
+    }
+
+    .footer{
+      background:#fff;
+      border-top:1px solid var(--line);
+      padding:14px 0;
+      text-align:center;
+      color:var(--muted);
+      font-size:.8rem;
+      margin-top:12px;
+    }
 
     @media (max-width: 575.98px){
-      .stat{ font-size:1.35rem }
-      .page-wrap{ padding:16px 12px 56px; }
-      .skeleton{ min-width: 80px; }
+      .stat{ font-size:1.35rem; }
+      .page-wrap{ padding:16px 12px 52px; }
+      .panel-body-scroll{ max-height: none; }
     }
   </style>
 </head>
@@ -126,152 +245,206 @@
 <nav class="topbar navbar navbar-light">
   <div class="container-fluid px-3">
     <a class="navbar-brand d-flex align-items-center" href="#">
-      <img src="https://res.cloudinary.com/dljpgzbto/image/upload/v1743993646/company-logo_dksb23.jpg" alt="Logo" height="36" class="me-2">
-      <span class="fw-bold">Manager <span class="brand">Dashboard</span></span>
+      <img src="https://res.cloudinary.com/dljpgzbto/image/upload/v1743993646/company-logo_dksb23.jpg"
+           alt="Logo" height="34" class="me-2">
+      <span class="fw-semibold">Manager <span class="brand">Dashboard</span></span>
     </a>
-    <div class="d-flex align-items-center gap-2">
-      <span class="text-muted small d-none d-md-inline">Today: <strong>{{ today }}</strong></span>
-      <a href="{{ url_for('login.logout') }}" class="btn btn-outline-danger btn-sm"><i class="bi bi-box-arrow-right"></i> Logout</a>
+    <div class="d-flex align-items-center gap-3">
+      <span class="text-muted small d-none d-md-inline">
+        Today: <strong>{{ today }}</strong>
+      </span>
+      <a href="{{ url_for('login.logout') }}" class="btn btn-outline-danger btn-sm">
+        <i class="bi bi-box-arrow-right"></i> Logout
+      </a>
     </div>
   </div>
 </nav>
 
 <main class="page-wrap">
-  <div class="d-flex align-items-center justify-content-between mb-3">
-    <h3 class="m-0">Welcome, {{ manager_name }}</h3>
-    <span class="badge-soft">Live overview</span>
-  </div>
+  <div class="dashboard-main">
+    <div class="d-flex align-items-center justify-content-between mb-3">
+      <div>
+        <h3 class="m-0">Hello, {{ manager_name }}</h3>
+        <div class="text-muted small">Branch performance and field activity at a glance.</div>
+      </div>
+      <span class="badge-soft d-none d-sm-inline-flex">
+        <i class="bi bi-broadcast me-1"></i> Live Overview
+      </span>
+    </div>
 
-  <!-- KPIs Row -->
-  <div class="row g-3 mb-3">
-    <!-- Payments Today -->
-    <div class="col-12 col-sm-6 col-lg-3">
-      <div class="kpi-card p-3 h-100">
-        <div class="d-flex align-items-center gap-3">
-          <div class="kpi-icon icon-brand"><i class="bi bi-cash-stack"></i></div>
-          <div>
-            <div class="substat">Payments Today</div>
-            <div class="stat">₵{{ "{:,.2f}".format(today_total_payment) }}</div>
+    <!-- KPIs Row -->
+    <div class="row g-3 mb-3">
+      <!-- Payments Today -->
+      <div class="col-12 col-sm-6 col-lg-3">
+        <div class="kpi-card p-3">
+          <div class="d-flex align-items-center gap-3">
+            <div class="kpi-icon icon-brand"><i class="bi bi-cash-stack"></i></div>
+            <div>
+              <div class="substat">Payments Today</div>
+              <div class="stat">₵{{ "{:,.2f}".format(today_total_payment) }}</div>
+            </div>
           </div>
         </div>
       </div>
-    </div>
 
-    <!-- Expenses Today (Approved) -->
-    <div class="col-12 col-sm-6 col-lg-3">
-      <div class="kpi-card p-3 h-100">
-        <div class="d-flex align-items-center gap-3">
-          <div class="kpi-icon icon-success"><i class="bi bi-receipt"></i></div>
-          <div>
-            <div class="substat">Expenses Today</div>
-            <div class="stat"><span id="kpiExpToday" class="skeleton">&nbsp;</span></div>
+      <!-- Expenses Today (Approved) -->
+      <div class="col-12 col-sm-6 col-lg-3">
+        <div class="kpi-card p-3">
+          <div class="d-flex align-items-center gap-3">
+            <div class="kpi-icon icon-success"><i class="bi bi-receipt"></i></div>
+            <div>
+              <div class="substat">Expenses Today</div>
+              <div class="stat"><span id="kpiExpToday" class="skeleton">&nbsp;</span></div>
+            </div>
           </div>
-        </div>
-        <div class="mt-2 small text-muted">Approved only</div>
-      </div>
-    </div>
-
-    <!-- Expenses This Week (Approved) -->
-    <div class="col-12 col-sm-6 col-lg-3">
-      <div class="kpi-card p-3 h-100">
-        <div class="d-flex align-items-center gap-3">
-          <div class="kpi-icon icon-info"><i class="bi bi-calendar-week"></i></div>
-          <div>
-            <div class="substat">Expenses This Week</div>
-            <div class="stat"><span id="kpiExpWeek" class="skeleton">&nbsp;</span></div>
-          </div>
-        </div>
-        <div class="mt-2 small text-muted">Mon–Sun (UTC)</div>
-      </div>
-    </div>
-
-    <!-- Expenses This Month (Approved) + Pending -->
-    <div class="col-12 col-sm-6 col-lg-3">
-      <div class="kpi-card p-3 h-100">
-        <div class="d-flex align-items-center gap-3">
-          <div class="kpi-icon icon-warning"><i class="bi bi-calendar2-month"></i></div>
-          <div>
-            <div class="substat">Expenses This Month</div>
-            <div class="stat"><span id="kpiExpMonth" class="skeleton">&nbsp;</span></div>
-          </div>
-        </div>
-        <div class="mt-2 small">
-          <span class="text-muted">Pending: </span>
-          <strong class="text-danger"><span id="kpiExpPendingTotal" class="skeleton">&nbsp;</span></strong>
-          <span class="text-muted"> (<span id="kpiExpPendingCount" class="skeleton" style="min-width: 32px;">&nbsp;</span> items)</span>
+          <div class="mt-2 small text-muted">Approved only</div>
         </div>
       </div>
-    </div>
-  </div>
 
-  <!-- Targets -->
-  <div class="section-head">
-    <h5 class="m-0">Monthly Targets</h5>
-    <a href="/manager/targets/" class="btn btn-outline-primary btn-sm"><i class="bi bi-flag"></i> View All</a>
-  </div>
-
-  {% if results and results|length %}
-    <div class="row g-3">
-      {% for item in results %}
-      <div class="col-md-6 col-lg-4">
-        <div class="metric-card h-100">
-          <div class="small text-muted mb-1">
-            <i class="bi bi-calendar-event"></i> {{ item.start_date }} → {{ item.end_date }}
+      <!-- Expenses This Week (Approved) -->
+      <div class="col-12 col-sm-6 col-lg-3">
+        <div class="kpi-card p-3">
+          <div class="d-flex align-items-center gap-3">
+            <div class="kpi-icon icon-info"><i class="bi bi-calendar-week"></i></div>
+            <div>
+              <div class="substat">Expenses This Week</div>
+              <div class="stat"><span id="kpiExpWeek" class="skeleton">&nbsp;</span></div>
+            </div>
           </div>
-          <h6 class="fw-bold mb-3">{{ item.title }}</h6>
-
-          <div class="mb-2 d-flex justify-content-between small"><span>Product</span><span>{{ item.product_pct }}%</span></div>
-          <div class="progress mb-3">
-            <div class="progress-bar bg-success auto" role="progressbar" style="--v: {{ item.product_pct or 0 }};"></div>
-          </div>
-          <div class="text-muted small mb-2">Units: <strong>{{ item.product_achieved }}</strong> / {{ item.product_target }}</div>
-
-          <div class="mb-2 d-flex justify-content-between small"><span>Cash</span><span>{{ item.payment_pct }}%</span></div>
-          <div class="progress mb-3">
-            <div class="progress-bar bg-primary auto" role="progressbar" style="--v: {{ item.payment_pct or 0 }};"></div>
-          </div>
-          <div class="text-muted small mb-2">GHS: <strong>{{ item.cash_achieved }}</strong> / {{ item.cash_target }}</div>
-
-          <div class="mb-2 d-flex justify-content-between small"><span>Customers</span><span>{{ item.customer_pct }}%</span></div>
-          <div class="progress mb-3">
-            <div class="progress-bar bg-warning text-dark auto" role="progressbar" style="--v: {{ item.customer_pct or 0 }};"></div>
-          </div>
-          <div class="text-muted small">Count: <strong>{{ item.customer_achieved }}</strong> / {{ item.customer_target }}</div>
-
-          <div class="d-flex justify-content-end mt-3">
-            <span class="badge-soft">Overall: {{ item.overall }}%</span>
-          </div>
+          <div class="mt-2 small text-muted">Mon–Sun (UTC)</div>
         </div>
       </div>
-      {% endfor %}
-    </div>
-  {% else %}
-    <div class="alert alert-info">No targets assigned yet.</div>
-  {% endif %}
 
-  <!-- Attendance -->
-  <div class="section-head mt-4">
-    <h5 class="m-0">Attendance — {{ today }}</h5>
-    <span class="text-muted small">Customers attended today: <strong>{{ attended_customers_count }}</strong> / {{ total_customer_count }}</span>
-  </div>
-
-  <div class="row g-3">
-    {% for agent in attendance_data %}
-    <div class="col-md-6 col-lg-4">
-      <div class="agent-card p-3 d-flex gap-3">
-        <img src="{{ agent.image_url }}" class="rounded-circle" width="56" height="56" alt="Agent">
-        <div class="flex-grow-1">
-          <div class="d-flex justify-content-between">
-            <h6 class="mb-0">{{ agent.name }}</h6>
-            <span class="small {{ 'text-success' if agent.status == 'Worked' else 'text-danger' }}">
-              {{ 'Worked' if agent.status == 'Worked' else 'Absent' }}
+      <!-- Expenses This Month (Approved) + Pending -->
+      <div class="col-12 col-sm-6 col-lg-3">
+        <div class="kpi-card p-3">
+          <div class="d-flex align-items-center gap-3">
+            <div class="kpi-icon icon-warning"><i class="bi bi-calendar2-month"></i></div>
+            <div>
+              <div class="substat">Expenses This Month</div>
+              <div class="stat"><span id="kpiExpMonth" class="skeleton">&nbsp;</span></div>
+            </div>
+          </div>
+          <div class="mt-2 small">
+            <span class="text-muted">Pending: </span>
+            <strong class="text-danger"><span id="kpiExpPendingTotal" class="skeleton">&nbsp;</span></strong>
+            <span class="text-muted">
+              (<span id="kpiExpPendingCount" class="skeleton" style="min-width: 28px;">&nbsp;</span> items)
             </span>
           </div>
-          <div class="small text-muted">Payments: {{ agent.payment_count }}</div>
         </div>
       </div>
     </div>
-    {% endfor %}
+
+    <!-- Main content split: Targets (left) / Attendance (right) -->
+    <div class="row g-3">
+      <!-- Monthly Targets -->
+      <div class="col-lg-7">
+        <div class="section-head">
+          <h5 class="m-0">Monthly Targets</h5>
+          <a href="/manager/targets/" class="btn btn-outline-primary btn-sm">
+            <i class="bi bi-flag"></i> View All
+          </a>
+        </div>
+
+        {% if results and results|length %}
+          <div class="row g-3">
+            {% for item in results %}
+            <div class="col-md-6">
+              <div class="metric-card h-100">
+                <div class="small text-muted mb-1">
+                  <i class="bi bi-calendar-event"></i>
+                  {{ item.start_date }} → {{ item.end_date }}
+                </div>
+                <h6 class="fw-bold mb-3">{{ item.title }}</h6>
+
+                <div class="mb-1 d-flex justify-content-between small">
+                  <span>Product</span><span>{{ item.product_pct }}%</span>
+                </div>
+                <div class="progress mb-2">
+                  <div class="progress-bar bg-success auto"
+                       role="progressbar" style="--v: {{ item.product_pct or 0 }};"></div>
+                </div>
+                <div class="text-muted small mb-2">
+                  Units: <strong>{{ item.product_achieved }}</strong> / {{ item.product_target }}
+                </div>
+
+                <div class="mb-1 d-flex justify-content-between small">
+                  <span>Cash</span><span>{{ item.payment_pct }}%</span>
+                </div>
+                <div class="progress mb-2">
+                  <div class="progress-bar bg-primary auto"
+                       role="progressbar" style="--v: {{ item.payment_pct or 0 }};"></div>
+                </div>
+                <div class="text-muted small mb-2">
+                  GHS: <strong>{{ item.cash_achieved }}</strong> / {{ item.cash_target }}
+                </div>
+
+                <div class="mb-1 d-flex justify-content-between small">
+                  <span>Customers</span><span>{{ item.customer_pct }}%</span>
+                </div>
+                <div class="progress mb-2">
+                  <div class="progress-bar bg-warning text-dark auto"
+                       role="progressbar" style="--v: {{ item.customer_pct or 0 }};"></div>
+                </div>
+                <div class="text-muted small">
+                  Count: <strong>{{ item.customer_achieved }}</strong> / {{ item.customer_target }}
+                </div>
+
+                <div class="d-flex justify-content-end mt-3">
+                  <span class="badge-soft">Overall: {{ item.overall }}%</span>
+                </div>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="alert alert-info mb-0">
+            No monthly targets have been assigned yet.
+          </div>
+        {% endif %}
+      </div>
+
+      <!-- Attendance Panel -->
+      <div class="col-lg-5">
+        <div class="section-head mb-1">
+          <h5 class="m-0">Attendance — {{ today }}</h5>
+          <span class="text-muted small">
+            Customers attended: <strong>{{ attended_customers_count }}</strong> / {{ total_customer_count }}
+          </span>
+        </div>
+
+        <div class="panel-card">
+          <div class="panel-header">
+            <div class="small text-muted">
+              Field agents who recorded payments today.
+            </div>
+          </div>
+          <div class="panel-body-scroll">
+            {% if attendance_data and attendance_data|length %}
+              {% for agent in attendance_data %}
+              <div class="agent-row">
+                <img src="{{ agent.image_url }}" class="agent-avatar" alt="Agent">
+                <div class="flex-grow-1">
+                  <div class="d-flex justify-content-between align-items-center">
+                    <span class="agent-name">{{ agent.name }}</span>
+                    <span class="status-pill {{ 'status-worked' if agent.status == 'Worked' else 'status-absent' }}">
+                      {{ 'Worked' if agent.status == 'Worked' else 'Absent' }}
+                    </span>
+                  </div>
+                  <div class="agent-meta">
+                    Payments: <strong>{{ agent.payment_count }}</strong>
+                  </div>
+                </div>
+              </div>
+              {% endfor %}
+            {% else %}
+              <div class="text-muted small">No agents found under this manager.</div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </main>
 
@@ -281,9 +454,12 @@
 
 <!-- Defer loading expense KPIs -->
 <script>
-  function fmtMoney(n){ 
+  function fmtMoney(n){
     const num = Number(n || 0);
-    return '₵' + num.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2});
+    return '₵' + num.toLocaleString(undefined, {
+      minimumFractionDigits:2,
+      maximumFractionDigits:2
+    });
   }
 
   async function loadExpenseKPIs(){
@@ -311,15 +487,15 @@
     }catch(e){
       [$today,$week,$month,$pendCnt,$pendTot].forEach(el => el && (el.textContent = '—'));
     }finally{
-      // remove skeleton class after load/error to stop shimmer
       [$today,$week,$month,$pendCnt,$pendTot].forEach(el => el && el.classList.remove('skeleton'));
     }
   }
 
-  // Kick off after first paint
-  window.addEventListener('DOMContentLoaded', () => {
-    // Let the browser paint first, then fetch
-    setTimeout(loadExpenseKPIs, 50);
+  document.addEventListener('DOMContentLoaded', () => {
+    // fade in main dashboard shell
+    document.body.classList.add('page-ready');
+    // let the shell paint, then fetch expenses
+    setTimeout(loadExpenseKPIs, 60);
   });
 </script>
 
