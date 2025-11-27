@@ -1,8 +1,8 @@
-# executive_sales_close.py (FAST, single-aggregation dashboard)
+# executive_sales_close.py
 from flask import Blueprint, render_template, request, jsonify, session, redirect, url_for
 from bson.objectid import ObjectId
-from datetime import datetime, timezone
-from typing import List, Dict, Any, Optional
+from datetime import datetime, timedelta
+from typing import List, Dict, Any, Optional, Tuple
 from db import db
 
 executive_sales_close_bp = Blueprint(
@@ -11,28 +11,31 @@ executive_sales_close_bp = Blueprint(
     url_prefix="/executive-close"
 )
 
-users_col       = db["users"]
-sales_close_col = db["sales_close"]
+users_col             = db["users"]
+sales_close_col       = db["sales_close"]
+manager_expenses_col  = db["manager_expenses"]
 
 # ---------- optional: indexes (safe to run repeatedly) ----------
 def _ensure_indexes():
     try:
         sales_close_col.create_index([("agent_id", 1), ("date", -1)])
         sales_close_col.create_index([("agent_id", 1), ("updated_at", -1)])
+        manager_expenses_col.create_index([("manager_id", 1), ("date", -1), ("status", 1)])
     except Exception:
         pass
 
 _ensure_indexes()
 
 # -------------------------------------------------------------------
-# (You said indexes are in place; keeping here for reference)
+# Example helpful indexes (for reference, not executed here):
 # db.sales_close.createIndex({ agent_id: 1, date: -1 })
 # db.sales_close.createIndex({ agent_id: 1, total_amount: 1 })
 # db.sales_close.createIndex({ date: -1, updated_at: -1 })
 # db.users.createIndex({ role: 1 })
+# db.manager_expenses.createIndex({ manager_id: 1, date: -1, status: 1 })
 # -------------------------------------------------------------------
 
-# ---------- helpers ----------
+# ---------- basic helpers ----------
 
 def _is_ajax(req) -> bool:
     return req.headers.get("X-Requested-With", "").lower() == "xmlhttprequest"
@@ -83,6 +86,176 @@ def _sum_ledger_all_dates(owner_id_str: str) -> float:
     except Exception:
         return 0.0
 
+# ---------- date & expense / gross helpers (mirrors manager logic) ----------
+
+def _date_range_strings(key: str) -> Tuple[Optional[str], Optional[str]]:
+    """
+    Returns (start_str, end_str) as 'YYYY-MM-DD' for:
+      - 'today' : today only
+      - 'week'  : Monday -> today
+      - 'month' : 1st of month -> today
+    If key is unrecognised, returns (None, None) meaning "all time".
+    """
+    today = datetime.utcnow().date()
+
+    if key == "today":
+        s = today.strftime("%Y-%m-%d")
+        return s, s
+
+    if key == "week":
+        start = today - timedelta(days=today.weekday())
+        return start.strftime("%Y-%m-%d"), today.strftime("%Y-%m-%d")
+
+    if key == "month":
+        start = today.replace(day=1)
+        return start.strftime("%Y-%m-%d"), today.strftime("%Y-%m-%d")
+
+    return None, None  # all time
+
+def _manager_approved_expenses_total(manager_id_str: Optional[str], range_key: Optional[str]) -> float:
+    """
+    Sum of APPROVED expenses:
+      - If manager_id_str is given: only that manager's expenses.
+      - If manager_id_str is None: all managers' expenses.
+    range_key: None/'total' -> all time, otherwise 'today'|'week'|'month'.
+    """
+    match: Dict[str, Any] = {
+        "status": "Approved",
+    }
+    if manager_id_str is not None:
+        match["manager_id"] = manager_id_str
+
+    if range_key and range_key != "total":
+        start_str, end_str = _date_range_strings(range_key)
+        if start_str:
+            match["date"] = {"$gte": start_str, "$lte": end_str}
+
+    pipeline = [
+        {"$match": match},
+        {"$group": {
+            "_id": None,
+            "sum_amount": {"$sum": {"$toDouble": {"$ifNull": ["$amount", 0]}}}
+        }}
+    ]
+    agg = list(manager_expenses_col.aggregate(pipeline))
+    if not agg:
+        return 0.0
+    try:
+        return float(agg[0].get("sum_amount", 0.0))
+    except Exception:
+        return 0.0
+
+def _owner_ledger_flow_for_range(owner_id_str: Optional[str], range_key: Optional[str]) -> Dict[str, float]:
+    """
+    For sales_close docs:
+      - If owner_id_str is given: only that owner's ledger (agent_id == owner_id_str).
+      - If owner_id_str is None: ALL docs (all owners).
+
+    For a given period:
+      available = sum of current total_amount (remaining)   in docs in that date range
+      withdrawn = sum of withdrawals[].amount              in docs in that date range
+      gross_before_expense = available + withdrawn
+    """
+    match: Dict[str, Any] = {}
+    if owner_id_str is not None:
+        match["agent_id"] = owner_id_str
+
+    if range_key and range_key != "total":
+        start_str, end_str = _date_range_strings(range_key)
+        if start_str:
+            match["date"] = {"$gte": start_str, "$lte": end_str}
+
+    pipeline = [
+        {"$match": match},
+        {
+            "$project": {
+                "bal_num": {
+                    "$toDouble": {"$ifNull": ["$total_amount", 0]}
+                },
+                "withdrawals_amounts": {
+                    "$map": {
+                        "input": {"$ifNull": ["$withdrawals", []]},
+                        "as": "w",
+                        "in": {
+                            "$toDouble": {"$ifNull": ["$$w.amount", 0]}
+                        },
+                    }
+                },
+            }
+        },
+        {
+            "$project": {
+                "bal_num": 1,
+                "withdrawals_sum": {"$sum": "$withdrawals_amounts"},
+            }
+        },
+        {
+            "$group": {
+                "_id": None,
+                "sum_bal": {"$sum": "$bal_num"},
+                "sum_withdrawn": {"$sum": "$withdrawals_sum"},
+            }
+        },
+    ]
+
+    agg = list(sales_close_col.aggregate(pipeline))
+    if not agg:
+        return {"available": 0.0, "withdrawn": 0.0, "gross": 0.0}
+
+    doc = agg[0]
+    available = float(doc.get("sum_bal", 0.0))
+    withdrawn = float(doc.get("sum_withdrawn", 0.0))
+    gross = available + withdrawn
+
+    return {"available": available, "withdrawn": withdrawn, "gross": gross}
+
+def _manager_balance_breakdown(manager_id_str: str) -> Dict[str, Dict[str, float]]:
+    """
+    Per-manager / per-branch breakdown for:
+      - today, week, month, total
+
+    For each period:
+      col   = Σ(total_amount + withdrawals.amount) in that manager's ledger
+      exp   = approved expenses for that manager in that period
+      gross = col − exp
+    """
+    periods = ["total", "month", "week", "today"]
+    out: Dict[str, Dict[str, float]] = {}
+
+    for p in periods:
+        rng = None if p == "total" else p
+        flow = _owner_ledger_flow_for_range(manager_id_str, rng)
+        col = flow["gross"]
+        exp = _manager_approved_expenses_total(manager_id_str, rng)
+        gross_after = col - exp
+        out[p] = {"col": col, "exp": exp, "gross": gross_after}
+
+    return out
+
+def _all_branches_balance_breakdown(manager_ids: List[str]) -> Dict[str, Dict[str, float]]:
+    """
+    Sum of all manager branches:
+      For each period, we sum:
+        - col (collections)
+        - exp (expenses)
+        - gross (col - exp)
+    """
+    periods = ["total", "month", "week", "today"]
+    agg_out: Dict[str, Dict[str, float]] = {
+        p: {"col": 0.0, "exp": 0.0, "gross": 0.0} for p in periods
+    }
+
+    for mid in manager_ids:
+        mb = _manager_balance_breakdown(mid)
+        for p in periods:
+            agg_out[p]["col"]   += mb[p]["col"]
+            agg_out[p]["exp"]   += mb[p]["exp"]
+            agg_out[p]["gross"] += mb[p]["gross"]
+
+    return agg_out
+
+# ---------- role grouping helper (existing) ----------
+
 def _group_totals_for_roles(roles: List[str]) -> List[Dict[str, Any]]:
     """
     FAST path: one aggregation to get TOTAL (all dates) per user for the given roles.
@@ -127,12 +300,12 @@ def _group_totals_for_roles(roles: List[str]) -> List[Dict[str, Any]]:
 def executive_close_page():
     """
     Executive dashboard:
+      - All Branches Gross Today / Week / Month / Total:
+           Gross = (Σ total_amount + Σ withdrawals.amount into manager ledgers) − Σ Approved manager expenses
+      - Branch overview per manager (Gross per period + available)
       - Close Total (Executive ledger, all dates)
-      - Unclose Total (sum of Agent+Manager+Admin balances, all dates)
-      - Three grids (Admins, Managers, Agents) with TOTAL balances (all dates), sorted DESC
-      - Each item can be withdrawn from.
-
-    FAST: single aggregation builds all role totals; no per-user loops.
+      - Unclose Total (sum of Admin+Manager+Agent balances, all dates)
+      - Grids for Admins, Managers, Agents (same as before for withdrawals).
     """
     scope = _ensure_executive_or_redirect()
     if not isinstance(scope, tuple):
@@ -144,7 +317,6 @@ def executive_close_page():
     # One pass to get all balances per role (desc sorted already)
     grouped = _group_totals_for_roles(["admin", "manager", "agent"])
 
-    # Split into role groups (already sorted desc)
     def _fmt_row(r: Dict[str, Any]) -> Dict[str, Any]:
         total = float(r.get("total", 0.0))
         return {
@@ -160,16 +332,108 @@ def executive_close_page():
     managers = [_fmt_row(r) for r in grouped if r["role"] == "manager"]
     agents   = [_fmt_row(r) for r in grouped if r["role"] == "agent"]
 
-    # Cards (executive close total + unclose total across admins/managers/agents)
-    close_total   = _sum_ledger_all_dates(exec_id)  # one quick agg
+    # All-branches GROSS & collections & expenses (per period) based on MANAGERS
+    manager_ids = [m["_id"] for m in managers]
+    all_branches = _all_branches_balance_breakdown(manager_ids)
+
+    all_gross_total = all_branches["total"]["gross"]
+    all_gross_month = all_branches["month"]["gross"]
+    all_gross_week  = all_branches["week"]["gross"]
+    all_gross_today = all_branches["today"]["gross"]
+
+    all_col_total = all_branches["total"]["col"]
+    all_col_month = all_branches["month"]["col"]
+    all_col_week  = all_branches["week"]["col"]
+    all_col_today = all_branches["today"]["col"]
+
+    all_exp_total = all_branches["total"]["exp"]
+    all_exp_month = all_branches["month"]["exp"]
+    all_exp_week  = all_branches["week"]["exp"]
+    all_exp_today = all_branches["today"]["exp"]
+
+    # Per-branch breakdown for managers (branch-level cards/table)
+    branches: List[Dict[str, Any]] = []
+    for m in managers:
+        mid = m["_id"]
+        mb  = _manager_balance_breakdown(mid)
+
+        # attempt to get a branch label from users collection (optional)
+        try:
+            m_doc = users_col.find_one(
+                {"_id": ObjectId(mid)},
+                {"branch": 1, "branch_name": 1, "name": 1, "username": 1}
+            )
+        except Exception:
+            m_doc = users_col.find_one(
+                {"_id": mid},
+                {"branch": 1, "branch_name": 1, "name": 1, "username": 1}
+            )
+
+        branch_label = (
+            (m_doc or {}).get("branch_name")
+            or (m_doc or {}).get("branch")
+            or m["name"]
+        )
+
+        branches.append({
+            "manager_id": mid,
+            "branch": branch_label,
+            "name": m["name"],
+            "phone": m["phone"],
+            "available": m["available"],
+            "available_num": m["available_num"],
+
+            "gross_today": f"{mb['today']['gross']:,.2f}",
+            "gross_week":  f"{mb['week']['gross']:,.2f}",
+            "gross_month": f"{mb['month']['gross']:,.2f}",
+            "gross_total": f"{mb['total']['gross']:,.2f}",
+
+            "col_today": f"{mb['today']['col']:,.2f}",
+            "col_week":  f"{mb['week']['col']:,.2f}",
+            "col_month": f"{mb['month']['col']:,.2f}",
+            "col_total": f"{mb['total']['col']:,.2f}",
+
+            "exp_today": f"{mb['today']['exp']:,.2f}",
+            "exp_week":  f"{mb['week']['exp']:,.2f}",
+            "exp_month": f"{mb['month']['exp']:,.2f}",
+            "exp_total": f"{mb['total']['exp']:,.2f}",
+        })
+
+    # Cards: Executive close total + unclose total across admins/managers/agents
+    close_total   = _sum_ledger_all_dates(exec_id)
     unclose_total = float(sum(r["available_num"] for r in admins + managers + agents))
 
     return render_template(
         "executive_sales_close.html",
         executive_name=exec_doc.get("name", "Executive"),
         today=today,
+
+        # All-branches gross
+        all_gross_total=f"{all_gross_total:,.2f}",
+        all_gross_month=f"{all_gross_month:,.2f}",
+        all_gross_week=f"{all_gross_week:,.2f}",
+        all_gross_today=f"{all_gross_today:,.2f}",
+
+        # All-branches collections (before expenses)
+        all_col_total=f"{all_col_total:,.2f}",
+        all_col_month=f"{all_col_month:,.2f}",
+        all_col_week=f"{all_col_week:,.2f}",
+        all_col_today=f"{all_col_today:,.2f}",
+
+        # All-branches approved expenses
+        all_exp_total=f"{all_exp_total:,.2f}",
+        all_exp_month=f"{all_exp_month:,.2f}",
+        all_exp_week=f"{all_exp_week:,.2f}",
+        all_exp_today=f"{all_exp_today:,.2f}",
+
+        # Executive own ledger & unclose
         close_total=f"{close_total:,.2f}",
         unclose_total=f"{unclose_total:,.2f}",
+
+        # per-branch manager breakdown
+        branches=branches,
+
+        # role cards
         admins=admins,
         managers=managers,
         agents=agents
@@ -180,7 +444,7 @@ def executive_withdraw():
     """
     POST: target_id, amount, note (optional)
 
-    Improved behavior:
+    Behaviour:
       - Debits across multiple sales_close docs of the TARGET (today first, then most recent -> older),
         using $expr/$toDouble so both numeric and string balances are handled.
       - Credits the EXECUTIVE'S TODAY doc with the total actually withdrawn.
