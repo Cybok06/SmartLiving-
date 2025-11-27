@@ -3,6 +3,7 @@ from flask import Blueprint, render_template, request, jsonify, send_from_direct
 from flask_login import login_required, current_user
 from werkzeug.utils import secure_filename
 from db import db
+from datetime import datetime
 import os
 import uuid
 
@@ -14,19 +15,28 @@ users_collection = db["users"]
 UPLOAD_FOLDER = '/uploads'
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
 
+
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
 
 # Show registration page
 @customer_bp.route('/register', methods=['GET'])
 @login_required
 def register_customer():
-    return render_template('register_customer.html', agent_id=current_user.id)
+    today_str = datetime.utcnow().strftime("%Y-%m-%d")
+    return render_template(
+        'register_customer.html',
+        agent_id=current_user.id,
+        today_str=today_str
+    )
+
 
 # Serve uploaded images (if needed elsewhere)
 @customer_bp.route('/uploads/<filename>')
 def uploaded_file(filename):
     return send_from_directory(UPLOAD_FOLDER, filename)
+
 
 # Add a new customer
 @customer_bp.route('/add', methods=['POST'])
@@ -42,6 +52,7 @@ def add_customer():
         latitude = request.form.get('latitude')
         longitude = request.form.get('longitude')
         image_file = request.files.get('image')
+        date_registered_str = request.form.get('date_registered')
 
         if not agent_id:
             return jsonify({'error': 'Agent ID is required'}), 400
@@ -63,6 +74,15 @@ def add_customer():
         else:
             return jsonify({'error': 'Invalid or missing image file'}), 400
 
+        # Parse / fallback for date_registered
+        try:
+            if date_registered_str:
+                date_registered = datetime.strptime(date_registered_str, "%Y-%m-%d")
+            else:
+                date_registered = datetime.utcnow()
+        except ValueError:
+            date_registered = datetime.utcnow()
+
         # Build customer object
         customer = {
             'name': name,
@@ -72,7 +92,8 @@ def add_customer():
             'phone_number': phone_number,
             'comment': comment,
             'agent_id': agent_id,
-            'manager_id': manager_id
+            'manager_id': manager_id,
+            'date_registered': date_registered,  # ✅ NEW FIELD
         }
 
         # Coordinates
