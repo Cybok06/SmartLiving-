@@ -1,0 +1,492 @@
+{# templates/accounting/fixed_assets_register.html #}
+<!DOCTYPE html>
+<html class="light" lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+  <title>Fixed Assets Register - TRUEtype Services</title>
+  <link rel="icon" href="https://res.cloudinary.com/dljpgzbto/image/upload/v1743993646/company-logo_dksb23.jpg" type="image/png">
+
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+
+  <style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    }
+  </style>
+
+  <script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "primary": "#0f172a",
+            "accent": "#16a34a",
+            "background-light": "#f9fafb",
+            "background-dark": "#111827",
+            "neutral-border": "#e5e7eb",
+            "neutral-text-light": "#111827",
+            "neutral-text-dark": "#f9fafb",
+          },
+          fontFamily: {
+            "display": ["Inter", "sans-serif"]
+          },
+          borderRadius: {
+            "DEFAULT": "0.5rem",
+            "lg": "1rem",
+            "xl": "1.125rem",
+            "full": "9999px"
+          },
+          boxShadow: {
+            "soft": "0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05)"
+          }
+        },
+      },
+    }
+  </script>
+</head>
+
+<body class="font-display bg-background-light dark:bg-background-dark text-neutral-text-light dark:text-neutral-text-dark">
+  {% include 'accounting/sidebar.html' %}
+
+  <div class="min-h-screen flex flex-col acc-with-sidebar">
+
+    <!-- Main Content -->
+    <main class="flex-1">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8 flex flex-col gap-6">
+
+        <!-- Page Heading -->
+        <div class="flex flex-wrap justify-between items-start gap-4">
+          <div class="space-y-2">
+            <h1 class="text-primary dark:text-white text-2xl sm:text-3xl lg:text-4xl font-black leading-tight tracking-tight">
+              Fixed Assets Register
+            </h1>
+            <p class="text-sm sm:text-base text-zinc-600 dark:text-zinc-400 max-w-2xl">
+              Maintain a complete view of all capitalized assets, their depreciation and net book values.
+            </p>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-2">
+            <!-- Export CSV -->
+            <a
+              href="{{ url_for('fixed_assets.export_assets') }}"
+              class="flex items-center justify-center gap-2 rounded-xl h-9 sm:h-10 px-3 sm:px-4 text-xs sm:text-sm font-bold border border-primary text-primary dark:border-white dark:text-white hover:bg-primary/5 dark:hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-primary/50"
+            >
+              <span class="material-symbols-outlined text-base sm:text-lg">file_upload</span>
+              <span class="truncate">Export</span>
+            </a>
+
+            <!-- Print Page -->
+            <button
+              type="button"
+              onclick="window.print()"
+              class="flex items-center justify-center gap-2 rounded-xl h-9 sm:h-10 px-3 sm:px-4 text-xs sm:text-sm font-bold border border-primary text-primary dark:border-white dark:text-white hover:bg-primary/5 dark:hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-primary/50"
+            >
+              <span class="material-symbols-outlined text-base sm:text-lg">print</span>
+              <span class="truncate">Print</span>
+            </button>
+
+            <!-- Add Asset opens modal -->
+            <button
+              type="button"
+              id="btnAddAsset"
+              class="flex items-center justify-center gap-2 rounded-xl h-9 sm:h-10 px-3 sm:px-4 bg-accent text-white text-xs sm:text-sm font-bold hover:bg-accent/90 focus:outline-none focus:ring-2 focus:ring-accent/50"
+            >
+              <span class="material-symbols-outlined text-base sm:text-lg">add_circle</span>
+              <span class="truncate">Add Asset</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Main Action Bar -->
+        <div class="flex flex-wrap items-center gap-3 p-4 bg-white dark:bg-zinc-900 rounded-xl shadow-soft border border-neutral-border/50 dark:border-zinc-800">
+          <form method="post" action="{{ url_for('fixed_assets.compute_depreciation') }}">
+            <button
+              type="submit"
+              class="flex items-center justify-center gap-2 rounded-xl h-9 sm:h-10 px-3 sm:px-4 text-xs sm:text-sm font-bold border border-primary text-primary dark:border-white dark:text-white hover:bg-primary/5 dark:hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-primary/50"
+            >
+              <span class="material-symbols-outlined text-base sm:text-lg">calculate</span>
+              <span class="truncate">Compute Monthly Depreciation</span>
+            </button>
+          </form>
+
+          <form method="post" action="{{ url_for('fixed_assets.post_depreciation') }}">
+            <button
+              type="submit"
+              class="flex items-center justify-center gap-2 rounded-xl h-9 sm:h-10 px-3 sm:px-4 text-xs sm:text-sm font-bold border border-primary text-primary dark:border-white dark:text-white hover:bg-primary/5 dark:hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-primary/50"
+            >
+              <span class="material-symbols-outlined text-base sm:text-lg">post_add</span>
+              <span class="truncate">Post Depreciation</span>
+            </button>
+          </form>
+        </div>
+
+        <!-- Filter & Search Section -->
+        <form
+          method="get"
+          action="{{ url_for('fixed_assets.register') }}"
+          class="flex flex-wrap justify-between items-center gap-4 p-4 bg-white dark:bg-zinc-900 rounded-xl shadow-soft border border-neutral-border/50 dark:border-zinc-800"
+        >
+          <div class="relative flex-1 min-w-[200px]">
+            <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400">search</span>
+            <input
+              class="w-full h-10 pl-10 pr-4 rounded-lg border border-neutral-border dark:border-zinc-700 bg-transparent text-sm focus:ring-2 focus:ring-primary/50 focus:border-primary dark:focus:border-accent"
+              placeholder="Search by asset ID or name..."
+              type="text"
+              name="q"
+              value="{{ request.args.get('q','') }}"
+            />
+          </div>
+
+          <div class="flex flex-wrap gap-3">
+            <div>
+              <label class="sr-only" for="categoryFilter">Category</label>
+              <select
+                id="categoryFilter"
+                name="category"
+                class="flex h-10 items-center justify-between gap-x-2 rounded-lg bg-background-light dark:bg-zinc-800 border border-neutral-border dark:border-zinc-700 px-3 text-xs sm:text-sm text-primary dark:text-white"
+              >
+                <option value="">All Categories</option>
+                {% for cat in categories or [] %}
+                  <option value="{{ cat }}" {% if request.args.get('category') == cat %}selected{% endif %}>
+                    {{ cat }}
+                  </option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <div>
+              <label class="sr-only" for="statusFilter">Status</label>
+              <select
+                id="statusFilter"
+                name="status"
+                class="flex h-10 items-center justify-between gap-x-2 rounded-lg bg-background-light dark:bg-zinc-800 border border-neutral-border dark:border-zinc-700 px-3 text-xs sm:text-sm text-primary dark:text-white"
+              >
+                <option value="">All Statuses</option>
+                {% for st in statuses or [] %}
+                  <option value="{{ st }}" {% if request.args.get('status') == st %}selected{% endif %}>
+                    {{ st }}
+                  </option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <button
+              type="submit"
+              class="flex h-10 items-center justify-center rounded-lg bg-primary text-white px-4 text-xs sm:text-sm font-medium hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary/60"
+            >
+              Apply
+            </button>
+          </div>
+        </form>
+
+        <!-- Table -->
+        <div class="overflow-hidden rounded-xl shadow-soft border border-neutral-border/50 dark:border-zinc-800 bg-white dark:bg-zinc-900">
+          <div class="overflow-x-auto">
+            <table class="w-full min-w-[1100px] text-xs sm:text-sm text-left">
+              <thead class="bg-zinc-50 dark:bg-zinc-900 sticky top-0 z-10">
+                <tr class="border-b border-neutral-border dark:border-zinc-800">
+                  <th class="px-4 py-3 sm:py-4 font-bold text-primary dark:text-white tracking-wider text-xs sm:text-[13px]">Asset ID</th>
+                  <th class="px-4 py-3 sm:py-4 font-bold text-primary dark:text-white tracking-wider text-xs sm:text-[13px]">Asset Name</th>
+                  <th class="px-4 py-3 sm:py-4 font-bold text-primary dark:text-white tracking-wider text-xs sm:text-[13px]">Category</th>
+                  <th class="px-4 py-3 sm:py-4 font-bold text-primary dark:text-white tracking-wider text-xs sm:text-[13px]">Acquisition Date</th>
+                  <th class="px-4 py-3 sm:py-4 font-bold text-primary dark:text-white tracking-wider text-right text-xs sm:text-[13px]">Cost</th>
+                  <th class="px-4 py-3 sm:py-4 font-bold text-primary dark:text-white tracking-wider text-right text-xs sm:text-[13px]">Accum. Depreciation</th>
+                  <th class="px-4 py-3 sm:py-4 font-bold text-primary dark:text-white tracking-wider text-right text-xs sm:text-[13px]">Net Book Value</th>
+                  <th class="px-4 py-3 sm:py-4 font-bold text-primary dark:text-white tracking-wider text-xs sm:text-[13px]">Method</th>
+                  <th class="px-4 py-3 sm:py-4 font-bold text-primary dark:text-white tracking-wider text-xs sm:text-[13px]">Useful Life</th>
+                  <th class="px-4 py-3 sm:py-4 font-bold text-primary dark:text-white tracking-wider text-xs sm:text-[13px]">Status</th>
+                  <th class="px-4 py-3 sm:py-4 font-bold text-primary dark:text-white tracking-wider text-center text-xs sm:text-[13px]">Actions</th>
+                </tr>
+              </thead>
+              <tbody class="bg-white dark:bg-zinc-900/50">
+                {% for asset in assets %}
+                  {% set status = asset.status or "Active" %}
+                  <tr class="border-t border-neutral-border dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 cursor-pointer">
+                    <td class="h-[60px] px-4 py-2 text-zinc-500 dark:text-zinc-400 whitespace-nowrap">{{ asset.asset_id }}</td>
+                    <td class="h-[60px] px-4 py-2 font-medium text-primary dark:text-white whitespace-nowrap">
+                      {{ asset.name }}
+                    </td>
+                    <td class="h-[60px] px-4 py-2 text-zinc-500 dark:text-zinc-400 whitespace-nowrap">
+                      {{ asset.category or '-' }}
+                    </td>
+                    <td class="h-[60px] px-4 py-2 text-zinc-500 dark:text-zinc-400 whitespace-nowrap">
+                      {{ asset.acquisition_date_str or '' }}
+                    </td>
+                    <td class="h-[60px] px-4 py-2 text-zinc-500 dark:text-zinc-400 text-right whitespace-nowrap">
+                      {{ (currency_symbol or '') }}{{ asset.cost|money }}
+                    </td>
+                    <td class="h-[60px] px-4 py-2 text-zinc-500 dark:text-zinc-400 text-right whitespace-nowrap">
+                      {{ (currency_symbol or '') }}{{ asset.accum_depr|money }}
+                    </td>
+                    <td class="h-[60px] px-4 py-2 text-zinc-500 dark:text-zinc-400 text-right whitespace-nowrap">
+                      {{ (currency_symbol or '') }}{{ asset.net_book_value|money }}
+                    </td>
+                    <td class="h-[60px] px-4 py-2 text-zinc-500 dark:text-zinc-400 whitespace-nowrap">
+                      {{ asset.method or 'SL' }}
+                    </td>
+                    <td class="h-[60px] px-4 py-2 text-zinc-500 dark:text-zinc-400 whitespace-nowrap">
+                      {{ asset.useful_life_years or 0 }} Years
+                    </td>
+                    <td class="h-[60px] px-4 py-2">
+                      {% if status == "Active" %}
+                        <span class="inline-flex items-center px-3 py-1 rounded-full text-[11px] font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                          Active
+                        </span>
+                      {% elif status == "Fully Depreciated" %}
+                        <span class="inline-flex items-center px-3 py-1 rounded-full text-[11px] font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                          Fully Depreciated
+                        </span>
+                      {% elif status == "Disposed" %}
+                        <span class="inline-flex items-center px-3 py-1 rounded-full text-[11px] font-medium bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">
+                          Disposed
+                        </span>
+                      {% else %}
+                        <span class="inline-flex items-center px-3 py-1 rounded-full text-[11px] font-medium bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-200">
+                          {{ status }}
+                        </span>
+                      {% endif %}
+                    </td>
+                    <td class="h-[60px] px-4 py-2 text-center">
+                      <form
+                        method="post"
+                        action="{{ url_for('fixed_assets.dispose_asset', asset_id=asset.asset_id) }}"
+                        onsubmit="return confirm('Mark this asset as disposed?');"
+                      >
+                        <button
+                          type="submit"
+                          class="inline-flex items-center justify-center rounded-full p-1.5 text-zinc-500 dark:text-zinc-400 hover:text-primary dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 focus:outline-none focus:ring-1 focus:ring-primary/40"
+                          title="Dispose asset"
+                        >
+                          <span class="material-symbols-outlined text-base">more_horiz</span>
+                        </button>
+                      </form>
+                    </td>
+                  </tr>
+                {% else %}
+                  <tr>
+                    <td colspan="11" class="px-4 py-10 text-center text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm">
+                      No fixed assets have been registered yet.
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <!-- Add Asset Modal -->
+  <div
+    id="assetModalBackdrop"
+    class="fixed inset-0 z-40 hidden bg-black/40 backdrop-blur-sm"
+  ></div>
+
+  <section
+    id="assetModal"
+    class="fixed inset-0 z-50 hidden flex items-center justify-center px-4"
+    aria-hidden="true"
+  >
+    <div class="w-full max-w-lg bg-white dark:bg-zinc-900 rounded-xl shadow-soft border border-neutral-border dark:border-zinc-800 max-h-[90vh] flex flex-col">
+      <header class="flex items-center justify-between px-5 py-4 border-b border-neutral-border dark:border-zinc-800">
+        <div>
+          <h2 class="text-base sm:text-lg font-semibold text-primary dark:text-white">
+            Add New Asset
+          </h2>
+          <p class="text-xs sm:text-[13px] text-zinc-500 dark:text-zinc-400">
+            Capture key details for a new fixed asset.
+          </p>
+        </div>
+        <button
+          type="button"
+          id="assetModalClose"
+          class="inline-flex h-8 w-8 items-center justify-center rounded-full border border-zinc-200 dark:border-zinc-700 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-zinc-100"
+        >
+          <span class="material-symbols-outlined text-base">close</span>
+        </button>
+      </header>
+
+      <form
+        id="assetForm"
+        method="post"
+        action="{{ url_for('fixed_assets.add_asset_form') }}"
+        class="flex-1 overflow-y-auto px-5 py-4 space-y-4"
+      >
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-medium text-zinc-600 dark:text-zinc-300 mb-1">
+              Asset Name <span class="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              name="name"
+              required
+              placeholder="e.g., MacBook Pro 16&quot;"
+              class="w-full rounded-lg border border-zinc-200 dark:border-zinc-700 px-3 py-2 text-sm bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 focus:border-accent focus:ring-accent"
+            />
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-zinc-600 dark:text-zinc-300 mb-1">
+              Category
+            </label>
+            <input
+              type="text"
+              name="category"
+              placeholder="e.g., IT Equipment"
+              class="w-full rounded-lg border border-zinc-200 dark:border-zinc-700 px-3 py-2 text-sm bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 focus:border-accent focus:ring-accent"
+            />
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-medium text-zinc-600 dark:text-zinc-300 mb-1">
+              Acquisition Date
+            </label>
+            <input
+              type="date"
+              name="acquisition_date"
+              class="w-full rounded-lg border border-zinc-200 dark:border-zinc-700 px-3 py-2 text-sm bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 focus:border-accent focus:ring-accent"
+            />
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-zinc-600 dark:text-zinc-300 mb-1">
+              Cost ({{ (currency_symbol or 'Amount') | trim }})
+            </label>
+            <input
+              type="number"
+              step="0.01"
+              min="0"
+              name="cost"
+              placeholder="0.00"
+              class="w-full rounded-lg border border-zinc-200 dark:border-zinc-700 px-3 py-2 text-sm bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 focus:border-accent focus:ring-accent"
+            />
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-medium text-zinc-600 dark:text-zinc-300 mb-1">
+              Depreciation Method
+            </label>
+            <select
+              name="method"
+              class="w-full rounded-lg border border-zinc-200 dark:border-zinc-700 px-3 py-2 text-sm bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 focus:border-accent focus:ring-accent"
+            >
+              <option value="SL">Straight Line (SL)</option>
+              <option value="DB">Declining Balance (DB)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-zinc-600 dark:text-zinc-300 mb-1">
+              Useful Life (Years)
+            </label>
+            <input
+              type="number"
+              min="0"
+              name="useful_life_years"
+              placeholder="e.g., 5"
+              class="w-full rounded-lg border border-zinc-200 dark:border-zinc-700 px-3 py-2 text-sm bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 focus:border-accent focus:ring-accent"
+            />
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-medium text-zinc-600 dark:text-zinc-300 mb-1">
+            Notes (optional)
+          </label>
+          <textarea
+            name="notes"
+            rows="3"
+            class="w-full rounded-lg border border-zinc-200 dark:border-zinc-700 px-3 py-2 text-sm bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 focus:border-accent focus:ring-accent"
+            placeholder="Any extra info about this asset..."
+          ></textarea>
+        </div>
+      </form>
+
+      <footer class="flex items-center justify-between gap-3 border-t border-neutral-border dark:border-zinc-800 px-5 py-3 bg-zinc-50 dark:bg-zinc-900/80">
+        <button
+          type="button"
+          id="assetModalCancel"
+          class="inline-flex items-center justify-center h-9 px-4 rounded-lg text-xs sm:text-sm font-medium text-zinc-600 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+        >
+          Cancel
+        </button>
+        <button
+          type="submit"
+          form="assetForm"
+          class="inline-flex items-center justify-center gap-2 h-9 px-5 rounded-full bg-accent text-white text-xs sm:text-sm font-semibold shadow-sm hover:bg-accent/90 disabled:opacity-60 disabled:cursor-not-allowed"
+        >
+          <span class="material-symbols-outlined text-base hidden" id="assetSpinner">sync</span>
+          <span>Save Asset</span>
+        </button>
+      </footer>
+    </div>
+  </section>
+
+  <script>
+    (function () {
+      const openBtn   = document.getElementById('btnAddAsset');
+      const backdrop  = document.getElementById('assetModalBackdrop');
+      const modal     = document.getElementById('assetModal');
+      const closeBtn  = document.getElementById('assetModalClose');
+      const cancelBtn = document.getElementById('assetModalCancel');
+      const form      = document.getElementById('assetForm');
+      const spinner   = document.getElementById('assetSpinner');
+
+      function openModal() {
+        if (backdrop) backdrop.classList.remove('hidden');
+        if (modal) {
+          modal.classList.remove('hidden');
+          modal.setAttribute('aria-hidden', 'false');
+        }
+      }
+
+      function closeModal() {
+        if (backdrop) backdrop.classList.add('hidden');
+        if (modal) {
+          modal.classList.add('hidden');
+          modal.setAttribute('aria-hidden', 'true');
+        }
+        if (form && typeof form.reset === 'function') {
+          form.reset();
+        }
+      }
+
+      if (openBtn) {
+        openBtn.addEventListener('click', openModal);
+      }
+      if (closeBtn) {
+        closeBtn.addEventListener('click', closeModal);
+      }
+      if (cancelBtn) {
+        cancelBtn.addEventListener('click', closeModal);
+      }
+      if (backdrop) {
+        backdrop.addEventListener('click', function (e) {
+          if (e.target === backdrop) {
+            closeModal();
+          }
+        });
+      }
+      window.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') {
+          closeModal();
+        }
+      });
+
+      if (form) {
+        form.addEventListener('submit', function () {
+          if (spinner) spinner.classList.remove('hidden');
+        });
+      }
+    })();
+  </script>
+</body>
+</html>

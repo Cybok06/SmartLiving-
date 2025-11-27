@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html class="light" lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>My Profile - TRUEtype Accounting</title>
+
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link rel="icon" href="https://res.cloudinary.com/dljpgzbto/image/upload/v1743993646/company-logo_dksb23.jpg" type="image/png">
+
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+
+  <script>
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "primary": "#16a34a",
+            "navy": "#0f172a",
+            "background-light": "#f9fafb",
+            "background-dark": "#020617",
+            "medium-gray": "#e5e7eb",
+          },
+          fontFamily: { "display": ["Inter", "sans-serif"] },
+          borderRadius: {
+            "lg": "1.25rem",
+            "xl": "1.5rem",
+          },
+          boxShadow: {
+            "soft": "0 18px 45px rgba(15,23,42,0.12)",
+          }
+        },
+      },
+    }
+  </script>
+
+  <style>
+    .material-symbols-outlined {
+      font-variation-settings:
+        'FILL' 0,
+        'wght' 400,
+        'GRAD' 0,
+        'opsz' 24;
+    }
+  </style>
+</head>
+
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100">
+  {% include 'accounting/sidebar.html' %}
+
+  <main class="min-h-screen p-4 sm:p-6 lg:p-10 acc-with-sidebar">
+    <div class="mx-auto max-w-6xl space-y-6">
+      <!-- Top hero / heading -->
+      <section class="relative overflow-hidden rounded-2xl bg-gradient-to-r from-emerald-500 via-emerald-600 to-navy shadow-soft">
+        <div class="absolute inset-0 opacity-30 mix-blend-soft-light">
+          <div class="h-full w-full bg-[radial-gradient(circle_at_top,_#ffffff33_0,_transparent_55%),radial-gradient(circle_at_bottom,_#22c55e22_0,_transparent_55%)]"></div>
+        </div>
+        <div class="relative px-6 py-6 sm:px-8 sm:py-8 lg:px-10 lg:py-9 flex flex-col sm:flex-row items-start sm:items-center gap-5">
+          <!-- Avatar -->
+          <div class="shrink-0">
+            <div class="h-16 w-16 sm:h-20 sm:w-20 rounded-2xl bg-white/10 border border-emerald-200/50 flex items-center justify-center shadow-soft backdrop-blur">
+              <span class="text-3xl sm:text-4xl font-bold text-white">
+                {{ profile.initial }}
+              </span>
+            </div>
+          </div>
+
+          <!-- Text -->
+          <div class="flex-1">
+            <p class="text-xs font-semibold tracking-[0.16em] text-emerald-100 uppercase mb-1">
+              Accounting Workspace
+            </p>
+            <h1 class="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight text-white">
+              My Profile
+            </h1>
+            <p class="mt-1 text-sm sm:text-base text-emerald-50/90 max-w-2xl">
+              Manage your TRUEtype Accounting identity, security and access.
+              Keep your password safe and up to date for a secure back-office.
+            </p>
+          </div>
+
+          <!-- Status pill -->
+          <div class="flex flex-col items-start sm:items-end gap-2">
+            <span class="inline-flex items-center rounded-full bg-emerald-50/10 border border-emerald-200/50 px-3 py-1 text-xs font-semibold text-emerald-100 backdrop-blur">
+              <span class="h-2 w-2 rounded-full bg-emerald-300 mr-2"></span>
+              {{ profile.status or "Active" }} account
+            </span>
+            <span class="inline-flex items-center rounded-full bg-white/10 px-3 py-1 text-[11px] font-medium text-emerald-50 backdrop-blur">
+              <span class="material-symbols-outlined mr-1 text-xs align-middle">
+                shield_person
+              </span>
+              Role: {{ profile.role }}
+            </span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Main content -->
+      <section class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+        <!-- Profile details -->
+        <div class="lg:col-span-1 space-y-4">
+          <div class="rounded-2xl bg-white dark:bg-slate-900 border border-medium-gray/60 dark:border-slate-800 shadow-soft p-5 sm:p-6">
+            <div class="flex items-center justify-between mb-4">
+              <h2 class="text-sm font-semibold tracking-wide text-slate-800 dark:text-slate-100 uppercase">
+                Profile details
+              </h2>
+              <span class="inline-flex items-center rounded-full bg-slate-100 dark:bg-slate-800 px-2.5 py-1 text-[11px] font-medium text-slate-600 dark:text-slate-300">
+                <span class="material-symbols-outlined mr-1 text-xs">person</span>
+                Accounting user
+              </span>
+            </div>
+
+            <dl class="space-y-3 text-sm">
+              <div class="flex justify-between">
+                <dt class="text-slate-500 dark:text-slate-400">Full name</dt>
+                <dd class="font-medium text-slate-900 dark:text-slate-100">
+                  {{ profile.name }}
+                </dd>
+              </div>
+
+              <div class="flex justify-between">
+                <dt class="text-slate-500 dark:text-slate-400">Username</dt>
+                <dd class="font-mono text-[13px] font-semibold text-slate-900 dark:text-slate-100">
+                  {{ profile.username }}
+                </dd>
+              </div>
+
+              <div class="flex justify-between">
+                <dt class="text-slate-500 dark:text-slate-400">Position</dt>
+                <dd class="font-medium text-slate-900 dark:text-slate-100">
+                  {{ profile.position }}
+                </dd>
+              </div>
+
+              <div class="flex justify-between">
+                <dt class="text-slate-500 dark:text-slate-400">Role</dt>
+                <dd class="font-medium text-slate-900 dark:text-slate-100">
+                  {{ profile.role }}
+                </dd>
+              </div>
+
+              <div class="flex justify-between">
+                <dt class="text-slate-500 dark:text-slate-400">Status</dt>
+                <dd>
+                  <span class="inline-flex items-center rounded-full bg-emerald-50 dark:bg-emerald-900/40 px-2.5 py-1 text-[11px] font-semibold text-emerald-700 dark:text-emerald-200">
+                    <span class="h-1.5 w-1.5 rounded-full bg-emerald-500 mr-1.5"></span>
+                    {{ profile.status }}
+                  </span>
+                </dd>
+              </div>
+
+              {% if profile.created_at %}
+              <div class="flex justify-between">
+                <dt class="text-slate-500 dark:text-slate-400">Created</dt>
+                <dd class="text-slate-900 dark:text-slate-100">
+                  {{ profile.created_at }}
+                </dd>
+              </div>
+              {% endif %}
+
+              {% if profile.updated_at %}
+              <div class="flex justify-between">
+                <dt class="text-slate-500 dark:text-slate-400">Last updated</dt>
+                <dd class="text-slate-900 dark:text-slate-100">
+                  {{ profile.updated_at }}
+                </dd>
+              </div>
+              {% endif %}
+            </dl>
+
+            <p class="mt-5 text-[11px] leading-relaxed text-slate-500 dark:text-slate-400">
+              If any of these details are incorrect (e.g. role or position),
+              contact your system administrator. Only your password can be
+              changed from this screen.
+            </p>
+          </div>
+        </div>
+
+        <!-- Security / change password -->
+        <div class="lg:col-span-2 space-y-4">
+          <div class="rounded-2xl bg-white dark:bg-slate-900 border border-medium-gray/60 dark:border-slate-800 shadow-soft p-5 sm:p-6">
+            <div class="flex items-center justify-between mb-4">
+              <div>
+                <h2 class="text-sm font-semibold tracking-wide text-slate-800 dark:text-slate-100 uppercase">
+                  Security &amp; password
+                </h2>
+                <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                  Use a strong unique password to protect access to financial data.
+                </p>
+              </div>
+              <span class="hidden sm:inline-flex items-center rounded-full bg-slate-100 dark:bg-slate-800 px-2.5 py-1 text-[11px] font-medium text-slate-600 dark:text-slate-300">
+                <span class="material-symbols-outlined mr-1 text-xs">lock</span>
+                Password protected
+              </span>
+            </div>
+
+            <form method="POST" class="space-y-4 max-w-lg">
+              <input type="hidden" name="action" value="change_password"/>
+
+              <div class="space-y-1.5">
+                <label for="current_password" class="block text-xs font-medium text-slate-600 dark:text-slate-300">
+                  Current password
+                </label>
+                <div class="relative">
+                  <span class="material-symbols-outlined absolute left-3 top-2.5 text-slate-400 text-sm">
+                    key
+                  </span>
+                  <input
+                    id="current_password"
+                    name="current_password"
+                    type="password"
+                    required
+                    class="block w-full rounded-xl border border-medium-gray/80 dark:border-slate-700 bg-white dark:bg-slate-950 pl-9 pr-3 py-2.5 text-sm text-slate-900 dark:text-slate-100 focus:border-primary focus:ring-primary"
+                    placeholder="Enter your current password"
+                  />
+                </div>
+              </div>
+
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div class="space-y-1.5">
+                  <label for="new_password" class="block text-xs font-medium text-slate-600 dark:text-slate-300">
+                    New password
+                  </label>
+                  <div class="relative">
+                    <span class="material-symbols-outlined absolute left-3 top-2.5 text-slate-400 text-sm">
+                      lock_reset
+                    </span>
+                    <input
+                      id="new_password"
+                      name="new_password"
+                      type="password"
+                      required
+                      minlength="8"
+                      class="block w-full rounded-xl border border-medium-gray/80 dark:border-slate-700 bg-white dark:bg-slate-950 pl-9 pr-3 py-2.5 text-sm text-slate-900 dark:text-slate-100 focus:border-primary focus:ring-primary"
+                      placeholder="At least 8 characters"
+                    />
+                  </div>
+                </div>
+
+                <div class="space-y-1.5">
+                  <label for="confirm_password" class="block text-xs font-medium text-slate-600 dark:text-slate-300">
+                    Confirm new password
+                  </label>
+                  <div class="relative">
+                    <span class="material-symbols-outlined absolute left-3 top-2.5 text-slate-400 text-sm">
+                      done_all
+                    </span>
+                    <input
+                      id="confirm_password"
+                      name="confirm_password"
+                      type="password"
+                      required
+                      minlength="8"
+                      class="block w-full rounded-xl border border-medium-gray/80 dark:border-slate-700 bg-white dark:bg-slate-950 pl-9 pr-3 py-2.5 text-sm text-slate-900 dark:text-slate-100 focus:border-primary focus:ring-primary"
+                      placeholder="Repeat new password"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div class="flex flex-col sm:flex-row sm:items-center gap-3 pt-2">
+                <button
+                  type="submit"
+                  class="inline-flex items-center justify-center rounded-full px-4 h-10 text-xs font-semibold text-white bg-primary hover:bg-emerald-600 shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+                >
+                  <span class="material-symbols-outlined mr-1.5 text-sm">
+                    save
+                  </span>
+                  Update password
+                </button>
+                <p class="text-[11px] text-slate-500 dark:text-slate-400 max-w-md">
+                  After changing your password, you will stay signed in here.
+                  If you suspect any suspicious activity, contact your system admin.
+                </p>
+              </div>
+            </form>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+</body>
+</html>

@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Accounts Payable • Bills</title>
+
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+  <link rel="icon" href="https://static.wixstatic.com/media/13bf20_85bc952de62849e895a80e274750784b~mv2.png/v1/fill/w_392,h_146,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/13bf20_85bc952de62849e895a80e274750784b~mv2.png" type="image/png">
+
+  <script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            primary: "#0f172a",
+            accent: "#16a34a",
+            soft: "#f9fafb",
+            "neutral-border": "#e5e7eb",
+          },
+          fontFamily: {
+            display: ["Inter", "system-ui", "sans-serif"],
+          },
+          borderRadius: {
+            xl: "1.125rem",
+          },
+          boxShadow: {
+            soft: "0 4px 6px -1px rgb(0 0 0 / 0.08), 0 2px 4px -2px rgb(0 0 0 / 0.06)",
+          },
+        },
+      },
+    }
+  </script>
+
+  <style>
+    .material-symbols-outlined{
+      font-variation-settings: 'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;
+    }
+  </style>
+</head>
+
+<body class="min-h-full font-display bg-soft text-primary">
+  {# Global accounting sidebar #}
+  {% include 'accounting/sidebar.html' %}
+
+  <main class="acc-with-sidebar max-w-7xl mx-auto px-4 lg:px-8 py-6 lg:py-8">
+    <!-- Page heading & primary actions -->
+    <header class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-6">
+      <div class="space-y-1">
+        <h1 class="text-3xl lg:text-4xl font-black tracking-tight">
+          Accounts Payable Bills
+        </h1>
+        <p class="text-sm text-slate-500">
+          Track vendor bills, due dates, and payments (multi-currency).
+        </p>
+      </div>
+
+      <div class="flex flex-wrap gap-3">
+        <!-- NEW BILL BUTTON (opens slide-over) -->
+        <button
+          type="button"
+          id="btnNewBill"
+          class="inline-flex items-center justify-center gap-2 h-11 px-5 rounded-full bg-accent text-white text-sm font-bold shadow-soft hover:bg-emerald-600 transition-colors"
+        >
+          <span class="material-symbols-outlined text-base">add</span>
+          <span class="truncate">New Bill</span>
+        </button>
+
+        <button
+          type="button"
+          class="inline-flex items-center justify-center gap-2 h-11 px-5 rounded-full border border-primary text-primary text-sm font-semibold hover:bg-primary/5 transition-colors"
+        >
+          <span class="material-symbols-outlined text-base">picture_as_pdf</span>
+          <span class="truncate">Export PDF</span>
+        </button>
+
+        <a
+          href="{{ export_url if export_url is defined else '#' }}"
+          class="inline-flex items-center justify-center gap-2 h-11 px-5 rounded-full border border-primary text-primary text-sm font-semibold hover:bg-primary/5 transition-colors"
+        >
+          <span class="material-symbols-outlined text-base">description</span>
+          <span class="truncate">Export Excel</span>
+        </a>
+      </div>
+    </header>
+
+    <!-- Filters -->
+    <section class="mb-6 rounded-xl border border-neutral-border bg-white shadow-soft px-4 py-4 sm:px-5 sm:py-4">
+      <form class="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-4 items-center" method="get">
+        <!-- Status filter pill (static for now) -->
+        <button
+          type="button"
+          class="inline-flex items-center justify-between gap-2 h-10 rounded-full bg-slate-100 px-3 text-sm text-slate-700 w-full md:w-auto"
+        >
+          <span class="inline-flex items-center gap-1">
+            <span class="material-symbols-outlined text-base text-slate-500">filter_list</span>
+            <span>Status: All</span>
+          </span>
+          <span class="material-symbols-outlined text-base text-slate-500">expand_more</span>
+        </button>
+
+        <!-- Date range pill (static for now) -->
+        <button
+          type="button"
+          class="inline-flex items-center justify-between gap-2 h-10 rounded-full bg-slate-100 px-3 text-sm text-slate-700 w-full md:w-auto"
+        >
+          <span class="inline-flex items-center gap-1">
+            <span class="material-symbols-outlined text-base text-slate-500">calendar_today</span>
+            <span>Date Range</span>
+          </span>
+          <span class="material-symbols-outlined text-base text-slate-500">expand_more</span>
+        </button>
+
+        <!-- Vendor search -->
+        <div class="relative col-span-1 lg:col-span-2 w-full">
+          <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-base">
+            search
+          </span>
+          <input
+            type="text"
+            name="q"
+            value="{{ request.args.get('q','') }}"
+            placeholder="Search by vendor, bill no, reference…"
+            class="w-full h-10 pl-10 pr-3 rounded-full border border-neutral-border bg-slate-50 text-sm focus:border-accent focus:ring-accent"
+          />
+        </div>
+      </form>
+    </section>
+
+    <!-- Table wrapper -->
+    <section class="rounded-xl border border-neutral-border bg-white shadow-soft overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="min-w-full text-sm">
+          <thead class="bg-slate-50">
+            <tr class="border-b border-neutral-border/80">
+              <th class="p-3 w-10">
+                <input
+                  type="checkbox"
+                  class="h-4 w-4 rounded border-slate-300 text-accent focus:ring-accent"
+                />
+              </th>
+              <th class="px-3 py-3 text-left text-xs font-semibold tracking-wide text-slate-600 uppercase">
+                Bill No
+              </th>
+              <th class="px-3 py-3 text-left text-xs font-semibold tracking-wide text-slate-600 uppercase">
+                Vendor
+              </th>
+              <th class="px-3 py-3 text-left text-xs font-semibold tracking-wide text-slate-600 uppercase">
+                Bill Date
+              </th>
+              <th class="px-3 py-3 text-left text-xs font-semibold tracking-wide text-slate-600 uppercase">
+                Due Date
+              </th>
+              <th class="px-3 py-3 text-left text-xs font-semibold tracking-wide text-slate-600 uppercase hidden sm:table-cell">
+                Currency
+              </th>
+              <th class="px-3 py-3 text-right text-xs font-semibold tracking-wide text-slate-600 uppercase">
+                Amount
+              </th>
+              <th class="px-3 py-3 text-right text-xs font-semibold tracking-wide text-slate-600 uppercase hidden sm:table-cell">
+                Paid
+              </th>
+              <th class="px-3 py-3 text-right text-xs font-semibold tracking-wide text-slate-600 uppercase">
+                Balance
+              </th>
+              <th class="px-3 py-3 text-left text-xs font-semibold tracking-wide text-slate-600 uppercase">
+                Status
+              </th>
+              <th class="px-3 py-3 text-center text-xs font-semibold tracking-wide text-slate-600 uppercase">
+                Actions
+              </th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-neutral-border/80">
+            {% for b in rows %}
+              {% set status = (b.status or '').lower() %}
+              {% if status == 'paid' %}
+                {% set badge = 'bg-emerald-100 text-emerald-800' %}
+              {% elif status in ['part-paid','partial'] %}
+                {% set badge = 'bg-blue-100 text-blue-800' %}
+              {% elif status in ['overdue','past-due'] %}
+                {% set badge = 'bg-red-100 text-red-800' %}
+              {% elif status in ['approved'] %}
+                {% set badge = 'bg-cyan-100 text-cyan-800' %}
+              {% elif status in ['draft'] %}
+                {% set badge = 'bg-slate-100 text-slate-800' %}
+              {% else %}
+                {% set badge = 'bg-slate-100 text-slate-700' %}
+              {% endif %}
+
+              <tr class="hover:bg-accent/5">
+                <td class="p-3 align-middle">
+                  <input
+                    type="checkbox"
+                    class="h-4 w-4 rounded border-slate-300 text-accent focus:ring-accent"
+                  />
+                </td>
+                <td class="px-3 py-3 font-medium text-slate-900 whitespace-nowrap">
+                  {{ b.no or b.bill_no }}
+                </td>
+                <td class="px-3 py-3 text-slate-600 whitespace-nowrap">
+                  {{ b.vendor_name or b.vendor }}
+                </td>
+                <td class="px-3 py-3 text-slate-600 whitespace-nowrap">
+                  {{ b.bill_date }}
+                </td>
+                <td class="px-3 py-3 text-slate-600 whitespace-nowrap">
+                  {{ b.due_date }}
+                </td>
+                <td class="px-3 py-3 text-slate-600 whitespace-nowrap hidden sm:table-cell">
+                  {{ b.currency or 'GHS' }}
+                </td>
+                <td class="px-3 py-3 text-right text-slate-700 whitespace-nowrap">
+                  {{ b.currency_symbol or '' }}{{ "%.2f"|format(b.amount or 0) }}
+                </td>
+                <td class="px-3 py-3 text-right text-slate-600 whitespace-nowrap hidden sm:table-cell">
+                  {{ b.currency_symbol or '' }}{{ "%.2f"|format(b.paid or 0) }}
+                </td>
+                <td class="px-3 py-3 text-right font-semibold text-slate-900 whitespace-nowrap">
+                  {{ b.currency_symbol or '' }}{{ "%.2f"|format(b.balance or (b.amount or 0) - (b.paid or 0)) }}
+                </td>
+                <td class="px-3 py-3 whitespace-nowrap">
+                  <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-medium {{ badge }}">
+                    {{ (b.status or 'Draft')|title }}
+                  </span>
+                </td>
+                <td class="px-3 py-3 text-center">
+                  <button
+                    type="button"
+                    class="inline-flex h-8 w-8 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+                  >
+                    <span class="material-symbols-outlined text-base">more_vert</span>
+                  </button>
+                </td>
+              </tr>
+            {% else %}
+              <!-- Empty state -->
+              <tr>
+                <td colspan="11" class="px-6 py-12 text-center text-slate-500">
+                  No bills found. Use “New Bill” to add your first vendor bill.
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Pagination -->
+    {% if pager and pager.pages > 1 %}
+      <nav class="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between text-sm text-slate-600">
+        <a
+          href="{{ pager.prev_url or '#' }}"
+          class="inline-flex items-center justify-center gap-1 px-3 py-2 rounded-lg border border-neutral-border
+          {{ 'pointer-events-none opacity-50' if not pager.prev_url else 'hover:bg-slate-50' }}"
+        >
+          <span class="material-symbols-outlined text-base">chevron_left</span>
+          <span>Previous</span>
+        </a>
+
+        <p class="text-center">
+          Page {{ pager.page }} of {{ pager.pages }}
+        </p>
+
+        <a
+          href="{{ pager.next_url or '#' }}"
+          class="inline-flex items-center justify-center gap-1 px-3 py-2 rounded-lg border border-neutral-border
+          {{ 'pointer-events-none opacity-50' if not pager.next_url else 'hover:bg-slate-50' }}"
+        >
+          <span>Next</span>
+          <span class="material-symbols-outlined text-base">chevron_right</span>
+        </a>
+      </nav>
+    {% endif %}
+  </main>
+
+  <!-- NEW BILL SLIDE-OVER -->
+  <div
+    id="billModalBackdrop"
+    class="fixed inset-0 z-40 hidden bg-slate-900/40 backdrop-blur-sm"
+  ></div>
+
+  <section
+    id="billModal"
+    class="fixed inset-y-0 right-0 z-50 hidden w-full max-w-lg bg-white shadow-xl border-l border-neutral-border flex flex-col"
+    aria-hidden="true"
+  >
+    <header class="flex items-center justify-between px-5 py-4 border-b border-neutral-border">
+      <div>
+        <h2 class="text-base font-semibold text-slate-900">
+          New Vendor Bill
+        </h2>
+        <p class="text-xs text-slate-500">
+          Capture a vendor bill, due date and amount payable.
+        </p>
+      </div>
+      <button
+        type="button"
+        id="billModalClose"
+        class="inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+      >
+        <span class="material-symbols-outlined text-base">close</span>
+      </button>
+    </header>
+
+    <form id="billForm" class="flex-1 overflow-y-auto px-5 py-4 space-y-4">
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs font-medium text-slate-600 mb-1">Bill No</label>
+          <input
+            type="text"
+            name="bill_no"
+            placeholder="Optional (auto or from vendor)"
+            class="w-full rounded-lg border border-neutral-border px-3 py-2 text-sm focus:border-accent focus:ring-accent"
+          />
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-600 mb-1">Reference</label>
+          <input
+            type="text"
+            name="reference"
+            placeholder="Vendor ref / PO"
+            class="w-full rounded-lg border border-neutral-border px-3 py-2 text-sm focus:border-accent focus:ring-accent"
+          />
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs font-medium text-slate-600 mb-1">Vendor Name</label>
+          <input
+            type="text"
+            name="vendor_name"
+            required
+            placeholder="E.g. Global Supplies Ltd."
+            class="w-full rounded-lg border border-neutral-border px-3 py-2 text-sm focus:border-accent focus:ring-accent"
+          />
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-600 mb-1">Vendor Code</label>
+          <input
+            type="text"
+            name="vendor"
+            placeholder="Optional code"
+            class="w-full rounded-lg border border-neutral-border px-3 py-2 text-sm focus:border-accent focus:ring-accent"
+          />
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs font-medium text-slate-600 mb-1">Bill Date</label>
+          <input
+            type="date"
+            name="bill_date"
+            value="{{ today }}"
+            required
+            class="w-full rounded-lg border border-neutral-border px-3 py-2 text-sm focus:border-accent focus:ring-accent"
+          />
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-600 mb-1">Due Date</label>
+          <input
+            type="date"
+            name="due_date"
+            required
+            class="w-full rounded-lg border border-neutral-border px-3 py-2 text-sm focus:border-accent focus:ring-accent"
+          />
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div class="sm:col-span-2">
+          <label class="block text-xs font-medium text-slate-600 mb-1">Amount</label>
+          <input
+            type="number"
+            step="0.01"
+            min="0"
+            name="amount"
+            required
+            placeholder="0.00"
+            class="w-full rounded-lg border border-neutral-border px-3 py-2 text-sm focus:border-accent focus:ring-accent"
+          />
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-600 mb-1">Currency</label>
+          <select
+            name="currency"
+            class="w-full rounded-lg border border-neutral-border px-3 py-2 text-sm focus:border-accent focus:ring-accent"
+          >
+            <option value="GHS" selected>GHS (GH₵)</option>
+            <option value="USD">USD ($)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs font-medium text-slate-600 mb-1">Initial Status</label>
+          <select
+            name="status"
+            class="w-full rounded-lg border border-neutral-border px-3 py-2 text-sm focus:border-accent focus:ring-accent"
+          >
+            <option value="draft">Draft</option>
+            <option value="approved">Approved</option>
+            <option value="paid">Paid</option>
+            <option value="overdue">Overdue</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-600 mb-1">Already Paid (optional)</label>
+          <input
+            type="number"
+            step="0.01"
+            min="0"
+            name="paid"
+            placeholder="0.00"
+            class="w-full rounded-lg border border-neutral-border px-3 py-2 text-sm focus:border-accent focus:ring-accent"
+          />
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-xs font-medium text-slate-600 mb-1">Notes</label>
+        <textarea
+          name="notes"
+          rows="3"
+          placeholder="Add any notes or description…"
+          class="w-full rounded-lg border border-neutral-border px-3 py-2 text-sm focus:border-accent focus:ring-accent"
+        ></textarea>
+      </div>
+    </form>
+
+    <footer class="flex items-center justify-between gap-3 border-t border-neutral-border px-5 py-3 bg-slate-50">
+      <button
+        type="button"
+        id="billModalCancel"
+        class="inline-flex items-center justify-center h-9 px-4 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100"
+      >
+        Cancel
+      </button>
+      <button
+        type="submit"
+        form="billForm"
+        id="billFormSubmit"
+        class="inline-flex items-center justify-center gap-2 h-9 px-5 rounded-full bg-accent text-white text-sm font-semibold shadow-soft hover:bg-emerald-600 disabled:opacity-60 disabled:cursor-not-allowed"
+      >
+        <span class="material-symbols-outlined text-base" id="billFormSpinner" style="display:none;">sync</span>
+        <span>Save Bill</span>
+      </button>
+    </footer>
+  </section>
+
+  <script>
+    (function(){
+      const newBillBtn    = document.getElementById('btnNewBill');
+      const billModal     = document.getElementById('billModal');
+      const billBackdrop  = document.getElementById('billModalBackdrop');
+      const billClose     = document.getElementById('billModalClose');
+      const billCancel    = document.getElementById('billModalCancel');
+      const billForm      = document.getElementById('billForm');
+      const billSubmit    = document.getElementById('billFormSubmit');
+      const billSpinner   = document.getElementById('billFormSpinner');
+
+      function openModal(){
+        billModal.classList.remove('hidden');
+        billBackdrop.classList.remove('hidden');
+        billModal.setAttribute('aria-hidden','false');
+      }
+      function closeModal(){
+        billModal.classList.add('hidden');
+        billBackdrop.classList.add('hidden');
+        billModal.setAttribute('aria-hidden','true');
+      }
+
+      newBillBtn?.addEventListener('click', openModal);
+      billClose?.addEventListener('click', closeModal);
+      billCancel?.addEventListener('click', closeModal);
+      billBackdrop?.addEventListener('click', closeModal);
+      window.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') closeModal(); });
+
+      billForm?.addEventListener('submit', async (e)=>{
+        e.preventDefault();
+        billSubmit.disabled = true;
+        if (billSpinner) billSpinner.style.display = 'inline-block';
+
+        const formData = new FormData(billForm);
+
+        try{
+          const resp = await fetch("{{ url_for('ap_bills.quick_create') }}", {
+            method: "POST",
+            body: formData
+          });
+          const data = await resp.json().catch(()=>({}));
+
+          if(!resp.ok || !data.ok){
+            alert(data.message || "Failed to save bill.");
+          }else{
+            closeModal();
+            // Simple way: reload to show new bill
+            window.location.reload();
+          }
+        }catch(err){
+          console.error(err);
+          alert("An error occurred while saving the bill.");
+        }finally{
+          billSubmit.disabled = false;
+          if (billSpinner) billSpinner.style.display = 'none';
+        }
+      });
+    })();
+  </script>
+</body>
+</html>
