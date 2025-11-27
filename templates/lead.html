@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Leads Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    :root {
+      --bg-color: #ffffff;
+      --text-color: #000000;
+      --border-color: #ccc;
+      --header-bg: #f5f5f5;
+      --note-bg: #f9f9f9;
+      --form-bg: #fafafa;
+      --primary-color: rgba(139, 11, 129, 0.582)
+      ;
+    }
+
+    body.dark-mode {
+      --bg-color: #121212;
+      --text-color: #f0f0f0;
+      --border-color: #333;
+      --header-bg: #1e1e1e;
+      --note-bg: #1a1a1a;
+      --form-bg: #1e1e1e;
+    }
+
+    body {
+      font-family: Arial, sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      margin: 0;
+      padding: 0;
+      transition: background-color 0.3s, color 0.3s;
+    }
+
+    nav {
+      background-color: var(--primary-color);
+      padding: 1rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: white;
+    }
+
+    nav h2 {
+      margin: 0;
+      font-size: 1.2rem;
+    }
+
+    nav a {
+      color: white;
+      margin-left: 1rem;
+      text-decoration: none;
+      font-weight: bold;
+    }
+
+    nav a:hover {
+      text-decoration: underline;
+    }
+
+    .dark-toggle {
+      cursor: pointer;
+      font-size: 1.5em;
+    }
+
+    .container {
+      padding: 20px;
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 10px;
+    }
+
+    .form-toggle-btn {
+      display: block;
+      margin: 20px auto 0;
+      padding: 10px 20px;
+      background-color: var(--primary-color);
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    form.add-lead {
+      display: none;
+      margin-top: 20px;
+      border: 1px solid var(--border-color);
+      padding: 15px;
+      background-color: var(--form-bg);
+      border-radius: 8px;
+    }
+
+    form.add-lead input,
+    form.add-lead select,
+    form.add-lead textarea {
+      margin-bottom: 10px;
+      width: 100%;
+      padding: 10px;
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      box-sizing: border-box;
+    }
+
+    form.add-lead label {
+      font-weight: bold;
+      display: block;
+      margin-top: 10px;
+    }
+
+    form.add-lead button {
+      background-color: var(--primary-color);
+      color: white;
+      padding: 10px 15px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 30px;
+    }
+
+    th, td {
+      border: 1px solid var(--border-color);
+      padding: 10px;
+      text-align: left;
+    }
+
+    th {
+      background-color: var(--header-bg);
+    }
+
+    .notes {
+      background: var(--note-bg);
+      padding: 8px;
+      margin-top: 5px;
+      font-size: 0.9em;
+      max-height: 100px;
+      overflow-y: auto;
+      border-radius: 4px;
+    }
+
+    .analytics {
+      margin-top: 40px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+      justify-content: space-between;
+    }
+
+    .analytics > div {
+      flex: 1 1 300px;
+      background: var(--form-bg);
+      padding: 15px;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+    }
+
+    @media (max-width: 768px) {
+      table {
+        font-size: 0.9rem;
+      }
+
+      th, td {
+        padding: 8px;
+      }
+
+      nav {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      nav a {
+        margin: 0.3rem 0 0 0;
+      }
+    }
+    button {
+
+      background-color: rgb(72, 139, 72);
+      border: none;
+      border-radius: 5px;
+    }
+  </style>
+</head>
+<body>
+{% include 'side_bar.html' %}
+
+
+  <div class="container">
+    <h1>Leads Dashboard</h1>
+
+    <button class="form-toggle-btn" onclick="toggleForm()">Add New Lead</button>
+
+    <form action="{{ url_for('lead_bp.add_lead') }}" method="POST" class="add-lead" id="leadForm" enctype="multipart/form-data">
+      <h3>Add New Lead</h3>
+
+      <label for="name">Full Name:</label>
+      <input type="text" id="name" name="name" required />
+
+          <div class="form-group">
+    <label for="image">Upload Image</label>
+    <input type="file" id="image" name="image" accept="image/*" required>
+    <input type="hidden" id="image_url" name="image_url">
+    <p id="upload-status" style="font-size: 0.9em; color: #555;"></p>
+    </div>
+
+      <label for="location">Location:</label>
+      <input type="text" id="location" name="location" />
+
+      <label for="occupation">Occupation:</label>
+      <input type="text" id="occupation" name="occupation" />
+
+      <label for="phone_number">Phone Number:</label>
+      <input type="text" id="phone_number" name="phone_number" required />
+
+      <label for="comments">Comments:</label>
+      <textarea id="comments" name="comments"></textarea>
+
+      <label for="source">Source:</label>
+      <select id="source" name="source">
+      <option value="Website">In person</option>
+        <option value="Website">Website</option>
+        <option value="Referral">Referral</option>
+        <option value="Social Media">Social Media</option>
+        <option value="Ads">Ads</option>
+        <option value="Other">Other</option>
+      </select>
+
+      <label for="status">Status:</label>
+      <select id="status" name="status">
+        <option value="New" selected>New</option>
+        <option value="Contacted">Contacted</option>
+        <option value="Follow-up">Follow-up</option>
+        <option value="Converted">Converted</option>
+        <option value="Lost">Lost</option>
+      </select>
+
+      <label for="priority">Priority:</label>
+      <select id="priority" name="priority">
+        <option value="High">High</option>
+        <option value="Medium" selected>Medium</option>
+        <option value="Low">Low</option>
+      </select>
+
+      <button type="submit">Add Lead</button>
+    </form>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Full Name</th>
+          <th>Location</th>
+          <th>Phone</th>
+          <th>Status</th>
+          <th>Priority</th>
+          <th>Contact Attempts</th>
+          <th>Date Registered</th>
+          <th>Comments / Notes</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for lead in leads %}
+        <tr>
+          <td>{{ lead.name }}</td>
+          <td>{{ lead.location }}</td>
+          <td>{{ lead.phone_number }}</td>
+          <td>{{ lead.status or 'New' }}</td>
+          <td>{{ lead.priority or 'Medium' }}</td>
+          <td>{{ lead.contact_attempts or 0 }}</td>
+          <td>{{ lead.created_at.strftime('%Y-%m-%d') if lead.created_at else 'N/A' }}</td>
+          <td><div class="notes">{{ lead.comments }}</div></td>
+          <td>
+            {% if not lead.converted %}
+            <form action="{{ url_for('lead_bp.convert_lead', lead_id=lead._id) }}" method="POST" style="display:inline;">
+              <button type="submit">Convert</button>
+            </form>
+            {% else %}
+            Converted
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <div class="analytics">
+      <div>
+        <h3>Lead Analytics</h3>
+        <p>Total Leads: {{ total_leads }}</p>
+        <p>Total Converted: {{ total_converted }}</p>
+      </div>
+      <div>
+        <canvas id="statusPieChart" width="300" height="300"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const ctx = document.getElementById('statusPieChart').getContext('2d');
+    const statusData = JSON.parse('{{ leads_by_status | tojson | safe }}');
+    const labels = Object.keys(statusData);
+    const data = Object.values(statusData);
+    const colors = ['#36A2EB', '#FF6384', '#FFCE56', '#4BC0C0', '#9966FF'];
+
+    new Chart(ctx, {
+      type: 'pie',
+      data: {
+        labels: labels,
+        datasets: [{
+          data: data,
+          backgroundColor: colors.slice(0, labels.length),
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { position: 'bottom' }
+        }
+      }
+    });
+
+    function toggleDarkMode() {
+      document.body.classList.toggle('dark-mode');
+      const icon = document.querySelector('.dark-toggle');
+      icon.textContent = document.body.classList.contains('dark-mode') ? '🌞' : '🌙';
+    }
+
+    function toggleForm() {
+      const form = document.getElementById('leadForm');
+      form.style.display = form.style.display === 'none' || !form.style.display ? 'block' : 'none';
+    }
+
+    window.onload = () => {
+      document.getElementById('leadForm').style.display = 'none';
+    }
+     /*fecting image url from cloudinary*/
+
+  </script>
+  <script>
+document.getElementById('image').addEventListener('change', async function (event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const uploadStatus = document.getElementById('upload-status');
+  uploadStatus.textContent = "Uploading image...";
+
+  const formData = new FormData();
+  formData.append('image', file);
+
+  try {
+    const response = await fetch('/leads/upload_image', {
+      method: 'POST',
+      body: formData
+    });
+
+    const data = await response.json();
+
+    if (data.success && data.image_url) {
+      document.getElementById('image_url').value = data.image_url;
+      uploadStatus.textContent = "✅ Image uploaded successfully.";
+    } else {
+      uploadStatus.textContent = "❌ Upload failed.";
+      console.error(data);
+    }
+  } catch (err) {
+    console.error(err);
+    uploadStatus.textContent = "❌ Upload error.";
+  }
+});
+</script>
+
+</body>
+</html>
