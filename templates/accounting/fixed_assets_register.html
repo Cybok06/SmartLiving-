@@ -62,10 +62,10 @@
         <div class="flex flex-wrap justify-between items-start gap-4">
           <div class="space-y-2">
             <h1 class="text-primary dark:text-white text-2xl sm:text-3xl lg:text-4xl font-black leading-tight tracking-tight">
-              Fixed Assets Register
+              Fixed Assets & Rent Register
             </h1>
             <p class="text-sm sm:text-base text-zinc-600 dark:text-zinc-400 max-w-2xl">
-              Maintain a complete view of all capitalized assets, their depreciation and net book values.
+              Maintain a complete view of all capitalized assets as well as key rental agreements.
             </p>
           </div>
 
@@ -96,7 +96,7 @@
               class="flex items-center justify-center gap-2 rounded-xl h-9 sm:h-10 px-3 sm:px-4 bg-accent text-white text-xs sm:text-sm font-bold hover:bg-accent/90 focus:outline-none focus:ring-2 focus:ring-accent/50"
             >
               <span class="material-symbols-outlined text-base sm:text-lg">add_circle</span>
-              <span class="truncate">Add Asset</span>
+              <span class="truncate">Add Record</span>
             </button>
           </div>
         </div>
@@ -190,10 +190,11 @@
               <thead class="bg-zinc-50 dark:bg-zinc-900 sticky top-0 z-10">
                 <tr class="border-b border-neutral-border dark:border-zinc-800">
                   <th class="px-4 py-3 sm:py-4 font-bold text-primary dark:text-white tracking-wider text-xs sm:text-[13px]">Asset ID</th>
-                  <th class="px-4 py-3 sm:py-4 font-bold text-primary dark:text-white tracking-wider text-xs sm:text-[13px]">Asset Name</th>
+                  <th class="px-4 py-3 sm:py-4 font-bold text-primary dark:text-white tracking-wider text-xs sm:text-[13px]">Name</th>
                   <th class="px-4 py-3 sm:py-4 font-bold text-primary dark:text-white tracking-wider text-xs sm:text-[13px]">Category</th>
-                  <th class="px-4 py-3 sm:py-4 font-bold text-primary dark:text-white tracking-wider text-xs sm:text-[13px]">Acquisition Date</th>
-                  <th class="px-4 py-3 sm:py-4 font-bold text-primary dark:text-white tracking-wider text-right text-xs sm:text-[13px]">Cost</th>
+                  <th class="px-4 py-3 sm:py-4 font-bold text-primary dark:text-white tracking-wider text-xs sm:text-[13px]">Type</th>
+                  <th class="px-4 py-3 sm:py-4 font-bold text-primary dark:text-white tracking-wider text-xs sm:text-[13px]">Acquisition / Date Rented</th>
+                  <th class="px-4 py-3 sm:py-4 font-bold text-primary dark:text-white tracking-wider text-right text-xs sm:text-[13px]">Cost / Rent Amount</th>
                   <th class="px-4 py-3 sm:py-4 font-bold text-primary dark:text-white tracking-wider text-right text-xs sm:text-[13px]">Accum. Depreciation</th>
                   <th class="px-4 py-3 sm:py-4 font-bold text-primary dark:text-white tracking-wider text-right text-xs sm:text-[13px]">Net Book Value</th>
                   <th class="px-4 py-3 sm:py-4 font-bold text-primary dark:text-white tracking-wider text-xs sm:text-[13px]">Method</th>
@@ -205,13 +206,30 @@
               <tbody class="bg-white dark:bg-zinc-900/50">
                 {% for asset in assets %}
                   {% set status = asset.status or "Active" %}
+                  {% set entry_type = asset.entry_type or "asset" %}
                   <tr class="border-t border-neutral-border dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 cursor-pointer">
-                    <td class="h-[60px] px-4 py-2 text-zinc-500 dark:text-zinc-400 whitespace-nowrap">{{ asset.asset_id }}</td>
+                    <td class="h-[60px] px-4 py-2 text-zinc-500 dark:text-zinc-400 whitespace-nowrap">
+                      {{ asset.asset_id }}
+                    </td>
                     <td class="h-[60px] px-4 py-2 font-medium text-primary dark:text-white whitespace-nowrap">
-                      {{ asset.name }}
+                      <div class="flex items-center gap-2">
+                        <span>{{ asset.name }}</span>
+                        {% if entry_type == 'rent' %}
+                          <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200">
+                            Rent
+                          </span>
+                        {% endif %}
+                      </div>
                     </td>
                     <td class="h-[60px] px-4 py-2 text-zinc-500 dark:text-zinc-400 whitespace-nowrap">
                       {{ asset.category or '-' }}
+                    </td>
+                    <td class="h-[60px] px-4 py-2 text-zinc-500 dark:text-zinc-400 whitespace-nowrap">
+                      {% if entry_type == 'rent' %}
+                        {{ asset.rent_type or 'Rent' }}
+                      {% else %}
+                        Fixed Asset
+                      {% endif %}
                     </td>
                     <td class="h-[60px] px-4 py-2 text-zinc-500 dark:text-zinc-400 whitespace-nowrap">
                       {{ asset.acquisition_date_str or '' }}
@@ -220,16 +238,32 @@
                       {{ (currency_symbol or '') }}{{ asset.cost|money }}
                     </td>
                     <td class="h-[60px] px-4 py-2 text-zinc-500 dark:text-zinc-400 text-right whitespace-nowrap">
-                      {{ (currency_symbol or '') }}{{ asset.accum_depr|money }}
+                      {% if entry_type == 'rent' %}
+                        -
+                      {% else %}
+                        {{ (currency_symbol or '') }}{{ asset.accum_depr|money }}
+                      {% endif %}
                     </td>
                     <td class="h-[60px] px-4 py-2 text-zinc-500 dark:text-zinc-400 text-right whitespace-nowrap">
-                      {{ (currency_symbol or '') }}{{ asset.net_book_value|money }}
+                      {% if entry_type == 'rent' %}
+                        -
+                      {% else %}
+                        {{ (currency_symbol or '') }}{{ asset.net_book_value|money }}
+                      {% endif %}
                     </td>
                     <td class="h-[60px] px-4 py-2 text-zinc-500 dark:text-zinc-400 whitespace-nowrap">
-                      {{ asset.method or 'SL' }}
+                      {% if entry_type == 'rent' %}
+                        N/A
+                      {% else %}
+                        {{ asset.method or 'SL' }}
+                      {% endif %}
                     </td>
                     <td class="h-[60px] px-4 py-2 text-zinc-500 dark:text-zinc-400 whitespace-nowrap">
-                      {{ asset.useful_life_years or 0 }} Years
+                      {% if entry_type == 'rent' %}
+                        -
+                      {% else %}
+                        {{ asset.useful_life_years or 0 }} Years
+                      {% endif %}
                     </td>
                     <td class="h-[60px] px-4 py-2">
                       {% if status == "Active" %}
@@ -268,8 +302,8 @@
                   </tr>
                 {% else %}
                   <tr>
-                    <td colspan="11" class="px-4 py-10 text-center text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm">
-                      No fixed assets have been registered yet.
+                    <td colspan="12" class="px-4 py-10 text-center text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm">
+                      No fixed assets or rent records have been registered yet.
                     </td>
                   </tr>
                 {% endfor %}
@@ -282,7 +316,7 @@
     </main>
   </div>
 
-  <!-- Add Asset Modal -->
+  <!-- Add Asset / Rent Modal -->
   <div
     id="assetModalBackdrop"
     class="fixed inset-0 z-40 hidden bg-black/40 backdrop-blur-sm"
@@ -297,10 +331,10 @@
       <header class="flex items-center justify-between px-5 py-4 border-b border-neutral-border dark:border-zinc-800">
         <div>
           <h2 class="text-base sm:text-lg font-semibold text-primary dark:text-white">
-            Add New Asset
+            Add Asset or Rent
           </h2>
           <p class="text-xs sm:text-[13px] text-zinc-500 dark:text-zinc-400">
-            Capture key details for a new fixed asset.
+            Capture key details for a new fixed asset or rental agreement.
           </p>
         </div>
         <button
@@ -318,16 +352,32 @@
         action="{{ url_for('fixed_assets.add_asset_form') }}"
         class="flex-1 overflow-y-auto px-5 py-4 space-y-4"
       >
+        <!-- Record Type -->
+        <div>
+          <label class="block text-xs font-medium text-zinc-600 dark:text-zinc-300 mb-1">
+            Record Type
+          </label>
+          <select
+            id="entryTypeSelect"
+            name="entry_type"
+            class="w-full rounded-lg border border-zinc-200 dark:border-zinc-700 px-3 py-2 text-sm bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 focus:border-accent focus:ring-accent"
+          >
+            <option value="asset" selected>Fixed Asset</option>
+            <option value="rent">Rent</option>
+          </select>
+        </div>
+
+        <!-- Name & Category -->
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label class="block text-xs font-medium text-zinc-600 dark:text-zinc-300 mb-1">
-              Asset Name <span class="text-red-500">*</span>
+              Name <span class="text-red-500">*</span>
             </label>
             <input
               type="text"
               name="name"
               required
-              placeholder="e.g., MacBook Pro 16&quot;"
+              placeholder="e.g., MacBook Pro 16&quot; / Dome Warehouse"
               class="w-full rounded-lg border border-zinc-200 dark:border-zinc-700 px-3 py-2 text-sm bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 focus:border-accent focus:ring-accent"
             />
           </div>
@@ -337,16 +387,21 @@
             </label>
             <input
               type="text"
+              id="categoryInput"
               name="category"
-              placeholder="e.g., IT Equipment"
+              placeholder="e.g., IT Equipment / Rent"
               class="w-full rounded-lg border border-zinc-200 dark:border-zinc-700 px-3 py-2 text-sm bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 focus:border-accent focus:ring-accent"
             />
           </div>
         </div>
 
+        <!-- Date + Amount -->
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label class="block text-xs font-medium text-zinc-600 dark:text-zinc-300 mb-1">
+            <label
+              id="label_acquisition_date"
+              class="block text-xs font-medium text-zinc-600 dark:text-zinc-300 mb-1"
+            >
               Acquisition Date
             </label>
             <input
@@ -356,7 +411,10 @@
             />
           </div>
           <div>
-            <label class="block text-xs font-medium text-zinc-600 dark:text-zinc-300 mb-1">
+            <label
+              id="label_cost"
+              class="block text-xs font-medium text-zinc-600 dark:text-zinc-300 mb-1"
+            >
               Cost ({{ (currency_symbol or 'Amount') | trim }})
             </label>
             <input
@@ -370,7 +428,8 @@
           </div>
         </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <!-- Asset-only: Depreciation Method & Useful Life -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4" data-section="asset-only">
           <div>
             <label class="block text-xs font-medium text-zinc-600 dark:text-zinc-300 mb-1">
               Depreciation Method
@@ -397,6 +456,89 @@
           </div>
         </div>
 
+        <!-- Rent-only: Place + Type -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 hidden" data-section="rent-only">
+          <div>
+            <label class="block text-xs font-medium text-zinc-600 dark:text-zinc-300 mb-1">
+              Place of Rent
+            </label>
+            <input
+              type="text"
+              name="rent_place"
+              placeholder="e.g., Dome Market, East Legon"
+              class="w-full rounded-lg border border-zinc-200 dark:border-zinc-700 px-3 py-2 text-sm bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 focus:border-accent focus:ring-accent"
+            />
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-zinc-600 dark:text-zinc-300 mb-1">
+              Type of Rent
+            </label>
+            <select
+              name="rent_type"
+              class="w-full rounded-lg border border-zinc-200 dark:border-zinc-700 px-3 py-2 text-sm bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 focus:border-accent focus:ring-accent"
+            >
+              <option value="">Select...</option>
+              <option value="Office">Office</option>
+              <option value="Warehouse">Warehouse</option>
+              <option value="Room">Room</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Rent-only: Due Date -->
+        <div class="hidden" data-section="rent-only">
+          <label class="block text-xs font-medium text-zinc-600 dark:text-zinc-300 mb-1">
+            Due Date
+          </label>
+          <input
+            type="date"
+            name="rent_due_date"
+            class="w-full rounded-lg border border-zinc-200 dark:border-zinc-700 px-3 py-2 text-sm bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 focus:border-accent focus:ring-accent"
+          />
+        </div>
+
+        <!-- Rent-only: Advance -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 hidden" data-section="rent-only">
+          <div>
+            <label class="block text-xs font-medium text-zinc-600 dark:text-zinc-300 mb-1">
+              Advance Amount (GHS)
+            </label>
+            <input
+              type="number"
+              step="0.01"
+              min="0"
+              name="advance_amount"
+              placeholder="0.00"
+              class="w-full rounded-lg border border-zinc-200 dark:border-zinc-700 px-3 py-2 text-sm bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 focus:border-accent focus:ring-accent"
+            />
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-zinc-600 dark:text-zinc-300 mb-1">
+              Advance Years
+            </label>
+            <input
+              type="number"
+              min="0"
+              name="advance_years"
+              placeholder="e.g., 2"
+              class="w-full rounded-lg border border-zinc-200 dark:border-zinc-700 px-3 py-2 text-sm bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 focus:border-accent focus:ring-accent"
+            />
+          </div>
+        </div>
+
+        <div class="hidden" data-section="rent-only">
+          <label class="block text-xs font-medium text-zinc-600 dark:text-zinc-300 mb-1">
+            Advance Note
+          </label>
+          <textarea
+            name="advance_note"
+            rows="2"
+            class="w-full rounded-lg border border-zinc-200 dark:border-zinc-700 px-3 py-2 text-sm bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 focus:border-accent focus:ring-accent"
+            placeholder="Any note about the advance payment..."
+          ></textarea>
+        </div>
+
+        <!-- Notes -->
         <div>
           <label class="block text-xs font-medium text-zinc-600 dark:text-zinc-300 mb-1">
             Notes (optional)
@@ -405,7 +547,7 @@
             name="notes"
             rows="3"
             class="w-full rounded-lg border border-zinc-200 dark:border-zinc-700 px-3 py-2 text-sm bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 focus:border-accent focus:ring-accent"
-            placeholder="Any extra info about this asset..."
+            placeholder="Any extra info about this asset or rent..."
           ></textarea>
         </div>
       </form>
@@ -424,7 +566,7 @@
           class="inline-flex items-center justify-center gap-2 h-9 px-5 rounded-full bg-accent text-white text-xs sm:text-sm font-semibold shadow-sm hover:bg-accent/90 disabled:opacity-60 disabled:cursor-not-allowed"
         >
           <span class="material-symbols-outlined text-base hidden" id="assetSpinner">sync</span>
-          <span>Save Asset</span>
+          <span>Save Record</span>
         </button>
       </footer>
     </div>
@@ -439,6 +581,13 @@
       const cancelBtn = document.getElementById('assetModalCancel');
       const form      = document.getElementById('assetForm');
       const spinner   = document.getElementById('assetSpinner');
+
+      const entryTypeSelect = document.getElementById('entryTypeSelect');
+      const categoryInput   = document.getElementById('categoryInput');
+      const acqLabel        = document.getElementById('label_acquisition_date');
+      const costLabel       = document.getElementById('label_cost');
+      const assetOnlyBlocks = document.querySelectorAll('[data-section="asset-only"]');
+      const rentOnlyBlocks  = document.querySelectorAll('[data-section="rent-only"]');
 
       function openModal() {
         if (backdrop) backdrop.classList.remove('hidden');
@@ -457,6 +606,41 @@
         if (form && typeof form.reset === 'function') {
           form.reset();
         }
+        // Reset to default type
+        if (entryTypeSelect) {
+          entryTypeSelect.value = 'asset';
+          syncEntryTypeUI();
+        }
+      }
+
+      function syncEntryTypeUI() {
+        const type = (entryTypeSelect ? entryTypeSelect.value : 'asset');
+
+        if (type === 'rent') {
+          // Labels
+          if (acqLabel) acqLabel.textContent = 'Date Rented';
+          if (costLabel) costLabel.textContent = 'Rent Amount (GHS)';
+
+          // Default category to Rent if empty
+          if (categoryInput && !categoryInput.value.trim()) {
+            categoryInput.value = 'Rent';
+          }
+
+          // Toggle visibility
+          assetOnlyBlocks.forEach(el => el.classList.add('hidden'));
+          rentOnlyBlocks.forEach(el => el.classList.remove('hidden'));
+        } else {
+          if (acqLabel) acqLabel.textContent = 'Acquisition Date';
+          if (costLabel) costLabel.textContent = 'Cost ({{ (currency_symbol or "Amount") | trim }})';
+
+          assetOnlyBlocks.forEach(el => el.classList.remove('hidden'));
+          rentOnlyBlocks.forEach(el => el.classList.add('hidden'));
+        }
+      }
+
+      if (entryTypeSelect) {
+        entryTypeSelect.addEventListener('change', syncEntryTypeUI);
+        syncEntryTypeUI();
       }
 
       if (openBtn) {
