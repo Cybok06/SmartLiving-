@@ -26,6 +26,7 @@
 
 <div class="container py-4">
 
+  {# Standard flash messages (for non-AJAX flows / fallback) #}
   {% with messages = get_flashed_messages(with_categories=true) %}
     {% if messages %}
       <div class="mb-3">
@@ -37,6 +38,9 @@
       </div>
     {% endif %}
   {% endwith %}
+
+  {# AJAX-only alert #}
+  <div id="ajaxAlert" class="alert d-none mb-3" role="alert"></div>
 
   <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
     <h3 class="m-0">
@@ -135,7 +139,7 @@
 
         <!-- Buttons -->
         <div class="col-12 d-flex gap-2">
-          <button id="submitBtn" class="btn btn-primary px-4">
+          <button id="submitBtn" class="btn btn-primary px-4" type="submit">
             <span class="btn-label"><i class="bi bi-cloud-upload me-2"></i>Submit Deposit</span>
             <span class="spinner-inline ms-2" id="btnSpinner"></span>
           </button>
@@ -232,7 +236,6 @@
 
 <script>
   // Make all accounts (bank + momo + cash) available to JS as a JSON array
-  // Wrap the Jinja JSON in a string and parse it so VS Code's JS parser is happy
   const BANK_ACCOUNTS = JSON.parse('{{ bank_accounts|tojson|safe }}');
 
   // Controls
@@ -249,6 +252,7 @@
   const methodNameHelp     = document.getElementById('method_name_help');
   const bankAccountWrapper = document.getElementById('bankAccountWrapper');
   const bankAccountSelect  = document.getElementById('bank_account_id');
+  const ajaxAlert          = document.getElementById('ajaxAlert');
 
   // File preview
   input.addEventListener('change', () => {
@@ -331,10 +335,85 @@
   // Initialize on load
   updateMethodUI();
 
-  // Disable/Spinner on submit
-  form.addEventListener('submit', () => {
-    submitBtn.disabled = true;
-    btnSpinner.style.display = 'inline-block';
+  function showAjaxAlert(type, messages) {
+    if (!ajaxAlert) return;
+    ajaxAlert.classList.remove('d-none', 'alert-success', 'alert-danger', 'alert-warning');
+    ajaxAlert.classList.add('alert', type === 'success' ? 'alert-success' : 'alert-danger');
+
+    if (Array.isArray(messages)) {
+      ajaxAlert.innerHTML = '<i class="bi bi-info-circle me-2"></i>' + messages.join('<br>');
+    } else {
+      ajaxAlert.innerHTML = '<i class="bi bi-info-circle me-2"></i>' + messages;
+    }
+  }
+
+  function hideAjaxAlert() {
+    if (!ajaxAlert) return;
+    ajaxAlert.classList.add('d-none');
+    ajaxAlert.innerHTML = '';
+  }
+
+  function setSubmitting(isSubmitting) {
+    if (isSubmitting) {
+      submitBtn.disabled = true;
+      btnSpinner.style.display = 'inline-block';
+    } else {
+      submitBtn.disabled = false;
+      btnSpinner.style.display = 'none';
+    }
+  }
+
+  // AJAX submit
+  form.addEventListener('submit', function (e) {
+    e.preventDefault(); // prevent normal page reload
+    hideAjaxAlert();
+    setSubmitting(true);
+
+    const formData = new FormData(form);
+
+    fetch(form.action, {
+      method: 'POST',
+      body: formData,
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest'
+      }
+    })
+      .then(async (res) => {
+        let data;
+        try {
+          data = await res.json();
+        } catch (err) {
+          data = null;
+        }
+
+        if (!data) {
+          throw new Error('Unexpected response from server.');
+        }
+
+        if (!res.ok || !data.ok) {
+          const errors = data.errors || ['Deposit submission failed.'];
+          showAjaxAlert('error', errors);
+          throw new Error('Validation / server error');
+        }
+
+        // Success
+        showAjaxAlert('success', data.message || 'Deposit submitted successfully.');
+        form.reset();
+        img.classList.add('d-none');
+        pdfNote.classList.add('d-none');
+        // Reset method UI
+        updateMethodUI();
+      })
+      .catch((err) => {
+        if (!ajaxAlert.classList.contains('d-none')) {
+          // already showing specific errors
+          return;
+        }
+        showAjaxAlert('error', err.message || 'Something went wrong. Please try again.');
+      })
+      .finally(() => {
+        setSubmitting(false);
+      });
   });
 </script>
 </body>
