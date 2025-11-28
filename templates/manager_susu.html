@@ -260,6 +260,40 @@
       padding: 0.1rem 0.5rem;
     }
 
+    /* Live preview panel in modal */
+    .preview-panel {
+      border-radius: 10px;
+      border: 1px solid #e5e7eb;
+      background: #f9fafb;
+      padding: 0.5rem 0.75rem;
+      margin-top: 0.25rem;
+    }
+    .preview-panel h6 {
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #6b7280;
+      margin-bottom: 0.35rem;
+    }
+    .preview-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.8rem;
+      margin-bottom: 0.2rem;
+    }
+    .preview-label {
+      color: #6b7280;
+    }
+    .preview-value {
+      font-weight: 600;
+    }
+    .preview-value.text-profit {
+      color: #b45309;
+    }
+    .preview-value.text-balance {
+      color: #16a34a;
+    }
+
     @media (max-width: 992px) {
       .stats-row {
         grid-template-columns: repeat(2,minmax(0,1fr));
@@ -610,7 +644,12 @@
       </div>
 
       <!-- Withdraw Modal -->
-      <div class="modal fade" id="withdrawModal-{{ c.id }}" tabindex="-1" aria-hidden="true">
+      <div class="modal fade"
+           id="withdrawModal-{{ c.id }}"
+           tabindex="-1"
+           aria-hidden="true"
+           data-available-balance="{{ '%.2f'|format(c.available_balance) }}"
+           data-default-rate="{{ c.default_rate or c.rate_hint or 0 }}">
         <div class="modal-dialog modal-dialog-centered">
           <form class="modal-content susu-withdraw-form"
                 data-customer-id="{{ c.id }}"
@@ -650,28 +689,8 @@
                 {% endif %}
               </div>
 
-              <div class="mb-3">
-                <label class="form-label">Customer rate (usual daily amount)</label>
-                <div class="input-group input-group-sm">
-                  <span class="input-group-text">GH₵</span>
-                  <input type="number" step="0.01" min="0" class="form-control"
-                         name="rate"
-                         value="{{ c.default_rate or c.rate_hint }}">
-                </div>
-                <div class="form-text">Example: 10 for customers paying 10 GHS daily.</div>
-              </div>
-
-              <div class="mb-3">
-                <label class="form-label">Company deduction (SUSU profit)</label>
-                <div class="input-group input-group-sm">
-                  <span class="input-group-text">GH₵</span>
-                  <input type="number" step="0.01" min="0" class="form-control"
-                         name="company_deduction"
-                         value="{{ c.default_rate or c.rate_hint }}">
-                </div>
-                <div class="form-text">
-                  Usually equal to the customer's rate. Saved as <strong>SUSU profit collection</strong>.
-                </div>
+              <div class="alert alert-info small py-1 px-2 mb-3">
+                Rate &amp; SUSU profit are <strong>auto-calculated</strong> from this customer's SUSU history.
               </div>
 
               <div class="mb-3">
@@ -692,6 +711,35 @@
                           class="form-control form-control-sm"
                           rows="2"
                           placeholder="E.g. SUSU withdrawal via cash..."></textarea>
+              </div>
+
+              <!-- Live Preview Panel -->
+              <div class="preview-panel" data-preview-panel>
+                <h6>Live Summary</h6>
+                <div class="preview-row">
+                  <span class="preview-label">Customer will receive</span>
+                  <span class="preview-value" data-preview-withdraw>GH₵0.00</span>
+                </div>
+                <div class="preview-row">
+                  <span class="preview-label">Company SUSU profit</span>
+                  <span class="preview-value text-profit" data-preview-profit>GH₵0.00</span>
+                </div>
+                <!-- NEW: show customer daily rate -->
+                <div class="preview-row">
+                  <span class="preview-label">Customer daily rate</span>
+                  <span class="preview-value" data-preview-rate>GH₵0.00</span>
+                </div>
+                <div class="preview-row">
+                  <span class="preview-label">Balance after withdrawal</span>
+                  <span class="preview-value text-balance" data-preview-balance>
+                    GH₵{{ "%.2f"|format(c.available_balance) }}
+                  </span>
+                </div>
+                <div class="mt-1">
+                  <small class="text-muted" data-preview-note>
+                    Start typing the withdrawal amount to see the breakdown with the customer rate.
+                  </small>
+                </div>
               </div>
             </div>
             <div class="modal-footer">
@@ -798,7 +846,13 @@
 
 <script>
   document.addEventListener('DOMContentLoaded', function () {
-    // ===== AJAX SUSU withdrawal forms =====
+    // ===== Helper: format money =====
+    function fmt(amount) {
+      const n = isNaN(amount) ? 0 : Number(amount);
+      return 'GH₵' + n.toFixed(2);
+    }
+
+    // ===== AJAX SUSU withdrawal forms (SAVE) =====
     const forms = document.querySelectorAll('.susu-withdraw-form');
 
     forms.forEach(form => {
@@ -807,22 +861,16 @@
 
         const customerId = form.dataset.customerId;
         const url = form.action;
-        const formData = new FormData(form);
+        const formData = new FormData(form);  // normal submit (no preview flag)
 
         const submitBtn = form.querySelector('.susu-submit-btn');
         const spinner   = submitBtn ? submitBtn.querySelector('.spinner-border') : null;
         const btnText   = submitBtn ? submitBtn.querySelector('.btn-text') : null;
 
         // Show loading spinner
-        if (submitBtn) {
-          submitBtn.disabled = true;
-        }
-        if (spinner) {
-          spinner.classList.remove('d-none');
-        }
-        if (btnText) {
-          btnText.textContent = 'Processing...';
-        }
+        if (submitBtn) submitBtn.disabled = true;
+        if (spinner)   spinner.classList.remove('d-none');
+        if (btnText)   btnText.textContent = 'Processing...';
 
         fetch(url, {
           method: 'POST',
@@ -839,14 +887,14 @@
           }
 
           const stats = data.stats || {};
-          const cid = data.customer_id;
+          const cid = data.customer_id || customerId;
 
           function updateStat(role, value) {
             const el = document.querySelector(
               '.stat-value[data-role="' + role + '"][data-customer-id="' + cid + '"]'
             );
             if (el && typeof value === 'number') {
-              el.textContent = 'GH₵' + value.toFixed(2);
+              el.textContent = fmt(value);
             }
           }
 
@@ -854,14 +902,6 @@
           updateStat('withdraw-to-customer', stats.withdraw_to_customer);
           updateStat('available-balance', stats.available_balance);
           updateStat('susu-profit', stats.susu_profit);
-
-          // If default rate updated, prefill for next time
-          if (stats.default_rate !== null && stats.default_rate !== undefined) {
-            const rateInput = form.querySelector('input[name="rate"]');
-            const dedInput  = form.querySelector('input[name="company_deduction"]');
-            if (rateInput) rateInput.value = stats.default_rate;
-            if (dedInput)  dedInput.value = stats.default_rate;
-          }
 
           // Close modal
           const modalEl = form.closest('.modal');
@@ -873,11 +913,11 @@
 
           // Reset only the withdraw amount + note & checkbox
           const withdrawInput = form.querySelector('input[name="withdraw_amount"]');
-          const noteInput = form.querySelector('textarea[name="note"]');
-          const confirmInput = form.querySelector('input[name="confirm_called"]');
+          const noteInput     = form.querySelector('textarea[name="note"]');
+          const confirmInput  = form.querySelector('input[name="confirm_called"]');
           if (withdrawInput) withdrawInput.value = '';
-          if (noteInput) noteInput.value = '';
-          if (confirmInput) confirmInput.checked = false;
+          if (noteInput)     noteInput.value = '';
+          if (confirmInput)  confirmInput.checked = false;
 
           console.log(data.message || 'SUSU withdrawal recorded.');
         })
@@ -886,17 +926,119 @@
           alert('Network error while recording SUSU withdrawal.');
         })
         .finally(() => {
-          // Hide loading spinner
-          if (submitBtn) {
-            submitBtn.disabled = false;
-          }
-          if (spinner) {
-            spinner.classList.add('d-none');
-          }
-          if (btnText) {
-            btnText.textContent = 'Record Withdrawal';
-          }
+          if (submitBtn) submitBtn.disabled = false;
+          if (spinner)   spinner.classList.add('d-none');
+          if (btnText)   btnText.textContent = 'Record Withdrawal';
         });
+      });
+    });
+
+    // ===== Live Preview: call preview endpoint on input =====
+    forms.forEach(form => {
+      const modalEl = form.closest('.modal');
+      const amountInput = form.querySelector('input[name="withdraw_amount"]');
+      const previewPanel = form.querySelector('[data-preview-panel]');
+      if (!modalEl || !amountInput || !previewPanel) return;
+
+      const avail = parseFloat(modalEl.getAttribute('data-available-balance') || '0') || 0;
+      const defaultRate = parseFloat(modalEl.getAttribute('data-default-rate') || '0') || 0;
+
+      const valWithdraw = previewPanel.querySelector('[data-preview-withdraw]');
+      const valProfit   = previewPanel.querySelector('[data-preview-profit]');
+      const valBalance  = previewPanel.querySelector('[data-preview-balance]');
+      const valRate     = previewPanel.querySelector('[data-preview-rate]');
+      const noteEl      = previewPanel.querySelector('[data-preview-note]');
+
+      let previewTimer = null;
+
+      function applyPreviewValues(withdrawAmt, profitAmt, balanceAmt, rate, fromServer) {
+        if (valWithdraw) valWithdraw.textContent = fmt(withdrawAmt);
+        if (valProfit)   valProfit.textContent   = fmt(profitAmt);
+        if (valBalance)  valBalance.textContent  = fmt(balanceAmt);
+        if (valRate && typeof rate === 'number') valRate.textContent = fmt(rate);
+
+        if (noteEl) {
+          if (fromServer) {
+            noteEl.textContent = 'Preview calculated from SUSU history (including customer daily rate).';
+          } else {
+            noteEl.textContent = 'Preview based on estimated rate.';
+          }
+        }
+      }
+
+      function fallbackPreview(amount) {
+        const withdrawAmt = amount;
+        const rate = defaultRate > 0 ? defaultRate : 0;
+        let profitAmt = 0;
+
+        if (rate > 0) {
+          // minimum 1 box of rate, but not more than amount
+          profitAmt = Math.min(rate, amount);
+        }
+
+        let balanceAfter = avail - withdrawAmt - profitAmt;
+        if (balanceAfter < 0) balanceAfter = 0;
+
+        applyPreviewValues(withdrawAmt, profitAmt, balanceAfter, rate, false);
+      }
+
+      function runPreview() {
+        const raw = amountInput.value;
+        const amount = parseFloat(raw || '0') || 0;
+
+        if (!raw || amount <= 0) {
+          // Reset to initial view
+          applyPreviewValues(0, 0, avail, defaultRate || 0, false);
+          return;
+        }
+
+        const url = form.action;
+        const fd = new FormData(form);
+        fd.set('withdraw_amount', amount.toString());
+        fd.set('preview', '1');  // 🔹 tell backend this is preview
+
+        fetch(url, {
+          method: 'POST',
+          body: fd,
+          headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+          }
+        })
+        .then(res => res.json())
+        .then(data => {
+          if (!data.ok || !data.preview_summary) {
+            // Use fallback estimate if backend can't preview
+            fallbackPreview(amount);
+            return;
+          }
+
+          const s = data.preview_summary;
+          const withdrawAmt = typeof s.withdraw_amount === 'number' ? s.withdraw_amount : amount;
+          const profitAmt   = typeof s.company_profit === 'number' ? s.company_profit : 0;
+          const balanceAfter = typeof s.balance_after === 'number'
+            ? s.balance_after
+            : (avail - withdrawAmt - profitAmt);
+          const rate = typeof s.customer_rate === 'number'
+            ? s.customer_rate
+            : (defaultRate || 0);
+
+          applyPreviewValues(withdrawAmt, profitAmt, balanceAfter, rate, true);
+        })
+        .catch(err => {
+          console.error('Preview error:', err);
+          fallbackPreview(amount);
+        });
+      }
+
+      amountInput.addEventListener('input', function () {
+        if (previewTimer) clearTimeout(previewTimer);
+        previewTimer = setTimeout(runPreview, 250); // small debounce
+      });
+
+      // Reset preview when modal opens
+      modalEl.addEventListener('show.bs.modal', function () {
+        amountInput.value = '';
+        applyPreviewValues(0, 0, avail, defaultRate || 0, false);
       });
     });
 
