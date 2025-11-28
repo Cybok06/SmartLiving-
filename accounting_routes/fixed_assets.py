@@ -12,13 +12,14 @@ Routes become:
     /accounting/fixed-assets/compute-depreciation    -> compute_depreciation()
     /accounting/fixed-assets/post-depreciation       -> post_depreciation()
     /accounting/fixed-assets/dispose/<asset_id>      -> dispose_asset()
+    /accounting/fixed-assets/update-status/<asset_id>-> update_status()
 """
 
 from flask import (
     Blueprint, render_template, request, redirect,
-    url_for, flash, Response
+    url_for, flash, Response, jsonify
 )
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 from db import db
 import csv
 import io
@@ -109,6 +110,108 @@ def _compute_net_book_value(asset):
     return nbv if nbv > 0 else 0.0
 
 
+def _compute_progress(start_date, end_date, today=None):
+    """
+    Generic progress % between two dates, clamped 0–100.
+    Returns (percent, label_str) or (None, "") if not applicable.
+    """
+    if not start_date or not end_date:
+        return None, ""
+
+    if isinstance(start_date, datetime):
+        start_date = start_date.date()
+    if isinstance(end_date, datetime):
+        end_date = end_date.date()
+    if today is None:
+        today = date.today()
+
+    total_days = (end_date - start_date).days
+    if total_days <= 0:
+        return None, ""
+
+    elapsed_days = (today - start_date).days
+    if elapsed_days < 0:
+        elapsed_days = 0
+    if elapsed_days > total_days:
+        elapsed_days = total_days
+
+    pct = round((elapsed_days / total_days) * 100, 1)
+    label = f"{elapsed_days} / {total_days} days ({pct}%)"
+    return pct, label
+
+
+def _asset_to_view(doc):
+    """
+    Convert Mongo document to view dict used by template and JSON.
+    Includes:
+      - formatted money strings
+      - life span progress for assets
+      - rent period progress for rent entries
+    """
+    entry_type = (doc.get("entry_type") or "asset").lower()
+    status = doc.get("status", "Active")
+
+    cost = _safe_float(doc, "cost", 0)
+    accum = _safe_float(doc, "accum_depr", 0)
+    nbv = _compute_net_book_value(doc)
+
+    acq_date = _parse_date(doc.get("acquisition_date"))
+    rent_due = _parse_date(doc.get("rent_due_date"))
+
+    # Life span progress (assets only)
+    life_progress_pct = None
+    life_progress_label = ""
+    useful_life_years = int(doc.get("useful_life_years") or 0)
+    if entry_type != "rent" and acq_date and useful_life_years > 0:
+        life_end = acq_date + timedelta(days=useful_life_years * 365)
+        life_progress_pct, life_progress_label = _compute_progress(acq_date, life_end)
+
+    # Rent period progress (rent only)
+    rent_progress_pct = None
+    rent_progress_label = ""
+    if entry_type == "rent" and acq_date and rent_due:
+        rent_progress_pct, rent_progress_label = _compute_progress(acq_date, rent_due)
+
+    advance = doc.get("advance") or {}
+    advance_amount = _safe_float(advance, "amount", 0)
+    advance_years = int(advance.get("years") or 0)
+    advance_note = advance.get("note", "")
+
+    return {
+        "_id": str(doc.get("_id")),
+        "asset_id": doc.get("asset_id"),
+        "name": doc.get("name"),
+        "category": doc.get("category"),
+        "entry_type": entry_type,
+        "method": doc.get("method", "SL"),
+        "useful_life_years": useful_life_years,
+        "status": status,
+
+        "cost": cost,
+        "accum_depr": 0.0 if entry_type == "rent" else accum,
+        "net_book_value": 0.0 if entry_type == "rent" else nbv,
+
+        "cost_display": f"{cost:,.2f}",
+        "accum_depr_display": "-" if entry_type == "rent" else f"{accum:,.2f}",
+        "nbv_display": "-" if entry_type == "rent" else f"{nbv:,.2f}",
+
+        "acquisition_date_str": _format_date(acq_date),
+
+        "rent_place": doc.get("rent_place"),
+        "rent_type": doc.get("rent_type"),
+        "rent_due_date_str": _format_date(rent_due),
+
+        "advance_amount": advance_amount,
+        "advance_years": advance_years,
+        "advance_note": advance_note,
+
+        "life_progress_pct": life_progress_pct,
+        "life_progress_label": life_progress_label,
+        "rent_progress_pct": rent_progress_pct,
+        "rent_progress_label": rent_progress_label,
+    }
+
+
 # -------------------------------------------------------------------
 # Main register view
 # -------------------------------------------------------------------
@@ -134,50 +237,7 @@ def register():
         fixed_assets_col.find(query).sort("acquisition_date", -1)
     )
 
-    assets = []
-    for doc in docs:
-        entry_type = (doc.get("entry_type") or "asset").lower()
-
-        asset = {
-            "_id": doc.get("_id"),
-            "asset_id": doc.get("asset_id"),
-            "name": doc.get("name"),
-            "category": doc.get("category"),
-            "entry_type": entry_type,
-            "method": doc.get("method", "SL"),
-            "useful_life_years": doc.get("useful_life_years", 0),
-            "status": doc.get("status", "Active"),
-        }
-
-        cost = _safe_float(doc, "cost", 0)
-        accum = _safe_float(doc, "accum_depr", 0)
-
-        # For RENT entries, we show cost but NBV = 0 and no depreciation
-        if entry_type == "rent":
-            asset["cost"] = cost
-            asset["accum_depr"] = 0.0
-            asset["net_book_value"] = 0.0
-            asset["method"] = "N/A"
-            asset["useful_life_years"] = 0
-        else:
-            asset["cost"] = cost
-            asset["accum_depr"] = accum
-            asset["net_book_value"] = _compute_net_book_value(doc)
-
-        acq_date = doc.get("acquisition_date")
-        asset["acquisition_date_str"] = _format_date(_parse_date(acq_date))
-
-        # Extra RENT info (optional display / future use)
-        asset["rent_place"] = doc.get("rent_place")
-        asset["rent_type"] = doc.get("rent_type")
-        asset["rent_due_date_str"] = _format_date(_parse_date(doc.get("rent_due_date")))
-
-        advance = doc.get("advance") or {}
-        asset["advance_amount"] = _safe_float(advance, "amount", 0)
-        asset["advance_years"] = int(advance.get("years") or 0)
-        asset["advance_note"] = advance.get("note", "")
-
-        assets.append(asset)
+    assets = [_asset_to_view(doc) for doc in docs]
 
     categories = sorted([c for c in fixed_assets_col.distinct("category") if c])
     statuses = ["Active", "Fully Depreciated", "Disposed"]
@@ -266,11 +326,13 @@ def export_assets():
 
 
 # -------------------------------------------------------------------
-# Add Asset / Rent – POST only (modal submits here)
+# Add Asset / Rent – supports normal POST and AJAX JSON
 # -------------------------------------------------------------------
 
 @fixed_assets_bp.route("/add", methods=["POST"])
 def add_asset_form():
+    is_ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest"
+
     # Type selector: "asset" or "rent"
     entry_type = (request.form.get("entry_type") or "asset").strip().lower()
     if entry_type not in ("asset", "rent"):
@@ -294,6 +356,8 @@ def add_asset_form():
     advance_note = (request.form.get("advance_note") or "").strip()
 
     if not name:
+        if is_ajax:
+            return jsonify({"ok": False, "message": "Asset/Rent name is required."}), 400
         flash("Asset/Rent name is required.", "error")
         return redirect(url_for("fixed_assets.register"))
 
@@ -369,7 +433,17 @@ def add_asset_form():
             "note": "",
         }
 
-    fixed_assets_col.insert_one(doc)
+    result = fixed_assets_col.insert_one(doc)
+    doc["_id"] = result.inserted_id
+
+    if is_ajax:
+        # Return JSON with a ready-to-render view dict
+        asset_view = _asset_to_view(doc)
+        return jsonify({
+            "ok": True,
+            "message": f"Record {asset_id} ({'Rent' if entry_type == 'rent' else 'Asset'}) created.",
+            "asset": asset_view,
+        })
 
     flash(f"Record {asset_id} ({'Rent' if entry_type == 'rent' else 'Asset'}) created.", "success")
     return redirect(url_for("fixed_assets.register"))
@@ -475,7 +549,7 @@ def post_depreciation():
 
 
 # -------------------------------------------------------------------
-# Dispose asset
+# Dispose asset (legacy non-AJAX)
 # -------------------------------------------------------------------
 
 @fixed_assets_bp.route("/dispose/<asset_id>", methods=["POST"])
@@ -495,4 +569,38 @@ def dispose_asset(asset_id):
         },
     )
     flash(f"Asset {asset_id} marked as disposed.", "success")
+    return redirect(url_for("fixed_assets.register"))
+
+
+# -------------------------------------------------------------------
+# Update status (AJAX: Active / Disposed / Fully Depreciated)
+# -------------------------------------------------------------------
+
+@fixed_assets_bp.route("/update-status/<asset_id>", methods=["POST"])
+def update_status(asset_id):
+    is_ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest"
+    new_status = (request.form.get("status") or "").strip() or (request.json.get("status") if request.is_json else "")
+
+    if new_status not in ["Active", "Disposed", "Fully Depreciated"]:
+        if is_ajax:
+            return jsonify({"ok": False, "message": "Invalid status."}), 400
+        flash("Invalid status.", "error")
+        return redirect(url_for("fixed_assets.register"))
+
+    doc = fixed_assets_col.find_one({"asset_id": asset_id})
+    if not doc:
+        if is_ajax:
+            return jsonify({"ok": False, "message": "Asset not found."}), 404
+        flash("Asset not found.", "error")
+        return redirect(url_for("fixed_assets.register"))
+
+    fixed_assets_col.update_one(
+        {"_id": doc["_id"]},
+        {"$set": {"status": new_status, "updated_at": datetime.utcnow()}}
+    )
+
+    if is_ajax:
+        return jsonify({"ok": True, "asset_id": asset_id, "new_status": new_status})
+
+    flash(f"Asset {asset_id} status updated to {new_status}.", "success")
     return redirect(url_for("fixed_assets.register"))
