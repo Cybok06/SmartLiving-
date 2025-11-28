@@ -4,6 +4,7 @@ from __future__ import annotations
 from datetime import datetime, date, timedelta
 from typing import Dict, Any, List, Optional
 from collections import defaultdict
+import math
 
 from flask import (
     Blueprint, render_template, session, redirect,
@@ -119,6 +120,68 @@ def _classify_susu_withdraw(p: Dict[str, Any]) -> Optional[str]:
         return "cash"
 
     return None
+
+
+def _infer_susu_rate_for_customer(
+    customer: Dict[str, Any],
+    payments_for_cust: List[Dict[str, Any]]
+) -> tuple[Optional[float], List[str]]:
+    """
+    Infer SUSU daily rate for a customer.
+
+    Priority:
+      1) If susu_default_rate is set on the customer and > 0, use it.
+      2) Else, derive from SUSU contributions using GCD of amounts.
+
+    Returns: (rate_or_None, logs)
+    """
+    logs: List[str] = []
+
+    default_rate = customer.get("susu_default_rate")
+    if default_rate is not None:
+        try:
+            rate = float(default_rate)
+            if rate > 0:
+                logs.append(f"Using stored susu_default_rate: GH₵{rate:.2f}")
+                return rate, logs
+        except (TypeError, ValueError):
+            logs.append("Stored susu_default_rate is invalid; will infer from payments.")
+
+    # Collect contribution amounts (payment_type == "SUSU")
+    contrib_amounts: List[float] = []
+    for p in payments_for_cust:
+        if p.get("payment_type") == "SUSU":
+            try:
+                amt = float(p.get("amount", 0) or 0)
+            except (TypeError, ValueError):
+                continue
+            if amt > 0:
+                contrib_amounts.append(amt)
+
+    if not contrib_amounts:
+        logs.append("No SUSU contributions found for this customer; cannot infer rate.")
+        return None, logs
+
+    logs.append(f"Found {len(contrib_amounts)} SUSU contributions for rate inference.")
+
+    # Convert to integer pesewas and compute GCD
+    int_amounts = [int(round(a * 100)) for a in contrib_amounts if a > 0]
+    if not int_amounts:
+        logs.append("All SUSU contribution amounts are invalid for GCD; cannot infer rate.")
+        return None, logs
+
+    gcd_val = int_amounts[0]
+    for v in int_amounts[1:]:
+        gcd_val = math.gcd(gcd_val, v)
+
+    if gcd_val <= 0:
+        logs.append("Computed GCD is zero; cannot infer rate safely.")
+        return None, logs
+
+    rate = gcd_val / 100.0
+    logs.append(f"Inferred SUSU daily rate from contributions: GH₵{rate:.2f}")
+
+    return rate, logs
 
 
 # ---------------- Dashboard ----------------
@@ -559,27 +622,19 @@ def susu_dashboard():
     )
 
 
-# ---------------- Withdraw (AJAX + normal) ----------------
+# ---------------- Withdraw (AJAX + preview + normal) ----------------
 
 @manager_susu_bp.route("/manager/susu/<customer_id>/withdraw", methods=["POST"])
 def susu_withdraw(customer_id):
     """
-    SUSU withdrawal flow (supports AJAX and normal form):
+    SUSU withdrawal flow (supports:
+      - preview mode for live calculation (no DB changes),
+      - normal save (records payments + expense).
 
-    Steps:
-      1) Confirm customer has been called.
-      2) Enter customer's usual rate (daily amount).
-      3) Enter company deduction (usually same as rate).
-      4) Enter amount to pay customer.
-
-    We record 2 withdrawals:
-      - method="SUSU Withdrawal"  (money to customer)
-      - method="SUSU Profit"      (profit for company, optional)
-
-    Also:
-      - Auto-create an expense row in manager_expenses with category "SUSU Withdrawal"
-        ONLY for the CASH PAID TO CUSTOMER (withdraw_amount), NOT the company profit.
-      - Track customer's SUSU rate: after 3 same rates in a row -> susu_default_rate.
+    Preview:
+      - request.form['preview'] == "1"
+      - returns: { ok: True, preview_summary: { withdraw_amount, company_profit, balance_after, customer_rate } }
+      - ignores confirm_called and does NOT insert records.
     """
     manager_oid = _require_manager_oid()
     if not manager_oid:
@@ -587,11 +642,17 @@ def susu_withdraw(customer_id):
             return jsonify(ok=False, message="Please log in again."), 401
         return redirect(url_for("login.login"))
 
+    logs: List[str] = []
+    is_preview = (request.form.get("preview") == "1")
+
     try:
         customer_oid = ObjectId(customer_id)
     except Exception:
         msg = "Invalid customer ID."
         if _is_ajax(request):
+            # for preview, send ok=False so frontend falls back
+            if is_preview:
+                return jsonify(ok=False)
             return jsonify(ok=False, message=msg), 400
         flash(msg, "danger")
         return redirect(url_for("manager_susu.susu_dashboard"))
@@ -600,12 +661,14 @@ def susu_withdraw(customer_id):
     if not customer:
         msg = "Customer not found."
         if _is_ajax(request):
+            if is_preview:
+                return jsonify(ok=False)
             return jsonify(ok=False, message=msg), 404
         flash(msg, "danger")
         return redirect(url_for("manager_susu.susu_dashboard"))
 
-    # Step 1: confirm call
-    if not request.form.get("confirm_called"):
+    # Step 1: confirm call (NOT required for preview)
+    if (not is_preview) and (not request.form.get("confirm_called")):
         msg = "Please confirm you have called the customer before withdrawing."
         if _is_ajax(request):
             return jsonify(ok=False, message=msg), 400
@@ -618,24 +681,21 @@ def susu_withdraw(customer_id):
         except (TypeError, ValueError):
             return 0.0
 
-    rate = _to_float("rate")
-    company_deduction = _to_float("company_deduction")
     withdraw_amount = _to_float("withdraw_amount")
     note = (request.form.get("note") or "").strip()
 
     if withdraw_amount <= 0:
         msg = "Withdraw amount must be greater than 0."
+        logs.append(f"Invalid withdraw_amount={withdraw_amount:.2f}.")
         if _is_ajax(request):
+            if is_preview:
+                # let frontend fallback to simple estimate
+                return jsonify(ok=False)
             return jsonify(ok=False, message=msg), 400
         flash(msg, "danger")
         return redirect(url_for("manager_susu.susu_dashboard"))
 
-    if company_deduction < 0:
-        msg = "Company deduction cannot be negative."
-        if _is_ajax(request):
-            return jsonify(ok=False, message=msg), 400
-        flash(msg, "danger")
-        return redirect(url_for("manager_susu.susu_dashboard"))
+    logs.append(f"Requested withdrawal: GH₵{withdraw_amount:.2f}")
 
     # Compute available balance (support old & new manager_id types)
     payments_for_cust = list(payments_col.find({
@@ -643,13 +703,18 @@ def susu_withdraw(customer_id):
         "customer_id": customer_oid,
     }))
 
+    logs.append(f"Loaded {len(payments_for_cust)} total payments for this customer.")
+
     total_susu = 0.0
     total_withdraw_to_customer = 0.0
     total_susu_profit = 0.0
 
     for p in payments_for_cust:
         p_type = p.get("payment_type")
-        amt = float(p.get("amount", 0) or 0)
+        try:
+            amt = float(p.get("amount", 0) or 0)
+        except (TypeError, ValueError):
+            continue
 
         if p_type == "SUSU":
             total_susu += amt
@@ -662,23 +727,99 @@ def susu_withdraw(customer_id):
             else:
                 total_withdraw_to_customer += amt
 
+    logs.append(f"Total SUSU contributed so far: GH₵{total_susu:.2f}")
+    logs.append(f"Total withdrawn to customer so far: GH₵{total_withdraw_to_customer:.2f}")
+    logs.append(f"Total SUSU profit taken so far: GH₵{total_susu_profit:.2f}")
+
     available_balance_before = total_susu - total_withdraw_to_customer - total_susu_profit
     if available_balance_before < 0:
         available_balance_before = 0.0
 
-    total_to_deduct = withdraw_amount + company_deduction
+    logs.append(f"Available SUSU balance before this withdrawal: GH₵{available_balance_before:.2f}")
 
-    if total_to_deduct > available_balance_before + 0.0001:
-        msg = (
-            f"Requested total ({total_to_deduct:.2f}) is more than available "
-            f"SUSU balance ({available_balance_before:.2f})."
-        )
+    # ---- Infer rate ----
+    rate, rate_logs = _infer_susu_rate_for_customer(customer, payments_for_cust)
+    logs.extend(rate_logs)
+
+    if rate is None or rate <= 0:
+        msg = "Unable to determine SUSU daily rate for this customer. Please check their SUSU payments."
         if _is_ajax(request):
+            if is_preview:
+                # front-end will fallback to rough estimate
+                return jsonify(ok=False)
             return jsonify(ok=False, message=msg), 400
         flash(msg, "danger")
         return redirect(url_for("manager_susu.susu_dashboard"))
 
-    # ---------- Record withdrawals ----------
+    # ---- Calculate profit based on withdrawal pages ----
+    # 1 page = 30 days/boxes
+    page_days = 30.0
+
+    withdraw_days = withdraw_amount / rate
+    logs.append(f"Withdrawal amount in days at rate GH₵{rate:.2f}: {withdraw_days:.2f} days")
+
+    # Profit boxes logic:
+    #  - 30 days or less     -> 1 box
+    #  - crosses 30 days     -> 2 boxes
+    #  - crosses 60 days     -> 3 boxes, etc.
+    # So boxes = max(1, ceil(withdraw_days / 30))
+    raw_boxes = max(1, math.ceil(withdraw_days / page_days))
+    logs.append(f"Raw profit boxes computed from withdrawal days: {raw_boxes}")
+
+    profit_boxes = raw_boxes
+    profit_amount = profit_boxes * rate
+    total_to_deduct = withdraw_amount + profit_amount
+
+    logs.append(f"Initial profit_amount = GH₵{profit_amount:.2f} "
+                f"({profit_boxes} boxes × GH₵{rate:.2f}).")
+    logs.append(f"Total to deduct (withdrawal + profit) = GH₵{total_to_deduct:.2f}.")
+
+    # If total_to_deduct > available balance, try reduce boxes down to 1.
+    if total_to_deduct > available_balance_before + 0.0001:
+        logs.append("Total to deduct is more than available balance; trying to reduce profit boxes.")
+        while profit_boxes > 1 and (withdraw_amount + profit_boxes * rate) > available_balance_before + 0.0001:
+            profit_boxes -= 1
+            logs.append(f"Reduced profit boxes to {profit_boxes} due to balance limit.")
+        profit_amount = profit_boxes * rate
+        total_to_deduct = withdraw_amount + profit_amount
+        logs.append(f"After adjustment: profit_amount = GH₵{profit_amount:.2f}, "
+                    f"total_to_deduct = GH₵{total_to_deduct:.2f}.")
+
+        # Still not enough even with minimum 1 box
+        if total_to_deduct > available_balance_before + 0.0001:
+            msg = (
+                f"Requested amount plus minimum SUSU profit (GH₵{rate:.2f}) "
+                f"is more than available SUSU balance (GH₵{available_balance_before:.2f})."
+            )
+            logs.append("Even with minimum profit box, balance is insufficient; aborting withdrawal.")
+            if _is_ajax(request):
+                if is_preview:
+                    # let UI fallback to simple estimated preview
+                    return jsonify(ok=False)
+                return jsonify(ok=False, message=msg), 400
+            flash(msg, "danger")
+            return redirect(url_for("manager_susu.susu_dashboard"))
+
+    logs.append(f"Final profit boxes to charge: {profit_boxes} "
+                f"-> profit_amount: GH₵{profit_amount:.2f}")
+
+    # ---------- Preview mode: NO DB changes, just return calculated summary ----------
+    if is_preview and _is_ajax(request):
+        balance_after = available_balance_before - total_to_deduct
+        if balance_after < 0:
+            balance_after = 0.0
+
+        return jsonify(
+            ok=True,
+            preview_summary={
+                "withdraw_amount": round(withdraw_amount, 2),
+                "company_profit": round(profit_amount, 2),
+                "balance_after": round(balance_after, 2),
+                "customer_rate": round(rate, 2),
+            },
+        )
+
+    # ---------- Record withdrawals (normal save) ----------
     now = datetime.utcnow()
     now_str = now.strftime("%Y-%m-%d")
     time_str = now.strftime("%H:%M:%S")
@@ -692,10 +833,11 @@ def susu_withdraw(customer_id):
         "amount": withdraw_amount,
         "payment_type": "WITHDRAWAL",
         "method": "SUSU Withdrawal",
-        "note": note or f"SUSU withdrawal (rate {rate:.2f})",
+        "note": note or f"SUSU withdrawal (auto-rate GH₵{rate:.2f})",
         "date": now_str,
         "timestamp": now,
     })
+    logs.append(f"Recorded SUSU Withdrawal payment of GH₵{withdraw_amount:.2f}.")
 
     # Auto-create manager expense for SUSU Withdrawal (ONLY money paid to customer)
     expenses_col.insert_one({
@@ -711,60 +853,47 @@ def susu_withdraw(customer_id):
         "approved_at": None,
         "approved_by": None,
     })
+    logs.append("Auto-created manager expense row for SUSU Withdrawal cash paid to customer.")
 
     # 2) Company SUSU profit (NOT an expense)
-    if company_deduction > 0:
+    if profit_amount > 0:
         payments_col.insert_one({
             "manager_id": str(manager_oid),
             "agent_id": agent_id,
             "customer_id": customer_oid,
-            "amount": company_deduction,
+            "amount": float(round(profit_amount, 2)),
             "payment_type": "WITHDRAWAL",
             "method": "SUSU Profit",
-            "note": "SUSU profit collection",
+            "note": "Auto SUSU profit collection based on pages crossed.",
             "date": now_str,
             "timestamp": now,
         })
+        logs.append(f"Recorded SUSU Profit payment of GH₵{profit_amount:.2f}.")
 
-    # ---------- Track & store default SUSU rate ----------
-    new_default_rate = customer.get("susu_default_rate")
-    if rate > 0:
-        try:
-            last_rate = float(customer.get("susu_rate_last") or 0.0)
-        except (TypeError, ValueError):
-            last_rate = 0.0
-
-        try:
-            streak = int(customer.get("susu_rate_streak") or 0)
-        except (TypeError, ValueError):
-            streak = 0
-
-        if abs(rate - last_rate) < 0.0001:
-            streak += 1
-        else:
-            streak = 1
-
-        updates: Dict[str, Any] = {
-            "susu_rate_last": rate,
-            "susu_rate_streak": streak,
+    # ---------- Store / refresh default SUSU rate on customer ----------
+    new_default_rate = rate
+    customers_col.update_one(
+        {"_id": customer_oid},
+        {
+            "$set": {
+                "susu_default_rate": rate,
+                "susu_rate_last": rate,
+                "susu_rate_streak": 3,
+            }
         }
-
-        if streak >= 3:
-            if new_default_rate is None or abs(float(new_default_rate) - rate) >= 0.0001:
-                updates["susu_default_rate"] = rate
-                new_default_rate = rate
-
-        customers_col.update_one(
-            {"_id": customer_oid},
-            {"$set": updates}
-        )
+    )
+    logs.append(f"Updated customer default SUSU rate to GH₵{rate:.2f}.")
 
     # ---------- Build updated stats for this customer ----------
     new_withdraw_to_customer = total_withdraw_to_customer + withdraw_amount
-    new_susu_profit = total_susu_profit + company_deduction
+    new_susu_profit = total_susu_profit + profit_amount
     new_available = total_susu - new_withdraw_to_customer - new_susu_profit
     if new_available < 0:
         new_available = 0.0
+
+    logs.append(f"New total withdrawn to customer: GH₵{new_withdraw_to_customer:.2f}")
+    logs.append(f"New total SUSU profit: GH₵{new_susu_profit:.2f}")
+    logs.append(f"New available SUSU balance: GH₵{new_available:.2f}")
 
     if _is_ajax(request):
         return jsonify(
@@ -777,7 +906,7 @@ def susu_withdraw(customer_id):
                 "susu_profit": round(new_susu_profit, 2),
                 "available_balance": round(new_available, 2),
                 "default_rate": float(new_default_rate) if new_default_rate is not None else None,
-            }
+            },
         )
 
     flash("✅ SUSU withdrawal recorded successfully.", "success")
