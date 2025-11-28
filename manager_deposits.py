@@ -1,7 +1,10 @@
 # routes/manager_deposits.py
 from __future__ import annotations
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash, session, current_app
+from flask import (
+    Blueprint, render_template, request, redirect, url_for,
+    flash, session, current_app, jsonify
+)
 from werkzeug.utils import secure_filename
 from bson import ObjectId
 from datetime import datetime, timezone
@@ -145,6 +148,10 @@ def _build_bank_label(bank_doc: Dict[str, Any]) -> str:
     return label or "Account / Wallet"
 
 
+def _is_ajax() -> bool:
+    return (request.headers.get("X-Requested-With") == "XMLHttpRequest")
+
+
 # ---------- Routes ----------
 @manager_deposits_bp.route("/", methods=["GET"])
 def form_and_list():
@@ -202,6 +209,11 @@ def form_and_list():
 def submit_deposit():
     manager_id, manager_doc = _require_manager_session()
     if not manager_id:
+        if _is_ajax():
+            return jsonify({
+                "ok": False,
+                "errors": ["Session expired. Please log in again."]
+            }), 401
         return redirect(url_for("login.login"))
 
     manager_name = manager_doc.get("name") or manager_doc.get("username") or "Unknown"
@@ -279,6 +291,8 @@ def submit_deposit():
                 errors.append("Could not save file. Try a different image/PDF.")
 
     if errors:
+        if _is_ajax():
+            return jsonify({"ok": False, "errors": errors}), 400
         for e in errors:
             flash(e, "danger")
         return redirect(url_for("manager_deposits.form_and_list"))
@@ -318,5 +332,12 @@ def submit_deposit():
             doc["account_type"] = bank_doc.get("account_type")
 
     manager_deposits_col.insert_one(doc)
+
+    if _is_ajax():
+        return jsonify({
+            "ok": True,
+            "message": "Deposit submitted successfully."
+        }), 200
+
     flash("Deposit submitted successfully.", "success")
     return redirect(url_for("manager_deposits.form_and_list"))
