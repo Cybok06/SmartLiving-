@@ -203,11 +203,14 @@
                   <th class="px-4 py-3 sm:py-4 font-bold text-primary dark:text-white tracking-wider text-center text-xs sm:text-[13px]">Actions</th>
                 </tr>
               </thead>
-              <tbody class="bg-white dark:bg-zinc-900/50">
+              <tbody class="bg-white dark:bg-zinc-900/50" id="assetsTbody">
                 {% for asset in assets %}
                   {% set status = asset.status or "Active" %}
                   {% set entry_type = asset.entry_type or "asset" %}
-                  <tr class="border-t border-neutral-border dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 cursor-pointer">
+                  <tr
+                    class="border-t border-neutral-border dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 cursor-pointer"
+                    data-asset-row="{{ asset.asset_id }}"
+                  >
                     <td class="h-[60px] px-4 py-2 text-zinc-500 dark:text-zinc-400 whitespace-nowrap">
                       {{ asset.asset_id }}
                     </td>
@@ -233,22 +236,27 @@
                     </td>
                     <td class="h-[60px] px-4 py-2 text-zinc-500 dark:text-zinc-400 whitespace-nowrap">
                       {{ asset.acquisition_date_str or '' }}
+                      {% if entry_type == 'rent' and asset.rent_due_date_str %}
+                        <div class="text-[11px] text-zinc-400 dark:text-zinc-500">
+                          Due: {{ asset.rent_due_date_str }}
+                        </div>
+                      {% endif %}
                     </td>
                     <td class="h-[60px] px-4 py-2 text-zinc-500 dark:text-zinc-400 text-right whitespace-nowrap">
-                      {{ (currency_symbol or '') }}{{ asset.cost|money }}
+                      {{ (currency_symbol or '') }}{{ asset.cost_display }}
                     </td>
                     <td class="h-[60px] px-4 py-2 text-zinc-500 dark:text-zinc-400 text-right whitespace-nowrap">
                       {% if entry_type == 'rent' %}
                         -
                       {% else %}
-                        {{ (currency_symbol or '') }}{{ asset.accum_depr|money }}
+                        {{ (currency_symbol or '') }}{{ asset.accum_depr_display }}
                       {% endif %}
                     </td>
                     <td class="h-[60px] px-4 py-2 text-zinc-500 dark:text-zinc-400 text-right whitespace-nowrap">
                       {% if entry_type == 'rent' %}
                         -
                       {% else %}
-                        {{ (currency_symbol or '') }}{{ asset.net_book_value|money }}
+                        {{ (currency_symbol or '') }}{{ asset.nbv_display }}
                       {% endif %}
                     </td>
                     <td class="h-[60px] px-4 py-2 text-zinc-500 dark:text-zinc-400 whitespace-nowrap">
@@ -265,7 +273,7 @@
                         {{ asset.useful_life_years or 0 }} Years
                       {% endif %}
                     </td>
-                    <td class="h-[60px] px-4 py-2">
+                    <td class="h-[60px] px-4 py-2" data-status-cell>
                       {% if status == "Active" %}
                         <span class="inline-flex items-center px-3 py-1 rounded-full text-[11px] font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
                           Active
@@ -285,19 +293,69 @@
                       {% endif %}
                     </td>
                     <td class="h-[60px] px-4 py-2 text-center">
-                      <form
-                        method="post"
-                        action="{{ url_for('fixed_assets.dispose_asset', asset_id=asset.asset_id) }}"
-                        onsubmit="return confirm('Mark this asset as disposed?');"
-                      >
+                      <div class="relative inline-block text-left">
                         <button
-                          type="submit"
+                          type="button"
                           class="inline-flex items-center justify-center rounded-full p-1.5 text-zinc-500 dark:text-zinc-400 hover:text-primary dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 focus:outline-none focus:ring-1 focus:ring-primary/40"
-                          title="Dispose asset"
+                          onclick="toggleAssetMenu('{{ asset.asset_id }}')"
                         >
                           <span class="material-symbols-outlined text-base">more_horiz</span>
                         </button>
-                      </form>
+                        <div
+                          id="asset-menu-{{ asset.asset_id }}"
+                          class="hidden origin-top-right absolute right-0 mt-2 w-40 rounded-md shadow-lg bg-white dark:bg-zinc-800 ring-1 ring-black ring-opacity-5 focus:outline-none z-20"
+                        >
+                          <button
+                            type="button"
+                            class="w-full px-3 py-2 text-left text-[11px] sm:text-xs text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-700"
+                            onclick="updateAssetStatus('{{ asset.asset_id }}','Active')"
+                          >
+                            <span class="material-symbols-outlined text-sm align-middle mr-1">play_arrow</span>
+                            Mark Active
+                          </button>
+                          <button
+                            type="button"
+                            class="w-full px-3 py-2 text-left text-[11px] sm:text-xs text-red-700 dark:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/40"
+                            onclick="updateAssetStatus('{{ asset.asset_id }}','Disposed')"
+                          >
+                            <span class="material-symbols-outlined text-sm align-middle mr-1">delete</span>
+                            Mark Disposed
+                          </button>
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+
+                  {# Progress row between each record #}
+                  <tr class="border-b border-neutral-border/70 dark:border-zinc-800/80">
+                    <td colspan="12" class="px-4 pb-3">
+                      <div class="space-y-1">
+                        {% if entry_type != 'rent' and asset.life_progress_pct is not none %}
+                          <div class="flex items-center justify-between text-[11px] text-zinc-500 dark:text-zinc-400 mb-1">
+                            <span>Asset life span</span>
+                            <span>{{ asset.life_progress_label }}</span>
+                          </div>
+                          <div class="w-full h-1.5 rounded-full bg-zinc-100 dark:bg-zinc-800 overflow-hidden">
+                            <div
+                              class="h-1.5 bg-emerald-500"
+                              data-life-progress="{{ asset.life_progress_pct or 0 }}"
+                            ></div>
+                          </div>
+                        {% endif %}
+
+                        {% if entry_type == 'rent' and asset.rent_progress_pct is not none %}
+                          <div class="flex items-center justify-between text-[11px] text-zinc-500 dark:text-zinc-400 mt-2 mb-1">
+                            <span>Rent period (Date Rented → Due Date)</span>
+                            <span>{{ asset.rent_progress_label }}</span>
+                          </div>
+                          <div class="w-full h-1.5 rounded-full bg-zinc-100 dark:bg-zinc-800 overflow-hidden">
+                            <div
+                              class="h-1.5 bg-indigo-500"
+                              data-rent-progress="{{ asset.rent_progress_pct or 0 }}"
+                            ></div>
+                          </div>
+                        {% endif %}
+                      </div>
                     </td>
                   </tr>
                 {% else %}
@@ -563,16 +621,107 @@
         <button
           type="submit"
           form="assetForm"
+          id="assetSaveBtn"
           class="inline-flex items-center justify-center gap-2 h-9 px-5 rounded-full bg-accent text-white text-xs sm:text-sm font-semibold shadow-sm hover:bg-accent/90 disabled:opacity-60 disabled:cursor-not-allowed"
         >
-          <span class="material-symbols-outlined text-base hidden" id="assetSpinner">sync</span>
-          <span>Save Record</span>
+          <span class="material-symbols-outlined text-base hidden animate-spin" id="assetSpinner">sync</span>
+          <span id="assetSaveText">Save Record</span>
         </button>
       </footer>
     </div>
   </section>
 
   <script>
+    // ---------- helper: apply progress widths from data-* ----------
+    function applyProgressWidths() {
+      document.querySelectorAll('[data-life-progress]').forEach(el => {
+        const raw = el.getAttribute('data-life-progress') || '0';
+        let pct = parseFloat(raw);
+        if (isNaN(pct)) pct = 0;
+        if (pct < 0) pct = 0;
+        if (pct > 100) pct = 100;
+        el.style.width = pct + '%';
+      });
+
+      document.querySelectorAll('[data-rent-progress]').forEach(el => {
+        const raw = el.getAttribute('data-rent-progress') || '0';
+        let pct = parseFloat(raw);
+        if (isNaN(pct)) pct = 0;
+        if (pct < 0) pct = 0;
+        if (pct > 100) pct = 100;
+        el.style.width = pct + '%';
+      });
+    }
+
+    // ---------- small helper: close all action menus ----------
+    function closeAllMenus() {
+      document.querySelectorAll('[id^="asset-menu-"]').forEach(el => el.classList.add('hidden'));
+    }
+
+    function toggleAssetMenu(assetId) {
+      const menu = document.getElementById('asset-menu-' + assetId);
+      if (!menu) return;
+      const isHidden = menu.classList.contains('hidden');
+      closeAllMenus();
+      if (isHidden) menu.classList.remove('hidden');
+    }
+
+    window.addEventListener('click', function (e) {
+      if (!e.target.closest('[id^="asset-menu-"]') && !e.target.closest('button')) {
+        closeAllMenus();
+      }
+    });
+
+    // ---------- AJAX: update status ----------
+    async function updateAssetStatus(assetId, newStatus) {
+      try {
+        const formData = new FormData();
+        formData.append('status', newStatus);
+
+        const res = await fetch(`{{ url_for("fixed_assets.update_status", asset_id="__ID__") }}`.replace('__ID__', assetId), {
+          method: 'POST',
+          headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+          },
+          body: formData
+        });
+
+        const data = await res.json();
+        if (!data.ok) {
+          alert(data.message || 'Unable to update status.');
+          return;
+        }
+
+        // Update badge in row
+        const row = document.querySelector(`tr[data-asset-row="${assetId}"]`);
+        if (!row) return;
+        const statusCell = row.querySelector('[data-status-cell]');
+        if (!statusCell) return;
+
+        const s = data.new_status;
+        if (s === 'Active') {
+          statusCell.innerHTML =
+            '<span class="inline-flex items-center px-3 py-1 rounded-full text-[11px] font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">Active</span>';
+        } else if (s === 'Fully Depreciated') {
+          statusCell.innerHTML =
+            '<span class="inline-flex items-center px-3 py-1 rounded-full text-[11px] font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">Fully Depreciated</span>';
+        } else if (s === 'Disposed') {
+          statusCell.innerHTML =
+            '<span class="inline-flex items-center px-3 py-1 rounded-full text-[11px] font-medium bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">Disposed</span>';
+        } else {
+          statusCell.innerHTML =
+            '<span class="inline-flex items-center px-3 py-1 rounded-full text-[11px] font-medium bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-200">' +
+            s +
+            '</span>';
+        }
+
+        closeAllMenus();
+      } catch (err) {
+        console.error(err);
+        alert('Network error while updating status.');
+      }
+    }
+
     (function () {
       const openBtn   = document.getElementById('btnAddAsset');
       const backdrop  = document.getElementById('assetModalBackdrop');
@@ -581,6 +730,8 @@
       const cancelBtn = document.getElementById('assetModalCancel');
       const form      = document.getElementById('assetForm');
       const spinner   = document.getElementById('assetSpinner');
+      const saveBtn   = document.getElementById('assetSaveBtn');
+      const saveText  = document.getElementById('assetSaveText');
 
       const entryTypeSelect = document.getElementById('entryTypeSelect');
       const categoryInput   = document.getElementById('categoryInput');
@@ -588,6 +739,7 @@
       const costLabel       = document.getElementById('label_cost');
       const assetOnlyBlocks = document.querySelectorAll('[data-section="asset-only"]');
       const rentOnlyBlocks  = document.querySelectorAll('[data-section="rent-only"]');
+      const tbody           = document.getElementById('assetsTbody');
 
       function openModal() {
         if (backdrop) backdrop.classList.remove('hidden');
@@ -606,27 +758,26 @@
         if (form && typeof form.reset === 'function') {
           form.reset();
         }
-        // Reset to default type
         if (entryTypeSelect) {
           entryTypeSelect.value = 'asset';
           syncEntryTypeUI();
         }
+        if (spinner) spinner.classList.add('hidden');
+        if (saveBtn) saveBtn.disabled = false;
+        if (saveText) saveText.textContent = 'Save Record';
       }
 
       function syncEntryTypeUI() {
         const type = (entryTypeSelect ? entryTypeSelect.value : 'asset');
 
         if (type === 'rent') {
-          // Labels
           if (acqLabel) acqLabel.textContent = 'Date Rented';
           if (costLabel) costLabel.textContent = 'Rent Amount (GHS)';
 
-          // Default category to Rent if empty
           if (categoryInput && !categoryInput.value.trim()) {
             categoryInput.value = 'Rent';
           }
 
-          // Toggle visibility
           assetOnlyBlocks.forEach(el => el.classList.add('hidden'));
           rentOnlyBlocks.forEach(el => el.classList.remove('hidden'));
         } else {
@@ -665,11 +816,182 @@
         }
       });
 
-      if (form) {
-        form.addEventListener('submit', function () {
+      // -------- AJAX submit for Add Asset / Rent --------
+      if (form && saveBtn) {
+        form.addEventListener('submit', function (e) {
+          e.preventDefault(); // prevent normal post (no page reload)
+
+          const fd = new FormData(form);
           if (spinner) spinner.classList.remove('hidden');
+          if (saveBtn) saveBtn.disabled = true;
+          if (saveText) saveText.textContent = 'Saving...';
+
+          fetch(form.action, {
+            method: 'POST',
+            headers: {
+              'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: fd
+          })
+          .then(res => res.json())
+          .then(data => {
+            if (!data.ok) {
+              alert(data.message || 'Could not save record.');
+              return;
+            }
+
+            const a = data.asset;
+            if (!a || !tbody) {
+              return;
+            }
+
+            // Build main row HTML + progress row
+            const entryType = a.entry_type || 'asset';
+            const status = a.status || 'Active';
+
+            let statusBadge = '';
+            if (status === 'Active') {
+              statusBadge =
+                '<span class="inline-flex items-center px-3 py-1 rounded-full text-[11px] font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">Active</span>';
+            } else if (status === 'Fully Depreciated') {
+              statusBadge =
+                '<span class="inline-flex items-center px-3 py-1 rounded-full text-[11px] font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">Fully Depreciated</span>';
+            } else if (status === 'Disposed') {
+              statusBadge =
+                '<span class="inline-flex items-center px-3 py-1 rounded-full text-[11px] font-medium bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">Disposed</span>';
+            } else {
+              statusBadge =
+                '<span class="inline-flex items-center px-3 py-1 rounded-full text-[11px] font-medium bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-200">' +
+                status + '</span>';
+            }
+
+            const rentLabel =
+              entryType === 'rent'
+                ? (a.rent_type || 'Rent')
+                : 'Fixed Asset';
+
+            const rentChip =
+              entryType === 'rent'
+                ? '<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200">Rent</span>'
+                : '';
+
+            const acqExtra =
+              (entryType === 'rent' && a.rent_due_date_str)
+                ? `<div class="text-[11px] text-zinc-400 dark:text-zinc-500">Due: ${a.rent_due_date_str}</div>`
+                : '';
+
+            const accumDisplay =
+              entryType === 'rent' ? '-' : '{{ (currency_symbol or "") }}' + a.accum_depr_display;
+            const nbvDisplay =
+              entryType === 'rent' ? '-' : '{{ (currency_symbol or "") }}' + a.nbv_display;
+
+            const mainRowHtml = `
+<tr class="border-t border-neutral-border dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 cursor-pointer" data-asset-row="${a.asset_id}">
+  <td class="h-[60px] px-4 py-2 text-zinc-500 dark:text-zinc-400 whitespace-nowrap">${a.asset_id}</td>
+  <td class="h-[60px] px-4 py-2 font-medium text-primary dark:text-white whitespace-nowrap">
+    <div class="flex items-center gap-2">
+      <span>${a.name}</span>
+      ${rentChip}
+    </div>
+  </td>
+  <td class="h-[60px] px-4 py-2 text-zinc-500 dark:text-zinc-400 whitespace-nowrap">${a.category || '-'}</td>
+  <td class="h-[60px] px-4 py-2 text-zinc-500 dark:text-zinc-400 whitespace-nowrap">${rentLabel}</td>
+  <td class="h-[60px] px-4 py-2 text-zinc-500 dark:text-zinc-400 whitespace-nowrap">
+    ${a.acquisition_date_str || ''}${acqExtra}
+  </td>
+  <td class="h-[60px] px-4 py-2 text-zinc-500 dark:text-zinc-400 text-right whitespace-nowrap">
+    {{ (currency_symbol or "") }}${a.cost_display}
+  </td>
+  <td class="h-[60px] px-4 py-2 text-zinc-500 dark:text-zinc-400 text-right whitespace-nowrap">${accumDisplay}</td>
+  <td class="h-[60px] px-4 py-2 text-zinc-500 dark:text-zinc-400 text-right whitespace-nowrap">${nbvDisplay}</td>
+  <td class="h-[60px] px-4 py-2 text-zinc-500 dark:text-zinc-400 whitespace-nowrap">
+    ${entryType === 'rent' ? 'N/A' : (a.method || 'SL')}
+  </td>
+  <td class="h-[60px] px-4 py-2 text-zinc-500 dark:text-zinc-400 whitespace-nowrap">
+    ${entryType === 'rent' ? '-' : ((a.useful_life_years || 0) + ' Years')}
+  </td>
+  <td class="h-[60px] px-4 py-2" data-status-cell>
+    ${statusBadge}
+  </td>
+  <td class="h-[60px] px-4 py-2 text-center">
+    <div class="relative inline-block text-left">
+      <button
+        type="button"
+        class="inline-flex items-center justify-center rounded-full p-1.5 text-zinc-500 dark:text-zinc-400 hover:text-primary dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 focus:outline-none focus:ring-1 focus:ring-primary/40"
+        onclick="toggleAssetMenu('${a.asset_id}')"
+      >
+        <span class="material-symbols-outlined text-base">more_horiz</span>
+      </button>
+      <div
+        id="asset-menu-${a.asset_id}"
+        class="hidden origin-top-right absolute right-0 mt-2 w-40 rounded-md shadow-lg bg-white dark:bg-zinc-800 ring-1 ring-black ring-opacity-5 focus:outline-none z-20"
+      >
+        <button
+          type="button"
+          class="w-full px-3 py-2 text-left text-[11px] sm:text-xs text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-700"
+          onclick="updateAssetStatus('${a.asset_id}','Active')"
+        >
+          <span class="material-symbols-outlined text-sm align-middle mr-1">play_arrow</span>
+          Mark Active
+        </button>
+        <button
+          type="button"
+          class="w-full px-3 py-2 text-left text-[11px] sm:text-xs text-red-700 dark:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/40"
+          onclick="updateAssetStatus('${a.asset_id}','Disposed')"
+        >
+          <span class="material-symbols-outlined text-sm align-middle mr-1">delete</span>
+          Mark Disposed
+        </button>
+      </div>
+    </div>
+  </td>
+</tr>`;
+
+            let progressRowHtml = '<tr class="border-b border-neutral-border/70 dark:border-zinc-800/80"><td colspan="12" class="px-4 pb-3"><div class="space-y-1">';
+            if (entryType !== 'rent' && a.life_progress_pct !== null && a.life_progress_pct !== undefined) {
+              progressRowHtml += `
+<div class="flex items-center justify-between text-[11px] text-zinc-500 dark:text-zinc-400 mb-1">
+  <span>Asset life span</span>
+  <span>${a.life_progress_label || ''}</span>
+</div>
+<div class="w-full h-1.5 rounded-full bg-zinc-100 dark:bg-zinc-800 overflow-hidden">
+  <div class="h-1.5 bg-emerald-500" style="width: ${a.life_progress_pct}%;"></div>
+</div>`;
+            }
+            if (entryType === 'rent' && a.rent_progress_pct !== null && a.rent_progress_pct !== undefined) {
+              progressRowHtml += `
+<div class="flex items-center justify-between text-[11px] text-zinc-500 dark:text-zinc-400 mt-2 mb-1">
+  <span>Rent period (Date Rented → Due Date)</span>
+  <span>${a.rent_progress_label || ''}</span>
+</div>
+<div class="w-full h-1.5 rounded-full bg-zinc-100 dark:bg-zinc-800 overflow-hidden">
+  <div class="h-1.5 bg-indigo-500" style="width: ${a.rent_progress_pct}%;"></div>
+</div>`;
+            }
+            progressRowHtml += '</div></td></tr>';
+
+            tbody.insertAdjacentHTML('afterbegin', progressRowHtml);
+            tbody.insertAdjacentHTML('afterbegin', mainRowHtml);
+
+            // apply widths to any new data-* progress bars if needed
+            applyProgressWidths();
+
+            closeModal();
+          })
+          .catch(err => {
+            console.error(err);
+            alert('Network error while saving record.');
+          })
+          .finally(() => {
+            if (spinner) spinner.classList.add('hidden');
+            if (saveBtn) saveBtn.disabled = false;
+            if (saveText) saveText.textContent = 'Save Record';
+          });
         });
       }
+
+      // run once on page load to set initial progress bar widths
+      applyProgressWidths();
     })();
   </script>
 </body>
