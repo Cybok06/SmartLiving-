@@ -99,6 +99,10 @@ def _auto_asset_id():
 
 
 def _compute_net_book_value(asset):
+    # For RENT entries, we don't do NBV logic – just show 0.00
+    if (asset.get("entry_type") or "asset").lower() == "rent":
+        return 0.0
+
     cost = _safe_float(asset, "cost", 0)
     accum = _safe_float(asset, "accum_depr", 0)
     nbv = cost - accum
@@ -132,11 +136,14 @@ def register():
 
     assets = []
     for doc in docs:
+        entry_type = (doc.get("entry_type") or "asset").lower()
+
         asset = {
             "_id": doc.get("_id"),
             "asset_id": doc.get("asset_id"),
             "name": doc.get("name"),
             "category": doc.get("category"),
+            "entry_type": entry_type,
             "method": doc.get("method", "SL"),
             "useful_life_years": doc.get("useful_life_years", 0),
             "status": doc.get("status", "Active"),
@@ -144,12 +151,31 @@ def register():
 
         cost = _safe_float(doc, "cost", 0)
         accum = _safe_float(doc, "accum_depr", 0)
-        asset["cost"] = cost
-        asset["accum_depr"] = accum
-        asset["net_book_value"] = _compute_net_book_value(doc)
+
+        # For RENT entries, we show cost but NBV = 0 and no depreciation
+        if entry_type == "rent":
+            asset["cost"] = cost
+            asset["accum_depr"] = 0.0
+            asset["net_book_value"] = 0.0
+            asset["method"] = "N/A"
+            asset["useful_life_years"] = 0
+        else:
+            asset["cost"] = cost
+            asset["accum_depr"] = accum
+            asset["net_book_value"] = _compute_net_book_value(doc)
 
         acq_date = doc.get("acquisition_date")
         asset["acquisition_date_str"] = _format_date(_parse_date(acq_date))
+
+        # Extra RENT info (optional display / future use)
+        asset["rent_place"] = doc.get("rent_place")
+        asset["rent_type"] = doc.get("rent_type")
+        asset["rent_due_date_str"] = _format_date(_parse_date(doc.get("rent_due_date")))
+
+        advance = doc.get("advance") or {}
+        asset["advance_amount"] = _safe_float(advance, "amount", 0)
+        asset["advance_years"] = int(advance.get("years") or 0)
+        asset["advance_note"] = advance.get("note", "")
 
         assets.append(asset)
 
@@ -178,24 +204,39 @@ def export_assets():
     writer.writerow([
         "Asset ID",
         "Name",
+        "Entry Type",          # asset / rent
         "Category",
-        "Acquisition Date",
-        "Cost",
+        "Acquisition / Rented Date",
+        "Cost / Rent Amount",
         "Accumulated Depreciation",
         "Net Book Value",
         "Method",
         "Useful Life (Years)",
         "Status",
+        "Rent Place",
+        "Rent Type",
+        "Rent Due Date",
+        "Advance Amount",
+        "Advance Years",
+        "Advance Note",
     ])
 
     for doc in docs:
+        entry_type = (doc.get("entry_type") or "asset").lower()
+
         cost = _safe_float(doc, "cost", 0)
         accum = _safe_float(doc, "accum_depr", 0)
         nbv = _compute_net_book_value(doc)
 
+        advance = doc.get("advance") or {}
+        advance_amount = _safe_float(advance, "amount", 0)
+        advance_years = int(advance.get("years") or 0)
+        advance_note = advance.get("note", "")
+
         writer.writerow([
             doc.get("asset_id", ""),
             doc.get("name", ""),
+            entry_type,
             doc.get("category", ""),
             _format_date(_parse_date(doc.get("acquisition_date"))),
             f"{cost:,.2f}",
@@ -204,6 +245,12 @@ def export_assets():
             doc.get("method", "SL"),
             doc.get("useful_life_years", 0),
             doc.get("status", "Active"),
+            doc.get("rent_place", ""),
+            doc.get("rent_type", ""),
+            _format_date(_parse_date(doc.get("rent_due_date"))),
+            f"{advance_amount:,.2f}",
+            advance_years,
+            advance_note,
         ])
 
     output.seek(0)
@@ -219,11 +266,16 @@ def export_assets():
 
 
 # -------------------------------------------------------------------
-# Add Asset – POST only (modal submits here)
+# Add Asset / Rent – POST only (modal submits here)
 # -------------------------------------------------------------------
 
 @fixed_assets_bp.route("/add", methods=["POST"])
 def add_asset_form():
+    # Type selector: "asset" or "rent"
+    entry_type = (request.form.get("entry_type") or "asset").strip().lower()
+    if entry_type not in ("asset", "rent"):
+        entry_type = "asset"
+
     name = (request.form.get("name") or "").strip()
     category = (request.form.get("category") or "").strip()
     method = (request.form.get("method") or "SL").strip()
@@ -232,13 +284,23 @@ def add_asset_form():
     acq_date_raw = request.form.get("acquisition_date") or ""
     notes = (request.form.get("notes") or "").strip()
 
+    # RENT-specific fields
+    rent_place = (request.form.get("rent_place") or "").strip()
+    rent_type = (request.form.get("rent_type") or "").strip()  # Office, Warehouse, Room
+    rent_due_raw = request.form.get("rent_due_date") or ""
+
+    advance_amount_raw = request.form.get("advance_amount") or "0"
+    advance_years_raw = request.form.get("advance_years") or "0"
+    advance_note = (request.form.get("advance_note") or "").strip()
+
     if not name:
-        flash("Asset name is required.", "error")
+        flash("Asset/Rent name is required.", "error")
         return redirect(url_for("fixed_assets.register"))
 
+    # Auto ID
     asset_id = _auto_asset_id()
 
-    # 🔧 IMPORTANT: store as datetime.datetime (never datetime.date)
+    # Acquisition date (for rent, this is Date Rented)
     if acq_date_raw:
         try:
             acquisition_datetime = datetime.strptime(acq_date_raw, "%Y-%m-%d")
@@ -247,19 +309,40 @@ def add_asset_form():
     else:
         acquisition_datetime = datetime.utcnow()
 
+    # Parse rent due date
+    rent_due_dt = None
+    if rent_due_raw:
+        try:
+            rent_due_dt = datetime.strptime(rent_due_raw, "%Y-%m-%d")
+        except Exception:
+            rent_due_dt = None
+
+    # Amounts
     cost = _safe_float({"cost": cost_raw}, "cost", 0)
+    advance_amount = _safe_float({"amount": advance_amount_raw}, "amount", 0)
     try:
         useful_life_years = int(life_years)
     except ValueError:
         useful_life_years = 0
+    try:
+        advance_years = int(advance_years_raw)
+    except ValueError:
+        advance_years = 0
+
+    # For RENT entries, if category is blank, default to "Rent"
+    if entry_type == "rent" and not category:
+        category = "Rent"
 
     doc = {
         "asset_id": asset_id,
         "name": name,
         "category": category,
+        "entry_type": entry_type,           # <-- key: asset or rent
+
+        # Asset-related fields (for rent we still store them, but depreciation will ignore)
         "method": method or "SL",
         "useful_life_years": useful_life_years,
-        "acquisition_date": acquisition_datetime,   # ⬅️ datetime, BSON-safe
+        "acquisition_date": acquisition_datetime,   # date rented for rent type
         "cost": cost,
         "accum_depr": 0.0,
         "status": "Active",
@@ -268,9 +351,27 @@ def add_asset_form():
         "updated_at": datetime.utcnow(),
     }
 
+    # Attach rent info if entry_type is rent
+    if entry_type == "rent":
+        doc["rent_place"] = rent_place
+        doc["rent_type"] = rent_type
+        doc["rent_due_date"] = rent_due_dt
+        doc["advance"] = {
+            "amount": advance_amount,
+            "years": advance_years,
+            "note": advance_note,
+        }
+    else:
+        # For normal assets, keep advance structure clean (optional)
+        doc["advance"] = {
+            "amount": 0.0,
+            "years": 0,
+            "note": "",
+        }
+
     fixed_assets_col.insert_one(doc)
 
-    flash(f"Asset {asset_id} created.", "success")
+    flash(f"Record {asset_id} ({'Rent' if entry_type == 'rent' else 'Asset'}) created.", "success")
     return redirect(url_for("fixed_assets.register"))
 
 
@@ -284,7 +385,12 @@ def _monthly_depreciation_amount(doc):
       - Straight Line: cost / (useful_life_years * 12)
       - DB: 2 * SL rate * remaining NBV
     Assumes zero salvage value.
+
+    RENT entries are ignored (no depreciation).
     """
+    if (doc.get("entry_type") or "asset").lower() == "rent":
+        return 0.0
+
     method = (doc.get("method") or "SL").upper()
     useful_life_years = int(doc.get("useful_life_years") or 0)
     if useful_life_years <= 0:
