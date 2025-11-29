@@ -1,481 +1,755 @@
-# routes/executive_susu.py
-from __future__ import annotations
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Executive SUSU Overview – Smart Living</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
 
-from datetime import datetime, date, timedelta
-from typing import Dict, Any, List, Optional
-from collections import defaultdict
+  <!-- Bootstrap + Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <link rel="icon" type="image/png"
+        href="https://res.cloudinary.com/dljpgzbto/image/upload/v1743993646/company-logo_dksb23.jpg">
 
-from flask import (
-    Blueprint, render_template, session, redirect,
-    url_for, request
-)
-from bson.objectid import ObjectId
-
-from db import db
-
-executive_susu_bp = Blueprint("executive_susu", __name__)
-
-# Collections
-users_col     = db.users
-customers_col = db.customers
-payments_col  = db.payments
-
-
-# ---------- Helpers ----------
-
-def _require_executive_or_admin() -> bool:
-    """
-    Ensure only EXECUTIVE / ADMIN can view this page.
-    Returns True if allowed, else False.
-    """
-    return bool(session.get("executive_id") or session.get("admin_id"))
-
-
-def _safe_date_from_payment(p: Dict[str, Any]) -> Optional[date]:
-    """
-    Try to get a date from payment doc:
-      - prefer `timestamp` (datetime)
-      - fallback to parsing `date` (YYYY-MM-DD)
-    """
-    ts = p.get("timestamp")
-    if isinstance(ts, datetime):
-        return ts.date()
-
-    date_str = p.get("date")
-    if isinstance(date_str, str):
-        try:
-            return datetime.strptime(date_str[:10], "%Y-%m-%d").date()
-        except Exception:
-            return None
-    return None
-
-
-def _normalize_id(v: Any) -> Optional[str]:
-    if not v:
-        return None
-    if isinstance(v, ObjectId):
-        return str(v)
-    try:
-        return str(v)
-    except Exception:
-        return None
-
-
-def _classify_susu_withdraw(p: Dict[str, Any]) -> Optional[str]:
-    """
-    Classify a WITHDRAWAL payment as:
-      - "cash"   -> money paid to customer
-      - "profit" -> company SUSU profit
-      - None     -> not SUSU-related (ignore)
-
-    Supports BOTH old and new structures:
-
-    NEW:
-      method = "SUSU Withdrawal" / "SUSU Profit"
-
-    OLD:
-      method = "Manual"  (cash)
-      method = "Deduction" / "SUSU deduction" (profit)
-      plus hints from the note text (contains 'susu', 'profit', 'deduction', etc.)
-    """
-    if p.get("payment_type") != "WITHDRAWAL":
-        return None
-
-    method_raw = (p.get("method") or "").strip()
-    method_lc = method_raw.lower()
-    note_lc = (p.get("note") or "").strip().lower()
-
-    is_cash = False
-    is_profit = False
-
-    # --- Cash to customer variants ---
-    if method_lc in ("susu withdrawal", "manual", "cash", "withdrawal", "susu cash"):
-        is_cash = True
-
-    # --- Profit / deduction variants ---
-    if method_lc in ("susu profit", "deduction", "susu deduction"):
-        is_profit = True
-
-    # --- Infer from note text for old data ---
-    if "susu" in note_lc:
-        if "profit" in note_lc or "deduction" in note_lc:
-            is_profit = True
-        if "withdraw" in note_lc or "cash" in note_lc or "payout" in note_lc:
-            is_cash = True
-
-    if is_profit and not is_cash:
-        return "profit"
-    if is_cash and not is_profit:
-        return "cash"
-    if is_cash and is_profit:
-        # If both signs appear, prioritise profit if strong signals
-        if ("profit" in method_lc or "deduction" in method_lc or
-                "profit" in note_lc or "deduction" in note_lc):
-            return "profit"
-        return "cash"
-
-    return None
-
-
-def _parse_date(s: str) -> Optional[date]:
-    if not s:
-        return None
-    try:
-        return datetime.strptime(s[:10], "%Y-%m-%d").date()
-    except Exception:
-        return None
-
-
-# ---------- Executive SUSU Overview ----------
-
-@executive_susu_bp.route("/executive/susu")
-def executive_susu_dashboard():
-    """
-    Executive SUSU overview:
-
-    - Global SUSU metrics (all branches, filtered by date range)
-    - Branch-level SUSU breakdown:
-        * Total SUSU collected
-        * Total withdrawals (cash to customer)
-        * SUSU profit (company)
-        * Net SUSU available per branch
-    - Time buckets (Today / This Week / This Month) for quick snapshot
-    - Customer search:
-        * Search by name / phone and see:
-            - Total contributed
-            - Total withdrawn (cash)
-            - SUSU profit
-            - Available SUSU balance
-            - Branch (based on manager who handled SUSU)
-    - Date range filter:
-        * range = today | week | month | all | custom
-        * For custom: start_date=YYYY-MM-DD & end_date=YYYY-MM-DD
-    """
-    if not _require_executive_or_admin():
-        return redirect(url_for("login.login"))
-
-    # -------- Query params --------
-    branch_filter = (request.args.get("branch") or "all").strip()
-    customer_search_term = (request.args.get("search") or "").strip()
-
-    range_key = (request.args.get("range") or "month").lower()
-    start_param = (request.args.get("start_date") or "").strip()
-    end_param = (request.args.get("end_date") or "").strip()
-
-    # -------- Load managers (for branch mapping) --------
-    manager_map: Dict[str, Dict[str, Any]] = {}
-    branches: set[str] = set()
-
-    for u in users_col.find({"role": "manager"}, {"_id": 1, "name": 1, "branch": 1}):
-        mid_str = str(u["_id"])
-        branch = (u.get("branch") or "Unassigned").strip() or "Unassigned"
-        manager_map[mid_str] = {
-            "name": u.get("name", "Manager"),
-            "branch": branch,
-        }
-        branches.add(branch)
-
-    sorted_branches = sorted(branches)
-
-    # -------- Date setup --------
-    today = datetime.utcnow().date()
-    start_of_week = today - timedelta(days=today.weekday())  # Monday
-    start_of_month = today.replace(day=1)
-
-    # Range for filtering totals / branch / customers
-    start_range: Optional[date] = None
-    end_range: Optional[date] = None
-    filter_label = ""
-
-    if range_key == "today":
-        start_range = today
-        end_range = today
-        filter_label = "Today"
-    elif range_key == "week":
-        start_range = start_of_week
-        end_range = today
-        filter_label = "This Week"
-    elif range_key == "month":
-        start_range = start_of_month
-        end_range = today
-        filter_label = "This Month"
-    elif range_key == "custom":
-        sd = _parse_date(start_param)
-        ed = _parse_date(end_param)
-        if sd and ed and sd <= ed:
-            start_range = sd
-            end_range = ed
-            filter_label = f"{sd.isoformat()} to {ed.isoformat()}"
-        else:
-            # Fallback to month if invalid
-            start_range = start_of_month
-            end_range = today
-            filter_label = "This Month (invalid custom dates)"
-            range_key = "month"
-    else:
-        # "all" or unknown
-        start_range = None
-        end_range = None
-        filter_label = "All Time"
-
-    def _in_selected_range(d: Optional[date]) -> bool:
-        if start_range is None or end_range is None:
-            return True  # no filter (all time)
-        if not d:
-            return False
-        return start_range <= d <= end_range
-
-    # -------- Global & branch metrics --------
-    global_totals = {
-        "total_susu": 0.0,
-        "total_withdrawals": 0.0,
-        "total_profit": 0.0,
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: radial-gradient(circle at top left, #e0f2fe 0, #f4f5fb 40%, #eef2ff 100%);
+      color: #111827;
+    }
+    .page-header {
+      padding: 1.5rem 0 0.75rem;
+    }
+    .page-header h1 {
+      font-size: 1.8rem;
+      font-weight: 700;
+      margin-bottom: 0.15rem;
+    }
+    .page-header p {
+      margin: 0;
+      color: #6b7280;
+      font-size: 0.9rem;
+    }
+    .badge-pill {
+      border-radius: 999px;
+      font-size: 0.7rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
     }
 
-    branch_totals: Dict[str, Dict[str, float]] = defaultdict(
-        lambda: {
-            "total_susu": 0.0,
-            "total_withdrawals": 0.0,
-            "total_profit": 0.0,
-        }
-    )
-
-    # Snapshot metrics (NOT affected by date filter; true picture)
-    time_metrics = {
-        "today": {"susu": 0.0, "withdraw": 0.0, "profit": 0.0, "net": 0.0},
-        "week":  {"susu": 0.0, "withdraw": 0.0, "profit": 0.0, "net": 0.0},
-        "month": {"susu": 0.0, "withdraw": 0.0, "profit": 0.0, "net": 0.0},
+    .metric-card {
+      border-radius: 14px;
+      border: 1px solid rgba(148,163,184,0.35);
+      background: #ffffff;
+      box-shadow: 0 12px 25px rgba(15,23,42,0.04);
+      padding: 0.9rem 1rem;
+      height: 100%;
+      position: relative;
+      overflow: hidden;
+    }
+    .metric-card::after {
+      content: "";
+      position: absolute;
+      right: -24px;
+      bottom: -24px;
+      width: 70px;
+      height: 70px;
+      background: radial-gradient(circle, rgba(59,130,246,0.15), transparent 60%);
+      opacity: 0.7;
+    }
+    .metric-label {
+      text-transform: uppercase;
+      font-size: 0.7rem;
+      letter-spacing: 0.08em;
+      color: #6b7280;
+      margin-bottom: 0.1rem;
+    }
+    .metric-title {
+      font-size: 0.95rem;
+      font-weight: 600;
+      margin-bottom: 0.25rem;
+    }
+    .metric-main {
+      font-size: 1.2rem;
+      font-weight: 700;
+    }
+    .metric-sub {
+      font-size: 0.8rem;
+      color: #6b7280;
+      margin-top: 0.15rem;
     }
 
-    today_withdrawals_count = 0  # for snapshot
+    .card-filter {
+      border-radius: 14px;
+      border: 1px solid rgba(148,163,184,0.3);
+      background: #ffffff;
+      box-shadow: 0 10px 22px rgba(15,23,42,0.03);
+    }
 
-    # -------- Scan all SUSU-related payments --------
-    payments_cursor = payments_col.find({
-        "payment_type": {"$in": ["SUSU", "WITHDRAWAL"]}
-    })
+    .branch-table-wrapper {
+      border-radius: 16px;
+      border: 1px solid rgba(148,163,184,0.35);
+      background: #ffffff;
+      box-shadow: 0 12px 24px rgba(15,23,42,0.03);
+    }
+    .branch-table thead th {
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #6b7280;
+    }
+    .branch-table tbody td {
+      font-size: 0.85rem;
+    }
 
-    for p in payments_cursor:
-        p_type = p.get("payment_type")
-        amt = float(p.get("amount", 0) or 0)
+    .customer-card {
+      border-radius: 16px;
+      border: 1px solid rgba(148,163,184,0.35);
+      background: #ffffff;
+      box-shadow: 0 10px 20px rgba(15,23,42,0.03);
+      padding: 0.8rem 0.95rem;
+      margin-bottom: 0.7rem;
+    }
+    .customer-header {
+      display: flex;
+      align-items: center;
+      gap: 0.7rem;
+      margin-bottom: 0.4rem;
+    }
+    .avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 999px;
+      background: linear-gradient(135deg,#0ea5e9,#22c55e);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: #f9fafb;
+      font-weight: 700;
+      font-size: 1rem;
+      overflow: hidden;
+    }
+    .avatar img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .customer-name {
+      font-weight: 600;
+      font-size: 0.95rem;
+    }
+    .customer-meta {
+      font-size: 0.78rem;
+      color: #6b7280;
+    }
+    .customer-badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.25rem;
+      margin-top: 0.1rem;
+    }
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      padding: 0.2rem 0.55rem;
+      border-radius: 999px;
+      font-size: 0.72rem;
+      background: #eff6ff;
+      color: #1d4ed8;
+      border: 1px solid rgba(59,130,246,0.2);
+    }
 
-        # Manager / branch mapping
-        mid_norm = _normalize_id(p.get("manager_id"))
-        manager_info = manager_map.get(mid_norm, {})
-        branch_name = manager_info.get("branch", "Unassigned")
+    .stat-row {
+      display: grid;
+      grid-template-columns: repeat(4,minmax(0,1fr));
+      gap: 0.45rem;
+      margin-top: 0.4rem;
+    }
+    .stat-pill {
+      border-radius: 12px;
+      border: 1px solid rgba(209,213,219,0.9);
+      background: #f9fafb;
+      padding: 0.3rem 0.45rem;
+    }
+    .stat-label {
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #9ca3af;
+      margin-bottom: 0.05rem;
+    }
+    .stat-value {
+      font-size: 0.9rem;
+      font-weight: 600;
+    }
+    .stat-available {
+      color: #16a34a;
+      font-weight: 700;
+    }
 
-        # Date
-        d = _safe_date_from_payment(p)
+    .empty-state {
+      padding: 3rem 1rem;
+      text-align: center;
+      color: #6b7280;
+    }
 
-        # ---------- Snapshot (today/week/month) ----------
-        if p_type == "SUSU":
-            if d:
-                # today
-                if d == today:
-                    time_metrics["today"]["susu"] += amt
-                    time_metrics["today"]["net"]  += amt
-                # week
-                if d >= start_of_week:
-                    time_metrics["week"]["susu"] += amt
-                    time_metrics["week"]["net"]  += amt
-                # month
-                if d >= start_of_month:
-                    time_metrics["month"]["susu"] += amt
-                    time_metrics["month"]["net"]  += amt
+    .chart-card {
+      border-radius: 16px;
+      border: 1px solid rgba(148,163,184,0.35);
+      background: #ffffff;
+      box-shadow: 0 12px 24px rgba(15,23,42,0.04);
+      padding: 0.85rem 1rem;
+      height: 100%;
+    }
+    .chart-title {
+      font-size: 0.9rem;
+      font-weight: 600;
+      margin-bottom: 0.15rem;
+    }
+    .chart-sub {
+      font-size: 0.75rem;
+      color: #6b7280;
+      margin-bottom: 0.4rem;
+    }
 
-        elif p_type == "WITHDRAWAL":
-            kind = _classify_susu_withdraw(p)
-            if not kind:
-                # Not SUSU-related
-                continue
+    @media (max-width: 992px) {
+      .stat-row {
+        grid-template-columns: repeat(2,minmax(0,1fr));
+      }
+    }
+    @media (max-width: 576px) {
+      .stat-row {
+        grid-template-columns: repeat(2,minmax(0,1fr));
+      }
+    }
+  </style>
+</head>
+<body>
+  {% include 'executive_sidebar.html' %}
 
-            if d:
-                # today
-                if d == today:
-                    if kind == "profit":
-                        time_metrics["today"]["profit"] += amt
-                    else:
-                        time_metrics["today"]["withdraw"] += amt
-                        today_withdrawals_count += 1
-                    time_metrics["today"]["net"] -= amt
+<main class="container py-3">
 
-                # week
-                if d >= start_of_week:
-                    if kind == "profit":
-                        time_metrics["week"]["profit"] += amt
-                    else:
-                        time_metrics["week"]["withdraw"] += amt
-                    time_metrics["week"]["net"] -= amt
+  <!-- Header -->
+  <div class="d-flex flex-wrap justify-content-between align-items-start page-header">
+    <div>
+      <h1>Executive SUSU Overview</h1>
+      <p>
+        Monitor SUSU <strong>collections</strong>, <strong>withdrawals</strong>,
+        <strong>profit</strong>, and <strong>available balances</strong> across all branches.
+      </p>
+      <span class="badge bg-light text-muted border badge-pill mt-1">
+        Period: {{ summary.global.filter_label }}
+      </span>
+    </div>
+    <div class="mt-2 mt-md-0 d-flex flex-column align-items-end gap-1">
+      <span class="badge bg-primary-subtle text-primary-emphasis border border-primary-subtle badge-pill">
+        TODAY NET: GH₵{{ '{:,.2f}'.format(summary.time.today.net) }}
+      </span>
+      <span class="badge bg-light text-muted border badge-pill">
+        TODAY WITHDRAWALS: {{ summary.today_withdrawals_count }}
+      </span>
+    </div>
+  </div>
 
-                # month
-                if d >= start_of_month:
-                    if kind == "profit":
-                        time_metrics["month"]["profit"] += amt
-                    else:
-                        time_metrics["month"]["withdraw"] += amt
-                    time_metrics["month"]["net"] -= amt
+  <!-- Global Metrics -->
+  <div class="row g-3 mb-3">
+    <!-- Total Available -->
+    <div class="col-12 col-md-3">
+      <div class="metric-card">
+        <div class="metric-label">All Branches</div>
+        <div class="metric-title">Total SUSU Available</div>
+        <div class="metric-main text-success">
+          GH₵{{ '{:,.2f}'.format(summary.global.available) }}
+        </div>
+        <div class="metric-sub">
+          Money currently available in all SUSU customer accounts
+          ({{ summary.global.filter_label }}).
+        </div>
+      </div>
+    </div>
 
-        # ---------- Date-filtered totals (global + branch) ----------
-        if not _in_selected_range(d):
-            continue  # outside selected range for totals
+    <!-- Total SUSU Collected -->
+    <div class="col-12 col-md-3">
+      <div class="metric-card">
+        <div class="metric-label">All Branches</div>
+        <div class="metric-title">Total SUSU Collected</div>
+        <div class="metric-main text-primary">
+          GH₵{{ '{:,.2f}'.format(summary.global.total_susu) }}
+        </div>
+        <div class="metric-sub">
+          SUSU contributions in the selected period.
+        </div>
+      </div>
+    </div>
 
-        if p_type == "SUSU":
-            global_totals["total_susu"] += amt
-            branch_totals[branch_name]["total_susu"] += amt
+    <!-- Total Withdrawals -->
+    <div class="col-12 col-md-3">
+      <div class="metric-card">
+        <div class="metric-label">All Branches</div>
+        <div class="metric-title">Total Withdrawals</div>
+        <div class="metric-main text-danger">
+          GH₵{{ '{:,.2f}'.format(summary.global.total_withdrawals) }}
+        </div>
+        <div class="metric-sub">
+          Cash paid out to customers in the selected period.
+        </div>
+      </div>
+    </div>
 
-        elif p_type == "WITHDRAWAL":
-            kind = _classify_susu_withdraw(p)
-            if not kind:
-                continue
+    <!-- Total SUSU Profit -->
+    <div class="col-12 col-md-3">
+      <div class="metric-card">
+        <div class="metric-label">All Branches</div>
+        <div class="metric-title">Total SUSU Profit</div>
+        <div class="metric-main text-warning">
+          GH₵{{ '{:,.2f}'.format(summary.global.total_profit) }}
+        </div>
+        <div class="metric-sub">
+          Company SUSU profit (fees) in this period.
+        </div>
+      </div>
+    </div>
+  </div>
 
-            if kind == "profit":
-                global_totals["total_profit"] += amt
-                branch_totals[branch_name]["total_profit"] += amt
-            else:
-                global_totals["total_withdrawals"] += amt
-                branch_totals[branch_name]["total_withdrawals"] += amt
+  <!-- Time Metrics -->
+  <div class="row g-3 mb-4">
+    <!-- Today -->
+    <div class="col-12 col-md-4">
+      <div class="metric-card">
+        <div class="metric-label">Today</div>
+        <div class="metric-title">SUSU In / Out / Profit</div>
+        <div class="metric-main">
+          <span class="text-primary">GH₵{{ '{:,.2f}'.format(summary.time.today.susu) }}</span>
+          <span class="text-muted"> / </span>
+          <span class="text-danger">GH₵{{ '{:,.2f}'.format(summary.time.today.withdraw) }}</span>
+          <span class="text-muted"> / </span>
+          <span class="text-warning">GH₵{{ '{:,.2f}'.format(summary.time.today.profit) }}</span>
+        </div>
+        <div class="metric-sub">
+          Net:
+          <span class="{% if summary.time.today.net >= 0 %}text-success{% else %}text-danger{% endif %}">
+            GH₵{{ '{:,.2f}'.format(summary.time.today.net) }}
+          </span>
+        </div>
+      </div>
+    </div>
 
-    # Compute global available (for selected range)
-    global_available = (
-        global_totals["total_susu"]
-        - global_totals["total_withdrawals"]
-        - global_totals["total_profit"]
-    )
+    <!-- This Week -->
+    <div class="col-12 col-md-4">
+      <div class="metric-card">
+        <div class="metric-label">This Week</div>
+        <div class="metric-title">SUSU In / Out / Profit</div>
+        <div class="metric-main">
+          <span class="text-primary">GH₵{{ '{:,.2f}'.format(summary.time.week.susu) }}</span>
+          <span class="text-muted"> / </span>
+          <span class="text-danger">GH₵{{ '{:,.2f}'.format(summary.time.week.withdraw) }}</span>
+          <span class="text-muted"> / </span>
+          <span class="text-warning">GH₵{{ '{:,.2f}'.format(summary.time.week.profit) }}</span>
+        </div>
+        <div class="metric-sub">
+          Net:
+          <span class="{% if summary.time.week.net >= 0 %}text-success{% else %}text-danger{% endif %}">
+            GH₵{{ '{:,.2f}'.format(summary.time.week.net) }}
+          </span>
+        </div>
+      </div>
+    </div>
 
-    # Compute per-branch available & build ordered list
-    branch_rows: List[Dict[str, Any]] = []
-    for branch_name, bt in branch_totals.items():
-        available = bt["total_susu"] - bt["total_withdrawals"] - bt["total_profit"]
-        branch_rows.append({
-            "branch": branch_name,
-            "total_susu": round(bt["total_susu"], 2),
-            "total_withdrawals": round(bt["total_withdrawals"], 2),
-            "total_profit": round(bt["total_profit"], 2),
-            "available": round(available, 2),
-        })
+    <!-- This Month -->
+    <div class="col-12 col-md-4">
+      <div class="metric-card">
+        <div class="metric-label">This Month</div>
+        <div class="metric-title">SUSU In / Out / Profit</div>
+        <div class="metric-main">
+          <span class="text-primary">GH₵{{ '{:,.2f}'.format(summary.time.month.susu) }}</span>
+          <span class="text-muted"> / </span>
+          <span class="text-danger">GH₵{{ '{:,.2f}'.format(summary.time.month.withdraw) }}</span>
+          <span class="text-muted"> / </span>
+          <span class="text-warning">GH₵{{ '{:,.2f}'.format(summary.time.month.profit) }}</span>
+        </div>
+        <div class="metric-sub">
+          Net:
+          <span class="{% if summary.time.month.net >= 0 %}text-success{% else %}text-danger{% endif %}">
+            GH₵{{ '{:,.2f}'.format(summary.time.month.net) }}
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
 
-    branch_rows.sort(key=lambda x: x["branch"].lower())
+  <!-- Filters: Branch + Date Range + Customer Search -->
+  <div class="card card-filter mb-3">
+    <div class="card-body">
+      <form method="get" class="row g-2 align-items-end" id="susu-filter-form">
+        <div class="col-md-3">
+          <label class="form-label mb-1">Branch</label>
+          <select name="branch" class="form-select form-select-sm">
+            <option value="all" {% if branch_filter == 'all' %}selected{% endif %}>All branches</option>
+            {% for br in branches %}
+              <option value="{{ br }}"
+                      {% if branch_filter == br %}selected{% endif %}>
+                {{ br }}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
 
-    # Selected branch summary (if filter applied)
-    selected_branch_stats = None
-    if branch_filter != "all":
-        for row in branch_rows:
-            if row["branch"] == branch_filter:
-                selected_branch_stats = row
-                break
+        <div class="col-md-3">
+          <label class="form-label mb-1">Period</label>
+          <select name="range" id="range-select" class="form-select form-select-sm">
+            <option value="today"  {% if range_key == 'today' %}selected{% endif %}>Today</option>
+            <option value="week"   {% if range_key == 'week' %}selected{% endif %}>This Week</option>
+            <option value="month"  {% if range_key == 'month' %}selected{% endif %}>This Month</option>
+            <option value="all"    {% if range_key == 'all' %}selected{% endif %}>All Time</option>
+            <option value="custom" {% if range_key == 'custom' %}selected{% endif %}>Custom Range</option>
+          </select>
+        </div>
 
-    # -------- Customer search (by name / phone, date-filtered) --------
-    customer_results: List[Dict[str, Any]] = []
-    if customer_search_term:
-        customer_filter: Dict[str, Any] = {
-            "$or": [
-                {"name": {"$regex": customer_search_term, "$options": "i"}},
-                {"phone_number": {"$regex": customer_search_term, "$options": "i"}},
-            ]
-        }
-        customers_cursor = customers_col.find(
-            customer_filter,
-            {
-                "name": 1,
-                "phone_number": 1,
-                "location": 1,
-                "image_url": 1,
+        <div class="col-md-3 custom-date-field" {% if range_key != 'custom' %}style="display:none"{% endif %}>
+          <label class="form-label mb-1">Start Date</label>
+          <input type="date"
+                 name="start_date"
+                 class="form-control form-control-sm"
+                 value="{{ start_date }}">
+        </div>
+
+        <div class="col-md-3 custom-date-field" {% if range_key != 'custom' %}style="display:none"{% endif %}>
+          <label class="form-label mb-1">End Date</label>
+          <input type="date"
+                 name="end_date"
+                 class="form-control form-control-sm"
+                 value="{{ end_date }}">
+        </div>
+
+        <div class="col-md-4 mt-2">
+          <label class="form-label mb-1">Search customer (name or phone)</label>
+          <input type="text"
+                 name="search"
+                 class="form-control form-control-sm"
+                 placeholder="E.g. Ama Serwaa or 024..."
+                 value="{{ customer_search_term }}">
+        </div>
+
+        <div class="col-md-2 mt-2">
+          <button type="submit" class="btn btn-primary btn-sm w-100">
+            <i class="bi bi-filter me-1"></i> Apply
+          </button>
+        </div>
+
+        {% if branch_filter != 'all' or customer_search_term or range_key != 'month' or start_date or end_date %}
+          <div class="col-md-2 mt-2">
+            <a href="{{ url_for('executive_susu.executive_susu_dashboard') }}"
+               class="btn btn-outline-secondary btn-sm w-100">
+              Clear
+            </a>
+          </div>
+        {% endif %}
+      </form>
+    </div>
+  </div>
+
+  <!-- Charts Row -->
+  <div class="row g-3 mb-4">
+    <div class="col-12 col-lg-5">
+      <div class="chart-card">
+        <div class="chart-title">
+          <i class="bi bi-pie-chart me-1"></i>
+          SUSU Overview ({{ summary.global.filter_label }})
+        </div>
+        <div class="chart-sub">
+          Distribution of collected SUSU, withdrawals, profit and net available.
+        </div>
+        <canvas id="globalSusuChart" height="220"></canvas>
+      </div>
+    </div>
+
+    <div class="col-12 col-lg-7">
+      <div class="chart-card">
+        <div class="chart-title">
+          <i class="bi bi-bar-chart-line me-1"></i>
+          Branch Available SUSU
+        </div>
+        <div class="chart-sub">
+          Available SUSU amount per branch (filtered period).
+        </div>
+        <canvas id="branchSusuChart" height="220"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Selected Branch Highlight (optional) -->
+  {% if selected_branch_stats %}
+    <div class="mb-3">
+      <div class="metric-card">
+        <div class="metric-label">Selected Branch</div>
+        <div class="metric-title">{{ selected_branch_stats.branch }}</div>
+        <div class="metric-main">
+          <span class="text-primary">
+            GH₵{{ '{:,.2f}'.format(selected_branch_stats.total_susu) }} SUSU
+          </span>
+          <span class="text-muted"> • </span>
+          <span class="text-danger">
+            GH₵{{ '{:,.2f}'.format(selected_branch_stats.total_withdrawals) }} Withdrawn
+          </span>
+          <span class="text-muted"> • </span>
+          <span class="text-warning">
+            GH₵{{ '{:,.2f}'.format(selected_branch_stats.total_profit) }} Profit
+          </span>
+        </div>
+        <div class="metric-sub">
+          Available:
+          <span class="text-success fw-bold">
+            GH₵{{ '{:,.2f}'.format(selected_branch_stats.available) }}
+          </span>
+        </div>
+      </div>
+    </div>
+  {% endif %}
+
+  <!-- Branch Table -->
+  <div class="branch-table-wrapper mb-4">
+    <div class="p-3 border-bottom">
+      <h6 class="mb-0">
+        <i class="bi bi-diagram-3 me-1"></i>
+        Branch SUSU Breakdown
+      </h6>
+      <small class="text-muted">
+        Overview of SUSU balances per branch ({{ summary.global.filter_label }}).
+      </small>
+    </div>
+    <div class="table-responsive">
+      <table class="table table-sm table-hover align-middle mb-0 branch-table">
+        <thead class="table-light">
+          <tr>
+            <th>Branch</th>
+            <th class="text-end">Total SUSU (₵)</th>
+            <th class="text-end">Withdrawn (₵)</th>
+            <th class="text-end">Profit (₵)</th>
+            <th class="text-end">Available (₵)</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% if branch_rows and branch_rows|length > 0 %}
+            {% for row in branch_rows %}
+              <tr class="{% if branch_filter != 'all' and branch_filter == row.branch %}table-primary{% endif %}">
+                <td>{{ row.branch }}</td>
+                <td class="text-end">GH₵{{ '{:,.2f}'.format(row.total_susu) }}</td>
+                <td class="text-end text-danger">GH₵{{ '{:,.2f}'.format(row.total_withdrawals) }}</td>
+                <td class="text-end text-warning">GH₵{{ '{:,.2f}'.format(row.total_profit) }}</td>
+                <td class="text-end text-success fw-semibold">
+                  GH₵{{ '{:,.2f}'.format(row.available) }}
+                </td>
+              </tr>
+            {% endfor %}
+          {% else %}
+            <tr>
+              <td colspan="5" class="text-center text-muted small">
+                No SUSU data found for this period.
+              </td>
+            </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Customer Search Results -->
+  <section class="mb-4">
+    <div class="d-flex justify-content-between align-items-center mb-2">
+      <h6 class="mb-0">
+        <i class="bi bi-search me-1"></i>
+        Customer SUSU Lookup
+      </h6>
+      {% if customer_search_term %}
+        <small class="text-muted">
+          Showing {{ customer_results|length }} result(s) for
+          "<strong>{{ customer_search_term }}</strong>"
+          {% if branch_filter != 'all' %}
+            in branch <strong>{{ branch_filter }}</strong>
+          {% endif %}
+          — Period: {{ summary.global.filter_label }}
+        </small>
+      {% else %}
+        <small class="text-muted">
+          Search a customer by name or phone to see SUSU totals in the selected period.
+        </small>
+      {% endif %}
+    </div>
+
+    {% if customer_search_term %}
+      {% if customer_results and customer_results|length > 0 %}
+        {% for c in customer_results %}
+          <div class="customer-card">
+            <div class="customer-header">
+              <div class="avatar">
+                {% if c.image_url %}
+                  <img src="{{ c.image_url }}" alt="{{ c.name }}">
+                {% else %}
+                  {{ c.name[:1] | upper }}
+                {% endif %}
+              </div>
+              <div class="flex-grow-1">
+                <div class="customer-name">{{ c.name }}</div>
+                <div class="customer-meta">
+                  {{ c.phone }}
+                  {% if c.location %} • {{ c.location }}{% endif %}
+                </div>
+                <div class="customer-badges">
+                  <span class="chip">
+                    <i class="bi bi-building"></i> {{ c.branch }}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div class="stat-row">
+              <div class="stat-pill">
+                <div class="stat-label">Total SUSU</div>
+                <div class="stat-value">GH₵{{ '{:,.2f}'.format(c.total_susu) }}</div>
+              </div>
+              <div class="stat-pill">
+                <div class="stat-label">Withdrawn</div>
+                <div class="stat-value text-danger">GH₵{{ '{:,.2f}'.format(c.total_withdraw) }}</div>
+              </div>
+              <div class="stat-pill">
+                <div class="stat-label">SUSU Profit</div>
+                <div class="stat-value text-warning">GH₵{{ '{:,.2f}'.format(c.total_profit) }}</div>
+              </div>
+              <div class="stat-pill">
+                <div class="stat-label">Available</div>
+                <div class="stat-value stat-available">
+                  GH₵{{ '{:,.2f}'.format(c.available) }}
+                </div>
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+      {% else %}
+        <div class="empty-state py-3">
+          <p class="mb-0">
+            No customer found matching your search and filters for this period.
+          </p>
+        </div>
+      {% endif %}
+    {% endif %}
+  </section>
+
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  // --- Toggle custom date fields based on range selection ---
+  const rangeSelect = document.getElementById('range-select');
+  const customDateFields = document.querySelectorAll('.custom-date-field');
+
+  function toggleCustomDateFields() {
+    const isCustom = rangeSelect && rangeSelect.value === 'custom';
+    customDateFields.forEach(el => {
+      el.style.display = isCustom ? '' : 'none';
+    });
+  }
+
+  if (rangeSelect) {
+    rangeSelect.addEventListener('change', toggleCustomDateFields);
+    toggleCustomDateFields();
+  }
+
+  // --- Chart Data from backend (wrapped in strings so JS parser is happy) ---
+  const globalData = {
+    collected: parseFloat('{{ summary.global.total_susu|default(0, true)|float }}'),
+    withdrawn: parseFloat('{{ summary.global.total_withdrawals|default(0, true)|float }}'),
+    profit:    parseFloat('{{ summary.global.total_profit|default(0, true)|float }}'),
+    available: parseFloat('{{ summary.global.available|default(0, true)|float }}')
+  };
+
+  const branchLabels = JSON.parse(
+    '{{ branch_rows|map(attribute="branch")|list|tojson|safe }}'
+  );
+  const branchAvailable = JSON.parse(
+    '{{ branch_rows|map(attribute="available")|list|tojson|safe }}'
+  );
+
+  // --- Global SUSU breakdown chart (doughnut) ---
+  const globalCtx = document.getElementById('globalSusuChart');
+  if (globalCtx && typeof Chart !== 'undefined') {
+    new Chart(globalCtx, {
+      type: 'doughnut',
+      data: {
+        labels: ['Collected', 'Withdrawn', 'Profit', 'Available'],
+        datasets: [{
+          data: [
+            globalData.collected,
+            globalData.withdrawn,
+            globalData.profit,
+            globalData.available
+          ],
+          borderWidth: 1
+        }]
+      },
+      options: {
+        plugins: {
+          legend: { position: 'bottom' },
+          tooltip: {
+            callbacks: {
+              label: function(ctx) {
+                const label = ctx.label || '';
+                const value = ctx.raw || 0;
+                return label + ': GH₵' + value.toLocaleString(
+                  undefined,
+                  { minimumFractionDigits: 2, maximumFractionDigits: 2 }
+                );
+              }
             }
-        ).limit(50)
+          }
+        }
+      }
+    });
+  }
 
-        for cust in customers_cursor:
-            cid = cust["_id"]
-            name = cust.get("name", "Customer")
-            phone = cust.get("phone_number", "N/A")
-            location = cust.get("location", "")
-            image_url = cust.get("image_url", "")
-
-            payments_for_cust = list(payments_col.find({"customer_id": cid}))
-
-            total_susu = 0.0
-            total_withdraw = 0.0
-            total_profit = 0.0
-
-            # Last known branch (overall, not limited by date)
-            last_branch = "Unknown"
-
-            for p in payments_for_cust:
-                p_type = p.get("payment_type")
-                amt = float(p.get("amount", 0) or 0)
-
-                mid_norm = _normalize_id(p.get("manager_id"))
-                manager_info = manager_map.get(mid_norm, {})
-                if manager_info.get("branch"):
-                    last_branch = manager_info["branch"]
-
-                d = _safe_date_from_payment(p)
-                if not _in_selected_range(d):
-                    # Do not count this payment in totals if outside selected period
-                    continue
-
-                if p_type == "SUSU":
-                    total_susu += amt
-                elif p_type == "WITHDRAWAL":
-                    kind = _classify_susu_withdraw(p)
-                    if not kind:
-                        continue
-                    if kind == "profit":
-                        total_profit += amt
-                    else:
-                        total_withdraw += amt
-
-            available = total_susu - total_withdraw - total_profit
-            if available < 0:
-                available = 0.0
-
-            # If branch filter is applied, only show matching customers
-            if branch_filter != "all" and last_branch != branch_filter:
-                continue
-
-            # If in selected period customer has no movement at all and everything is zero,
-            # you can choose to skip or keep. We'll keep so exec sees they exist but had 0 activity.
-            customer_results.append({
-                "id": str(cid),
-                "name": name,
-                "phone": phone,
-                "location": location,
-                "image_url": image_url,
-                "branch": last_branch,
-                "total_susu": round(total_susu, 2),
-                "total_withdraw": round(total_withdraw, 2),
-                "total_profit": round(total_profit, 2),
-                "available": round(available, 2),
-            })
-
-    # -------- Summary object for template --------
-    summary = {
-        "global": {
-            "total_susu": round(global_totals["total_susu"], 2),
-            "total_withdrawals": round(global_totals["total_withdrawals"], 2),
-            "total_profit": round(global_totals["total_profit"], 2),
-            "available": round(global_available, 2),
-            "filter_label": filter_label,
+  // --- Branch available SUSU chart (bar) ---
+  const branchCtx = document.getElementById('branchSusuChart');
+  if (branchCtx && typeof Chart !== 'undefined') {
+    new Chart(branchCtx, {
+      type: 'bar',
+      data: {
+        labels: branchLabels,
+        datasets: [{
+          label: 'Available SUSU (GH₵)',
+          data: branchAvailable,
+          borderWidth: 1
+        }]
+      },
+      options: {
+        indexAxis: 'x',
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: function(ctx) {
+                const value = ctx.raw || 0;
+                return 'Available: GH₵' + value.toLocaleString(
+                  undefined,
+                  { minimumFractionDigits: 2, maximumFractionDigits: 2 }
+                );
+              }
+            }
+          }
         },
-        "time": {
-            "today": {k: round(v, 2) for k, v in time_metrics["today"].items()},
-            "week": {k: round(v, 2) for k, v in time_metrics["week"].items()},
-            "month": {k: round(v, 2) for k, v in time_metrics["month"].items()},
-        },
-        "today_withdrawals_count": today_withdrawals_count,
-    }
-
-    start_date_str = start_range.isoformat() if start_range else ""
-    end_date_str = end_range.isoformat() if end_range else ""
-
-    return render_template(
-        "executive_susu.html",
-        summary=summary,
-        branch_rows=branch_rows,
-        branches=sorted_branches,
-        branch_filter=branch_filter,
-        selected_branch_stats=selected_branch_stats,
-        customer_search_term=customer_search_term,
-        customer_results=customer_results,
-        range_key=range_key,
-        start_date=start_date_str,
-        end_date=end_date_str,
-    )
+        scales: {
+          y: {
+            beginAtZero: true,
+            ticks: {
+              callback: function(value) {
+                return 'GH₵' + value.toLocaleString();
+              }
+            }
+          }
+        }
+      }
+    });
+  }
+</script>
+</body>
+</html>
