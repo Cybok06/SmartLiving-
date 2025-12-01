@@ -1,65 +1,49 @@
-from flask import Blueprint, render_template, session, redirect, url_for, request, flash
-from pymongo import MongoClient
-from pymongo.server_api import ServerApi
+from flask import Blueprint, render_template, session, redirect, url_for, request
 from bson.objectid import ObjectId
-from datetime import datetime
-from db import db
-manager_inventory_bp = Blueprint('manager_inventory', __name__)
 
-# MongoDB connection
+from db import db
+
+manager_inventory_bp = Blueprint('manager_inventory', __name__)
 
 # Collections
 inventory_col = db.inventory
-topup_requests_col = db.topup_requests  # ✅ For manager top-up requests
+
 
 @manager_inventory_bp.route('/manager/inventory')
 def view_manager_inventory():
-    if 'manager_id' not in session:
-        return redirect(url_for('login.login'))
-
-    manager_id = ObjectId(session['manager_id'])
-
-    # ✅ Fetch manager's inventory
-    inventory_items = list(inventory_col.find({"manager_id": manager_id}))
-
-    # ✅ Fetch their top-up requests
-    raw_requests = list(topup_requests_col.find({"manager_id": manager_id}).sort("requested_at", -1))
-
-    # Attach product names to requests
-    topup_requests = []
-    for req in raw_requests:
-        product = inventory_col.find_one({"_id": req["product_id"]})
-        topup_requests.append({
-            "product_name": product["name"] if product else "Unknown",
-            "requested_qty": req["requested_qty"],
-            "status": req["status"]
-        })
-
-    return render_template('manager_inventory.html',
-                           inventory_items=inventory_items,
-                           topup_requests=topup_requests)
-
-
-@manager_inventory_bp.route('/manager/request_topup/<product_id>', methods=['POST'])
-def request_topup(product_id):
+    """
+    Manager inventory view:
+      - Only products for the logged-in manager
+      - Optional category filter via ?category=<name>
+      - Results sorted by newest first
+    """
     if 'manager_id' not in session:
         return redirect(url_for('login.login'))
 
     try:
-        requested_qty = int(request.form.get('requested_qty', 0))
-        if requested_qty < 1:
-            raise ValueError("Quantity must be at least 1")
+        manager_id = ObjectId(session['manager_id'])
+    except Exception:
+        # If session is corrupted, force login again
+        return redirect(url_for('login.login'))
 
-        topup_requests_col.insert_one({
-            "product_id": ObjectId(product_id),
-            "manager_id": ObjectId(session['manager_id']),
-            "requested_qty": requested_qty,
-            "status": "Pending",
-            "requested_at": datetime.utcnow()
-        })
+    selected_category = request.args.get('category', 'all')
 
-        flash("Top-up request submitted successfully!", "success")
-    except Exception as e:
-        flash(f"Error: {str(e)}", "error")
+    query_filter = {"manager_id": manager_id}
+    if selected_category and selected_category != "all":
+        query_filter["category"] = selected_category
 
-    return redirect(url_for('manager_inventory.view_manager_inventory'))
+    # Fetch inventory for this manager (filtered by category if provided)
+    inventory_items = list(
+        inventory_col.find(query_filter).sort("created_at", -1)
+    )
+
+    # Build category list for filter dropdown (distinct categories for this manager)
+    raw_categories = inventory_col.distinct("category", {"manager_id": manager_id})
+    categories = sorted([c for c in raw_categories if c])
+
+    return render_template(
+        'manager_inventory.html',
+        inventory_items=inventory_items,
+        categories=categories,
+        selected_category=selected_category
+    )
