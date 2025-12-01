@@ -466,6 +466,7 @@
     <div class="inventory-grid" id="productGrid">
       {% for item in inventory_items %}
         {% set category = item.category if item.category is defined and item.category else 'Product' %}
+        {% set qty = item.qty if item.qty is defined else 0 %}
         <div class="product-card"
              onclick="openProductModal(this)"
              data-name="{{ item.name | lower }}"
@@ -473,7 +474,7 @@
              data-category="{{ category }}"
              data-description="{{ item.description | e }}"
              data-price="{{ '%.2f'|format(item.price) if item.price is not none else '' }}"
-             data-qty="{{ item.qty if item.qty is defined else '' }}"
+             data-qty="{{ qty }}"
              data-cost-price="{{ '%.2f'|format(item.cost_price) if item.cost_price is defined and item.cost_price is not none else '' }}"
              data-selling-price="{{ '%.2f'|format(item.selling_price) if item.selling_price is defined and item.selling_price is not none else '' }}"
              data-margin="{{ '%.2f'|format(item.margin) if item.margin is defined and item.margin is not none else '' }}">
@@ -483,7 +484,8 @@
           <div class="product-info">
             <div class="product-name">{{ item.name }}</div>
             <div class="product-meta-row">
-              <span class="product-chip">{{ category }}</span>
+              <!-- 🔁 Chip now shows Quantity instead of category -->
+              <span class="product-chip">Qty: {{ qty }}</span>
               {% if item.price is not none %}
                 <span class="price-pill">GHS {{ '%.2f'|format(item.price) }}</span>
               {% endif %}
