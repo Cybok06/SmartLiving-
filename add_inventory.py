@@ -1,4 +1,3 @@
-# add_inventory.py
 import os
 import json
 import math
@@ -220,11 +219,14 @@ def add_inventory():
             # ------- Parse numbers safely -------
             initial_price = parse_money(initial_price_str)
             qty = parse_int(qty_str)
+
             if initial_price is None or initial_price < 0:
                 flash("❌ Initial Price must be a valid non-negative number.", "danger")
                 return redirect(url_for('add_inventory.add_inventory'))
-            if qty is None or qty <= 0:
-                flash("❌ Quantity must be a positive integer.", "danger")
+
+            # ✅ Allow zero quantity (non-negative only)
+            if qty is None or qty < 0:
+                flash("❌ Quantity must be a non-negative integer (0 or more).", "danger")
                 return redirect(url_for('add_inventory.add_inventory'))
 
             # Final price from legacy model (server-side recalculation)
