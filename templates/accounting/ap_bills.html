@@ -87,6 +87,52 @@
       </div>
     </header>
 
+    {# ---- SUMMARY CARDS (TOTAL DEBT, PAID, PERCENTAGE) ---- #}
+    {% if ap_summary %}
+    <section class="mb-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <!-- Total Outstanding -->
+      <article class="rounded-xl bg-white border border-neutral-border shadow-soft px-4 py-4">
+        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Total Outstanding</p>
+        <p class="mt-2 text-2xl font-black text-slate-900">
+          GH₵ {{ "{:,.2f}".format(ap_summary.total_balance or 0) }}
+        </p>
+        <p class="mt-1 text-xs text-slate-500">
+          Total debt left to pay to all vendors.
+        </p>
+      </article>
+
+      <!-- Total Paid -->
+      <article class="rounded-xl bg-white border border-neutral-border shadow-soft px-4 py-4">
+        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Total Paid</p>
+        <p class="mt-2 text-2xl font-black text-emerald-700">
+          GH₵ {{ "{:,.2f}".format(ap_summary.total_paid or 0) }}
+        </p>
+        <p class="mt-1 text-xs text-slate-500">
+          Out of GH₵ {{ "{:,.2f}".format(ap_summary.total_amount or 0) }} billed.
+        </p>
+      </article>
+
+      <!-- Percentage Covered -->
+      <article class="rounded-xl bg-white border border-neutral-border shadow-soft px-4 py-4 flex flex-col justify-between">
+        <div>
+          <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Coverage</p>
+          <p class="mt-2 text-2xl font-black text-slate-900">
+            {{ ap_summary.paid_pct or 0 }}%
+          </p>
+          <p class="mt-1 text-xs text-slate-500">
+            Percentage of bills already paid.
+          </p>
+        </div>
+        <div class="mt-3 h-2 rounded-full bg-slate-100 overflow-hidden">
+          <div
+            class="h-full bg-accent js-ap-progress"
+            data-percent="{{ (ap_summary.paid_pct or 0) | int }}"
+          ></div>
+        </div>
+      </article>
+    </section>
+    {% endif %}
+
     <!-- Filters -->
     <section class="mb-6 rounded-xl border border-neutral-border bg-white shadow-soft px-4 py-4 sm:px-5 sm:py-4">
       <form class="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-4 items-center" method="get">
@@ -214,13 +260,13 @@
                   {{ b.currency or 'GHS' }}
                 </td>
                 <td class="px-3 py-3 text-right text-slate-700 whitespace-nowrap">
-                  {{ b.currency_symbol or '' }}{{ "%.2f"|format(b.amount or 0) }}
+                  {{ b.currency_symbol or '' }}{{ "{:,.2f}".format(b.amount or 0) }}
                 </td>
                 <td class="px-3 py-3 text-right text-slate-600 whitespace-nowrap hidden sm:table-cell">
-                  {{ b.currency_symbol or '' }}{{ "%.2f"|format(b.paid or 0) }}
+                  {{ b.currency_symbol or '' }}{{ "{:,.2f}".format(b.paid or 0) }}
                 </td>
                 <td class="px-3 py-3 text-right font-semibold text-slate-900 whitespace-nowrap">
-                  {{ b.currency_symbol or '' }}{{ "%.2f"|format(b.balance or (b.amount or 0) - (b.paid or 0)) }}
+                  {{ b.currency_symbol or '' }}{{ "{:,.2f}".format(b.balance or ((b.amount or 0) - (b.paid or 0))) }}
                 </td>
                 <td class="px-3 py-3 whitespace-nowrap">
                   <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-medium {{ badge }}">
@@ -228,12 +274,29 @@
                   </span>
                 </td>
                 <td class="px-3 py-3 text-center">
-                  <button
-                    type="button"
-                    class="inline-flex h-8 w-8 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100 hover:text-slate-900"
-                  >
-                    <span class="material-symbols-outlined text-base">more_vert</span>
-                  </button>
+                  <div class="inline-flex items-center justify-center gap-1">
+                    <!-- ADD PAYMENT BUTTON (opens card modal) -->
+                    <button
+                      type="button"
+                      class="inline-flex h-8 w-8 items-center justify-center rounded-full text-emerald-600 hover:bg-emerald-50 hover:text-emerald-800 js-open-pay-modal"
+                      data-bill-id="{{ b._id }}"
+                      data-vendor="{{ b.vendor_name or b.vendor }}"
+                      data-total="{{ b.amount or 0 }}"
+                      data-paid="{{ b.paid or 0 }}"
+                      data-balance="{{ b.balance or ((b.amount or 0) - (b.paid or 0)) }}"
+                      data-currency-symbol="{{ b.currency_symbol or '' }}"
+                    >
+                      <span class="material-symbols-outlined text-base">payments</span>
+                    </button>
+
+                    <!-- existing menu if needed -->
+                    <button
+                      type="button"
+                      class="inline-flex h-8 w-8 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+                    >
+                      <span class="material-symbols-outlined text-base">more_vert</span>
+                    </button>
+                  </div>
                 </td>
               </tr>
             {% else %}
@@ -454,6 +517,144 @@
     </footer>
   </section>
 
+  <!-- ADD PAYMENT CARD MODAL -->
+  <div
+    id="payModalBackdrop"
+    class="fixed inset-0 z-40 hidden bg-slate-900/40 backdrop-blur-sm"
+  ></div>
+
+  <section
+    id="payModal"
+    class="fixed inset-y-0 right-0 z-50 hidden w-full max-w-md bg-white shadow-xl border-l border-neutral-border flex flex-col"
+    aria-hidden="true"
+  >
+    <header class="flex items-center justify-between px-5 py-4 border-b border-neutral-border">
+      <div>
+        <h2 class="text-base font-semibold text-slate-900">
+          Record Payment
+        </h2>
+        <p class="text-xs text-slate-500">
+          Update this vendor bill, see amount owing and history.
+        </p>
+      </div>
+      <button
+        type="button"
+        id="payModalClose"
+        class="inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+      >
+        <span class="material-symbols-outlined text-base">close</span>
+      </button>
+    </header>
+
+    <div class="flex-1 overflow-y-auto px-5 py-4 space-y-4">
+      <!-- Summary card -->
+      <article class="rounded-xl border border-neutral-border bg-slate-50 px-4 py-3">
+        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Vendor</p>
+        <p class="mt-1 text-sm font-semibold text-slate-900" id="payVendorLabel">—</p>
+
+        <div class="mt-3 grid grid-cols-3 gap-3 text-xs">
+          <div>
+            <p class="text-slate-500 uppercase tracking-wide font-semibold">Total</p>
+            <p class="mt-1 text-slate-900 font-bold" id="paySummaryTotal">—</p>
+          </div>
+          <div>
+            <p class="text-slate-500 uppercase tracking-wide font-semibold">Paid</p>
+            <p class="mt-1 text-emerald-700 font-bold" id="paySummaryPaid">—</p>
+          </div>
+          <div>
+            <p class="text-slate-500 uppercase tracking-wide font-semibold">Balance</p>
+            <p class="mt-1 text-rose-700 font-bold" id="paySummaryBalance">—</p>
+          </div>
+        </div>
+      </article>
+
+      <!-- History card -->
+      <article class="rounded-xl border border-neutral-border bg-white px-4 py-3">
+        <div class="flex items-center justify-between gap-2 mb-2">
+          <p class="text-xs font-semibold text-slate-600 uppercase tracking-wide">Payment History</p>
+          <span class="text-[11px] text-slate-400">Latest first</span>
+        </div>
+        <div id="payHistoryList" class="space-y-1 text-xs text-slate-600">
+          <p class="text-slate-400">No payments yet.</p>
+        </div>
+      </article>
+
+      <!-- Payment form -->
+      <form id="payForm" class="space-y-3">
+        <input type="hidden" name="bill_id" id="payBillId"/>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-medium text-slate-600 mb-1">Payment Date</label>
+            <input
+              type="date"
+              name="payment_date"
+              id="payDateInput"
+              value="{{ today }}"
+              required
+              class="w-full rounded-lg border border-neutral-border px-3 py-2 text-sm focus:border-accent focus:ring-accent"
+            />
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-600 mb-1">Amount</label>
+            <input
+              type="number"
+              step="0.01"
+              min="0"
+              name="amount"
+              id="payAmountInput"
+              placeholder="0.00"
+              required
+              class="w-full rounded-lg border border-neutral-border px-3 py-2 text-sm focus:border-accent focus:ring-accent"
+            />
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-medium text-slate-600 mb-1">Method</label>
+            <input
+              type="text"
+              name="method"
+              id="payMethodInput"
+              placeholder="Cash / Bank / Momo…"
+              class="w-full rounded-lg border border-neutral-border px-3 py-2 text-sm focus:border-accent focus:ring-accent"
+            />
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-600 mb-1">Note (optional)</label>
+            <input
+              type="text"
+              name="note"
+              id="payNoteInput"
+              placeholder="Ref, cheque no, etc."
+              class="w-full rounded-lg border border-neutral-border px-3 py-2 text-sm focus:border-accent focus:ring-accent"
+            />
+          </div>
+        </div>
+      </form>
+    </div>
+
+    <footer class="flex items-center justify-between gap-3 border-t border-neutral-border px-5 py-3 bg-slate-50">
+      <button
+        type="button"
+        id="payModalCancel"
+        class="inline-flex items-center justify-center h-9 px-4 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100"
+      >
+        Close
+      </button>
+      <button
+        type="submit"
+        form="payForm"
+        id="payFormSubmit"
+        class="inline-flex items-center justify-center gap-2 h-9 px-5 rounded-full bg-accent text-white text-sm font-semibold shadow-soft hover:bg-emerald-600 disabled:opacity-60 disabled:cursor-not-allowed"
+      >
+        <span class="material-symbols-outlined text-base" id="payFormSpinner" style="display:none;">sync</span>
+        <span>Save Payment</span>
+      </button>
+    </footer>
+  </section>
+
   <script>
     (function(){
       const newBillBtn    = document.getElementById('btnNewBill');
@@ -465,22 +666,22 @@
       const billSubmit    = document.getElementById('billFormSubmit');
       const billSpinner   = document.getElementById('billFormSpinner');
 
-      function openModal(){
+      function openBillModal(){
         billModal.classList.remove('hidden');
         billBackdrop.classList.remove('hidden');
         billModal.setAttribute('aria-hidden','false');
       }
-      function closeModal(){
+      function closeBillModal(){
         billModal.classList.add('hidden');
         billBackdrop.classList.add('hidden');
         billModal.setAttribute('aria-hidden','true');
       }
 
-      newBillBtn?.addEventListener('click', openModal);
-      billClose?.addEventListener('click', closeModal);
-      billCancel?.addEventListener('click', closeModal);
-      billBackdrop?.addEventListener('click', closeModal);
-      window.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') closeModal(); });
+      newBillBtn?.addEventListener('click', openBillModal);
+      billClose?.addEventListener('click', closeBillModal);
+      billCancel?.addEventListener('click', closeBillModal);
+      billBackdrop?.addEventListener('click', closeBillModal);
+      window.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') closeBillModal(); });
 
       billForm?.addEventListener('submit', async (e)=>{
         e.preventDefault();
@@ -499,8 +700,7 @@
           if(!resp.ok || !data.ok){
             alert(data.message || "Failed to save bill.");
           }else{
-            closeModal();
-            // Simple way: reload to show new bill
+            closeBillModal();
             window.location.reload();
           }
         }catch(err){
@@ -510,6 +710,169 @@
           billSubmit.disabled = false;
           if (billSpinner) billSpinner.style.display = 'none';
         }
+      });
+    })();
+
+    // ----- ADD PAYMENT MODAL & HISTORY -----
+    (function(){
+      const payModal       = document.getElementById('payModal');
+      const payBackdrop    = document.getElementById('payModalBackdrop');
+      const payClose       = document.getElementById('payModalClose');
+      const payCancel      = document.getElementById('payModalCancel');
+      const payForm        = document.getElementById('payForm');
+      const paySubmit      = document.getElementById('payFormSubmit');
+      const paySpinner     = document.getElementById('payFormSpinner');
+
+      const payVendorLabel   = document.getElementById('payVendorLabel');
+      const paySummaryTotal  = document.getElementById('paySummaryTotal');
+      const paySummaryPaid   = document.getElementById('paySummaryPaid');
+      const paySummaryBalance= document.getElementById('paySummaryBalance');
+      const payBillIdInput   = document.getElementById('payBillId');
+      const payAmountInput   = document.getElementById('payAmountInput');
+      const payHistoryList   = document.getElementById('payHistoryList');
+
+      const payEndpointBase = "{{ url_for('ap_bills.add_payment', bill_id='BILL_ID') }}";
+      const historyEndpointBase = "{{ url_for('ap_bills.get_payments', bill_id='BILL_ID') }}";
+
+      let currentBillId = null;
+      let currentCurrencySymbol = '';
+
+      function fmt(n){
+        return Number(n || 0).toLocaleString(undefined, {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2
+        });
+      }
+
+      function openPayModal(){
+        payModal.classList.remove('hidden');
+        payBackdrop.classList.remove('hidden');
+        payModal.setAttribute('aria-hidden','false');
+      }
+      function closePayModal(){
+        payModal.classList.add('hidden');
+        payBackdrop.classList.add('hidden');
+        payModal.setAttribute('aria-hidden','true');
+        currentBillId = null;
+        currentCurrencySymbol = '';
+        if (payForm) payForm.reset();
+      }
+
+      payClose?.addEventListener('click', closePayModal);
+      payCancel?.addEventListener('click', closePayModal);
+      payBackdrop?.addEventListener('click', closePayModal);
+      window.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') closePayModal(); });
+
+      async function loadHistory(billId){
+        if(!payHistoryList) return;
+        payHistoryList.innerHTML = '<p class="text-slate-400 text-xs">Loading…</p>';
+        try{
+          const url = historyEndpointBase.replace('BILL_ID', billId);
+          const resp = await fetch(url);
+          const data = await resp.json().catch(()=>({}));
+
+          if(!resp.ok || !data.ok){
+            payHistoryList.innerHTML = '<p class="text-slate-400 text-xs">No history available.</p>';
+            return;
+          }
+
+          const payments = data.payments || [];
+          if(!payments.length){
+            payHistoryList.innerHTML = '<p class="text-slate-400 text-xs">No payments yet.</p>';
+            return;
+          }
+
+          const items = payments
+            .sort((a,b)=> (b.date || '').localeCompare(a.date || ''))
+            .map(p => `
+              <div class="flex items-center justify-between gap-2">
+                <div class="flex flex-col">
+                  <span class="font-medium text-slate-700">${currentCurrencySymbol}${fmt(p.amount)}</span>
+                  <span class="text-[11px] text-slate-400">${p.method || '—'}</span>
+                </div>
+                <div class="text-right">
+                  <span class="block text-[11px] text-slate-500">${p.date || ''}</span>
+                  ${p.note ? `<span class="block text-[11px] text-slate-400 italic">${p.note}</span>` : ''}
+                </div>
+              </div>
+            `).join('');
+
+          payHistoryList.innerHTML = items;
+        }catch(err){
+          console.error(err);
+          payHistoryList.innerHTML = '<p class="text-slate-400 text-xs">Error loading history.</p>';
+        }
+      }
+
+      // Attach click handlers to "Add Payment" buttons
+      document.querySelectorAll('.js-open-pay-modal').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const billId = btn.getAttribute('data-bill-id');
+          const vendor = btn.getAttribute('data-vendor') || 'Vendor';
+          const total  = parseFloat(btn.getAttribute('data-total') || '0');
+          const paid   = parseFloat(btn.getAttribute('data-paid') || '0');
+          const balance= parseFloat(btn.getAttribute('data-balance') || '0');
+          const sym    = btn.getAttribute('data-currency-symbol') || '';
+
+          currentBillId = billId;
+          currentCurrencySymbol = sym;
+
+          payBillIdInput.value = billId;
+          payVendorLabel.textContent = vendor;
+          paySummaryTotal.textContent   = sym + fmt(total);
+          paySummaryPaid.textContent    = sym + fmt(paid);
+          paySummaryBalance.textContent = sym + fmt(balance);
+
+          // pre-fill amount with balance (can be edited)
+          payAmountInput.value = balance > 0 ? balance.toFixed(2) : '';
+
+          openPayModal();
+          loadHistory(billId);
+        });
+      });
+
+      // Submit payment
+      payForm?.addEventListener('submit', async (e)=>{
+        e.preventDefault();
+        if(!currentBillId) return;
+
+        paySubmit.disabled = true;
+        if (paySpinner) paySpinner.style.display = 'inline-block';
+
+        const formData = new FormData(payForm);
+
+        try{
+          const url = payEndpointBase.replace('BILL_ID', currentBillId);
+          const resp = await fetch(url, {
+            method: 'POST',
+            body: formData
+          });
+          const data = await resp.json().catch(()=>({}));
+
+          if(!resp.ok || !data.ok){
+            alert(data.message || 'Failed to save payment.');
+          }else{
+            closePayModal();
+            window.location.reload();
+          }
+        }catch(err){
+          console.error(err);
+          alert('An error occurred while saving the payment.');
+        }finally{
+          paySubmit.disabled = false;
+          if (paySpinner) paySpinner.style.display = 'none';
+        }
+      });
+    })();
+
+    // Set width of AP coverage bar from data-percent (fixes CSS linter issue)
+    (function(){
+      document.querySelectorAll('.js-ap-progress').forEach(el => {
+        const raw = el.getAttribute('data-percent') || '0';
+        let pct = parseInt(raw, 10);
+        if (isNaN(pct)) pct = 0;
+        pct = Math.max(0, Math.min(pct, 100));
+        el.style.width = pct + '%';
       });
     })();
   </script>
