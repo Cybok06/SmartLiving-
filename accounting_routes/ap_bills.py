@@ -6,6 +6,7 @@ from datetime import datetime
 import io, csv, math, re
 from typing import Any, Dict, List
 
+from bson import ObjectId
 from db import db
 
 ap_bills_bp = Blueprint("ap_bills", __name__, template_folder="../templates")
@@ -87,6 +88,29 @@ def bills():
     docs = list(cur)
 
     # ------------------------
+    # Summary totals (for cards at the top)
+    # ------------------------
+    total_amount = 0.0
+    total_paid = 0.0
+    total_balance = 0.0
+
+    for d in docs:
+        amt = _safe_float(d.get("amount"))
+        paid = _safe_float(d.get("paid"))
+        bal = _safe_float(d.get("balance", amt - paid))
+        total_amount += amt
+        total_paid += paid
+        total_balance += bal
+
+    paid_ratio = (total_paid / total_amount * 100.0) if total_amount > 0 else 0.0
+    ap_summary = {
+        "total_amount": total_amount,
+        "total_paid": total_paid,
+        "total_balance": total_balance,
+        "paid_pct": int(round(paid_ratio)),
+    }
+
+    # ------------------------
     # CSV export
     # ------------------------
     if export and docs:
@@ -123,7 +147,7 @@ def bills():
         return Response(
             out.getvalue(),
             mimetype="text/csv",
-            headers={"Content-Disposition": 'attachment; filename=\"ap_bills.csv\"'},
+            headers={"Content-Disposition": 'attachment; filename="ap_bills.csv"'},
         )
 
     # ------------------------
@@ -169,6 +193,7 @@ def bills():
                 currency_symbol = ""
 
         rows.append({
+            "_id": str(d.get("_id")),
             "no": d.get("no") or d.get("bill_no", ""),
             "bill_no": d.get("bill_no", ""),
             "vendor": d.get("vendor", ""),
@@ -191,6 +216,7 @@ def bills():
         pager=pager,
         export_url=export_url,
         today=today,
+        ap_summary=ap_summary,
     )
 
 
@@ -238,6 +264,17 @@ def quick_create():
 
     balance = max(amount - paid, 0.0)
 
+    payment_history: List[Dict[str, Any]] = []
+    if paid > 0:
+        # initial payment at creation
+        payment_history.append({
+            "amount": paid,
+            "method": "Initial",
+            "note": "Initial amount at bill creation",
+            "date": datetime.utcnow(),
+            "created_at": datetime.utcnow(),
+        })
+
     doc = {
         "bill_no": bill_no,
         "no": bill_no,  # you can later change to an auto-number if needed
@@ -254,8 +291,116 @@ def quick_create():
         "balance": balance,
         "status": status,
         "notes": notes,
+        "payment_history": payment_history,
         "created_at": datetime.utcnow(),
     }
 
     bills_col.insert_one(doc)
     return jsonify(ok=True, bill_no=bill_no or "")
+
+
+@ap_bills_bp.post("/ap/bills/<bill_id>/add-payment")
+def add_payment(bill_id: str):
+    """
+    Add a payment against a single bill.
+
+    - Increments `paid`
+    - Recalculates `balance`
+    - Appends to `payment_history`
+    """
+    try:
+        oid = ObjectId(bill_id)
+    except Exception:
+        return jsonify(ok=False, message="Invalid bill ID."), 400
+
+    bill = bills_col.find_one({"_id": oid})
+    if not bill:
+        return jsonify(ok=False, message="Bill not found."), 404
+
+    amount = _safe_float(request.form.get("amount"))
+    if amount <= 0:
+        return jsonify(ok=False, message="Payment amount must be greater than zero."), 400
+
+    payment_date_s = (request.form.get("payment_date") or "").strip()
+    method = (request.form.get("method") or "").strip()
+    note = (request.form.get("note") or "").strip()
+
+    # Parse payment date
+    pay_dt = datetime.utcnow()
+    if payment_date_s:
+        try:
+            pay_dt = datetime.fromisoformat(payment_date_s)
+        except Exception:
+            pass  # keep utc now if parsing fails
+
+    current_paid = _safe_float(bill.get("paid"))
+    total_amount = _safe_float(bill.get("amount"))
+
+    new_paid = current_paid + amount
+    new_balance = max(total_amount - new_paid, 0.0)
+
+    payment_entry = {
+        "amount": amount,
+        "method": method,
+        "note": note,
+        "date": pay_dt,
+        "created_at": datetime.utcnow(),
+    }
+
+    new_status = bill.get("status", "approved")
+    if new_balance <= 0:
+        new_status = "paid"
+
+    bills_col.update_one(
+        {"_id": oid},
+        {
+            "$set": {
+                "paid": new_paid,
+                "balance": new_balance,
+                "status": new_status,
+                "updated_at": datetime.utcnow(),
+            },
+            "$push": {
+                "payment_history": payment_entry
+            }
+        }
+    )
+
+    return jsonify(ok=True, paid=new_paid, balance=new_balance)
+
+
+@ap_bills_bp.get("/ap/bills/<bill_id>/payments")
+def get_payments(bill_id: str):
+    """
+    Return a bill's payment history as JSON (for the history card).
+    """
+    try:
+        oid = ObjectId(bill_id)
+    except Exception:
+        return jsonify(ok=False, message="Invalid bill ID."), 400
+
+    bill = bills_col.find_one({"_id": oid}, {"payment_history": 1, "currency": 1})
+    if not bill:
+        return jsonify(ok=False, message="Bill not found."), 404
+
+    hist = bill.get("payment_history", []) or []
+    results: List[Dict[str, Any]] = []
+
+    for p in hist:
+        dt = p.get("date")
+        if isinstance(dt, datetime):
+            date_str = dt.strftime("%Y-%m-%d")
+        else:
+            date_str = str(dt or "")
+        results.append({
+            "amount": _safe_float(p.get("amount")),
+            "method": p.get("method") or "",
+            "note": p.get("note") or "",
+            "date": date_str,
+        })
+
+    return jsonify(
+        ok=True,
+        currency=bill.get("currency", "GHS"),
+        payments=results
+    )
