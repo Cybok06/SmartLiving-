@@ -40,6 +40,7 @@ from routes.meeting_report import meeting_report_bp
 from routes.agent_complaints import agent_complaints_bp
 from routes.agent_sidebar import agent_sidebar_bp
 from routes.inventory.orders import inventory_orders_bp  # Inventory Orders
+from api_smartliving import api_bp
 
 # ---------------- Manager Blueprints ----------------
 from register import register_bp
@@ -203,6 +204,7 @@ app.register_blueprint(admin_profile_bp)
 app.register_blueprint(admin_complaints_bp)
 app.register_blueprint(admin_dashboard_bp)
 app.register_blueprint(admin_transfer_logs_bp)
+app.register_blueprint(api_bp)
 
 # Inventory Orders
 app.register_blueprint(inventory_orders_bp)
@@ -319,3 +321,4 @@ def logout():
 
 if __name__ == "__main__":
   app.run(debug=True)
+
