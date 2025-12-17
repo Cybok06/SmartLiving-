@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Login | SmartLiving CRM</title>
+
+  <!-- Favicon (SmartLiving) -->
+  <link rel="icon"
+        href="https://res.cloudinary.com/dljpgzbto/image/upload/v1743993646/company-logo_dksb23.jpg"
+        type="image/png"/>
+
+  <!-- Icons -->
+  <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+  <!-- Font -->
+  <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Raleway:wght@400;500;600;700&display=swap">
+
+  <style>
+    :root{
+      /* Brand */
+      --ax-blue:#0066cc;
+      --ax-blue-dark:#004a99;
+      --ax-orange:#f58634;
+      --sl-purple:#7c3aed;
+
+      /* Neutrals */
+      --ink:#0f172a;
+      --muted:#64748b;
+      --border:rgba(148,163,184,.28);
+      --soft:#f3f4f6;
+      --card:rgba(255,255,255,.86);
+
+      /* Error */
+      --danger-bg:#fee2e2;
+      --danger-ink:#991b1b;
+      --danger-bd:#fecaca;
+    }
+
+    *{ box-sizing:border-box; margin:0; padding:0; font-family:"Raleway",system-ui,-apple-system,BlinkMacSystemFont,sans-serif; }
+
+    body{
+      min-height:100vh;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:22px 16px;
+      color:var(--ink);
+      background:
+        radial-gradient(circle at 12% 18%, rgba(124,58,237,.14), transparent 55%),
+        radial-gradient(circle at 88% 20%, rgba(0,102,204,.12), transparent 55%),
+        radial-gradient(circle at 82% 88%, rgba(245,134,52,.12), transparent 55%),
+        var(--soft);
+    }
+
+    .card{
+      width:100%;
+      max-width:520px;
+      border-radius:22px;
+      background:var(--card);
+      box-shadow: 0 26px 60px rgba(15,23,42,.14), 0 0 0 1px rgba(148,163,184,.24);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      overflow:hidden;
+      animation: pop .65s cubic-bezier(.22,.61,.36,1) both;
+    }
+
+    @keyframes pop{
+      0%{ opacity:0; transform: translateY(10px) scale(.99); }
+      100%{ opacity:1; transform: translateY(0) scale(1); }
+    }
+
+    .inner{
+      padding:28px 30px 26px;
+      background: linear-gradient(180deg, rgba(255,255,255,.82), rgba(255,255,255,.92));
+    }
+    @media (max-width:520px){ .inner{ padding:22px 18px; } }
+
+    /* Header */
+    .brand{
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      text-align:center;
+      gap:10px;
+      margin-bottom:18px;
+    }
+
+    .logo{
+      width:78px;height:78px;
+      border-radius:20px;
+      border:1px solid rgba(148,163,184,.28);
+      background:#fff;
+      overflow:hidden;
+      box-shadow: 0 10px 24px rgba(15,23,42,.08);
+      display:flex;align-items:center;justify-content:center;
+    }
+    .logo img{ width:100%; height:100%; object-fit:cover; }
+
+    .brand-name{
+      font-weight:900;
+      letter-spacing:.06em;
+      text-transform:uppercase;
+      font-size:16px;
+      color:var(--ink);
+      line-height:1.1;
+    }
+
+    .powered{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:6px 10px;
+      border-radius:999px;
+      border:1px solid rgba(0,102,204,.18);
+      background: rgba(255,255,255,.70);
+      font-size:11px;
+      font-weight:800;
+      letter-spacing:.10em;
+      text-transform:uppercase;
+      color:var(--ax-blue-dark);
+      white-space:nowrap;
+    }
+    .powered i{ color:var(--sl-purple); }
+
+    .title{
+      font-size:22px;
+      font-weight:900;
+      text-align:center;
+      margin: 6px 0 6px;
+    }
+    .sub{
+      font-size:13px;
+      color:var(--muted);
+      text-align:center;
+      line-height:1.55;
+      margin-bottom:18px;
+    }
+
+    /* Flash */
+    .popup-error{
+      margin: 0 0 14px;
+      border-radius:12px;
+      padding:10px 12px;
+      font-size:12px;
+      display:flex;
+      align-items:flex-start;
+      gap:10px;
+      background:var(--danger-bg);
+      color:var(--danger-ink);
+      border:1px solid var(--danger-bd);
+    }
+    .popup-error i{ margin-top:2px; font-size:14px; }
+
+    /* Form */
+    .field{ margin-bottom:14px; }
+    .label{
+      font-size:11px;
+      font-weight:900;
+      letter-spacing:.12em;
+      text-transform:uppercase;
+      color: rgba(71,85,105,.85);
+      margin-bottom:6px;
+      display:block;
+    }
+
+    .inputwrap{ position:relative; }
+    .inputwrap i{
+      position:absolute; left:12px; top:50%;
+      transform: translateY(-50%);
+      font-size:13px;
+      color: rgba(100,116,139,.75);
+      pointer-events:none;
+    }
+
+    .input{
+      width:100%;
+      border-radius:999px;
+      border:1px solid rgba(148,163,184,.55);
+      background: rgba(249,250,251,.92);
+      padding: 11px 14px 11px 34px;
+      font-size:14px;
+      outline:none;
+      transition: box-shadow .16s ease, border-color .16s ease, transform .08s ease, background .16s ease;
+    }
+    .input:focus{
+      border-color: rgba(0,102,204,.85);
+      background:#fff;
+      box-shadow: 0 0 0 1px rgba(0,102,204,.45), 0 0 0 6px rgba(124,58,237,.14);
+      transform: translateY(-.5px);
+    }
+
+    .row{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      margin: 10px 0 14px;
+      font-size:11px;
+      color: rgba(71,85,105,.85);
+      flex-wrap:wrap;
+    }
+    .remember{
+      display:flex; align-items:center; gap:7px;
+    }
+    .remember input{ width:14px; height:14px; accent-color: var(--ax-blue); cursor:pointer; }
+
+    .forgot{
+      text-decoration:none;
+      font-weight:900;
+      color: var(--ax-blue-dark);
+    }
+    .forgot:hover{ text-decoration:underline; }
+
+    .btn{
+      width:100%;
+      border:none;
+      cursor:pointer;
+      border-radius:999px;
+      padding: 12px 18px;
+      font-size:14px;
+      font-weight:900;
+      letter-spacing:.06em;
+      text-transform:uppercase;
+      color:#fff;
+      background: linear-gradient(90deg, var(--ax-orange), var(--ax-blue), var(--sl-purple));
+      box-shadow: 0 14px 34px rgba(0,102,204,.20);
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      gap:10px;
+      transition: transform .10s ease, box-shadow .18s ease, filter .10s ease;
+    }
+    .btn:hover{ transform: translateY(-1px); filter: brightness(1.03); box-shadow: 0 18px 44px rgba(0,102,204,.26); }
+    .btn:active{ transform: translateY(0); box-shadow: 0 10px 26px rgba(0,102,204,.20); }
+
+    /* Spinner overlay */
+    #spinnerOverlay{
+      position:fixed;
+      inset:0;
+      background: rgba(15,23,42,.40);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      z-index:9999;
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+    }
+    .spinner{
+      width:56px;height:56px;
+      border-radius:999px;
+      border: 6px solid rgba(148,163,184,.45);
+      border-top-color: var(--ax-blue);
+      animation: spin .9s linear infinite;
+      background:#fff;
+    }
+    @keyframes spin{ to{ transform: rotate(360deg);} }
+  </style>
+</head>
+
+<body>
+  <div id="spinnerOverlay"><div class="spinner"></div></div>
+
+  <div class="card">
+    <div class="inner">
+
+      <!-- Brand (SmartLiving main, then powered-by) -->
+      <div class="brand">
+        <div class="logo" title="SmartLiving Emporium Plus">
+          <img src="https://res.cloudinary.com/dljpgzbto/image/upload/v1743993646/company-logo_dksb23.jpg"
+               alt="SmartLiving Logo">
+        </div>
+
+        <div class="brand-name">SmartLiving Emporium Plus</div>
+
+        <div class="powered" title="Platform provider">
+          <i class="fa-solid fa-bolt"></i>
+          Powered by Axelera Flux
+        </div>
+      </div>
+
+      <div class="title">Sign in</div>
+      <div class="sub">Enter your username and password to continue.</div>
+
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          <div class="popup-error">
+            <i class="fa-solid fa-circle-exclamation"></i>
+            <div>
+              {% for category, message in messages %}
+                {{ message }}{% if not loop.last %}<br>{% endif %}
+              {% endfor %}
+            </div>
+          </div>
+        {% endif %}
+      {% endwith %}
+
+      <form method="POST" action="{{ url_for('login.login') }}" onsubmit="showSpinner()">
+        <div class="field">
+          <label class="label" for="username">Username</label>
+          <div class="inputwrap">
+            <i class="fa-regular fa-user"></i>
+            <input class="input" type="text" id="username" name="username" placeholder="Enter your username" required>
+          </div>
+        </div>
+
+        <div class="field">
+          <label class="label" for="password">Password</label>
+          <div class="inputwrap">
+            <i class="fa-solid fa-lock"></i>
+            <input class="input" type="password" id="password" name="password" placeholder="Enter your password" required>
+          </div>
+        </div>
+
+        <div class="row">
+          <label class="remember">
+            <input type="checkbox" name="remember_me">
+            <span>Keep me signed in</span>
+          </label>
+          <a href="#" class="forgot">Forgot password?</a>
+        </div>
+
+        <button type="submit" class="btn">
+          <span>Log In</span>
+          <i class="fa-solid fa-arrow-right"></i>
+        </button>
+      </form>
+
+    </div>
+  </div>
+
+  <script>
+    function showSpinner(){
+      const overlay = document.getElementById("spinnerOverlay");
+      if (overlay) overlay.style.display = "flex";
+    }
+  </script>
+</body>
+</html>

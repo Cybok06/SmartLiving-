@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Executive Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <!-- Bootstrap & Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+  <link rel="icon" href="https://res.cloudinary.com/dljpgzbto/image/upload/v1743993646/company-logo_dksb23.jpg" type="image/png" />
+
+  <style>
+    body {
+      background-color: #f8f9fa;
+      padding-left: 260px;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    @media (max-width: 768px) {
+      body {
+        padding-left: 0;
+      }
+    }
+
+    /* Page fade-in for main content */
+    .dashboard-main {
+      opacity: 0;
+      transform: translateY(6px);
+      transition: opacity 0.25s ease-out, transform 0.25s ease-out;
+    }
+    body.page-ready .dashboard-main {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* Metric cards */
+    .metric-card {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 2px 10px rgba(15, 23, 42, 0.06);
+      padding: 18px 18px 16px;
+      margin-bottom: 20px;
+      text-align: left;
+      border: 1px solid rgba(226, 232, 240, 0.9);
+    }
+    .metric-card h4 {
+      font-size: 0.9rem;
+      color: #6c757d;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    .metric-card h4 i {
+      color: #0d6efd;
+      font-size: 1.1rem;
+    }
+    .metric-card h2 {
+      font-weight: 700;
+      font-size: 1.6rem;
+      margin: 0;
+      color: #1f2937;
+    }
+
+    .earned-card {
+      background-color: #ffffff;
+      border-radius: 12px;
+      padding: 20px 18px;
+      box-shadow: 0 2px 10px rgba(15, 23, 42, 0.06);
+      margin-bottom: 22px;
+      border: 1px solid rgba(226, 232, 240, 0.9);
+    }
+    .earned-card h5 {
+      font-size: 0.9rem;
+      color: #0d6efd;
+      margin-bottom: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    .earned-item {
+      font-size: 1rem;
+      margin-bottom: 6px;
+      color: #374151;
+    }
+
+    /* Chart cards */
+    .chart-card {
+      background: #ffffff;
+      border-radius: 12px;
+      box-shadow: 0 2px 10px rgba(15, 23, 42, 0.06);
+      padding: 18px 18px 14px;
+      border: 1px solid rgba(226, 232, 240, 0.9);
+      position: relative;
+      overflow: hidden;
+    }
+    .chart-card h4 {
+      font-size: 0.95rem;
+      color: #6b7280;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .chart-card h4 i {
+      color: #0d6efd;
+    }
+
+    /* Skeleton placeholders for charts */
+    .chart-skeleton {
+      position: relative;
+      width: 100%;
+      height: 200px;
+      background: linear-gradient(90deg, #f3f4f6 25%, #e5e7eb 37%, #f3f4f6 63%);
+      background-size: 400% 100%;
+      border-radius: 10px;
+      animation: shimmer 1.2s ease-in-out infinite;
+    }
+    @keyframes shimmer {
+      0% { background-position: -400px 0; }
+      100% { background-position: 400px 0; }
+    }
+    .chart-canvas {
+      display: none;
+    }
+
+    /* Small page header */
+    .page-header {
+      margin-bottom: 14px;
+    }
+    .page-header-title {
+      font-size: 1.4rem;
+      font-weight: 600;
+      color: #111827;
+    }
+    .page-header-sub {
+      font-size: 0.86rem;
+      color: #6b7280;
+    }
+  </style>
+</head>
+<body>
+
+  {% include 'executive_sidebar.html' %}
+
+  <div class="container mt-4 dashboard-main">
+    <div class="page-header">
+      <div class="page-header-title">Executive Overview</div>
+      <div class="page-header-sub">
+        Snapshot of earnings, customers and team performance across all branches.
+      </div>
+    </div>
+
+    <!-- Summary Metrics -->
+    <div class="row">
+      {% set metrics = [
+        ('Total Earnings', 'bi-cash-coin', '₵' ~ (data.total_earnings | default(0) | round(2)) ),
+        ('Total Customers', 'bi-people-fill', data.total_customers | default(0)),
+        ('Products Sold', 'bi-bag-check', data.total_products_sold | default(0)),
+        ('Leads Generated', 'bi-magnet', data.total_leads | default(0)),
+        ('Withdrawals', 'bi-arrow-left-right', '₵' ~ (data.total_withdrawals | default(0) | round(2)) )
+      ] %}
+      {% for label, icon, value in metrics %}
+      <div class="col-lg-3 col-md-4 col-sm-6 mb-3">
+        <div class="metric-card">
+          <h4><i class="bi {{ icon }}"></i> {{ label }}</h4>
+          <h2>{{ value }}</h2>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- Customers Earned Section -->
+    <div class="row">
+      <div class="col-12">
+        <div class="earned-card">
+          <h5><i class="bi bi-calendar-check-fill me-1"></i> Customers Earned</h5>
+          <div class="row text-center">
+            <div class="col-md-4 earned-item">
+              <strong>Today:</strong> {{ data.customers_today | default(0) }}
+            </div>
+            <div class="col-md-4 earned-item">
+              <strong>This Week:</strong> {{ data.customers_week | default(0) }}
+            </div>
+            <div class="col-md-4 earned-item">
+              <strong>This Month:</strong> {{ data.customers_month | default(0) }}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Chart Visuals (lazy-loaded) -->
+    <div class="row">
+      <div class="col-md-6 mb-4">
+        <div class="chart-card">
+          <h4><i class="bi bi-box-seam"></i> Top Products Sold</h4>
+          <div id="productsSkeleton" class="chart-skeleton"></div>
+          <canvas id="topProductsChart" class="chart-canvas" height="200"></canvas>
+        </div>
+      </div>
+      <div class="col-md-6 mb-4">
+        <div class="chart-card">
+          <h4><i class="bi bi-person-badge-fill"></i> Top Managers by Payments</h4>
+          <div id="managersSkeleton" class="chart-skeleton"></div>
+          <canvas id="topManagersChart" class="chart-canvas" height="200"></canvas>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      // Let the shell appear smoothly
+      document.body.classList.add('page-ready');
+
+      const productsCanvas = document.getElementById('topProductsChart');
+      const managersCanvas = document.getElementById('topManagersChart');
+      const productsSkeleton = document.getElementById('productsSkeleton');
+      const managersSkeleton = document.getElementById('managersSkeleton');
+
+      // Fetch heavy chart data AFTER the page is visible
+      fetch("{{ url_for('executive_dashboard.dashboard_charts') }}", {
+        credentials: 'same-origin'
+      })
+        .then(res => res.json())
+        .then(data => {
+          if (!data.ok) return;
+
+          const topProducts = data.top_products || { labels: [], values: [] };
+          const topManagers = data.top_managers || { labels: [], values: [] };
+
+          // Hide skeletons, show canvases
+          if (productsSkeleton) productsSkeleton.style.display = 'none';
+          if (managersSkeleton) managersSkeleton.style.display = 'none';
+          if (productsCanvas) productsCanvas.style.display = 'block';
+          if (managersCanvas) managersCanvas.style.display = 'block';
+
+          // Top Products Chart
+          if (productsCanvas && topProducts.labels.length) {
+            new Chart(productsCanvas.getContext('2d'), {
+              type: 'bar',
+              data: {
+                labels: topProducts.labels,
+                datasets: [{
+                  label: 'Units Sold',
+                  data: topProducts.values,
+                  backgroundColor: '#0d6efd'
+                }]
+              },
+              options: {
+                plugins: { legend: { display: false } },
+                responsive: true,
+                scales: { y: { beginAtZero: true } }
+              }
+            });
+          }
+
+          // Top Managers Chart
+          if (managersCanvas && topManagers.labels.length) {
+            new Chart(managersCanvas.getContext('2d'), {
+              type: 'bar',
+              data: {
+                labels: topManagers.labels,
+                datasets: [{
+                  label: '₵ Payments',
+                  data: topManagers.values,
+                  backgroundColor: '#fd7e14'
+                }]
+              },
+              options: {
+                plugins: { legend: { display: false } },
+                responsive: true,
+                scales: { y: { beginAtZero: true } }
+              }
+            });
+          }
+        })
+        .catch(err => {
+          // If error, just leave skeletons (or you could show a small error text)
+          console.error('Error loading dashboard charts:', err);
+        });
+    });
+  </script>
+</body>
+</html>
