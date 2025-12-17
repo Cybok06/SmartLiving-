@@ -20,25 +20,38 @@ CF_IMAGES_TOKEN = "Brz0BEfl_GqEUjEghS2UEmLZhK39EUmMbZgu_hIo"
 CF_HASH         = "h9fmMoa1o2c2P55TcWJGOg"
 DEFAULT_VARIANT = "public"  # make sure this variant exists in Cloudflare Images
 
-# Ensure local upload folder exists (kept for legacy route below)
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 inventory_col = db.inventory
 products_col  = db.products
 users_col     = db.users
-images_col    = db.images   # NEW: store CF image logs/metadata here
+images_col    = db.images
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-# =============== NEW: Upload directly to Cloudflare ===============
+def _to_float(val, default=0.0):
+    try:
+        return float(str(val).replace(",", "").strip())
+    except Exception:
+        return float(default)
+
+def _profit_margin(cost_price: float, selling_price: float) -> float:
+    """
+    Returns margin % based on COST:
+      margin% = ((selling - cost) / cost) * 100
+    If cost <= 0 -> return 0.0 (avoid division errors)
+    """
+    try:
+        if cost_price <= 0:
+            return 0.0
+        return round(((selling_price - cost_price) / cost_price) * 100.0, 2)
+    except Exception:
+        return 0.0
+
+# =============== Upload directly to Cloudflare ===============
 @add_product_bp.route('/products/upload_image', methods=['POST'])
 def upload_image():
-    """
-    Receives 'image' file, requests a one-time Cloudflare direct upload URL,
-    uploads the file to Cloudflare, stores a record in DB, and returns JSON:
-      { success, image_url, image_id, variant }
-    """
     try:
         if 'image' not in request.files:
             return jsonify({'success': False, 'error': 'No file part in request'}), 400
@@ -50,13 +63,9 @@ def upload_image():
         if not (image and allowed_file(image.filename)):
             return jsonify({'success': False, 'error': 'File type not allowed'}), 400
 
-        # Step 1: get one-time direct upload URL from Cloudflare
         direct_url = f"https://api.cloudflare.com/client/v4/accounts/{CF_ACCOUNT_ID}/images/v2/direct_upload"
         headers    = {"Authorization": f"Bearer {CF_IMAGES_TOKEN}"}
-
-        # Optional: pass metadata; you can include anything (won’t be exposed to end users)
-        # data = {"metadata": json.dumps({"source": "add_product", "filename": image.filename})}
-        data = {}  # keeping minimal; add requireSignedURLs or metadata if needed
+        data = {}
 
         res = requests.post(direct_url, headers=headers, data=data, timeout=20)
         try:
@@ -70,7 +79,6 @@ def upload_image():
         upload_url = j['result']['uploadURL']
         image_id   = j['result']['id']
 
-        # Step 2: upload the actual file to Cloudflare
         up = requests.post(
             upload_url,
             files={'file': (secure_filename(image.filename), image.stream, image.mimetype or 'application/octet-stream')},
@@ -84,11 +92,9 @@ def upload_image():
         if not uj.get('success'):
             return jsonify({'success': False, 'error': 'Cloudflare upload failed', 'details': uj}), 400
 
-        # Step 3: build delivery URL & save in DB
         variant   = request.args.get('variant', DEFAULT_VARIANT)
         image_url = f"https://imagedelivery.net/{CF_HASH}/{image_id}/{variant}"
 
-        # Save a record in DB for traceability
         images_col.insert_one({
             'provider': 'cloudflare_images',
             'image_id': image_id,
@@ -96,7 +102,7 @@ def upload_image():
             'url': image_url,
             'original_filename': secure_filename(image.filename),
             'mimetype': image.mimetype,
-            'size_bytes': request.content_length,  # not exact file size, but fine for quick trace
+            'size_bytes': request.content_length,
             'created_at': datetime.utcnow()
         })
 
@@ -111,13 +117,12 @@ def upload_image():
 def uploaded_file(filename):
     return send_from_directory(UPLOAD_FOLDER, filename)
 
-# =============== Main product add route (unchanged logic) ===============
+# =============== Main product add route ===============
 @add_product_bp.route('/add_product', methods=['GET', 'POST'])
 def add_product():
     managers = list(users_col.find({'role': 'manager'}))
     raw_inventory = list(inventory_col.find({}))
 
-    # Group inventory items by shared attributes (excluding manager_id)
     grouped_inventory = {}
     for item in raw_inventory:
         key_data = {
@@ -130,25 +135,36 @@ def add_product():
         if key not in grouped_inventory:
             grouped_inventory[key] = item
 
-    # Distinct types and categories
     product_types = sorted(set(products_col.distinct("product_type")))
     categories    = sorted(set(products_col.distinct("category")))
 
     if request.method == 'POST':
         try:
-            required_fields = ['name', 'price', 'cash_price', 'description', 'image_url']
+            # ✅ added cost_price as required
+            required_fields = ['name', 'price', 'cash_price', 'cost_price', 'description', 'image_url']
             for field in required_fields:
-                if not request.form.get(field):
+                if request.form.get(field) in [None, ""]:
                     flash(f"❌ '{field}' is required.", "danger")
                     return redirect(url_for('add_product.add_product'))
 
-            name        = request.form['name']
-            price       = float(request.form['price'])
-            cash_price  = float(request.form['cash_price'])
+            name        = request.form['name'].strip()
+            price       = _to_float(request.form['price'])
+            cash_price  = _to_float(request.form['cash_price'])
+            cost_price  = _to_float(request.form['cost_price'])
             description = request.form['description']
-            image_url   = request.form['image_url']  # should be the Cloudflare URL returned by /products/upload_image
+            image_url   = request.form['image_url']
 
-            # Use custom field if present
+            # cf image id from the upload response (hidden input)
+            cf_image_id = (request.form.get('image_id') or '').strip() or None
+
+            # ✅ DO NOT change your pricing logic:
+            # price and cash_price are used as entered;
+            # we only calculate margins & profits from cost_price.
+            profit_price = round(price - cost_price, 2)
+            profit_cash  = round(cash_price - cost_price, 2)
+            profit_margin_price = _profit_margin(cost_price, price)
+            profit_margin_cash  = _profit_margin(cost_price, cash_price)
+
             product_type = request.form.get('custom_product_type') or request.form.get('product_type') or ''
             category     = request.form.get('custom_category') or request.form.get('category') or ''
             package_name = request.form.get('package_name', '')
@@ -198,10 +214,7 @@ def add_product():
                     })
 
                     if match:
-                        resolved_components.append({
-                            "_id": match["_id"],
-                            "quantity": qty
-                        })
+                        resolved_components.append({"_id": match["_id"], "quantity": qty})
                     else:
                         missing.append(comp_data.get('name'))
 
@@ -215,8 +228,17 @@ def add_product():
                         'name': name,
                         'price': price,
                         'cash_price': cash_price,
+
+                        # ✅ NEW
+                        'cost_price': cost_price,
+                        'profit_price': profit_price,
+                        'profit_cash': profit_cash,
+                        'profit_margin_price': profit_margin_price,
+                        'profit_margin_cash': profit_margin_cash,
+
                         'description': description,
-                        'image_url': image_url,  # Cloudflare delivery URL
+                        'image_url': image_url,
+                        'cf_image_id': cf_image_id,   # matches your product_profile usage
                         'product_type': product_type,
                         'category': category,
                         'package_name': package_name,
@@ -224,6 +246,7 @@ def add_product():
                         'manager_id': manager_oid,
                         'created_at': datetime.utcnow()
                     }
+
                     products_col.insert_one(product)
                     valid_count += 1
 
