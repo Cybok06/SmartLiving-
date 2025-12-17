@@ -1,0 +1,946 @@
+<!DOCTYPE html>
+<html class="light" lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Balance Sheet - TRUEtype Services</title>
+
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+  <link rel="icon" href="https://static.wixstatic.com/media/13bf20_85bc952de62849e895a80e274750784b~mv2.png/v1/fill/w_392,h_146,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/13bf20_85bc952de62849e895a80e274750784b~mv2.png" type="image/png">
+
+  <script>
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "primary": "#16a34a",
+            "background-light": "#f9fafb",
+            "background-dark": "#020617",
+            "navy": "#0f172a",
+            "emerald": "#16a34a",
+            "medium-gray": "#e5e7eb",
+            "dark-gray": "#111827",
+          },
+          fontFamily: {
+            "display": ["Inter", "sans-serif"]
+          },
+          borderRadius: {
+            "DEFAULT": "0.75rem",
+            "lg": "1.25rem",
+            "xl": "1.5rem",
+            "full": "9999px"
+          },
+          boxShadow: {
+            'soft': '0 6px 20px rgba(15,23,42,0.08)',
+          }
+        },
+      },
+    }
+  </script>
+
+  <style>
+    .material-symbols-outlined {
+      font-variation-settings:
+        'FILL' 0,
+        'wght' 400,
+        'GRAD' 0,
+        'opsz' 24;
+    }
+
+    @media print {
+      #toolbar,
+      #actions,
+      #accSidebar,
+      #accSidebarToggle,
+      #accSidebarBackdrop,
+      #lineModal {
+        display: none !important;
+      }
+      body {
+        background: #ffffff !important;
+      }
+      main {
+        padding: 0 !important;
+        margin: 0 !important;
+      }
+    }
+  </style>
+</head>
+
+<body class="bg-background-light dark:bg-background-dark font-display text-dark-gray dark:text-gray-100">
+  {% include 'accounting/sidebar.html' %}
+
+  <main class="min-h-screen p-4 sm:p-6 lg:p-10 acc-with-sidebar">
+    <div class="mx-auto max-w-7xl">
+      <!-- Heading + Toolbar -->
+      <header class="flex flex-col sm:flex-row flex-wrap items-start justify-between gap-4 mb-6">
+        <div>
+          <h1 class="text-navy dark:text-white text-3xl sm:text-4xl font-extrabold tracking-tight">
+            Balance Sheet
+          </h1>
+          <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
+            TRUEtype Services &mdash; Financial position snapshot (Assets vs Liabilities &amp; Equity).
+          </p>
+        </div>
+
+        <div id="toolbar" class="flex flex-col items-stretch sm:items-end gap-3 w-full sm:w-auto">
+          <!-- Sheet selector row -->
+          <div class="flex flex-wrap gap-2 sm:justify-end">
+            <div class="flex items-center gap-2 rounded-full border border-medium-gray/80 dark:border-gray-700 bg-white dark:bg-slate-900 px-3 py-1.5 shadow-soft">
+              <span class="material-symbols-outlined text-base text-navy dark:text-gray-100">layers</span>
+              <select
+                id="sheetSelector"
+                class="border-0 bg-transparent text-sm text-navy dark:text-gray-100 focus:ring-0 focus:outline-none max-w-[220px]"
+              >
+                <option value="">New sheet...</option>
+              </select>
+            </div>
+
+            <button
+              id="btnNewSheet"
+              type="button"
+              class="inline-flex items-center gap-2 rounded-full h-9 px-3.5 bg-white dark:bg-slate-900 border border-medium-gray/80 dark:border-gray-700 text-xs font-semibold text-navy dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-slate-800"
+            >
+              <span class="material-symbols-outlined text-sm">add_circle</span>
+              <span>New Sheet</span>
+            </button>
+          </div>
+
+          <!-- Meta row -->
+          <div class="flex flex-wrap gap-2 sm:justify-end">
+            <div class="inline-flex items-center gap-2 rounded-xl border border-medium-gray/80 dark:border-gray-700 bg-white dark:bg-slate-900 px-3 py-1.5 shadow-soft">
+              <span class="material-symbols-outlined text-base text-navy dark:text-gray-100">edit_note</span>
+              <input
+                id="sheetName"
+                type="text"
+                placeholder="Name (e.g. Dec 2025)"
+                class="border-0 bg-transparent text-sm text-navy dark:text-gray-100 focus:ring-0 focus:outline-none placeholder:text-gray-400 dark:placeholder:text-gray-500"
+              />
+            </div>
+
+            <div class="inline-flex items-center gap-2 rounded-xl border border-medium-gray/80 dark:border-gray-700 bg-white dark:bg-slate-900 px-3 py-1.5 shadow-soft">
+              <span class="material-symbols-outlined text-base text-navy dark:text-gray-100">calendar_month</span>
+              <input
+                id="asOfDate"
+                type="date"
+                value="{{ sheet.as_of_date or today }}"
+                class="border-0 bg-transparent text-sm text-navy dark:text-gray-100 focus:ring-0 focus:outline-none"
+              />
+            </div>
+
+            <div class="inline-flex items-center gap-2 rounded-xl border border-medium-gray/80 dark:border-gray-700 bg-white dark:bg-slate-900 px-3 py-1.5 shadow-soft">
+              <span class="material-symbols-outlined text-base text-navy dark:text-gray-100">currency_exchange</span>
+              <select
+                id="currency"
+                class="border-0 bg-transparent text-sm text-navy dark:text-gray-100 focus:ring-0 focus:outline-none"
+              >
+                <option value="GHS">GHS</option>
+                <option value="USD">USD</option>
+                <option value="EUR">EUR</option>
+                <option value="GBP">GBP</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Action buttons -->
+          <div class="flex flex-wrap gap-2 sm:justify-end">
+            <button
+              id="btnAddLine"
+              type="button"
+              class="inline-flex items-center gap-2 rounded-full h-9 px-3.5 bg-emerald text-white text-xs font-semibold shadow-sm hover:bg-emerald/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald"
+            >
+              <span class="material-symbols-outlined text-sm">add</span>
+              <span>Add Line</span>
+            </button>
+
+            <button
+              id="btnSaveSheet"
+              type="button"
+              class="inline-flex items-center gap-2 rounded-full h-9 px-3.5 bg-navy text-white text-xs font-semibold shadow-sm hover:bg-navy/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-navy"
+            >
+              <span class="material-symbols-outlined text-sm">save</span>
+              <span>Save Sheet</span>
+            </button>
+
+            <button
+              id="btnExportCsv"
+              type="button"
+              class="inline-flex items-center gap-2 rounded-full h-9 px-3.5 border border-navy/80 dark:border-gray-500 text-xs font-semibold text-navy dark:text-gray-100 bg-white dark:bg-slate-900 hover:bg-navy/5 dark:hover:bg-slate-800"
+            >
+              <span class="material-symbols-outlined text-sm">table_view</span>
+              <span>Export Excel</span>
+            </button>
+
+            <button
+              id="btnExportPdf"
+              type="button"
+              class="inline-flex items-center gap-2 rounded-full h-9 px-3.5 border border-navy/80 dark:border-gray-500 text-xs font-semibold text-navy dark:text-gray-100 bg-white dark:bg-slate-900 hover:bg-navy/5 dark:hover:bg-slate-800"
+            >
+              <span class="material-symbols-outlined text-sm">picture_as_pdf</span>
+              <span>PDF</span>
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <!-- Summary cards -->
+      <section class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div class="rounded-xl bg-white dark:bg-slate-900 shadow-soft border border-medium-gray/60 dark:border-gray-800 p-4">
+          <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Total Assets</p>
+          <p id="cardAssets" class="mt-2 text-2xl font-extrabold text-navy dark:text-white tracking-tight">0.00</p>
+        </div>
+        <div class="rounded-xl bg-white dark:bg-slate-900 shadow-soft border border-medium-gray/60 dark:border-gray-800 p-4">
+          <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Total Liabilities</p>
+          <p id="cardLiabilities" class="mt-2 text-2xl font-extrabold text-navy dark:text-white tracking-tight">0.00</p>
+        </div>
+        <div class="rounded-xl bg-white dark:bg-slate-900 shadow-soft border border-medium-gray/60 dark:border-gray-800 p-4">
+          <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Total Equity</p>
+          <p id="cardEquity" class="mt-2 text-2xl font-extrabold text-navy dark:text-white tracking-tight">0.00</p>
+        </div>
+        <div class="rounded-xl bg-white dark:bg-slate-900 shadow-soft border border-medium-gray/60 dark:border-gray-800 p-4">
+          <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Assets - (Liab + Equity)</p>
+          <p id="cardDiff" class="mt-2 text-2xl font-extrabold tracking-tight"
+             style="color:#0f172a;">
+            0.00
+          </p>
+          <p id="cardDiffNote" class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+            Should be 0.00 when fully balanced.
+          </p>
+        </div>
+      </section>
+
+      <!-- Two-column tables -->
+      <section class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-10">
+        <!-- Assets -->
+        <div class="overflow-hidden rounded-xl border border-medium-gray dark:border-gray-800 bg-white dark:bg-slate-900 shadow-soft">
+          <div class="flex items-center justify-between px-6 py-4 border-b border-medium-gray/60 dark:border-gray-800">
+            <h2 class="text-sm font-semibold text-navy dark:text-white tracking-wide uppercase">Assets</h2>
+            <span id="totalAssetsHeader" class="text-xs font-semibold text-gray-600 dark:text-gray-300">
+              Total: 0.00
+            </span>
+          </div>
+          <table class="w-full text-sm">
+            <thead class="bg-gray-50 dark:bg-slate-950/60">
+              <tr>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Section / Account</th>
+                <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Amount</th>
+                <th class="px-3 py-3"></th>
+              </tr>
+            </thead>
+            <tbody id="assetsBody" class="divide-y divide-medium-gray/70 dark:divide-gray-800">
+              <!-- Injected by JS -->
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Liabilities & Equity -->
+        <div class="overflow-hidden rounded-xl border border-medium-gray dark:border-gray-800 bg-white dark:bg-slate-900 shadow-soft">
+          <div class="flex items-center justify-between px-6 py-4 border-b border-medium-gray/60 dark:border-gray-800">
+            <h2 class="text-sm font-semibold text-navy dark:text-white tracking-wide uppercase">
+              Liabilities &amp; Equity
+            </h2>
+            <span id="totalLiabEqHeader" class="text-xs font-semibold text-gray-600 dark:text-gray-300">
+              Total: 0.00
+            </span>
+          </div>
+          <table class="w-full text-sm">
+            <thead class="bg-gray-50 dark:bg-slate-950/60">
+              <tr>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Type / Section / Account</th>
+                <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Amount</th>
+                <th class="px-3 py-3"></th>
+              </tr>
+            </thead>
+            <tbody id="liabEqBody" class="divide-y divide-medium-gray/70 dark:divide-gray-800">
+              <!-- Injected by JS -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Hidden export form -->
+      <form id="exportForm" method="POST" action="{{ url_for('acc_balance_sheet.balance_sheet_export_csv') }}" class="hidden">
+        <input type="hidden" name="payload" id="exportPayload">
+      </form>
+    </div>
+  </main>
+
+  <!-- Hidden data (safe for VS Code) -->
+  <div
+    id="balanceSheetData"
+    data-sheet='{{ (sheet or {})|tojson|safe }}'
+    data-sheets='{{ (sheet_options or [])|tojson|safe }}'
+    style="display:none;">
+  </div>
+
+  <!-- Add Line Modal -->
+  <div id="lineModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/40 backdrop-blur-sm">
+    <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-soft max-w-md w-full mx-4 p-5 border border-medium-gray/70 dark:border-gray-800">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-sm font-semibold text-navy dark:text-white tracking-wide uppercase">Add Line</h3>
+        <button id="lineModalClose" type="button" class="rounded-full p-1 hover:bg-gray-100 dark:hover:bg-slate-800">
+          <span class="material-symbols-outlined text-base text-gray-600 dark:text-gray-300">close</span>
+        </button>
+      </div>
+
+      <div class="space-y-3">
+        <div>
+          <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+            Type
+          </label>
+          <select
+            id="lineType"
+            class="block w-full rounded-lg border border-medium-gray dark:border-gray-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-navy dark:text-gray-100 focus:ring-emerald focus:border-emerald"
+          >
+            <option value="asset">Asset</option>
+            <option value="liability">Liability</option>
+            <option value="equity">Equity</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+            Section / Group (e.g. Current Assets, Non-current Liabilities)
+          </label>
+          <input
+            id="lineSection"
+            type="text"
+            class="block w-full rounded-lg border border-medium-gray dark:border-gray-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-navy dark:text-gray-100 focus:ring-emerald focus:border-emerald"
+            placeholder="Current Assets"
+          />
+        </div>
+
+        <div>
+          <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+            Account / Line Name
+          </label>
+          <input
+            id="lineLabel"
+            type="text"
+            class="block w-full rounded-lg border border-medium-gray dark:border-gray-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-navy dark:text-gray-100 focus:ring-emerald focus:border-emerald"
+            placeholder="Cash and cash equivalents"
+          />
+        </div>
+
+        <div>
+          <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+            Amount
+          </label>
+          <input
+            id="lineAmount"
+            type="number"
+            step="0.01"
+            class="block w-full rounded-lg border border-medium-gray dark:border-gray-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-navy dark:text-gray-100 focus:ring-emerald focus:border-emerald text-right"
+            placeholder="0.00"
+          />
+        </div>
+      </div>
+
+      <div class="mt-5 flex justify-end gap-2">
+        <button
+          id="lineModalCancel"
+          type="button"
+          class="inline-flex items-center justify-center rounded-full px-3.5 h-9 text-xs font-semibold text-gray-700 dark:text-gray-200 border border-medium-gray/80 dark:border-gray-700 bg-white dark:bg-slate-900 hover:bg-gray-50 dark:hover:bg-slate-800"
+        >
+          Cancel
+        </button>
+        <button
+          id="lineModalSave"
+          type="button"
+          class="inline-flex items-center justify-center rounded-full px-3.5 h-9 text-xs font-semibold text-white bg-emerald hover:bg-emerald/90 shadow-sm"
+        >
+          Save Line
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function(){
+      var dataEl = document.getElementById("balanceSheetData");
+      var rawSheet = dataEl ? dataEl.getAttribute("data-sheet") || "{}" : "{}";
+      var rawSheets = dataEl ? dataEl.getAttribute("data-sheets") || "[]" : "[]";
+
+      var currentSheet = {};
+      var sheetOptions = [];
+
+      try { currentSheet = JSON.parse(rawSheet); } catch(e){ currentSheet = {}; }
+      try { sheetOptions = JSON.parse(rawSheets); } catch(e){ sheetOptions = []; }
+
+      if (!currentSheet || typeof currentSheet !== "object") currentSheet = {};
+      if (!currentSheet.lines) currentSheet.lines = [];
+      if (!currentSheet.totals) {
+        currentSheet.totals = {
+          assets: 0, liabilities: 0, equity: 0, liab_plus_equity: 0
+        };
+      }
+
+      // Elements
+      var sheetSelector   = document.getElementById("sheetSelector");
+      var sheetNameEl     = document.getElementById("sheetName");
+      var asOfDateEl      = document.getElementById("asOfDate");
+      var currencyEl      = document.getElementById("currency");
+
+      var btnNewSheet     = document.getElementById("btnNewSheet");
+      var btnAddLine      = document.getElementById("btnAddLine");
+      var btnSaveSheet    = document.getElementById("btnSaveSheet");
+      var btnExportCsv    = document.getElementById("btnExportCsv");
+      var btnExportPdf    = document.getElementById("btnExportPdf");
+
+      var assetsBody      = document.getElementById("assetsBody");
+      var liabEqBody      = document.getElementById("liabEqBody");
+
+      var totalAssetsHeader = document.getElementById("totalAssetsHeader");
+      var totalLiabEqHeader = document.getElementById("totalLiabEqHeader");
+
+      var cardAssets      = document.getElementById("cardAssets");
+      var cardLiabilities = document.getElementById("cardLiabilities");
+      var cardEquity      = document.getElementById("cardEquity");
+      var cardDiff        = document.getElementById("cardDiff");
+      var cardDiffNote    = document.getElementById("cardDiffNote");
+
+      var exportForm      = document.getElementById("exportForm");
+      var exportPayload   = document.getElementById("exportPayload");
+
+      // Modal
+      var lineModal       = document.getElementById("lineModal");
+      var lineModalClose  = document.getElementById("lineModalClose");
+      var lineModalCancel = document.getElementById("lineModalCancel");
+      var lineModalSave   = document.getElementById("lineModalSave");
+
+      var lineTypeEl      = document.getElementById("lineType");
+      var lineSectionEl   = document.getElementById("lineSection");
+      var lineLabelEl     = document.getElementById("lineLabel");
+      var lineAmountEl    = document.getElementById("lineAmount");
+
+      var baseUrl         = "{{ url_for('acc_balance_sheet.balance_sheet_page') }}";
+
+      // Init sheet selector
+      function initSelector(){
+        if (!sheetSelector) return;
+        // Clear
+        while (sheetSelector.firstChild) {
+          sheetSelector.removeChild(sheetSelector.firstChild);
+        }
+        var optNew = document.createElement("option");
+        optNew.value = "";
+        optNew.textContent = "New sheet...";
+        sheetSelector.appendChild(optNew);
+
+        for (var i = 0; i < sheetOptions.length; i++) {
+          var o = sheetOptions[i];
+          var opt = document.createElement("option");
+          opt.value = o.id || "";
+          opt.textContent = o.label || "Unnamed Sheet";
+          if (currentSheet.id && o.id === currentSheet.id) {
+            opt.selected = true;
+          }
+          sheetSelector.appendChild(opt);
+        }
+      }
+
+      // Load meta into inputs
+      function hydrateMeta(){
+        if (sheetNameEl) {
+          sheetNameEl.value = currentSheet.name || "";
+        }
+        if (asOfDateEl) {
+          asOfDateEl.value = currentSheet.as_of_date || asOfDateEl.value || "";
+        }
+        if (currencyEl) {
+          var cur = (currentSheet.currency || "GHS").toUpperCase();
+          currencyEl.value = cur;
+        }
+      }
+
+      function formatMoney(n){
+        if (isNaN(n)) n = 0;
+        return n.toFixed(2);
+      }
+
+      function recomputeTotals(){
+        var lines = currentSheet.lines || [];
+        var sumA = 0, sumL = 0, sumE = 0;
+        for (var i = 0; i < lines.length; i++){
+          var line = lines[i];
+          var t = (line.type || "").toLowerCase();
+          var amt = Number(line.amount || 0);
+          if (t === "asset") sumA += amt;
+          else if (t === "liability") sumL += amt;
+          else if (t === "equity") sumE += amt;
+        }
+        currentSheet.totals = {
+          assets: sumA,
+          liabilities: sumL,
+          equity: sumE,
+          liab_plus_equity: (sumL + sumE)
+        };
+      }
+
+      function render(){
+        if (!assetsBody || !liabEqBody) return;
+
+        recomputeTotals();
+
+        // Clear bodies
+        assetsBody.innerHTML = "";
+        liabEqBody.innerHTML = "";
+
+        var lines = currentSheet.lines || [];
+        var i, line, t, section, label, amount;
+
+        // Assets
+        var assetLines = [];
+        for (i = 0; i < lines.length; i++){
+          if ((lines[i].type || "").toLowerCase() === "asset") {
+            assetLines.push({ line: lines[i], index: i });
+          }
+        }
+
+        var lastSectionA = null;
+        for (i = 0; i < assetLines.length; i++){
+          line = assetLines[i].line;
+          var idx = assetLines[i].index;
+          section = line.section || "";
+          label = line.label || "";
+          amount = Number(line.amount || 0);
+
+          if (section && section !== lastSectionA){
+            lastSectionA = section;
+            var trSec = document.createElement("tr");
+            trSec.className = "bg-gray-50 dark:bg-slate-950/40";
+            var tdSec = document.createElement("td");
+            tdSec.colSpan = 3;
+            tdSec.className = "px-6 py-2 text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide";
+            tdSec.textContent = section;
+            trSec.appendChild(tdSec);
+            assetsBody.appendChild(trSec);
+          }
+
+          var tr = document.createElement("tr");
+          tr.className = "hover:bg-gray-50/70 dark:hover:bg-slate-800/60";
+          tr.setAttribute("data-index", idx);
+
+          var tdLabel = document.createElement("td");
+          tdLabel.className = "px-6 py-2 text-sm text-gray-800 dark:text-gray-100";
+          tdLabel.textContent = label;
+
+          var tdAmt = document.createElement("td");
+          tdAmt.className = "px-6 py-2 text-sm text-right text-gray-800 dark:text-gray-100";
+          tdAmt.textContent = formatMoney(amount);
+
+          var tdActions = document.createElement("td");
+          tdActions.className = "px-3 py-2 text-right";
+          var btnDel = document.createElement("button");
+          btnDel.type = "button";
+          btnDel.className = "inline-flex items-center justify-center rounded-full bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-300 p-1.5 hover:bg-red-100 dark:hover:bg-red-800";
+          btnDel.setAttribute("data-action", "remove-line");
+          btnDel.innerHTML = '<span class="material-symbols-outlined text-sm">close</span>';
+          tdActions.appendChild(btnDel);
+
+          tr.appendChild(tdLabel);
+          tr.appendChild(tdAmt);
+          tr.appendChild(tdActions);
+          assetsBody.appendChild(tr);
+        }
+
+        // Liabilities & Equity
+        var liabLines = [];
+        var eqLines   = [];
+        for (i = 0; i < lines.length; i++){
+          t = (lines[i].type || "").toLowerCase();
+          if (t === "liability") liabLines.push({ line: lines[i], index: i });
+          else if (t === "equity") eqLines.push({ line: lines[i], index: i });
+        }
+
+        if (liabLines.length){
+          var trLiabHeader = document.createElement("tr");
+          trLiabHeader.className = "bg-gray-50 dark:bg-slate-950/40";
+          var tdLH = document.createElement("td");
+          tdLH.colSpan = 3;
+          tdLH.className = "px-6 py-2 text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide";
+          tdLH.textContent = "Liabilities";
+          trLiabHeader.appendChild(tdLH);
+          liabEqBody.appendChild(trLiabHeader);
+
+          var lastSectionL = null;
+          for (i = 0; i < liabLines.length; i++){
+            line = liabLines[i].line;
+            idx = liabLines[i].index;
+            section = line.section || "";
+            label = line.label || "";
+            amount = Number(line.amount || 0);
+
+            if (section && section !== lastSectionL){
+              lastSectionL = section;
+              var trSecL = document.createElement("tr");
+              trSecL.className = "bg-gray-50 dark:bg-slate-950/20";
+              var tdSecL = document.createElement("td");
+              tdSecL.colSpan = 3;
+              tdSecL.className = "px-6 py-2 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide";
+              tdSecL.textContent = section;
+              trSecL.appendChild(tdSecL);
+              liabEqBody.appendChild(trSecL);
+            }
+
+            var trL = document.createElement("tr");
+            trL.className = "hover:bg-gray-50/70 dark:hover:bg-slate-800/60";
+            trL.setAttribute("data-index", idx);
+
+            var tdLabelL = document.createElement("td");
+            tdLabelL.className = "px-6 py-2 text-sm text-gray-800 dark:text-gray-100";
+            tdLabelL.textContent = label;
+
+            var tdAmtL = document.createElement("td");
+            tdAmtL.className = "px-6 py-2 text-sm text-right text-gray-800 dark:text-gray-100";
+            tdAmtL.textContent = formatMoney(amount);
+
+            var tdActL = document.createElement("td");
+            tdActL.className = "px-3 py-2 text-right";
+            var btnDelL = document.createElement("button");
+            btnDelL.type = "button";
+            btnDelL.className = "inline-flex items-center justify-center rounded-full bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-300 p-1.5 hover:bg-red-100 dark:hover:bg-red-800";
+            btnDelL.setAttribute("data-action", "remove-line");
+            btnDelL.innerHTML = '<span class="material-symbols-outlined text-sm">close</span>';
+            tdActL.appendChild(btnDelL);
+
+            trL.appendChild(tdLabelL);
+            trL.appendChild(tdAmtL);
+            trL.appendChild(tdActL);
+            liabEqBody.appendChild(trL);
+          }
+        }
+
+        if (eqLines.length){
+          var trEqHeader = document.createElement("tr");
+          trEqHeader.className = "bg-gray-50 dark:bg-slate-950/40";
+          var tdEH = document.createElement("td");
+          tdEH.colSpan = 3;
+          tdEH.className = "px-6 py-2 text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide";
+          tdEH.textContent = "Equity";
+          trEqHeader.appendChild(tdEH);
+          liabEqBody.appendChild(trEqHeader);
+
+          var lastSectionE = null;
+          for (i = 0; i < eqLines.length; i++){
+            line = eqLines[i].line;
+            idx = eqLines[i].index;
+            section = line.section || "";
+            label = line.label || "";
+            amount = Number(line.amount || 0);
+
+            if (section && section !== lastSectionE){
+              lastSectionE = section;
+              var trSecE = document.createElement("tr");
+              trSecE.className = "bg-gray-50 dark:bg-slate-950/20";
+              var tdSecE = document.createElement("td");
+              tdSecE.colSpan = 3;
+              tdSecE.className = "px-6 py-2 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide";
+              tdSecE.textContent = section;
+              trSecE.appendChild(tdSecE);
+              liabEqBody.appendChild(trSecE);
+            }
+
+            var trE = document.createElement("tr");
+            trE.className = "hover:bg-gray-50/70 dark:hover:bg-slate-800/60";
+            trE.setAttribute("data-index", idx);
+
+            var tdLabelE = document.createElement("td");
+            tdLabelE.className = "px-6 py-2 text-sm text-gray-800 dark:text-gray-100";
+            tdLabelE.textContent = label;
+
+            var tdAmtE = document.createElement("td");
+            tdAmtE.className = "px-6 py-2 text-sm text-right text-gray-800 dark:text-gray-100";
+            tdAmtE.textContent = formatMoney(amount);
+
+            var tdActE = document.createElement("td");
+            tdActE.className = "px-3 py-2 text-right";
+            var btnDelE = document.createElement("button");
+            btnDelE.type = "button";
+            btnDelE.className = "inline-flex items-center justify-center rounded-full bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-300 p-1.5 hover:bg-red-100 dark:hover:bg-red-800";
+            btnDelE.setAttribute("data-action", "remove-line");
+            btnDelE.innerHTML = '<span class="material-symbols-outlined text-sm">close</span>';
+            tdActE.appendChild(btnDelE);
+
+            trE.appendChild(tdLabelE);
+            trE.appendChild(tdAmtE);
+            trE.appendChild(tdActE);
+            liabEqBody.appendChild(trE);
+          }
+        }
+
+        // Summary + cards
+        var totals = currentSheet.totals || {
+          assets: 0, liabilities: 0, equity: 0, liab_plus_equity: 0
+        };
+
+        var assets = Number(totals.assets || 0);
+        var liab   = Number(totals.liabilities || 0);
+        var eq     = Number(totals.equity || 0);
+        var lpq    = Number(totals.liab_plus_equity || 0);
+        var diff   = assets - lpq;
+
+        if (totalAssetsHeader) {
+          totalAssetsHeader.textContent = "Total: " + formatMoney(assets);
+        }
+        if (totalLiabEqHeader) {
+          totalLiabEqHeader.textContent = "Total: " + formatMoney(lpq);
+        }
+
+        if (cardAssets)      cardAssets.textContent      = formatMoney(assets);
+        if (cardLiabilities) cardLiabilities.textContent = formatMoney(liab);
+        if (cardEquity)      cardEquity.textContent      = formatMoney(eq);
+        if (cardDiff)        cardDiff.textContent        = formatMoney(diff);
+
+        if (cardDiff) {
+          if (Math.abs(diff) < 0.005) {
+            cardDiff.style.color = "#16a34a";
+            if (cardDiffNote) cardDiffNote.textContent = "Perfectly balanced. Assets = Liabilities + Equity.";
+          } else {
+            cardDiff.style.color = "#b91c1c";
+            if (cardDiffNote) cardDiffNote.textContent = "Not balanced yet. Adjust lines until the difference is 0.00.";
+          }
+        }
+      }
+
+      // Modal helpers
+      function openModal(){
+        if (!lineModal) return;
+        lineModal.classList.remove("hidden");
+        lineModal.classList.add("flex");
+        if (lineTypeEl) lineTypeEl.value = "asset";
+        if (lineSectionEl) lineSectionEl.value = "";
+        if (lineLabelEl) lineLabelEl.value = "";
+        if (lineAmountEl) lineAmountEl.value = "";
+        if (lineLabelEl) lineLabelEl.focus();
+      }
+      function closeModal(){
+        if (!lineModal) return;
+        lineModal.classList.add("hidden");
+        lineModal.classList.remove("flex");
+      }
+
+      // Collect payload for save/export
+      function collectPayload(){
+        var name = sheetNameEl ? (sheetNameEl.value || "") : "";
+        var asOf = asOfDateEl ? (asOfDateEl.value || "") : "";
+        var cur  = currencyEl ? (currencyEl.value || "GHS") : "GHS";
+
+        recomputeTotals();
+
+        return {
+          id: currentSheet.id || "",
+          name: name,
+          as_of_date: asOf,
+          currency: cur,
+          lines: currentSheet.lines || [],
+          totals: currentSheet.totals || {
+            assets: 0, liabilities: 0, equity: 0, liab_plus_equity: 0
+          }
+        };
+      }
+
+      // ---- Events ----
+      if (sheetSelector) {
+        sheetSelector.addEventListener("change", function(){
+          var val = sheetSelector.value || "";
+          if (!val) {
+            // New sheet (stay on page, clear current)
+            currentSheet = {
+              id: "",
+              name: "",
+              as_of_date: asOfDateEl ? (asOfDateEl.value || "") : "",
+              currency: (currencyEl ? currencyEl.value : "GHS"),
+              lines: [],
+              totals: {
+                assets: 0, liabilities: 0, equity: 0, liab_plus_equity: 0
+              }
+            };
+            hydrateMeta();
+            render();
+            return;
+          }
+          // Navigate to different sheet
+          window.location.href = baseUrl + "?sheet_id=" + encodeURIComponent(val);
+        });
+      }
+
+      if (btnNewSheet) {
+        btnNewSheet.addEventListener("click", function(){
+          if (!confirm("Start a brand new balance sheet? Unsaved changes on this page will be lost.")) {
+            return;
+          }
+          currentSheet = {
+            id: "",
+            name: "",
+            as_of_date: asOfDateEl ? (asOfDateEl.value || "") : "",
+            currency: (currencyEl ? currencyEl.value : "GHS"),
+            lines: [],
+            totals: {
+              assets: 0, liabilities: 0, equity: 0, liab_plus_equity: 0
+            }
+          };
+          if (sheetSelector) sheetSelector.value = "";
+          hydrateMeta();
+          render();
+        });
+      }
+
+      if (btnAddLine) {
+        btnAddLine.addEventListener("click", openModal);
+      }
+
+      if (lineModalClose) {
+        lineModalClose.addEventListener("click", closeModal);
+      }
+      if (lineModalCancel) {
+        lineModalCancel.addEventListener("click", closeModal);
+      }
+
+      if (lineModalSave) {
+        lineModalSave.addEventListener("click", function(){
+          var type    = lineTypeEl ? (lineTypeEl.value || "asset") : "asset";
+          var section = lineSectionEl ? (lineSectionEl.value || "") : "";
+          var label   = lineLabelEl ? (lineLabelEl.value || "") : "";
+          var amount  = lineAmountEl ? parseFloat(lineAmountEl.value || "0") : 0;
+
+          if (!label.trim()) {
+            alert("Please enter an account / line name.");
+            return;
+          }
+          if (!amount || isNaN(amount)) {
+            alert("Please enter a valid amount.");
+            return;
+          }
+
+          if (!currentSheet.lines) currentSheet.lines = [];
+          currentSheet.lines.push({
+            type: type,
+            section: section,
+            label: label,
+            amount: amount
+          });
+
+          closeModal();
+          render();
+        });
+      }
+
+      if (assetsBody) {
+        assetsBody.addEventListener("click", function(e){
+          var target = e.target;
+          if (!target) return;
+          var btn = target.closest ? target.closest("[data-action='remove-line']") : null;
+          if (!btn) return;
+          var tr = btn.closest("tr");
+          if (!tr) return;
+          var idxStr = tr.getAttribute("data-index") || "";
+          var idx = parseInt(idxStr, 10);
+          if (isNaN(idx)) return;
+          if (!currentSheet.lines) return;
+          if (idx < 0 || idx >= currentSheet.lines.length) return;
+          currentSheet.lines.splice(idx, 1);
+          render();
+        });
+      }
+
+      if (liabEqBody) {
+        liabEqBody.addEventListener("click", function(e){
+          var target = e.target;
+          if (!target) return;
+          var btn = target.closest ? target.closest("[data-action='remove-line']") : null;
+          if (!btn) return;
+          var tr = btn.closest("tr");
+          if (!tr) return;
+          var idxStr = tr.getAttribute("data-index") || "";
+          var idx = parseInt(idxStr, 10);
+          if (isNaN(idx)) return;
+          if (!currentSheet.lines) return;
+          if (idx < 0 || idx >= currentSheet.lines.length) return;
+          currentSheet.lines.splice(idx, 1);
+          render();
+        });
+      }
+
+      if (btnSaveSheet) {
+        btnSaveSheet.addEventListener("click", function(){
+          var payload = collectPayload();
+          if (!payload.lines || !payload.lines.length) {
+            alert("No lines to save.");
+            return;
+          }
+          if (!payload.as_of_date) {
+            if (!confirm("No 'As at' date set. Save anyway?")) {
+              return;
+            }
+          }
+
+          btnSaveSheet.disabled = true;
+          btnSaveSheet.classList.add("opacity-70");
+
+          fetch("{{ url_for('acc_balance_sheet.balance_sheet_save') }}", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+          })
+          .then(function(resp){
+            return resp.json().then(function(json){
+              return {ok: resp.ok, json: json};
+            }).catch(function(){
+              return {ok: resp.ok, json: {}};
+            });
+          })
+          .then(function(result){
+            if (!result.ok || !result.json.ok) {
+              alert(result.json.message || "Failed to save balance sheet.");
+              return;
+            }
+            var id = result.json.id || "";
+            currentSheet.id = id;
+            alert("Balance sheet saved successfully.");
+            // Reload page for clean state (and updated selector list)
+            window.location.href = baseUrl + "?sheet_id=" + encodeURIComponent(id);
+          })
+          .catch(function(err){
+            console.error(err);
+            alert("An error occurred while saving balance sheet.");
+          })
+          .finally(function(){
+            btnSaveSheet.disabled = false;
+            btnSaveSheet.classList.remove("opacity-70");
+          });
+        });
+      }
+
+      if (btnExportCsv) {
+        btnExportCsv.addEventListener("click", function(){
+          var payload = collectPayload();
+          if (!payload.lines || !payload.lines.length) {
+            alert("No data to export.");
+            return;
+          }
+          if (!exportPayload || !exportForm) return;
+          exportPayload.value = JSON.stringify(payload);
+          exportForm.submit();
+        });
+      }
+
+      if (btnExportPdf) {
+        btnExportPdf.addEventListener("click", function(){
+          window.print();
+        });
+      }
+
+      // Init
+      initSelector();
+      hydrateMeta();
+      render();
+    })();
+  </script>
+</body>
+</html>
