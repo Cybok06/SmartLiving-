@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Axelera Flux | Register Customer</title>
+
+    <!-- Bootstrap -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Favicon – Axelera Flux -->
+    <link rel="icon"
+          href="https://imagedelivery.net/h9fmMoa1o2c2P55TcWJGOg/8744779c-1300-4a50-49de-b143d24da300/public"
+          type="image/png"/>
+
+    <style>
+        :root {
+            --ax-bg: #020617;
+            --ax-bg-soft: #020617;
+            --ax-card: #020617;
+            --ax-input-bg: #020617;
+            --ax-primary: #0ea5e9;      /* blue from logo */
+            --ax-accent: #f97316;       /* orange from logo */
+            --ax-muted: #9ca3af;
+            --ax-border: rgba(148,163,184,0.35);
+            --ax-text-main: #e5e7eb;
+            --ax-error: #ef4444;
+            --ax-success: #22c55e;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            margin: 0;
+            padding: 0 14px 40px;
+            min-height: 100vh;
+            color: var(--ax-text-main);
+            background:
+                radial-gradient(circle at top left, rgba(14,165,233,0.18), transparent 55%),
+                radial-gradient(circle at bottom right, rgba(249,115,22,0.16), transparent 50%),
+                var(--ax-bg);
+        }
+
+        h1.page-title {
+            text-align: center;
+            margin-top: 24px;
+            margin-bottom: 10px;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            font-size: 1.15rem;
+            color: #f9fafb;
+        }
+
+        .page-subtitle {
+            text-align: center;
+            font-size: 0.82rem;
+            letter-spacing: 0.16em;
+            text-transform: uppercase;
+            color: var(--ax-muted);
+            margin-bottom: 24px;
+        }
+
+        .ax-card-wrapper {
+            max-width: 880px;
+            margin: 0 auto;
+        }
+
+        .ax-card {
+            background: radial-gradient(circle at top left, rgba(15,23,42,0.9), rgba(15,23,42,0.98));
+            border-radius: 18px;
+            padding: 24px 22px 26px;
+            border: 1px solid var(--ax-border);
+            box-shadow:
+                0 22px 45px rgba(15,23,42,0.8),
+                0 0 0 1px rgba(15,23,42,1);
+            opacity: 0;
+            animation: slideIn 0.7s ease-out forwards;
+        }
+
+        .ax-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            gap: 10px;
+        }
+
+        .ax-card-header h2 {
+            margin: 0;
+            font-size: 0.98rem;
+            text-transform: uppercase;
+            letter-spacing: 0.11em;
+            color: #e5e7eb;
+        }
+
+        .ax-tag {
+            font-size: 0.72rem;
+            padding: 4px 10px;
+            border-radius: 999px;
+            background: linear-gradient(135deg, var(--ax-accent), var(--ax-primary));
+            color: #020617;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        @keyframes slideIn {
+            0% { transform: translateY(16px); opacity: 0; }
+            100% { transform: translateY(0); opacity: 1; }
+        }
+
+        label {
+            font-weight: 500;
+            margin-top: 4px;
+            display: block;
+            font-size: 0.86rem;
+            color: #e5e7eb;
+        }
+
+        .form-group {
+            margin-bottom: 14px;
+        }
+
+        .form-control,
+        input[type="text"],
+        input[type="tel"],
+        input[type="file"],
+        textarea {
+            width: 100%;
+            padding: 9px 11px;
+            margin-top: 5px;
+            border-radius: 10px;
+            border: 1px solid rgba(55,65,81,0.9);
+            background-color: var(--ax-input-bg);
+            color: #e5e7eb;
+            font-size: 0.9rem;
+            outline: none;
+            transition:
+                border-color 0.2s ease,
+                box-shadow 0.2s ease,
+                background-color 0.2s ease,
+                transform 0.1s ease;
+        }
+
+        input[type="file"] {
+            padding: 7px 11px;
+        }
+
+        .form-control:focus,
+        input:focus,
+        textarea:focus {
+            border-color: var(--ax-primary);
+            box-shadow: 0 0 0 1px rgba(56,189,248,0.5);
+            transform: translateY(-1px);
+        }
+
+        textarea {
+            height: 120px;
+            resize: vertical;
+        }
+
+        .button {
+            background-image: linear-gradient(135deg, var(--ax-primary), var(--ax-accent));
+            color: #020617;
+            border: none;
+            padding: 11px 18px;
+            border-radius: 999px;
+            cursor: pointer;
+            width: 100%;
+            font-size: 0.96rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            margin-top: 6px;
+            box-shadow:
+                0 14px 30px rgba(15,23,42,0.85),
+                0 0 0 1px rgba(148,163,184,0.5);
+            transition:
+                transform 0.12s ease,
+                box-shadow 0.15s ease,
+                filter 0.15s ease;
+        }
+
+        .button:hover {
+            transform: translateY(-1px);
+            box-shadow:
+                0 22px 45px rgba(15,23,42,1),
+                0 0 0 1px rgba(56,189,248,0.7);
+            filter: brightness(1.04);
+        }
+
+        .button:active {
+            transform: translateY(0);
+            box-shadow:
+                0 10px 20px rgba(15,23,42,0.9),
+                0 0 0 1px rgba(56,189,248,0.6);
+        }
+
+        .message {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .success {
+            color: var(--ax-success);
+        }
+
+        .error {
+            color: var(--ax-error);
+        }
+
+        footer {
+            margin-top: 28px;
+            text-align: center;
+            font-size: 0.78rem;
+            letter-spacing: 0.16em;
+            text-transform: uppercase;
+            color: var(--ax-muted);
+        }
+
+        footer span {
+            color: var(--ax-primary);
+        }
+
+        /* Floating top message */
+        .floating-message {
+            position: fixed;
+            top: 18px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(135deg, #16a34a, #22c55e);
+            color: #ecfdf5;
+            padding: 10px 22px;
+            border-radius: 999px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            display: none;
+            z-index: 9999;
+            box-shadow: 0 16px 32px rgba(15,23,42,0.9);
+            animation: fadeInOut 4s ease-in-out forwards;
+            border: 1px solid rgba(74,222,128,0.8);
+        }
+
+        .floating-message.error {
+            background: linear-gradient(135deg, #b91c1c, #ef4444);
+            border-color: rgba(248,113,113,0.9);
+        }
+
+        @keyframes fadeInOut {
+            0% { opacity: 0; transform: translate(-50%, -10px); }
+            10% { opacity: 1; transform: translate(-50%, 0); }
+            90% { opacity: 1; transform: translate(-50%, 0); }
+            100% { opacity: 0; transform: translate(-50%, -10px); }
+        }
+
+        /* Modal header override to match Axelera colors */
+        .modal-header.axelera-header {
+            background: linear-gradient(135deg, var(--ax-primary), var(--ax-accent));
+            color: #020617;
+        }
+
+        .modal-header.axelera-header .btn-close {
+            filter: invert(0);
+        }
+
+        .modal-content {
+            border-radius: 18px;
+            border: 1px solid rgba(148,163,184,0.5);
+        }
+
+        .modal-body p strong {
+            color: #111827;
+        }
+
+        @media (max-width: 992px) {
+            body {
+                padding: 0 10px 32px;
+            }
+            .ax-card {
+                padding: 18px 16px 22px;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .ax-card-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+        }
+    </style>
+</head>
+<body>
+
+{% include 'side_bar.html' %}
+
+<div id="message" class="floating-message"></div>
+
+<h1 class="page-title">Register New Customer</h1>
+<p class="page-subtitle">Axelera Flux &bull; Field Agent Capture</p>
+
+<div class="ax-card-wrapper">
+  <div class="ax-card">
+    <div class="ax-card-header">
+      <h2>Customer Details</h2>
+      <div class="ax-tag">Geo-Tagged Registration</div>
+    </div>
+
+    <form id="customerForm" method="POST" action="/customer/add" enctype="multipart/form-data">
+      <!-- Date Registered (read-only) -->
+      <div class="form-group">
+        <label for="date_registered">Date Registered</label>
+        <input
+          type="text"
+          id="date_registered"
+          name="date_registered"
+          class="form-control"
+          value="{{ today_str }}"
+          readonly
+        >
+      </div>
+
+      <div class="form-group">
+        <label for="name">Full Name</label>
+        <input
+          type="text"
+          id="name"
+          name="name"
+          class="form-control"
+          required
+          placeholder="Enter customer full name">
+      </div>
+
+      <div class="form-group">
+        <label for="image">Upload Image</label>
+        <input
+          type="file"
+          id="image"
+          name="image"
+          class="form-control"
+          accept="image/*"
+          required>
+        <p id="upload-status" style="font-size: 0.8rem; color: #4ade80; margin-top: 4px;"></p>
+      </div>
+
+      <div class="form-group">
+        <label for="location">Location</label>
+        <input
+          type="text"
+          id="location"
+          name="location"
+          class="form-control"
+          required
+          placeholder="Community / Area">
+      </div>
+
+      <div class="form-group">
+        <label for="occupation">Occupation</label>
+        <input
+          type="text"
+          id="occupation"
+          name="occupation"
+          class="form-control"
+          required
+          placeholder="Customer occupation">
+      </div>
+
+      <div class="form-group">
+        <label for="phone_number">Phone Number</label>
+        <input
+          type="tel"
+          id="phone_number"
+          name="phone_number"
+          class="form-control"
+          required
+          placeholder="Active mobile number">
+      </div>
+
+      <div class="form-group">
+        <label for="comment">Additional Comments</label>
+        <textarea
+          id="comment"
+          name="comment"
+          class="form-control"
+          placeholder="House description, landmark, preferred delivery time, etc."></textarea>
+      </div>
+
+      <input type="hidden" name="agent_id" id="agent_id" value="{{ agent_id }}">
+      <input type="hidden" name="latitude" id="latitude">
+      <input type="hidden" name="longitude" id="longitude">
+
+      <button type="submit" class="button">Review &amp; Register</button>
+    </form>
+  </div>
+</div>
+
+<!-- Confirmation Modal -->
+<div class="modal fade" id="confirmModal" tabindex="-1" aria-labelledby="confirmModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content">
+      <div class="modal-header axelera-header">
+        <h5 class="modal-title" id="confirmModalLabel">Confirm Customer Registration</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p><strong>Date Registered:</strong> <span id="confDateRegistered"></span></p>
+        <p><strong>Full Name:</strong> <span id="confName"></span></p>
+        <p><strong>Phone:</strong> <span id="confPhone"></span></p>
+        <p><strong>Location:</strong> <span id="confLocation"></span></p>
+        <p><strong>Occupation:</strong> <span id="confOccupation"></span></p>
+        <p><strong>Comments:</strong> <span id="confComment"></span></p>
+        <p><strong>Image:</strong><br>
+          <img id="confImage" src="" alt="Customer Image" class="img-fluid rounded"
+               style="max-height: 200px; border: 1px solid #e5e7eb;">
+        </p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Edit</button>
+        <button type="button" class="btn btn-primary d-flex align-items-center" id="confirmSubmit"
+                style="background-image: linear-gradient(135deg, #0ea5e9, #f97316); border: none;">
+          <span class="spinner-border spinner-border-sm me-2 d-none" role="status" id="spinner" aria-hidden="true"></span>
+          <span id="btn-text">Confirm &amp; Register</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer>
+    <p>&copy; 2025 <span>Axelera Flux</span> &mdash; Accelerating Your Journey to Success.</p>
+</footer>
+
+<script>
+  // Preview image when selected
+  document.getElementById('image').addEventListener('change', function (event) {
+    const file = event.target.files[0];
+    if (file) {
+      const previewURL = URL.createObjectURL(file);
+      document.getElementById('confImage').src = previewURL;
+      document.getElementById('upload-status').textContent = "Image selected and ready.";
+    } else {
+      document.getElementById('upload-status').textContent = "";
+    }
+  });
+
+  // Show confirmation modal before submission
+  document.getElementById('customerForm').addEventListener('submit', function (event) {
+    event.preventDefault();
+
+    const dateRegistered = document.getElementById('date_registered').value.trim();
+    const name = document.getElementById('name').value.trim();
+    const location = document.getElementById('location').value.trim();
+    const occupation = document.getElementById('occupation').value.trim();
+    const phoneNumber = document.getElementById('phone_number').value.trim();
+    const comment = document.getElementById('comment').value.trim();
+    const imageInput = document.getElementById('image');
+
+    if (!name || !location || !occupation || !phoneNumber || !imageInput.files.length) {
+      showMessage('Please fill out all required fields.', 'error');
+      return;
+    }
+
+    // Fill modal with preview
+    document.getElementById('confDateRegistered').textContent = dateRegistered || 'N/A';
+    document.getElementById('confName').textContent = name;
+    document.getElementById('confPhone').textContent = phoneNumber;
+    document.getElementById('confLocation').textContent = location;
+    document.getElementById('confOccupation').textContent = occupation;
+    document.getElementById('confComment').textContent = comment || 'N/A';
+
+    const modal = new bootstrap.Modal(document.getElementById('confirmModal'));
+    modal.show();
+
+    // Confirm button click
+    document.getElementById('confirmSubmit').onclick = function () {
+      const form = document.getElementById('customerForm');
+      const formData = new FormData(form);
+
+      const btn = document.getElementById('confirmSubmit');
+      const spinner = document.getElementById('spinner');
+      const btnText = document.getElementById('btn-text');
+
+      spinner.classList.remove('d-none');
+      btnText.textContent = "Registering...";
+      btn.disabled = true;
+
+      fetch('/customer/add', {
+        method: 'POST',
+        body: formData
+      })
+      .then(response => response.json())
+      .then(data => {
+        const modalInstance = bootstrap.Modal.getInstance(document.getElementById('confirmModal'));
+        modalInstance.hide();
+
+        spinner.classList.add('d-none');
+        btnText.textContent = "Confirm & Register";
+        btn.disabled = false;
+
+        if (data.message) {
+          showMessage('Customer registered successfully.', 'success');
+          form.reset();
+          document.getElementById('confImage').src = "";
+          document.getElementById('upload-status').textContent = '';
+        } else {
+          showMessage(data.error || 'Something went wrong, please try again.', 'error');
+        }
+      })
+      .catch(error => {
+        const modalInstance = bootstrap.Modal.getInstance(document.getElementById('confirmModal'));
+        modalInstance.hide();
+
+        spinner.classList.add('d-none');
+        btnText.textContent = "Confirm & Register";
+        btn.disabled = false;
+
+        showMessage('Error: ' + error.message, 'error');
+      });
+    };
+  });
+
+  // Show floating message
+  function showMessage(message, type) {
+    const el = document.getElementById('message');
+    el.textContent = message;
+    el.className = `floating-message ${type}`;
+    el.style.display = 'block';
+    setTimeout(() => {
+      el.style.display = 'none';
+    }, 4000);
+  }
+
+  // Get location on page load
+  window.addEventListener('load', () => {
+    if ("geolocation" in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          document.getElementById('latitude').value = position.coords.latitude.toFixed(6);
+          document.getElementById('longitude').value = position.coords.longitude.toFixed(6);
+        },
+        (error) => {
+          alert("Location access denied or unavailable.");
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+      );
+    }
+  });
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.min.js"></script>
+
+<script>
+    window.cbConfig = {
+        chatId: "acac0de2-5c91-4eae-9354-1376e3093d91"
+    };
+</script>
+<script src="https://app.chatbit.co/embed.min.js" defer></script>
+</body>
+</html>

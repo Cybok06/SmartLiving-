@@ -1,0 +1,390 @@
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+
+<style>
+  :root {
+    --ax-blue: #0066cc;
+    --ax-blue-dark: #074073;
+    --ax-navy: #020b1a;
+    --ax-navy-soft: #06142b;
+    --ax-orange: #f58634;
+    --ax-orange-soft: #fbb47a;
+    --ax-border-soft: rgba(148, 163, 184, 0.25);
+    --ax-text-soft: #e5e7eb;
+  }
+
+  body.sidebar-open {
+    overflow: hidden;
+  }
+
+  /* TOGGLE BUTTON */
+  .toggle-btn {
+    position: fixed;
+    top: 16px;
+    left: 16px;
+    font-size: 1.4rem;
+    background: linear-gradient(135deg, var(--ax-orange), var(--ax-blue));
+    border: none;
+    color: #ffffff;
+    border-radius: 999px;
+    padding: 8px 12px;
+    z-index: 1100;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    box-shadow: 0 12px 24px rgba(15, 23, 42, 0.45);
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+  }
+
+  .toggle-btn span {
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    font-weight: 600;
+  }
+
+  .toggle-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 16px 30px rgba(15, 23, 42, 0.6);
+  }
+
+  .toggle-btn.hide {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  /* SIDEBAR WRAPPER */
+  .sidebar {
+    width: 280px;
+    background: radial-gradient(circle at top left, #0a2550, #020816);
+    color: var(--ax-text-soft);
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: -280px;
+    transition: left 0.35s ease-in-out;
+    z-index: 1050;
+    overflow-y: auto;
+    box-shadow: 4px 0 18px rgba(0, 0, 0, 0.35);
+    border-right: 1px solid rgba(148, 163, 184, 0.3);
+  }
+
+  .sidebar.active {
+    left: 0;
+  }
+
+  .sidebar::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .sidebar::-webkit-scrollbar-thumb {
+    background: rgba(100, 116, 139, 0.7);
+    border-radius: 999px;
+  }
+
+  /* HEADER */
+  .sidebar-header {
+    padding: 18px 20px 14px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.25);
+    background: linear-gradient(
+      135deg,
+      rgba(0, 102, 204, 0.18),
+      rgba(2, 8, 23, 0.9)
+    );
+  }
+
+  .brand-logo-shell {
+    width: 56px;
+    height: 56px;
+    border-radius: 16px;
+    background: radial-gradient(circle at 20% 0, #ffffff, #e0f0ff);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    border: 1px solid rgba(148, 163, 184, 0.45);
+    box-shadow: 0 10px 22px rgba(15, 23, 42, 0.7);
+  }
+
+  .brand-logo-shell img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+
+  .brand-text {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .brand-text h2 {
+    font-size: 1.05rem;
+    margin: 0;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #f9fafb;
+  }
+
+  .brand-text span {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    color: var(--ax-orange-soft);
+    font-weight: 600;
+  }
+
+  .close-btn {
+    background: transparent;
+    border: none;
+    color: #e5e7eb;
+    font-size: 1.9rem;
+    cursor: pointer;
+    line-height: 1;
+  }
+
+  /* SECTION LABEL */
+  .sidebar-section-label {
+    padding: 10px 22px 6px;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: rgba(156, 163, 175, 0.9);
+  }
+
+  /* LINKS */
+  .sidebar a,
+  .sidebar .dropdown-toggle {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 11px 22px;
+    color: #d1d5db;
+    text-decoration: none;
+    font-weight: 500;
+    font-size: 0.9rem;
+    cursor: pointer;
+    position: relative;
+    border-left: 3px solid transparent;
+    transition:
+      background 0.22s ease,
+      padding-left 0.22s ease,
+      color 0.22s ease,
+      border-color 0.22s ease;
+  }
+
+  .sidebar a i,
+  .sidebar .dropdown-toggle i {
+    font-size: 1.05rem;
+    color: var(--ax-orange-soft);
+  }
+
+  .sidebar a:hover,
+  .sidebar .dropdown-toggle:hover {
+    background: radial-gradient(circle at left, rgba(245, 134, 52, 0.08), transparent 60%);
+    padding-left: 26px;
+    color: #f9fafb;
+  }
+
+  .sidebar a.active,
+  .sidebar .dropdown-toggle.active {
+    background: linear-gradient(
+      90deg,
+      rgba(245, 134, 52, 0.22),
+      rgba(0, 102, 204, 0.12)
+    );
+    border-left-color: var(--ax-orange);
+    color: #fefce8;
+  }
+
+  .sidebar a.active i,
+  .sidebar .dropdown-toggle.active i {
+    color: #fffbeb;
+  }
+
+  /* SUBMENU */
+  .submenu {
+    display: none;
+    flex-direction: column;
+    background: rgba(15, 23, 42, 0.7);
+    border-left: 1px solid rgba(148, 163, 184, 0.35);
+  }
+
+  .submenu a {
+    padding-left: 40px;
+    font-size: 0.86rem;
+    color: #cbd5f5;
+  }
+
+  .submenu a:hover {
+    background: rgba(15, 23, 42, 0.9);
+    padding-left: 44px;
+  }
+
+  .submenu.show {
+    display: flex;
+  }
+
+  /* OVERLAY */
+  .overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(15, 23, 42, 0.55);
+    z-index: 1049;
+    display: none;
+  }
+
+  .overlay.show {
+    display: block;
+  }
+
+  /* BADGE */
+  .badge-counter {
+    margin-left: auto;
+    background: #facc15;
+    color: #111827;
+    border-radius: 999px;
+    padding: 2px 8px;
+    font-size: 0.72rem;
+    font-weight: 700;
+  }
+
+  /* SMALL SCREEN ADJUSTMENT */
+  @media (max-width: 768px) {
+    .sidebar {
+      width: 260px;
+      left: -260px;
+    }
+  }
+</style>
+
+<button class="toggle-btn" id="menuToggle" onclick="toggleSidebar()">
+  <i class="bi bi-list"></i>
+  <span>Menu</span>
+</button>
+
+<div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
+
+<div class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <div class="brand-logo-shell">
+      <img src="https://imagedelivery.net/h9fmMoa1o2c2P55TcWJGOg/8744779c-1300-4a50-49de-b143d24da300/public"
+           alt="Axelera Flux Logo">
+    </div>
+    <div class="brand-text">
+      <h2>Axelera Flux</h2>
+      <span>Agent Console</span>
+    </div>
+    <button class="close-btn" onclick="toggleSidebar()">&times;</button>
+  </div>
+
+  <div class="sidebar-section-label">Overview</div>
+  <a href="/dashboard/agent"><i class="bi bi-speedometer2"></i> Dashboard</a>
+
+  <div class="sidebar-section-label">Sales & Products</div>
+  <div class="dropdown-toggle" onclick="toggleMenu('productMenu')">
+    <i class="bi bi-box"></i> Products
+  </div>
+  <div class="submenu" id="productMenu">
+    <a href="/product/products">View Products</a>
+    <a href="/sell">Sell Product</a>
+  </div>
+
+  <a href="/analysis/"><i class="bi bi-bar-chart-line"></i> CRM Analysis</a>
+
+  <div class="sidebar-section-label">Customers & Payments</div>
+  <div class="dropdown-toggle" onclick="toggleMenu('customerMenu')">
+    <i class="bi bi-people"></i> Customers
+  </div>
+  <div class="submenu" id="customerMenu">
+    <a href="/view/customers">View Customers</a>
+    <a href="/customer/register">Register Customer</a>
+  </div>
+
+  <a href="{{ url_for('sales_close_agent.view_sales_close') }}">
+    <i class="bi bi-cash-coin"></i> Sales Close
+  </a>
+
+  <div class="dropdown-toggle" onclick="toggleMenu('paymentMenu')">
+    <i class="bi bi-credit-card"></i> Payments
+  </div>
+  <div class="submenu" id="paymentMenu">
+    <a href="/payment/add_payment">Add Payment</a>
+    <a href="/payment/all_payments">View Payments</a>
+  </div>
+
+  <div class="sidebar-section-label">Support & Activity</div>
+
+  <!-- Complaints link with unsolved counter -->
+  <a href="{{ url_for('agent_complaints.agent_complaints_home') }}">
+    <i class="bi bi-exclamation-octagon"></i>
+    My Complaints
+    {% if agent_unsolved_complaints and agent_unsolved_complaints > 0 %}
+      <span class="badge-counter">{{ agent_unsolved_complaints }}</span>
+    {% endif %}
+  </a>
+
+  <a href="/report/reports"><i class="bi bi-journal-text"></i> Reports</a>
+  <a href="/leads"><i class="bi bi-graph-up-arrow"></i> Leads</a>
+  <a href="{{ url_for('agent_tasks.view_tasks') }}"><i class="bi bi-envelope-open"></i> Task Messages</a>
+  <a href="{{ url_for('chat.chat') }}"><i class="bi bi-chat-dots"></i> Chat</a>
+  <a href="/todo"><i class="bi bi-check2-square"></i> Todo List</a>
+  <a href="{{ url_for('login_logs.login_logs') }}"><i class="bi bi-shield-lock"></i> Login Logs</a>
+<div class="sidebar-section-label">Payroll</div>
+
+<a href="/agent/payroll">
+  <i class="bi bi-wallet2"></i> My Payroll
+  <span class="badge-counter">NEW</span>
+</a>
+
+  <div class="sidebar-section-label">Profile</div>
+  <a href="/agent/profile"><i class="bi bi-person-circle"></i> Agent Profile</a>
+</div>
+
+<script>
+  function toggleSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('overlay');
+    const toggleBtn = document.getElementById('menuToggle');
+    const isActive = sidebar.classList.toggle('active');
+
+    overlay.classList.toggle('show', isActive);
+    document.body.classList.toggle('sidebar-open', isActive);
+    toggleBtn.classList.toggle('hide', isActive);
+  }
+
+  function toggleMenu(menuId) {
+    const menu = document.getElementById(menuId);
+    const isOpen = menu.classList.toggle('show');
+    if (isOpen) {
+      localStorage.setItem(menuId, 'open');
+    } else {
+      localStorage.removeItem(menuId);
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const currentPath = window.location.pathname;
+    document.querySelectorAll('.sidebar a').forEach(link => {
+      if (link.getAttribute('href') === currentPath) {
+        link.classList.add('active');
+      }
+    });
+
+    // Restore open submenus
+    ['productMenu', 'customerMenu', 'paymentMenu'].forEach(id => {
+      if (localStorage.getItem(id) === 'open') {
+        const el = document.getElementById(id);
+        if (el) el.classList.add('show');
+      }
+    });
+  });
+</script>
