@@ -694,6 +694,22 @@
               </div>
 
               <div class="mb-3">
+                <label class="form-label">Customer daily rate (optional)</label>
+                <div class="input-group input-group-sm">
+                  <span class="input-group-text">GHƒ,æ</span>
+                  <input type="number" step="0.01" min="0.01"
+                         class="form-control"
+                         name="manual_rate"
+                         value="{{ c.default_rate or c.rate_hint or '' }}"
+                         data-default-rate="{{ c.default_rate or c.rate_hint or '' }}"
+                         placeholder="Leave blank to auto-calculate">
+                </div>
+                <small class="text-muted">
+                  Enter a rate to override auto-calculation. This will be saved for future withdrawals.
+                </small>
+              </div>
+
+              <div class="mb-3">
                 <label class="form-label">Amount to pay customer</label>
                 <div class="input-group input-group-sm">
                   <span class="input-group-text">GH₵</span>
@@ -940,6 +956,7 @@
     forms.forEach(form => {
       const modalEl = form.closest('.modal');
       const amountInput = form.querySelector('input[name="withdraw_amount"]');
+      const rateInput = form.querySelector('input[name="manual_rate"]');
       const previewPanel = form.querySelector('[data-preview-panel]');
       if (!modalEl || !amountInput || !previewPanel) return;
 
@@ -954,6 +971,15 @@
       const noteEl      = previewPanel.querySelector('[data-preview-note]');
 
       let previewTimer = null;
+
+      function getManualRate() {
+        if (!rateInput) return 0;
+        const raw = (rateInput.value || '').trim();
+        if (!raw) return 0;
+        const parsed = parseFloat(raw);
+        if (isNaN(parsed) || parsed <= 0) return 0;
+        return parsed;
+      }
 
       function applyPreviewValues(withdrawAmt, profitAmt, balanceAmt, rate, fromServer) {
         const w = Number(withdrawAmt) || 0;
@@ -977,7 +1003,8 @@
 
       function fallbackPreview(amount) {
         const withdrawAmt = amount;
-        const rate = defaultRate > 0 ? defaultRate : 0;
+        const manualRate = getManualRate();
+        const rate = manualRate > 0 ? manualRate : (defaultRate > 0 ? defaultRate : 0);
         let profitAmt = 0;
 
         if (rate > 0) {
@@ -997,7 +1024,8 @@
 
         if (!raw || amount <= 0) {
           // Reset to initial view
-          applyPreviewValues(0, 0, avail, defaultRate || 0, false);
+          const resetRate = getManualRate() || defaultRate || 0;
+          applyPreviewValues(0, 0, avail, resetRate, false);
           return;
         }
 
@@ -1044,10 +1072,21 @@
         previewTimer = setTimeout(runPreview, 250); // small debounce
       });
 
+      if (rateInput) {
+        rateInput.addEventListener('input', function () {
+          if (previewTimer) clearTimeout(previewTimer);
+          previewTimer = setTimeout(runPreview, 250);
+        });
+      }
+
       // Reset preview when modal opens
       modalEl.addEventListener('show.bs.modal', function () {
         amountInput.value = '';
-        applyPreviewValues(0, 0, avail, defaultRate || 0, false);
+        if (rateInput) {
+          rateInput.value = rateInput.getAttribute('data-default-rate') || '';
+        }
+        const resetRate = getManualRate() || defaultRate || 0;
+        applyPreviewValues(0, 0, avail, resetRate, false);
       });
     });
 
