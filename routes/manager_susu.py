@@ -683,6 +683,22 @@ def susu_withdraw(customer_id):
 
     withdraw_amount = _to_float("withdraw_amount")
     note = (request.form.get("note") or "").strip()
+    manual_rate_raw = (request.form.get("manual_rate") or "").strip()
+    manual_rate: Optional[float] = None
+
+    if manual_rate_raw:
+        try:
+            manual_rate = float(manual_rate_raw)
+        except (TypeError, ValueError):
+            manual_rate = None
+        if manual_rate is None or manual_rate <= 0:
+            msg = "Customer daily rate must be a positive number."
+            if _is_ajax(request):
+                if is_preview:
+                    return jsonify(ok=False)
+                return jsonify(ok=False, message=msg), 400
+            flash(msg, "danger")
+            return redirect(url_for("manager_susu.susu_dashboard"))
 
     if withdraw_amount <= 0:
         msg = "Withdraw amount must be greater than 0."
@@ -737,9 +753,13 @@ def susu_withdraw(customer_id):
 
     logs.append(f"Available SUSU balance before this withdrawal: GH₵{available_balance_before:.2f}")
 
-    # ---- Infer rate ----
-    rate, rate_logs = _infer_susu_rate_for_customer(customer, payments_for_cust)
-    logs.extend(rate_logs)
+    # ---- Rate selection (manual override or inferred) ----
+    if manual_rate is not None and manual_rate > 0:
+        rate = manual_rate
+        logs.append(f"Using manager override rate: GHƒ,æ{rate:.2f}")
+    else:
+        rate, rate_logs = _infer_susu_rate_for_customer(customer, payments_for_cust)
+        logs.extend(rate_logs)
 
     if rate is None or rate <= 0:
         msg = "Unable to determine SUSU daily rate for this customer. Please check their SUSU payments."
