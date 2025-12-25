@@ -16,7 +16,7 @@
 
   <!-- Font -->
   <link rel="stylesheet"
-        href="https://fonts.googleapis.com/css2?family=Raleway:wght@400;500;600;700&display=swap">
+        href="https://fonts.googleapis.com/css2?family=Raleway:wght@400;500;600;700;800;900&display=swap">
 
   <style>
     :root{
@@ -29,14 +29,17 @@
       /* Neutrals */
       --ink:#0f172a;
       --muted:#64748b;
-      --border:rgba(148,163,184,.28);
-      --soft:#f3f4f6;
-      --card:rgba(255,255,255,.86);
+      --card:rgba(255,255,255,.88);
 
       /* Error */
       --danger-bg:#fee2e2;
       --danger-ink:#991b1b;
       --danger-bd:#fecaca;
+
+      /* Xmas */
+      --xmas-red:#d11a2a;
+      --xmas-green:#0f7a3a;
+      --xmas-gold:#f6c453;
     }
 
     *{ box-sizing:border-box; margin:0; padding:0; font-family:"Raleway",system-ui,-apple-system,BlinkMacSystemFont,sans-serif; }
@@ -48,23 +51,50 @@
       justify-content:center;
       padding:22px 16px;
       color:var(--ink);
+
+      /* Xmas background requested */
       background:
-        radial-gradient(circle at 12% 18%, rgba(124,58,237,.14), transparent 55%),
-        radial-gradient(circle at 88% 20%, rgba(0,102,204,.12), transparent 55%),
-        radial-gradient(circle at 82% 88%, rgba(245,134,52,.12), transparent 55%),
-        var(--soft);
+        radial-gradient(circle at 16% 16%, rgba(246,196,83,.20), transparent 55%),
+        radial-gradient(circle at 86% 20%, rgba(17,102,204,.14), transparent 55%),
+        radial-gradient(circle at 80% 86%, rgba(209,26,42,.16), transparent 55%),
+        url("https://static.vecteezy.com/system/resources/thumbnails/003/549/469/small/red-ribbon-christmas-tree-background-concept-free-vector.jpg");
+      background-size: auto, auto, auto, cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      background-attachment: fixed;
+    }
+
+    /* subtle overlay to keep legibility on bright background */
+    body::before{
+      content:"";
+      position:fixed;
+      inset:0;
+      background: linear-gradient(180deg, rgba(255,255,255,.58), rgba(255,255,255,.30));
+      pointer-events:none;
+      z-index:0;
     }
 
     .card{
+      position:relative;
       width:100%;
       max-width:520px;
       border-radius:22px;
       background:var(--card);
-      box-shadow: 0 26px 60px rgba(15,23,42,.14), 0 0 0 1px rgba(148,163,184,.24);
+      box-shadow: 0 26px 60px rgba(15,23,42,.16), 0 0 0 1px rgba(148,163,184,.24);
       backdrop-filter: blur(18px);
       -webkit-backdrop-filter: blur(18px);
       overflow:hidden;
       animation: pop .65s cubic-bezier(.22,.61,.36,1) both;
+      z-index: 3; /* above snow & balloons */
+    }
+
+    .card::before{
+      content:"";
+      position:absolute;
+      left:0; right:0; top:0;
+      height:7px;
+      background: linear-gradient(90deg, var(--xmas-red), var(--xmas-gold), var(--xmas-green));
+      opacity:.95;
     }
 
     @keyframes pop{
@@ -74,7 +104,7 @@
 
     .inner{
       padding:28px 30px 26px;
-      background: linear-gradient(180deg, rgba(255,255,255,.82), rgba(255,255,255,.92));
+      background: linear-gradient(180deg, rgba(255,255,255,.82), rgba(255,255,255,.94));
     }
     @media (max-width:520px){ .inner{ padding:22px 18px; } }
 
@@ -85,7 +115,7 @@
       align-items:center;
       text-align:center;
       gap:10px;
-      margin-bottom:18px;
+      margin-bottom:14px;
     }
 
     .logo{
@@ -96,8 +126,19 @@
       overflow:hidden;
       box-shadow: 0 10px 24px rgba(15,23,42,.08);
       display:flex;align-items:center;justify-content:center;
+      position:relative;
     }
     .logo img{ width:100%; height:100%; object-fit:cover; }
+
+    .hat{
+      position:absolute;
+      left:-8px; top:-14px;
+      width:52px;
+      transform: rotate(-18deg);
+      filter: drop-shadow(0 6px 10px rgba(15,23,42,.18));
+      pointer-events:none;
+      user-select:none;
+    }
 
     .brand-name{
       font-weight:900;
@@ -115,9 +156,9 @@
       padding:6px 10px;
       border-radius:999px;
       border:1px solid rgba(0,102,204,.18);
-      background: rgba(255,255,255,.70);
+      background: rgba(255,255,255,.72);
       font-size:11px;
-      font-weight:800;
+      font-weight:900;
       letter-spacing:.10em;
       text-transform:uppercase;
       color:var(--ax-blue-dark);
@@ -136,8 +177,44 @@
       color:var(--muted);
       text-align:center;
       line-height:1.55;
-      margin-bottom:18px;
+      margin-bottom:14px;
     }
+
+    .xmas-pill{
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:10px;
+      margin: 0 auto 14px;
+      width: fit-content;
+      max-width: 100%;
+      padding: 9px 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(246,196,83,.55);
+      background: rgba(255,255,255,.78);
+      box-shadow: 0 12px 24px rgba(15,23,42,.08);
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: .06em;
+    }
+    .xmas-pill .dot{
+      width:10px;height:10px;border-radius:50%;
+      background: linear-gradient(180deg, var(--xmas-red), #ff6b6b);
+      box-shadow: 0 0 0 4px rgba(209,26,42,.12);
+      flex: 0 0 auto;
+    }
+    .xmas-pill b{ color: var(--xmas-green); }
+    .xmas-pill span{ color: rgba(30,41,59,.90); }
+    .xmas-pill button{
+      margin-left: 6px;
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      color: rgba(71,85,105,.75);
+      padding: 4px 6px;
+      border-radius: 8px;
+    }
+    .xmas-pill button:hover{ background: rgba(15,23,42,.06); color: rgba(15,23,42,.75); }
 
     /* Flash */
     .popup-error{
@@ -225,7 +302,7 @@
       letter-spacing:.06em;
       text-transform:uppercase;
       color:#fff;
-      background: linear-gradient(90deg, var(--ax-orange), var(--ax-blue), var(--sl-purple));
+      background: linear-gradient(90deg, var(--xmas-red), var(--ax-orange), var(--ax-blue), var(--sl-purple));
       box-shadow: 0 14px 34px rgba(0,102,204,.20);
       display:inline-flex;
       align-items:center;
@@ -257,20 +334,357 @@
       background:#fff;
     }
     @keyframes spin{ to{ transform: rotate(360deg);} }
+
+    /* =========================
+       Xmas Popup
+       ========================= */
+    .xmas-modal{
+      position:fixed;
+      inset:0;
+      display:none;
+      align-items:center;
+      justify-content:center;
+      padding: 18px;
+      z-index: 9998;
+    }
+    .xmas-modal.show{ display:flex; }
+
+    .xmas-backdrop{
+      position:absolute;
+      inset:0;
+      background: rgba(15,23,42,.55);
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+    }
+
+    .xmas-dialog{
+      position:relative;
+      width:min(860px, 100%);
+      border-radius: 22px;
+      overflow:hidden;
+      box-shadow: 0 30px 90px rgba(0,0,0,.35);
+      animation: modalIn .42s cubic-bezier(.22,.61,.36,1) both;
+      background:#fff;
+    }
+    @keyframes modalIn{
+      0%{ opacity:0; transform: translateY(10px) scale(.985); }
+      100%{ opacity:1; transform: translateY(0) scale(1); }
+    }
+
+    .xmas-hero{
+      position:relative;
+      min-height: 320px;
+      background: url("https://img.freepik.com/premium-vector/merry-christmas-happy-new-year-background_112255-653.jpg") center/cover no-repeat;
+    }
+    .xmas-hero::after{
+      content:"";
+      position:absolute;
+      inset:0;
+      background: linear-gradient(90deg, rgba(15,23,42,.72), rgba(15,23,42,.22));
+    }
+
+    .xmas-content{
+      position:relative;
+      z-index:1;
+      padding: 26px 26px 22px;
+      display:flex;
+      flex-direction:column;
+      gap: 12px;
+      color:#fff;
+    }
+
+    .xmas-badge{
+      width: fit-content;
+      display:inline-flex;
+      align-items:center;
+      gap:10px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.14);
+      border: 1px solid rgba(255,255,255,.22);
+      font-size: 11px;
+      font-weight: 900;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+    .xmas-badge i{ color: var(--xmas-gold); }
+
+    .xmas-title{
+      font-size: 34px;
+      line-height: 1.05;
+      font-weight: 900;
+      letter-spacing: .01em;
+      margin-top: 2px;
+    }
+
+    .xmas-text{
+      max-width: 58ch;
+      font-size: 14px;
+      line-height: 1.55;
+      color: rgba(255,255,255,.92);
+    }
+
+    .xmas-actions{
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      margin-top: 6px;
+    }
+
+    .xmas-btn{
+      border:none;
+      cursor:pointer;
+      border-radius: 999px;
+      padding: 12px 16px;
+      font-weight: 900;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      font-size: 12px;
+      display:inline-flex;
+      align-items:center;
+      gap:10px;
+      transition: transform .10s ease, filter .12s ease, box-shadow .16s ease;
+      user-select:none;
+    }
+    .xmas-btn.primary{
+      color: #0b1320;
+      background: linear-gradient(90deg, #fff, rgba(255,255,255,.88));
+      box-shadow: 0 16px 40px rgba(0,0,0,.25);
+    }
+    .xmas-btn.primary:hover{ transform: translateY(-1px); filter: brightness(1.02); }
+    .xmas-btn.ghost{
+      color:#fff;
+      background: rgba(255,255,255,.12);
+      border: 1px solid rgba(255,255,255,.22);
+    }
+    .xmas-btn.ghost:hover{ transform: translateY(-1px); background: rgba(255,255,255,.16); }
+
+    .xmas-close{
+      position:absolute;
+      right: 14px;
+      top: 14px;
+      width: 42px;
+      height: 42px;
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,.22);
+      background: rgba(15,23,42,.35);
+      color:#fff;
+      cursor:pointer;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      z-index:2;
+      transition: transform .10s ease, background .12s ease;
+    }
+    .xmas-close:hover{ transform: translateY(-1px); background: rgba(15,23,42,.45); }
+
+    .xmas-footer{
+      background: rgba(255,255,255,.96);
+      padding: 14px 18px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap: 12px;
+      border-top: 1px solid rgba(148,163,184,.22);
+      color: rgba(71,85,105,.92);
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .xmas-footer .left{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+    .xmas-footer .tag{
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(246,196,83,.16);
+      border: 1px solid rgba(246,196,83,.35);
+      color: rgba(15,23,42,.90);
+      font-weight: 900;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      font-size: 11px;
+      white-space: nowrap;
+    }
+    .xmas-footer a{
+      color: var(--ax-blue-dark);
+      text-decoration:none;
+      font-weight: 900;
+    }
+    .xmas-footer a:hover{ text-decoration:underline; }
+
+    @media (max-width: 520px){
+      .xmas-title{ font-size: 28px; }
+      .xmas-hero{ min-height: 340px; }
+    }
+
+    /* =========================
+       Massive Snow + Balloon Pops
+       ========================= */
+
+    /* Snow canvas ALWAYS on */
+    #snowCanvas{
+      position:fixed;
+      inset:0;
+      pointer-events:none;
+      z-index: 1; /* above background overlay, below balloons/card */
+      display:block;
+    }
+
+    /* Balloon layer above snow but below card */
+    #balloonLayer{
+      position:fixed;
+      inset:0;
+      pointer-events:none;
+      z-index: 2;
+      overflow:hidden;
+    }
+
+    .balloon{
+      position:absolute;
+      width: 46px;
+      height: 58px;
+      border-radius: 50% 50% 45% 45%;
+      filter: drop-shadow(0 10px 16px rgba(15,23,42,.14));
+      opacity: .98;
+      transform: translate(-50%, -50%) scale(.9);
+      animation:
+        balloonFloat 5.6s linear forwards,
+        balloonWiggle 1.4s ease-in-out infinite;
+      will-change: transform, top, left, opacity;
+    }
+
+    .balloon::after{
+      content:"";
+      position:absolute;
+      left:50%;
+      bottom:-10px;
+      width:2px;
+      height:34px;
+      background: rgba(15,23,42,.20);
+      transform: translateX(-50%);
+    }
+
+    .balloon::before{
+      content:"";
+      position:absolute;
+      left:50%;
+      bottom:6px;
+      width:10px;
+      height:10px;
+      background: rgba(255,255,255,.25);
+      border-radius:50%;
+      transform: translateX(-50%) rotate(20deg);
+    }
+
+    @keyframes balloonFloat{
+      0%   { opacity:0; transform: translate(-50%, 14px) scale(.82); }
+      10%  { opacity:1; }
+      100% { opacity:0; transform: translate(-50%, -260px) scale(1.02); }
+    }
+
+    @keyframes balloonWiggle{
+      0%,100% { filter: drop-shadow(0 10px 16px rgba(15,23,42,.14)); }
+      50%     { filter: drop-shadow(0 16px 18px rgba(15,23,42,.18)); }
+    }
+
+    /* Confetti burst */
+    .confetti{
+      position:absolute;
+      width:6px;
+      height:10px;
+      border-radius:2px;
+      opacity: 0.95;
+      transform: translate(-50%, -50%);
+      animation: confettiBurst 900ms ease-out forwards;
+      will-change: transform, opacity;
+    }
+
+    @keyframes confettiBurst{
+      0%   { opacity:0; transform: translate(-50%, -50%) scale(.7); }
+      10%  { opacity:1; }
+      100% { opacity:0; transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) rotate(var(--rot)) scale(1.0); }
+    }
+
+    /* Reduced motion */
+    @media (prefers-reduced-motion: reduce){
+      #snowCanvas, #balloonLayer{ display:none !important; }
+      .card{ animation:none; }
+    }
   </style>
 </head>
 
 <body>
   <div id="spinnerOverlay"><div class="spinner"></div></div>
 
+  <!-- Always-on Snow + Balloon Layer -->
+  <canvas id="snowCanvas" aria-hidden="true"></canvas>
+  <div id="balloonLayer" aria-hidden="true"></div>
+
+  <!-- Xmas Popup Modal -->
+  <div id="xmasModal" class="xmas-modal" aria-hidden="true">
+    <div class="xmas-backdrop" data-close></div>
+
+    <div class="xmas-dialog" role="dialog" aria-modal="true" aria-labelledby="xmasTitle">
+      <button class="xmas-close" type="button" title="Close" aria-label="Close" data-close>
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+
+      <div class="xmas-hero">
+        <div class="xmas-content">
+          <div class="xmas-badge">
+            <i class="fa-solid fa-snowflake"></i>
+            SmartLiving Wishes You
+          </div>
+
+          <div class="xmas-title" id="xmasTitle">Merry Christmas 🎄</div>
+
+          <div class="xmas-text">
+            Thank you for being part of SmartLiving Emporium Plus.
+            Wishing you peace, joy, and bigger wins in the new year.
+          </div>
+
+          <div class="xmas-actions">
+            <button class="xmas-btn primary" type="button" data-close>
+              Continue to Login <i class="fa-solid fa-arrow-right"></i>
+            </button>
+            <button class="xmas-btn ghost" type="button" onclick="burstBalloons(14)">
+              Pop Balloons <i class="fa-solid fa-wand-magic-sparkles"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="xmas-footer">
+        <div class="left">
+          <span class="tag">Season’s Greetings</span>
+          <span>Empowering Homes, Simplifying Lives.</span>
+        </div>
+        <div class="right">
+          <a href="#" onclick="return false;">SmartLiving CRM</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div class="card">
     <div class="inner">
 
-      <!-- Brand (SmartLiving main, then powered-by) -->
       <div class="brand">
         <div class="logo" title="SmartLiving Emporium Plus">
           <img src="https://imagedelivery.net/h9fmMoa1o2c2P55TcWJGOg/10283f28-b9a0-4100-b254-19a854386800/public"
                alt="SmartLiving Logo">
+
+          <!-- Small santa hat overlay (no external asset needed) -->
+          <svg class="hat" viewBox="0 0 120 90" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <path d="M25 68c24-5 46-20 55-45 5-13 18-19 30-14 10 4 14 16 8 26-8 14-22 33-38 40-19 9-42 9-59 5l4-12z"
+                  fill="#d11a2a"/>
+            <path d="M18 68c22 10 71 15 93-4 4-3 6-7 6-12 0-7-5-12-12-12H20c-7 0-12 5-12 12 0 6 4 11 10 16z"
+                  fill="#ffffff" opacity="0.95"/>
+            <circle cx="22" cy="74" r="14" fill="#ffffff" opacity="0.95"/>
+          </svg>
         </div>
 
         <div class="brand-name">SmartLiving Emporium Plus</div>
@@ -279,6 +693,14 @@
           <i class="fa-solid fa-bolt"></i>
           Powered by Axelera Flux
         </div>
+      </div>
+
+      <div class="xmas-pill" id="xmasInlinePill">
+        <span class="dot"></span>
+        <span><b>Merry Christmas</b> — welcome back to SmartLiving CRM</span>
+        <button type="button" title="Hide" aria-label="Hide" onclick="hideInlinePill()">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
       </div>
 
       <div class="title">Sign in</div>
@@ -336,7 +758,244 @@
       const overlay = document.getElementById("spinnerOverlay");
       if (overlay) overlay.style.display = "flex";
     }
+
+    function hideInlinePill(){
+      const pill = document.getElementById("xmasInlinePill");
+      if (pill) pill.style.display = "none";
+    }
+
+    // =============================
+    // Xmas Popup logic (show once/day)
+    // =============================
+    (function initXmasPopup(){
+      const modal = document.getElementById("xmasModal");
+      if (!modal) return;
+
+      const key = "sl_xmas_popup_last_seen";
+      const today = new Date().toISOString().slice(0,10);
+      const lastSeen = localStorage.getItem(key);
+
+      if (lastSeen !== today){
+        openXmasModal();
+        localStorage.setItem(key, today);
+      }
+
+      modal.addEventListener("click", (e) => {
+        if (e.target && e.target.matches("[data-close]")) closeXmasModal();
+      });
+
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape" && modal.classList.contains("show")) closeXmasModal();
+      });
+    })();
+
+    function openXmasModal(){
+      const modal = document.getElementById("xmasModal");
+      if (!modal) return;
+      modal.classList.add("show");
+      modal.setAttribute("aria-hidden", "false");
+      document.documentElement.style.overflow = "hidden";
+    }
+
+    function closeXmasModal(){
+      const modal = document.getElementById("xmasModal");
+      if (!modal) return;
+      modal.classList.remove("show");
+      modal.setAttribute("aria-hidden", "true");
+      document.documentElement.style.overflow = "";
+    }
+
+    // =============================
+    // MASSIVE Always-On Snow (no libs)
+    // =============================
+    const Snow = (() => {
+      const c = document.getElementById("snowCanvas");
+      const ctx = c.getContext("2d");
+
+      let flakes = [];
+      let req = null;
+      let w = 0, h = 0;
+      let last = performance.now();
+
+      // MASSIVE snow settings
+      const COUNT = 360;      // increase for more snow
+      const MAX_R = 3.6;      // bigger flakes
+      const SPEED_MIN = 1.2;  // faster fall
+      const SPEED_MAX = 3.4;
+      const DRIFT = 0.85;
+
+      function resize(){
+        const dpr = Math.max(1, window.devicePixelRatio || 1);
+        w = window.innerWidth;
+        h = window.innerHeight;
+        c.width = Math.floor(w * dpr);
+        c.height = Math.floor(h * dpr);
+        c.style.width = "100%";
+        c.style.height = "100%";
+        ctx.setTransform(dpr,0,0,dpr,0,0);
+      }
+
+      function makeFlake(yStart){
+        const r = 0.9 + Math.random() * MAX_R;
+        return {
+          x: Math.random() * w,
+          y: yStart ? (Math.random() * h) : (-20 - Math.random()*h),
+          r,
+          vy: SPEED_MIN + Math.random() * (SPEED_MAX - SPEED_MIN),
+          vx: (Math.random() * 2 - 1) * DRIFT,
+          a: 0.35 + Math.random() * 0.55,
+          seed: Math.random() * 1000
+        };
+      }
+
+      function init(){
+        resize();
+        flakes = Array.from({length: COUNT}).map(() => makeFlake(true));
+        loop(performance.now());
+      }
+
+      function loop(t){
+        const dt = Math.min(40, t - last);
+        last = t;
+
+        ctx.clearRect(0,0,w,h);
+
+        for (const f of flakes){
+          f.y += f.vy * (dt/16);
+          f.x += (Math.sin((f.y + f.seed) * 0.010) * f.vx) + (f.vx * 0.22);
+
+          if (f.y > h + 20){
+            f.y = -20;
+            f.x = Math.random() * w;
+          }
+          if (f.x < -30) f.x = w + 30;
+          if (f.x > w + 30) f.x = -30;
+
+          ctx.globalAlpha = f.a;
+          ctx.beginPath();
+          ctx.arc(f.x, f.y, f.r, 0, Math.PI*2);
+          ctx.fillStyle = "#ffffff";
+          ctx.fill();
+        }
+        ctx.globalAlpha = 1;
+
+        req = requestAnimationFrame(loop);
+      }
+
+      window.addEventListener("resize", () => resize());
+
+      return { init };
+    })();
+
+    // Start snow immediately (even when modal is off)
+    Snow.init();
+
+    // =============================
+    // Balloon Pops (automatic + manual)
+    // =============================
+    const balloonLayer = document.getElementById("balloonLayer");
+
+    // Spawn balloons continuously
+    const BALLOON_INTERVAL_MS = 900;  // lower = more balloons
+    const BURST_INTERVAL_MS = 5200;   // random burst
+
+    function rand(min, max){ return Math.random() * (max - min) + min; }
+
+    function balloonColor(){
+      // festive palette (no external assets)
+      const colors = [
+        "linear-gradient(180deg, #ff4d4d, #c81d25)",
+        "linear-gradient(180deg, #34d399, #0f7a3a)",
+        "linear-gradient(180deg, #60a5fa, #1d4ed8)",
+        "linear-gradient(180deg, #fbbf24, #d97706)",
+        "linear-gradient(180deg, #a78bfa, #6d28d9)"
+      ];
+      return colors[Math.floor(Math.random()*colors.length)];
+    }
+
+    function spawnBalloon(x){
+      if (!balloonLayer) return;
+
+      const b = document.createElement("div");
+      b.className = "balloon";
+      b.style.left = (x ?? rand(10, window.innerWidth - 10)) + "px";
+      b.style.top = (window.innerHeight + rand(40, 140)) + "px";
+      b.style.background = balloonColor();
+
+      const size = rand(40, 62);
+      b.style.width = size + "px";
+      b.style.height = (size * 1.25) + "px";
+
+      // when animation ends, remove
+      b.addEventListener("animationend", () => b.remove());
+
+      // click-to-pop (even though pointer-events are none globally, we can still pop programmatically)
+      balloonLayer.appendChild(b);
+
+      // auto-pop some balloons mid-flight
+      const popAt = rand(1200, 3600);
+      setTimeout(() => {
+        if (document.body.contains(b)) popBalloon(b);
+      }, popAt);
+    }
+
+    function popBalloon(el){
+      if (!el) return;
+      const rect = el.getBoundingClientRect();
+      const x = rect.left + rect.width/2;
+      const y = rect.top + rect.height/2;
+
+      el.remove();
+      burstConfetti(x, y, 16);
+    }
+
+    function burstConfetti(x, y, count=18){
+      if (!balloonLayer) return;
+
+      for (let i=0;i<count;i++){
+        const c = document.createElement("div");
+        c.className = "confetti";
+        c.style.left = x + "px";
+        c.style.top = y + "px";
+
+        const colors = ["#ffffff", "#f6c453", "#d11a2a", "#0f7a3a", "#0066cc"];
+        c.style.background = colors[Math.floor(Math.random()*colors.length)];
+
+        const dx = rand(-120, 120) + "px";
+        const dy = rand(-140, 80) + "px";
+        const rot = Math.floor(rand(-260, 260)) + "deg";
+
+        c.style.setProperty("--dx", dx);
+        c.style.setProperty("--dy", dy);
+        c.style.setProperty("--rot", rot);
+
+        balloonLayer.appendChild(c);
+        c.addEventListener("animationend", () => c.remove());
+      }
+    }
+
+    function burstBalloons(n=10){
+      // burst confetti near center/top
+      for (let i=0;i<n;i++){
+        const x = rand(40, window.innerWidth - 40);
+        const y = rand(80, window.innerHeight * 0.55);
+        burstConfetti(x, y, 18);
+      }
+    }
+
+    // Continuous balloon spawn
+    setInterval(() => spawnBalloon(), BALLOON_INTERVAL_MS);
+
+    // Periodic "balloon pop ups" bursts
+    setInterval(() => burstBalloons(8), BURST_INTERVAL_MS);
+
+    // Extra: click anywhere to create a pop burst (nice for fun)
+    document.addEventListener("click", (e) => {
+      // don't interfere with form inputs too much
+      if (e.target && (e.target.closest(".card") || e.target.closest(".xmas-dialog"))){
+        burstConfetti(e.clientX, e.clientY, 14);
+      }
+    });
   </script>
 </body>
 </html>
-
