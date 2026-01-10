@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Inventory Analysis</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="icon" href="https://res.cloudinary.com/dljpgzbto/image/upload/v1743993646/company-logo_dksb23.jpg" type="image/png">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f8f9fa;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: auto;
+    }
+
+    h2 {
+      text-align: center;
+      color: #4e54c8;
+    }
+
+    .chart-container {
+      margin: 30px auto;
+      max-width: 600px;
+    }
+
+    .branch-section {
+      background: #fff;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 30px;
+      box-shadow: 0 0 8px rgba(0,0,0,0.05);
+    }
+
+    .branch-title {
+      color: #333;
+      margin-bottom: 10px;
+    }
+
+    ul {
+      padding-left: 20px;
+    }
+
+    .product-list {
+      display: flex;
+      gap: 40px;
+    }
+
+    .product-list ul {
+      list-style-type: disc;
+    }
+
+    .quick-nav {
+      position: fixed;
+      top: 80px;
+      right: 20px;
+      background: #fff;
+      border-radius: 8px;
+      padding: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      max-height: 80vh;
+      overflow-y: auto;
+      z-index: 1000;
+    }
+
+    .quick-nav h6 {
+      font-weight: bold;
+      margin-bottom: 10px;
+    }
+
+    .quick-nav a {
+      display: block;
+      margin-bottom: 8px;
+      text-decoration: none;
+      color: #4e54c8;
+      font-size: 14px;
+    }
+
+    .quick-nav a:hover {
+      text-decoration: underline;
+    }
+
+    @media (max-width: 768px) {
+      .product-list {
+        flex-direction: column;
+        gap: 20px;
+      }
+      .quick-nav {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Navbar -->
+<nav class="navbar navbar-expand-lg navbar-light bg-light px-3 mb-4">
+  <a class="navbar-brand d-flex align-items-center" href="{{ url_for('login.admin_dashboard') }}">
+    <img src="https://res.cloudinary.com/dljpgzbto/image/upload/v1743993646/company-logo_dksb23.jpg" alt="Logo" height="40">
+    <span class="ms-2">Admin Dashboard</span>
+  </a>
+  <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+    <span class="navbar-toggler-icon"></span>
+  </button>
+  <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
+    <ul class="navbar-nav align-items-center">
+      <li class="nav-item">
+        <a class="nav-link" href="{{ url_for('inventory_products.inventory_products') }}">📦 Warehouse</a>
+      </li>
+      <li class="nav-item">
+ <a class="nav-link" href="{{ url_for('login.admin_dashboard') }}">🏠 Dashboard</a>      </li>
+      <li class="nav-item">
+        <button class="btn btn-outline-dark ms-lg-3 me-3" onclick="toggleDarkMode()" id="darkModeToggle">🌙</button>
+      </li>
+      <li class="nav-item">
+        <a href="/logout" class="btn btn-danger">Logout</a>       
+
+      </li>
+    </ul>
+  </div>
+</nav>
+
+<div class="container">
+  <h2>Overall Inventory Analysis</h2>
+  <div class="chart-container">
+    <canvas id="overallChart"></canvas>
+  </div>
+  <div id="branchDetails"></div>
+</div>
+
+<!-- Quick Navigation -->
+<div class="quick-nav">
+  <h6>Jump to Branch</h6>
+  <div id="quickLinks"></div>
+</div>
+
+<script>
+  function toggleDarkMode() {
+    document.body.classList.toggle('dark-mode');
+    const btn = document.getElementById('darkModeToggle');
+    btn.textContent = document.body.classList.contains('dark-mode') ? '🌞' : '🌙';
+  }
+
+  const overall = JSON.parse('{{ overall | safe }}');
+  const perBranch = JSON.parse('{{ per_branch | safe }}');
+
+  // Overall Chart
+  new Chart(document.getElementById('overallChart'), {
+    type: 'pie',
+    data: {
+      labels: ['Low Inventory (≤ 5)', 'High Inventory (> 5)'],
+      datasets: [{
+        label: 'Overall',
+        data: [overall.low, overall.high],
+        backgroundColor: ['#dc3545', '#28a745']
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false
+    }
+  });
+
+  // Per-branch rendering
+  const branchDetails = document.getElementById('branchDetails');
+  const quickLinks = document.getElementById('quickLinks');
+
+  for (const branch in perBranch) {
+    const data = perBranch[branch];
+    const anchorId = branch.replace(/\s+/g, '_');
+    const chartId = `chart_${anchorId}`;
+
+    const section = document.createElement('div');
+    section.className = 'branch-section';
+    section.id = anchorId;
+    section.innerHTML = `
+      <h3 class="branch-title">${branch}</h3>
+      <div class="chart-container"><canvas id="${chartId}"></canvas></div>
+      <div class="product-list">
+        <div>
+          <h4 style="color:#dc3545">Low Inventory Products (≤5)</h4>
+          <ul>${data.products.low.map(p => `<li>${p}</li>`).join('')}</ul>
+        </div>
+        <div>
+          <h4 style="color:#28a745">High Inventory Products (>5)</h4>
+          <ul>${data.products.high.map(p => `<li>${p}</li>`).join('')}</ul>
+        </div>
+      </div>
+    `;
+    branchDetails.appendChild(section);
+
+    // Add link to quick nav
+    const link = document.createElement('a');
+    link.href = `#${anchorId}`;
+    link.textContent = branch;
+    quickLinks.appendChild(link);
+
+    // Render chart
+    new Chart(document.getElementById(chartId), {
+      type: 'doughnut',
+      data: {
+        labels: ['Low', 'High'],
+        datasets: [{
+          data: [data.low, data.high],
+          backgroundColor: ['#dc3545', '#28a745']
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false
+      }
+    });
+  }
+</script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  {% include 'app_footer.html' %}
+
+</body>
+</html>

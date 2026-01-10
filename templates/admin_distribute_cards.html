@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Distribute Cards</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body { background: #f5f7fb; }
+    .page-wrap { padding: 24px; }
+    @media (min-width: 992px) { .page-wrap { margin-left: 260px; } }
+    .card-panel { border-radius: 14px; box-shadow: 0 10px 24px rgba(15,23,42,.08); }
+    .table thead th { font-size: .78rem; text-transform: uppercase; letter-spacing: .08em; color: #6b7280; }
+    .preview-card { border: 1px dashed #cbd5f5; border-radius: 12px; padding: 12px; background: #f8fafc; }
+    .thumb { width: 64px; height: 64px; object-fit: cover; border-radius: 10px; border: 1px solid #e2e8f0; }
+    .img-sm { width: 38px; height: 38px; object-fit: cover; border-radius: 8px; border: 1px solid #e2e8f0; }
+    .missing { font-size: .7rem; color: #b91c1c; background: #fee2e2; padding: 2px 6px; border-radius: 999px; }
+  </style>
+</head>
+<body>
+  {% include 'admin_sidebar.html' %}
+
+  <div class="page-wrap">
+    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
+      <div>
+        <h4 class="mb-1">Distribute Cards to Managers</h4>
+        <div class="text-muted small">Move card stock from the admin pool to managers.</div>
+      </div>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="toast-container position-fixed top-0 end-0 p-3">
+          {% for category, message in messages %}
+            <div class="toast text-bg-{{ 'success' if category == 'success' else 'danger' }} border-0 mb-2" role="alert">
+              <div class="d-flex">
+                <div class="toast-body">{{ message }}</div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    <div class="row g-3">
+      <div class="col-lg-5">
+        <div class="card card-panel">
+          <div class="card-body">
+            <h6 class="mb-3">Distribute to Manager</h6>
+            <form method="POST" id="distributeForm">
+              <div class="mb-3">
+                <label class="form-label">Manager</label>
+                <select name="manager_id" class="form-select" required>
+                  <option value="">Select manager</option>
+                  {% for mgr in managers %}
+                    <option value="{{ mgr._id }}">{{ mgr.name }}{% if mgr.branch %} ({{ mgr.branch }}){% endif %}</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Product</label>
+                <select name="product_key" class="form-select" id="productSelect" required>
+                  <option value="">Select product</option>
+                  {% for product in products %}
+                    <option value="{{ product.product_key }}"
+                            data-name="{{ product.name|e }}"
+                            data-image="{{ product.image_url }}"
+                            data-price="{{ product.price }}"
+                            data-cash="{{ product.cash_price }}"
+                            data-desc="{{ product.description|e }}"
+                            data-balance="{{ balance_map.get(product.product_key, 0) }}">
+                      {{ product.name }}
+                    </option>
+                  {% endfor %}
+                </select>
+                <div class="form-text">Available in pool: <span id="poolBalance">0</span></div>
+              </div>
+
+              <div class="preview-card mb-3" id="productPreview">
+                <div class="d-flex gap-3 align-items-center">
+                  <img src="" alt="Preview" class="thumb d-none" id="previewImg">
+                  <div>
+                    <div class="fw-semibold" id="previewName">Select a product</div>
+                    <div class="small text-muted" id="previewDesc">Preview details will show here.</div>
+                    <div class="small text-muted" id="previewPrices"></div>
+                    <button type="button" class="btn btn-sm btn-outline-secondary mt-2 d-none" id="previewBtn">Preview</button>
+                  </div>
+                </div>
+                <div id="previewMissing" class="missing mt-2 d-none">Image missing</div>
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label">Quantity</label>
+                <input type="number" min="1" class="form-control" name="qty" required>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Note (optional)</label>
+                <textarea name="note" class="form-control" rows="2"></textarea>
+              </div>
+              <button type="button" class="btn btn-primary w-100" data-bs-toggle="modal" data-bs-target="#confirmDistribute">Distribute Cards</button>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-lg-7">
+        <div class="card card-panel">
+          <div class="card-body">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+              <h6 class="mb-0">Admin Pool Balances</h6>
+              <input type="text" id="balanceSearch" class="form-control form-control-sm" style="max-width: 200px" placeholder="Quick search">
+            </div>
+            <div class="table-responsive">
+              <table class="table table-sm align-middle">
+                <thead>
+                  <tr>
+                    <th>Product</th>
+                    <th>Qty on Hand</th>
+                  </tr>
+                </thead>
+                <tbody id="balanceTable">
+                  {% for product in products %}
+                    <tr data-name="{{ product.name|lower }}">
+                      <td>
+                        <div class="d-flex align-items-center gap-2">
+                          <img src="{{ product.image_url }}" class="img-sm" alt="" onerror="this.classList.add('d-none')">
+                          <span>{{ product.name }}</span>
+                        </div>
+                      </td>
+                      <td>{{ balance_map.get(product.product_key, 0) }}</td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="confirmDistribute" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Confirm Distribution</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="small text-muted">Please confirm you want to distribute these cards.</div>
+          <div class="mt-2" id="confirmDetails"></div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-primary" id="confirmSubmit">Yes, Distribute</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="productPreviewModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Product Preview</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <img src="" alt="Preview" id="modalImg" class="w-100 rounded mb-3" style="height:280px;object-fit:cover;">
+          <div class="fw-semibold" id="modalTitle"></div>
+          <div class="small text-muted mb-2" id="modalDesc"></div>
+          <div class="small" id="modalPrices"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    document.querySelectorAll('.toast').forEach(t => new bootstrap.Toast(t).show());
+
+    const productSelect = document.getElementById('productSelect');
+    const poolBalance = document.getElementById('poolBalance');
+    const previewImg = document.getElementById('previewImg');
+    const previewName = document.getElementById('previewName');
+    const previewDesc = document.getElementById('previewDesc');
+    const previewPrices = document.getElementById('previewPrices');
+    const previewBtn = document.getElementById('previewBtn');
+    const previewMissing = document.getElementById('previewMissing');
+
+    const modalEl = document.getElementById('productPreviewModal');
+    const modal = modalEl ? new bootstrap.Modal(modalEl) : null;
+    const modalImg = document.getElementById('modalImg');
+    const modalTitle = document.getElementById('modalTitle');
+    const modalDesc = document.getElementById('modalDesc');
+    const modalPrices = document.getElementById('modalPrices');
+
+    function updatePreview() {
+      const opt = productSelect?.options[productSelect.selectedIndex];
+      const balance = opt ? (opt.dataset.balance || '0') : '0';
+      if (poolBalance) poolBalance.textContent = balance;
+
+      if (!opt || !opt.value) {
+        previewImg.classList.add('d-none');
+        previewName.textContent = 'Select a product';
+        previewDesc.textContent = 'Preview details will show here.';
+        previewPrices.textContent = '';
+        previewBtn.classList.add('d-none');
+        previewMissing.classList.add('d-none');
+        return;
+      }
+      const name = opt.dataset.name || '';
+      const img = opt.dataset.image || '';
+      const desc = opt.dataset.desc || '';
+      const price = opt.dataset.price || '0';
+      const cash = opt.dataset.cash || '0';
+
+      previewName.textContent = name;
+      previewDesc.textContent = desc || 'No description available.';
+      previewPrices.textContent = `Price: GHS ${price} | Cash: GHS ${cash}`;
+      previewBtn.classList.remove('d-none');
+
+      if (img) {
+        previewImg.src = img;
+        previewImg.classList.remove('d-none');
+        previewMissing.classList.add('d-none');
+      } else {
+        previewImg.classList.add('d-none');
+        previewMissing.classList.remove('d-none');
+      }
+
+      previewBtn.onclick = () => {
+        if (!modal) return;
+        modalImg.src = img || '';
+        modalTitle.textContent = name;
+        modalDesc.textContent = desc || 'No description available.';
+        modalPrices.textContent = `Price: GHS ${price} | Cash: GHS ${cash}`;
+        modal.show();
+      };
+    }
+
+    productSelect?.addEventListener('change', updatePreview);
+    updatePreview();
+
+    const balanceSearch = document.getElementById('balanceSearch');
+    const balanceTable = document.getElementById('balanceTable');
+    if (balanceSearch && balanceTable) {
+      balanceSearch.addEventListener('input', () => {
+        const q = balanceSearch.value.toLowerCase();
+        balanceTable.querySelectorAll('tr[data-name]').forEach(row => {
+          row.style.display = row.dataset.name.includes(q) ? '' : 'none';
+        });
+      });
+    }
+
+    const confirmDetails = document.getElementById('confirmDetails');
+    const confirmSubmit = document.getElementById('confirmSubmit');
+    const distributeForm = document.getElementById('distributeForm');
+    if (confirmSubmit && distributeForm) {
+      confirmSubmit.addEventListener('click', () => {
+        distributeForm.submit();
+      });
+    }
+
+    const confirmModal = document.getElementById('confirmDistribute');
+    if (confirmModal && confirmDetails && distributeForm) {
+      confirmModal.addEventListener('show.bs.modal', () => {
+        const data = new FormData(distributeForm);
+        const managerText = distributeForm.querySelector('select[name="manager_id"] option:checked')?.textContent || '';
+        const productText = distributeForm.querySelector('select[name="product_key"] option:checked')?.textContent || '';
+        const qty = data.get('qty') || '0';
+        confirmDetails.innerHTML = `<div><strong>Manager:</strong> ${managerText}</div><div><strong>Product:</strong> ${productText}</div><div><strong>Qty:</strong> ${qty}</div>`;
+      });
+    }
+  </script>
+    {% include 'app_footer.html' %}
+
+</body>
+</html>

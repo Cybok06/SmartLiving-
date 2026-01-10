@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Flux 360 — Agent Dashboard</title>
+
+  <!-- Favicon / PWA -->
+  <link rel="icon"
+        href="https://imagedelivery.net/h9fmMoa1o2c2P55TcWJGOg/8744779c-1300-4a50-49de-b143d24da300/public"
+        type="image/png"/>
+  <link rel="apple-touch-icon"
+        href="https://imagedelivery.net/h9fmMoa1o2c2P55TcWJGOg/8744779c-1300-4a50-49de-b143d24da300/public"/>
+  <link rel="manifest" href="/manifest.json" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Axelera Flux CRM" />
+  <meta name="theme-color" content="#074073" />
+
+  <!-- Bootstrap 5 + Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+
+  <style>
+    :root{
+      /* Core colors you gave */
+      --ax-navy:#074073;
+      --ax-gold:#facc15;
+
+      /* Supporting system */
+      --ax-bg:#f5f7fb;
+      --ax-surface:#ffffff;
+      --ax-ink:#0b1220;
+      --ax-muted:#64748b;
+      --ax-border:rgba(148,163,184,.35);
+
+      --ax-navy-2: rgba(7,64,115,.10);
+      --ax-gold-2: rgba(250,204,21,.18);
+
+      --shadow-1: 0 10px 30px rgba(2, 8, 23, .08);
+      --shadow-2: 0 18px 45px rgba(2, 8, 23, .10);
+
+      --radius-1: 16px;
+      --radius-2: 22px;
+
+      --ring: 0 0 0 .25rem rgba(250,204,21,.22);
+    }
+
+    *{ -webkit-tap-highlight-color: transparent; }
+    body{
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--ax-ink);
+      background:
+        radial-gradient(1100px 650px at 15% 5%, var(--ax-navy-2), transparent 60%),
+        radial-gradient(900px 550px at 85% 95%, var(--ax-gold-2), transparent 55%),
+        var(--ax-bg);
+    }
+
+    a{ text-decoration:none; }
+    .money{ font-variant-numeric: tabular-nums; letter-spacing: .2px; }
+    .text-muted-2{ color: var(--ax-muted); }
+
+    /* Sticky header (polished) */
+    .ax-header{
+      position: sticky;
+      top: 0;
+      z-index: 1020;
+      backdrop-filter: blur(10px);
+      background: rgba(255,255,255,.72);
+      border-bottom: 1px solid rgba(148,163,184,.22);
+    }
+    .ax-header-inner{
+      padding: .85rem 1rem;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap: 1rem;
+    }
+    .ax-header-left{ display:flex; align-items:center; gap:.75rem; min-width:0; }
+    .ax-app-mark{
+      width: 40px; height: 40px;
+      border-radius: 14px;
+      background: linear-gradient(145deg, rgba(7,64,115,.08), rgba(250,204,21,.18));
+      border: 1px solid rgba(148,163,184,.35);
+      display:grid; place-items:center;
+      overflow:hidden;
+      box-shadow: 0 8px 18px rgba(2,8,23,.06);
+    }
+    .ax-app-mark img{ width: 70%; height: 70%; object-fit: contain; }
+    .ax-app-text{ line-height: 1.2; min-width: 0; }
+    .ax-app-text .brand{
+      font-weight: 800;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      font-size: .78rem;
+      color: var(--ax-navy);
+      white-space: nowrap;
+      overflow:hidden;
+      text-overflow: ellipsis;
+    }
+    .ax-app-text .sub{
+      font-size: .80rem;
+      color: var(--ax-muted);
+      white-space: nowrap;
+      overflow:hidden;
+      text-overflow: ellipsis;
+    }
+    .ax-header-right{
+      display:flex;
+      align-items:center;
+      gap:.6rem;
+      flex-wrap: wrap;
+      justify-content:flex-end;
+    }
+
+    .btn-ax{
+      border-radius: 999px;
+      font-weight: 600;
+      border: 1px solid rgba(7,64,115,.22);
+      background: rgba(255,255,255,.8);
+    }
+    .btn-ax:hover{ box-shadow: var(--shadow-1); }
+    .btn-ax:focus{ box-shadow: var(--ring); }
+
+    .btn-ax-primary{
+      border: none;
+      background: linear-gradient(180deg, rgba(7,64,115,1), rgba(5,50,90,1));
+      color: #fff;
+    }
+    .btn-ax-primary:hover{ filter: brightness(1.05); box-shadow: var(--shadow-2); }
+
+    .btn-ax-gold{
+      border: 1px solid rgba(250,204,21,.35);
+      background: rgba(250,204,21,.16);
+      color: var(--ax-navy);
+    }
+    .btn-ax-danger{
+      border: 1px solid rgba(185,28,28,.25);
+      background: rgba(185,28,28,.08);
+      color: #991b1b;
+    }
+
+    .agent-pic{
+      width: 40px; height: 40px;
+      border-radius: 999px;
+      object-fit: cover;
+      border: 2px solid rgba(250,204,21,.55);
+      box-shadow: 0 8px 18px rgba(2,8,23,.12);
+    }
+    .ax-user-meta{
+      display:flex;
+      flex-direction:column;
+      align-items:flex-end;
+      line-height:1.15;
+    }
+    .ax-user-meta .name{ font-size: .92rem; font-weight: 700; color: var(--ax-ink); }
+    .ax-user-meta .date{ font-size: .78rem; color: var(--ax-muted); }
+
+    @media (max-width: 576px){
+      .ax-user-meta{ display:none; }
+      .ax-app-text .sub{ display:none; }
+      .ax-header-inner{ padding-inline: .75rem; }
+    }
+
+    /* Cards */
+    .card-ax{
+      border-radius: var(--radius-2);
+      border: 1px solid rgba(148,163,184,.30);
+      background: rgba(255,255,255,.92);
+      box-shadow: var(--shadow-1);
+    }
+    .card-ax .card-title{ font-weight: 800; }
+    .card-soft{
+      border-radius: var(--radius-1);
+      border: 1px solid rgba(148,163,184,.25);
+      background: rgba(255,255,255,.78);
+    }
+
+    /* Section header */
+    .section-h{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap: 1rem;
+      margin-bottom: .6rem;
+    }
+    .section-title{
+      font-size: .85rem;
+      letter-spacing: .20em;
+      text-transform: uppercase;
+      font-weight: 900;
+      color: rgba(7,64,115,.85);
+    }
+    .section-note{
+      font-size: .85rem;
+      color: var(--ax-muted);
+    }
+
+    /* Hero summary card inspired by your image */
+    .hero{
+      position: relative;
+      overflow: hidden;
+    }
+    .hero::before{
+      content:"";
+      position:absolute;
+      inset:-120px -120px auto auto;
+      width: 360px;
+      height: 360px;
+      background: radial-gradient(circle at 30% 30%, rgba(250,204,21,.45), transparent 60%);
+      transform: rotate(12deg);
+      pointer-events:none;
+    }
+    .hero::after{
+      content:"";
+      position:absolute;
+      inset:auto auto -140px -140px;
+      width: 420px;
+      height: 420px;
+      background: radial-gradient(circle at 30% 30%, rgba(7,64,115,.22), transparent 60%);
+      transform: rotate(-10deg);
+      pointer-events:none;
+    }
+    .hero-inner{
+      position: relative;
+      z-index: 1;
+      padding: 1.1rem 1.1rem;
+    }
+
+    .hero-badge{
+      display:inline-flex;
+      align-items:center;
+      gap: .45rem;
+      padding: .35rem .65rem;
+      border-radius: 999px;
+      background: rgba(250,204,21,.20);
+      color: var(--ax-navy);
+      font-weight: 800;
+      font-size: .78rem;
+      border: 1px solid rgba(250,204,21,.35);
+    }
+
+    .hero-amount{
+      font-size: clamp(1.55rem, 3.2vw, 2.2rem);
+      font-weight: 900;
+      margin: .35rem 0 .15rem 0;
+      color: var(--ax-ink);
+    }
+    .hero-sub{
+      color: var(--ax-muted);
+      font-size: .92rem;
+      margin-bottom: .75rem;
+    }
+
+    .hero-meter{
+      height: 12px;
+      border-radius: 999px;
+      background: rgba(148,163,184,.22);
+      overflow:hidden;
+    }
+    .hero-meter > div{
+      height: 100%;
+      width: 0%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, var(--ax-navy), rgba(7,64,115,.85), var(--ax-gold));
+      transition: width .7s ease;
+    }
+
+    .hero-mini{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap: .75rem;
+      margin-top: .85rem;
+    }
+    .mini-pill{
+      padding: .75rem .85rem;
+      border-radius: 18px;
+      border: 1px solid rgba(148,163,184,.25);
+      background: rgba(255,255,255,.76);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap: .75rem;
+    }
+    .mini-pill .k{ font-size:.82rem; color: var(--ax-muted); font-weight:700; }
+    .mini-pill .v{ font-weight:900; color: var(--ax-ink); }
+
+    @media (max-width: 576px){
+      .hero-inner{ padding: 1rem; }
+      .hero-mini{ grid-template-columns: 1fr; }
+    }
+
+    /* Stats tiles */
+    .tile{
+      display:flex;
+      gap:.85rem;
+      align-items:flex-start;
+    }
+    .tile .ico{
+      width: 46px; height: 46px;
+      border-radius: 16px;
+      display:grid;
+      place-items:center;
+      font-size: 1.1rem;
+      flex: 0 0 auto;
+      border: 1px solid rgba(148,163,184,.25);
+    }
+    .ico-navy{ background: rgba(7,64,115,.10); color: var(--ax-navy); }
+    .ico-gold{ background: rgba(250,204,21,.20); color: #7a5b00; }
+    .ico-red{ background: rgba(185,28,28,.08); color: #991b1b; }
+
+    /* Progress bars (more premium) */
+    .pbar{
+      height: 10px;
+      background: rgba(148,163,184,.20);
+      border-radius: 999px;
+      overflow:hidden;
+    }
+    .pbar > div{
+      height: 100%;
+      width: 0%;
+      border-radius: 999px;
+      transition: width .7s ease;
+    }
+    .p-navy{ background: linear-gradient(90deg, var(--ax-navy), rgba(7,64,115,.85)); }
+    .p-gold{ background: linear-gradient(90deg, rgba(250,204,21,.95), rgba(250,204,21,.65)); }
+    .p-green{ background: linear-gradient(90deg, #16a34a, rgba(22,163,74,.75)); }
+
+    /* Loader */
+    #pageLoader{ z-index:1055 }
+
+    /* Reduce motion */
+    @media (prefers-reduced-motion: reduce){
+      .hero-meter > div,
+      .pbar > div{ transition: none; }
+    }
+  </style>
+</head>
+
+<body>
+  {% include 'side_bar.html' %}
+
+  <!-- Fullscreen Loader -->
+  <div id="pageLoader"
+       class="position-fixed top-0 start-0 w-100 h-100 d-none bg-white bg-opacity-75 d-flex flex-column align-items-center justify-content-center gap-2">
+    <div class="spinner-border" style="color:var(--ax-navy)" role="status" aria-label="Loading"></div>
+    <p class="fw-semibold mb-0">Loading...</p>
+  </div>
+
+  <!-- Header -->
+  <header class="ax-header">
+    <div class="ax-header-inner container-fluid">
+      <div class="ax-header-left">
+        <div class="ax-app-mark">
+          <img src="https://imagedelivery.net/h9fmMoa1o2c2P55TcWJGOg/8744779c-1300-4a50-49de-b143d24da300/public"
+               alt="Axelera Flux Logo">
+        </div>
+        <div class="ax-app-text">
+          <div class="brand">Flux 360</div>
+          <div class="sub">Agent  Dashboard</div>
+        </div>
+      </div>
+
+      <div class="ax-header-right">
+        {% if user.has_pending_tasks %}
+          <a href="{{ url_for('agent_tasks.view_tasks') }}"
+             class="btn btn-sm btn-ax btn-ax-danger d-inline-flex align-items-center gap-2 loading-trigger">
+            <i class="bi bi-bell-fill"></i>
+            <span class="d-none d-sm-inline">Tasks</span>
+            <span class="badge rounded-pill"
+                  style="background:rgba(185,28,28,.12); color:#991b1b; border:1px solid rgba(185,28,28,.2)">
+              {{ user.pending_task_count or 1 }}
+            </span>
+          </a>
+        {% endif %}
+
+        <a href="{{ url_for('issues.new_issue') }}"
+           class="btn btn-sm btn-ax btn-ax-gold d-inline-flex align-items-center gap-2 loading-trigger">
+          <i class="bi bi-exclamation-circle"></i>
+          <span class="d-none d-sm-inline">Report Issue</span>
+        </a>
+
+        <div class="d-flex align-items-center gap-2">
+          <div class="ax-user-meta">
+            <div class="name">Welcome back, {{ user.name }}!</div>
+            <div class="date">Today: <span class="fw-semibold">{{ today }}</span></div>
+          </div>
+          <img class="agent-pic"
+               src="{{ user.image_url or 'https://i.pravatar.cc/80?img=5' }}"
+               alt="Agent avatar">
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main -->
+  <main class="container py-4">
+
+    <!-- HERO SUMMARY (inspired by your image) -->
+    <section class="mb-3">
+      <div class="card-ax hero">
+        <div class="hero-inner">
+          <div class="d-flex flex-wrap align-items-start justify-content-between gap-3">
+            <div class="min-w-0">
+              <div class="hero-badge">
+                <i class="bi bi-speedometer2"></i>
+                <span>Dashboard Summary</span>
+              </div>
+
+              <div class="hero-amount money">
+                GH₵ {{ today_collections }}
+              </div>
+              <div class="hero-sub">
+                Today’s collections (excluding withdrawals). Quick view of your current performance.
+              </div>
+
+              <!-- Meter (uses JS to set width) -->
+              <div class="d-flex align-items-center justify-content-between small mb-2">
+                <span class="text-muted-2 fw-semibold">Daily progress</span>
+                <span class="text-muted-2 fw-semibold">
+                  <i class="bi bi-graph-up"></i> <span id="heroPctText">—</span>
+                </span>
+              </div>
+              <div class="hero-meter" aria-label="Today progress meter">
+                <div id="heroMeterBar" data-width="{{ hero_progress_pct|default(70) }}"></div>
+              </div>
+
+              <div class="hero-mini">
+                <div class="mini-pill">
+                  <div>
+                    <div class="k">Unclosed Account Money</div>
+                    <div class="v money">GH₵ {{ account_money_total }}</div>
+                  </div>
+                  <i class="bi bi-exclamation-octagon fs-4" style="color:#991b1b"></i>
+                </div>
+                <div class="mini-pill">
+                  <div>
+                    <div class="k">Quick action</div>
+                    <div class="v">Post to WhatsApp</div>
+                  </div>
+                  <i class="bi bi-whatsapp fs-4" style="color:#16a34a"></i>
+                </div>
+              </div>
+            </div>
+
+            <div class="d-flex flex-column gap-2 align-items-stretch">
+              <a href="{{ url_for('dashboard_agent.post_today_collections_whatsapp') }}"
+                 class="btn btn-ax-primary btn-sm d-inline-flex align-items-center justify-content-center gap-2 loading-trigger"
+                 style="min-width: 210px;">
+                <i class="bi bi-whatsapp"></i>
+                <span>Post Today’s Collections</span>
+              </a>
+
+              <a href="#targets"
+                 class="btn btn-ax btn-sm d-inline-flex align-items-center justify-content-center gap-2"
+                 style="min-width: 210px;">
+                <i class="bi bi-bullseye"></i>
+                <span>View My Targets</span>
+              </a>
+
+              <div class="card-soft p-3">
+                <div class="d-flex align-items-center gap-2">
+                  <div class="ico ico-navy">
+                    <i class="bi bi-shield-check"></i>
+                  </div>
+                  <div class="small">
+                    <div class="fw-bold">Clean & fast UI</div>
+                    <div class="text-muted-2">Optimized spacing and card hierarchy.</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div><!-- /top row -->
+        </div>
+      </div>
+    </section>
+
+    <!-- Financial Snapshot (premium tiles) -->
+    <section class="mb-4">
+      <div class="section-h">
+        <div class="section-title">Financial Snapshot</div>
+        <div class="section-note d-none d-md-block">Key money metrics at a glance</div>
+      </div>
+
+      <div class="row g-3">
+        <!-- Account Money (Unclosed) -->
+        <div class="col-12 col-lg-6">
+          <div class="card-ax p-3 h-100">
+            <div class="tile">
+              <div class="ico ico-red">
+                <i class="bi bi-exclamation-octagon"></i>
+              </div>
+              <div class="flex-grow-1 min-w-0">
+                <div class="text-muted-2 small fw-semibold">Account Money (Unclosed)</div>
+                <div class="fs-3 fw-black money mb-1" style="font-weight: 900; color:#991b1b;">
+                  GH₵ {{ account_money_total }}
+                </div>
+                <div class="text-muted-2 small">
+                  Total still in your sales close (all dates).
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Today’s Collections -->
+        <div class="col-12 col-lg-6">
+          <div class="card-ax p-3 h-100">
+            <div class="tile">
+              <div class="ico ico-navy">
+                <i class="bi bi-cash-coin"></i>
+              </div>
+              <div class="flex-grow-1 min-w-0">
+                <div class="text-muted-2 small fw-semibold">Today’s Collections</div>
+                <div class="fs-3 fw-black money mb-1" style="font-weight: 900; color:var(--ax-navy);">
+                  GH₵ {{ today_collections }}
+                </div>
+                <div class="text-muted-2 small">
+                  Payments received today (excluding withdrawals).
+                </div>
+                <div class="mt-3 d-flex gap-2 flex-wrap">
+                  <a href="{{ url_for('dashboard_agent.post_today_collections_whatsapp') }}"
+                     class="btn btn-sm btn-ax-primary d-inline-flex align-items-center gap-2 loading-trigger">
+                    <i class="bi bi-whatsapp"></i> Post on WhatsApp
+                  </a>
+                  <a href="#targets" class="btn btn-sm btn-ax btn-ax-gold d-inline-flex align-items-center gap-2">
+                    <i class="bi bi-bullseye"></i> Targets
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- COMMISSION SUMMARY -->
+    {% if commission_summary %}
+    <section class="mb-4">
+      <div class="section-h">
+        <div class="section-title">Commission Summary</div>
+        <div class="section-note">Surplus-based commission breakdown</div>
+      </div>
+
+      <div class="row g-3">
+        <div class="col-12 col-md-4">
+          <div class="card-ax p-3 h-100">
+            <div class="tile">
+              <div class="ico ico-gold">
+                <i class="bi bi-percent"></i>
+              </div>
+              <div class="min-w-0">
+                <div class="text-muted-2 small fw-semibold">My Commission Rate</div>
+                <div class="fs-4 fw-black" style="font-weight:900;">
+                  {{ '%.2f'|format(commission_summary.commission_pct or 0) }}%
+                </div>
+                <div class="text-muted-2 small mt-1">
+                  Applied on surplus cash above your cash target.
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-12 col-md-4">
+          <div class="card-ax p-3 h-100">
+            <div class="tile">
+              <div class="ico ico-navy">
+                <i class="bi bi-graph-up-arrow"></i>
+              </div>
+              <div class="min-w-0">
+                <div class="text-muted-2 small fw-semibold">Total Surplus Cash</div>
+                <div class="fs-4 fw-black money" style="font-weight:900;">
+                  GH₵ {{ '%.2f'|format(commission_summary.total_surplus_cash or 0) }}
+                </div>
+                <div class="text-muted-2 small mt-1">
+                  Sum of (Cash Achieved − Cash Quota), never below GH₵ 0.00.
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-12 col-md-4">
+          <div class="card-ax p-3 h-100">
+            <div class="tile">
+              <div class="ico ico-gold">
+                <i class="bi bi-trophy"></i>
+              </div>
+              <div class="min-w-0">
+                <div class="text-muted-2 small fw-semibold">Total Commission Earned</div>
+                <div class="fs-4 fw-black money" style="font-weight:900;">
+                  GH₵ {{ '%.2f'|format(commission_summary.total_commission or 0) }}
+                </div>
+                <div class="text-muted-2 small mt-1">
+                  Commission % × Surplus Cash.
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+    {% endif %}
+
+    <!-- Agent Targets Progress -->
+    <section id="targets" class="mt-2">
+      <div class="section-h">
+        <div class="section-title">My Targets</div>
+        <div class="section-note d-none d-md-block">Track product, cash, and customers</div>
+      </div>
+
+      {% if agent_targets and agent_targets|length > 0 %}
+        <div class="row g-3">
+          {% for t in agent_targets %}
+          <div class="col-12 col-md-6 col-xl-4">
+            <div class="card-ax h-100">
+              <div class="p-3 pb-2">
+                <div class="d-flex align-items-start justify-content-between gap-2">
+                  <div class="min-w-0">
+                    <div class="text-muted-2 small fw-semibold">
+                      <i class="bi bi-calendar-event me-1"></i>{{ t.duration|capitalize }}
+                      <span class="text-secondary ms-2">{{ t.start_date }} to {{ t.end_date }}</span>
+                    </div>
+                    <div class="fs-5 fw-black mt-1" style="font-weight:900;">
+                      {{ t.title }}
+                    </div>
+                  </div>
+
+                  <span class="badge rounded-pill"
+                        style="background:rgba(7,64,115,.10); color:var(--ax-navy); border:1px solid rgba(7,64,115,.18); font-weight:800;">
+                    {{ t.overall }}%
+                  </span>
+                </div>
+              </div>
+
+              <div class="px-3 pb-3">
+                <!-- Product -->
+                <div class="d-flex justify-content-between align-items-center small fw-semibold mb-1">
+                  <span>🛒 Product</span>
+                  <span>{{ t.product_achieved }} / {{ t.product_quota }}</span>
+                </div>
+                <div class="pbar mb-3" role="progressbar" aria-label="Product progress">
+                  <div class="p-green js-pbar" data-width="{{ t.product_pct|default(0) }}"></div>
+                </div>
+
+                <!-- Cash -->
+                <div class="d-flex justify-content-between align-items-center small fw-semibold mb-1">
+                  <span>💰 Cash</span>
+                  <span class="money">
+                    GH₵ {{ '%.2f'|format(t.cash_achieved or 0) }} / GH₵ {{ '%.2f'|format(t.cash_quota or 0) }}
+                  </span>
+                </div>
+                <div class="pbar mb-3" role="progressbar" aria-label="Cash progress">
+                  <div class="p-navy js-pbar" data-width="{{ t.payment_pct|default(0) }}"></div>
+                </div>
+
+                <!-- Customers -->
+                <div class="d-flex justify-content-between align-items-center small fw-semibold mb-1">
+                  <span>👥 Customers</span>
+                  <span>{{ t.customer_achieved }} / {{ t.customer_quota }}</span>
+                </div>
+                <div class="pbar mb-3" role="progressbar" aria-label="Customer progress">
+                  <div class="p-gold js-pbar" data-width="{{ t.customer_pct|default(0) }}"></div>
+                </div>
+
+                <!-- Commission box -->
+                <div class="card-soft p-3">
+                  <div class="d-flex justify-content-between small mb-1">
+                    <span class="text-muted-2 fw-semibold">📈 Surplus Cash</span>
+                    <span class="money fw-black" style="font-weight:900;">
+                      GH₵ {{ '%.2f'|format(t.surplus_cash or 0) }}
+                    </span>
+                  </div>
+                  <div class="d-flex justify-content-between small mb-1">
+                    <span class="text-muted-2 fw-semibold">🧮 Commission Rate</span>
+                    <span class="fw-semibold">{{ '%.2f'|format(t.commission_pct or 0) }}%</span>
+                  </div>
+                  <div class="d-flex justify-content-between small">
+                    <span class="text-muted-2 fw-semibold">💼 Commission Earned</span>
+                    <span class="money fw-black" style="font-weight:900; color:var(--ax-navy);">
+                      GH₵ {{ '%.2f'|format(t.commission_amount or 0) }}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="alert alert-info mb-0">
+          No targets assigned to you yet.
+        </div>
+      {% endif %}
+    </section>
+
+  </main>
+
+  <!-- Bootstrap JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" defer></script>
+
+  <script>
+    // Apply progress widths from data-width (targets) + hero
+    document.addEventListener('DOMContentLoaded', function () {
+      function clamp(v){ v = Number(v)||0; return Math.max(0, Math.min(100, v)); }
+
+      // Targets progress bars
+      var bars = document.querySelectorAll('.js-pbar');
+      for (var i = 0; i < bars.length; i++) {
+        var v = clamp(bars[i].getAttribute('data-width'));
+        bars[i].style.width = v + '%';
+        bars[i].setAttribute('aria-valuenow', v);
+      }
+
+      // Hero meter
+      var heroBar = document.getElementById('heroMeterBar');
+      var heroTxt = document.getElementById('heroPctText');
+      if (heroBar) {
+        var hv = clamp(heroBar.getAttribute('data-width'));
+        heroBar.style.width = hv + '%';
+        if (heroTxt) heroTxt.textContent = hv + '%';
+      }
+    });
+
+    // Page loader on links with .loading-trigger
+    window.addEventListener("DOMContentLoaded", function () {
+      var links = document.querySelectorAll("a.loading-trigger");
+      for (var i = 0; i < links.length; i++) {
+        links[i].addEventListener("click", function (e) {
+          var href = this.getAttribute("href");
+          if (!href) return;
+          var loader = document.getElementById("pageLoader");
+          if (loader) loader.classList.remove("d-none");
+          setTimeout(function () { window.location.href = href; }, 80);
+          e.preventDefault();
+        });
+      }
+    });
+  </script>
+
+  <!-- Chat widget -->
+  <script>
+    window.cbConfig = { chatId: "acac0de2-5c91-4eae-9354-1376e3093d91" };
+  </script>
+  <script src="https://app.chatbit.co/embed.min.js" defer></script>
+
+  {% include 'app_footer.html' %}
+</body>
+</html>

@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Aggregate Account Summary</title>
+    <link rel="icon" href="https://res.cloudinary.com/dljpgzbto/image/upload/v1743993646/company-logo_dksb23.jpg" type="image/png"/>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f4f7f8;
+            margin: 0;
+            padding: 20px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: #fff;
+            padding: 30px 40px;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+
+        h2 {
+            color: #2c3e50;
+            margin-top: 0;
+        }
+
+        h3 {
+            margin-top: 30px;
+            margin-bottom: 10px;
+            color: #34495e;
+        }
+
+        a.btn-back {
+            display: inline-block;
+            margin-bottom: 25px;
+            padding: 10px 18px;
+            background-color: #3498db;
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: 600;
+            transition: background-color 0.3s ease;
+        }
+
+        a.btn-back:hover {
+            background-color: #2980b9;
+        }
+
+        .highlight {
+            display: inline-block;
+            padding: 6px 14px;
+            border-radius: 6px;
+            font-weight: 600;
+            color: #fff;
+            margin-left: 10px;
+        }
+
+        .bg-green { background-color: #28a745; }
+        .bg-red { background-color: #dc3545; }
+        .bg-yellow { background-color: #ffc107; color: #000; }
+
+        p {
+            font-size: 1.1rem;
+            margin: 10px 0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+        th, td {
+            padding: 12px 15px;
+            border: 1px solid #ddd;
+            text-align: left;
+        }
+
+        th {
+            background-color: #3498db;
+            color: white;
+            font-weight: 600;
+        }
+
+        .no-expenses {
+            font-style: italic;
+            color: #777;
+            margin-top: 10px;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 20px 15px;
+            }
+
+            a.btn-back {
+                width: 100%;
+                text-align: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="{{ url_for('account_summary.account_summary') }}" class="btn-back">← Back to Daily Summary</a>
+
+        <h2>Aggregate Account Summary</h2>
+
+        <p><strong>Total Payment:</strong>
+            <span class="highlight bg-green">{{ total_payment | float | round(2) }}</span>
+        </p>
+
+        <p><strong>Final Payment:</strong>
+            {{ final_payment | float | round(2) }}
+        </p>
+
+        <p><strong>Total Shortage:</strong>
+            <span class="highlight bg-red">{{ total_shortage | float | round(2) }}</span>
+        </p>
+
+        <p><strong>Total Surplus:</strong>
+            <span class="highlight bg-yellow">{{ total_surplus | float | round(2) }}</span>
+        </p>
+
+        <h3>All Expenses</h3>
+        {% if expenses %}
+            <table>
+                <thead>
+                    <tr>
+                        <th>Description</th>
+                        <th>Amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for exp in expenses %}
+                    <tr>
+                        <td>{{ exp.description }}</td>
+                        <td>{{ exp.amount | float | round(2) }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p class="no-expenses">No expenses recorded.</p>
+        {% endif %}
+
+        <p><strong>Total Expense:</strong> {{ total_expense | float | round(2) }}</p>
+
+        <p><strong>Settled Payment:</strong>
+            <span class="highlight bg-green">{{ settled_payment | float | round(2) }}</span>
+        </p>
+    </div>
+</body>
+  {% include 'app_footer.html' %}
+
+</html>

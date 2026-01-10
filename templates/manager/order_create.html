@@ -1,0 +1,680 @@
+<!-- order_create.html (PRO layout: full-width, responsive, mobile-first, big search dropdown) -->
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Create Order</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    :root{
+      --bg1:#0b1220;
+      --bg2:#0f172a;
+      --card:#ffffff;
+      --edge:#e5e7eb;
+      --muted:#6b7280;
+      --ink:#0f172a;
+      --brand:#2563eb;
+      --brand2:#7c3aed;
+      --shadow: 0 18px 40px rgba(2,6,23,.12);
+    }
+    body{
+      background:
+        radial-gradient(1200px 500px at 10% -10%, rgba(37,99,235,.12), transparent 55%),
+        radial-gradient(900px 450px at 90% 0%, rgba(124,58,237,.12), transparent 55%),
+        linear-gradient(180deg, #f8fafc 0%, #eef2ff 100%);
+      min-height:100vh;
+      color:var(--ink);
+    }
+
+    /* Full width shell */
+    .page{
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 18px 12px 28px;
+    }
+    @media (min-width: 992px){
+      .page{ padding: 22px 18px 40px; }
+    }
+
+    /* Sticky header */
+    .topbar{
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      padding: 10px 0 14px;
+      backdrop-filter: blur(10px);
+    }
+    .topbar-inner{
+      background: rgba(255,255,255,.88);
+      border: 1px solid rgba(229,231,235,.9);
+      border-radius: 18px;
+      box-shadow: 0 10px 26px rgba(2,6,23,.08);
+      padding: 12px 14px;
+    }
+
+    .title{
+      font-weight: 800;
+      letter-spacing: -.02em;
+      margin: 0;
+    }
+    .subtitle{
+      color: var(--muted);
+      font-size: .92rem;
+      margin-top: 4px;
+    }
+
+    /* Cards */
+    .glass-card{
+      background: rgba(255,255,255,.92);
+      border: 1px solid rgba(229,231,235,.95);
+      border-radius: 18px;
+      box-shadow: var(--shadow);
+    }
+
+    /* Notes */
+    .notes{
+      resize: vertical;
+      min-height: 84px;
+    }
+
+    /* Table -> turns into cards on mobile */
+    .desktop-table{ display:none; }
+    .mobile-cards{ display:block; }
+    @media (min-width: 992px){
+      .desktop-table{ display:block; }
+      .mobile-cards{ display:none; }
+    }
+
+    /* Autocomplete dropdown (BIG + responsive) */
+    .position-relative{ position:relative; }
+
+    .suggest-box{
+      position:absolute;
+      top: calc(100% + 6px);
+      left: 0;
+      right: 0;
+      z-index: 3000;
+      border-radius: 14px;
+      overflow: hidden;
+      border: 1px solid rgba(229,231,235,.95);
+      background: #fff;
+      box-shadow: 0 18px 44px rgba(2,6,23,.16);
+      max-height: 58vh;            /* ✅ bigger on mobile */
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    @media (min-width: 992px){
+      .suggest-box{ max-height: 420px; }
+    }
+
+    .suggest-item{
+      display:flex;
+      gap: .85rem;
+      align-items:center;
+    }
+    .suggest-img{
+      width: 46px;
+      height: 46px;
+      border-radius: 12px;
+      object-fit: cover;
+      background: #f1f5f9;
+      border: 1px solid rgba(226,232,240,.9);
+      flex: 0 0 auto;
+    }
+    .suggest-title{
+      font-weight: 700;
+      line-height: 1.1;
+      font-size: .98rem;
+    }
+    .suggest-meta{
+      font-size: .85rem;
+      color: #6b7280;
+      margin-top: 2px;
+    }
+    .pill{
+      display:inline-flex;
+      align-items:center;
+      gap:.35rem;
+      border-radius: 999px;
+      padding: .15rem .6rem;
+      font-size: .78rem;
+      background: #f1f5f9;
+      color: #0f172a;
+      border: 1px solid rgba(226,232,240,.9);
+    }
+    .pill.qty{
+      background: rgba(37,99,235,.08);
+      border-color: rgba(37,99,235,.18);
+    }
+
+    /* Selected meta line */
+    .sel-meta{
+      font-size: .85rem;
+      color: #475569;
+    }
+
+    /* Footer actions */
+    .actions{
+      position: sticky;
+      bottom: 10px;
+      z-index: 40;
+      margin-top: 14px;
+    }
+    .actions-inner{
+      display:flex;
+      gap: 10px;
+      justify-content: space-between;
+      align-items:center;
+      padding: 12px;
+    }
+
+    /* Mobile line card */
+    .line-card{
+      border: 1px solid rgba(229,231,235,.95);
+      border-radius: 16px;
+      background: #fff;
+      padding: 12px;
+      box-shadow: 0 12px 26px rgba(2,6,23,.06);
+    }
+    .line-grid{
+      display:grid;
+      gap:10px;
+    }
+    .line-grid .two{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap:10px;
+    }
+    .danger-link{
+      color:#dc2626;
+      text-decoration:none;
+      font-weight:700;
+    }
+    .danger-link:hover{ text-decoration:underline; }
+
+    /* Better spacing in inputs */
+    .form-control, .form-select{
+      border-radius: 12px;
+      border-color: rgba(203,213,225,.9);
+    }
+    .btn{
+      border-radius: 12px;
+    }
+
+    /* Alert */
+    #alertWrap{ display:none; }
+  </style>
+</head>
+
+<body>
+  <div class="page">
+
+    <!-- Sticky header -->
+    <div class="topbar">
+      <div class="topbar-inner d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-2">
+        <div>
+          <h1 class="title h4 mb-0">Create Order</h1>
+          <div class="subtitle">
+            Type to search products, tap a result to select. Press <span class="pill">Enter</span> to select the first result.
+          </div>
+        </div>
+        <div class="d-flex gap-2">
+          <a class="btn btn-outline-secondary" href="/manager/orders">← Back</a>
+          <button class="btn btn-outline-primary" id="addTop">+ Add Line</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Alert -->
+    <div id="alertWrap" class="mb-3">
+      <div id="alertBox" class="alert"></div>
+    </div>
+
+    <div class="row g-3">
+      <!-- LEFT: Lines -->
+      <div class="col-12 col-lg-8">
+        <div class="glass-card p-3 p-lg-4">
+          <div class="d-flex align-items-center justify-content-between mb-3">
+            <div>
+              <div class="fw-bold">Order Lines</div>
+              <div class="text-muted small">Add items and quantities. Dropdown is optimized for mobile.</div>
+            </div>
+            <span class="pill"><span id="lineCount">1</span> lines</span>
+          </div>
+
+          <!-- Desktop table -->
+          <div class="desktop-table table-responsive">
+            <table class="table align-middle mb-0">
+              <thead>
+                <tr class="text-muted small">
+                  <th style="width:46%">Product</th>
+                  <th style="width:12%">Qty</th>
+                  <th style="width:18%">Expected Date</th>
+                  <th style="width:20%">Line Notes</th>
+                  <th style="width:4%"></th>
+                </tr>
+              </thead>
+              <tbody id="rows"></tbody>
+            </table>
+          </div>
+
+          <!-- Mobile cards -->
+          <div class="mobile-cards" id="mobileRows"></div>
+
+        </div>
+      </div>
+
+      <!-- RIGHT: Notes + Summary -->
+      <div class="col-12 col-lg-4">
+        <div class="glass-card p-3 p-lg-4">
+          <div class="fw-bold mb-2">Notes</div>
+          <textarea id="notes" class="form-control notes" rows="4" placeholder="Any extra notes for Inventory…"></textarea>
+
+          <hr class="my-4">
+
+          <div class="d-flex align-items-center justify-content-between">
+            <div class="fw-bold">Quick Summary</div>
+            <span class="pill qty">Ready</span>
+          </div>
+
+          <div class="mt-3 small text-muted">
+            • Make sure every line has a selected product (not just typed text).<br>
+            • Quantity must be ≥ 1 and not more than available stock.
+          </div>
+
+          <div class="mt-3">
+            <div class="d-flex justify-content-between">
+              <span class="text-muted">Lines:</span>
+              <strong id="sumLines">1</strong>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sticky bottom actions -->
+    <div class="actions">
+      <div class="actions-inner glass-card">
+        <button class="btn btn-outline-secondary" id="add">+ Add item</button>
+        <div class="d-flex gap-2">
+          <a class="btn btn-outline-secondary d-none d-lg-inline-flex" href="/manager/orders">Cancel</a>
+          <button class="btn btn-primary" id="save">Submit Order</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+<script>
+  // ----- DOM -----
+  const rows = document.getElementById('rows');
+  const mobileRows = document.getElementById('mobileRows');
+  const lineCountEl = document.getElementById('lineCount');
+  const sumLinesEl = document.getElementById('sumLines');
+
+  function showAlert(msg, type='danger'){
+    const wrap = document.getElementById('alertWrap');
+    const box = document.getElementById('alertBox');
+    box.className = `alert alert-${type}`;
+    box.textContent = msg;
+    wrap.style.display = '';
+    setTimeout(()=> wrap.style.display='none', 4500);
+  }
+
+  function esc(s){
+    return String(s||'').replace(/[&<>"']/g, m => ({
+      '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+    }[m]));
+  }
+
+  function updateCounts(){
+    // count non-empty rows (or total DOM rows if you want strict)
+    const desktopLines = rows.querySelectorAll('tr').length;
+    const mobileLines = mobileRows.querySelectorAll('.line-card').length;
+    const lines = Math.max(desktopLines, mobileLines, 0) || 0;
+    lineCountEl.textContent = String(lines || 1);
+    sumLinesEl.textContent = String(lines || 1);
+  }
+
+  // ----- Templates -----
+  function desktopRowHTML(v){
+    return `
+      <td class="position-relative">
+        <input class="form-control prod-name" placeholder="Search product…" autocomplete="off" value="${esc(v.name||'')}">
+        <input type="hidden" class="prod-id" value="${esc(v.product_id||'')}">
+        <div class="list-group suggest-box d-none"></div>
+        <div class="mt-2 sel-meta"></div>
+      </td>
+      <td><input type="number" min="1" class="form-control prod-qty" value="${v.qty||1}"></td>
+      <td><input type="date" class="form-control prod-exp" value="${esc(v.expected_date||'')}"></td>
+      <td><input class="form-control prod-notes" value="${esc(v.notes||'')}"></td>
+      <td class="text-end"><a href="#" class="danger-link btn-remove" title="Remove">×</a></td>
+    `;
+  }
+
+  function mobileCardHTML(v){
+    return `
+      <div class="line-card">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <div class="fw-bold">Line Item</div>
+          <a href="#" class="danger-link m-remove">Remove</a>
+        </div>
+
+        <div class="position-relative">
+          <label class="form-label small text-muted mb-1">Product</label>
+          <input class="form-control m-name" placeholder="Search product…" autocomplete="off" value="${esc(v.name||'')}">
+          <input type="hidden" class="m-id" value="${esc(v.product_id||'')}">
+          <div class="list-group suggest-box d-none"></div>
+          <div class="mt-2 sel-meta m-meta"></div>
+        </div>
+
+        <div class="line-grid mt-2">
+          <div class="two">
+            <div>
+              <label class="form-label small text-muted mb-1">Qty</label>
+              <input type="number" min="1" class="form-control m-qty" value="${v.qty||1}">
+            </div>
+            <div>
+              <label class="form-label small text-muted mb-1">Expected Date</label>
+              <input type="date" class="form-control m-exp" value="${esc(v.expected_date||'')}">
+            </div>
+          </div>
+          <div>
+            <label class="form-label small text-muted mb-1">Line Notes</label>
+            <input class="form-control m-notes" value="${esc(v.notes||'')}">
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  // ----- Autocomplete binder (works for desktop row + mobile card) -----
+  function bindAutocomplete({ input, hid, box, meta, qtyEl, rootEl }){
+    let typingTimer = null;
+    let lastResults = [];
+
+    function hideBox(){ box.classList.add('d-none'); }
+    function showBox(){ box.classList.remove('d-none'); }
+
+    function setSelected(p){
+      input.value = p.name || '';
+      hid.value   = p._id || '';
+      meta.innerHTML = `Selected: <strong>${esc(p.name||'')}</strong> · <span class="pill qty">Qty: ${Number(p.qty_available||0)}</span> ${p.sku ? `<span class="pill">${esc(p.sku)}</span>` : ''} ${p.tag ? `<span class="pill">${esc(p.tag)}</span>` : ''}`;
+      hideBox();
+      box.innerHTML = '';
+      lastResults = [];
+      if (qtyEl) setTimeout(()=> qtyEl.focus(), 0);
+    }
+
+    function render(results){
+      lastResults = results || [];
+      box.innerHTML = '';
+
+      (results||[]).forEach((p)=>{
+        const a = document.createElement('a');
+        a.href = "#";
+        a.className = "list-group-item list-group-item-action py-3"; // ✅ bigger touch target
+
+        const img = p.image_url
+          ? `<img class="suggest-img" src="${esc(p.image_url)}" alt="">`
+          : `<div class="suggest-img"></div>`;
+
+        a.innerHTML = `
+          <div class="suggest-item">
+            ${img}
+            <div class="flex-grow-1">
+              <div class="suggest-title">${esc(p.name)}</div>
+              <div class="suggest-meta">
+                <span class="pill qty">Qty: ${Number(p.qty_available||0)}</span>
+                ${p.sku ? `<span class="pill">${esc(p.sku)}</span>` : ''}
+                ${p.tag ? `<span class="pill">${esc(p.tag)}</span>` : ''}
+              </div>
+            </div>
+          </div>
+        `;
+
+        // ✅ mousedown for desktop + touchstart for mobile
+        a.addEventListener('mousedown', (ev)=>{ ev.preventDefault(); ev.stopPropagation(); setSelected(p); });
+        a.addEventListener('touchstart', (ev)=>{ ev.preventDefault(); ev.stopPropagation(); setSelected(p); }, {passive:false});
+
+        box.appendChild(a);
+      });
+
+      if (box.children.length) showBox();
+      else hideBox();
+    }
+
+    async function prefetch(){
+      try{
+        const r = await fetch(`/manager/orders/products_prefetch?limit=180`);
+        const j = await r.json();
+        if (!j.ok) return;
+        render(j.results || []);
+      }catch(e){}
+    }
+
+    async function search(q){
+      try{
+        const r = await fetch(`/manager/orders/products?q=${encodeURIComponent(q)}&limit=60`);
+        const j = await r.json();
+        if (!j.ok) return;
+        render(j.results || []);
+      }catch(e){}
+    }
+
+    input.addEventListener('focus', ()=>{
+      const q = input.value.trim();
+      if (!q) prefetch();
+      else search(q);
+    });
+
+    input.addEventListener('input', ()=>{
+      const q = input.value.trim();
+      hid.value = "";
+      meta.textContent = "";
+      clearTimeout(typingTimer);
+      typingTimer = setTimeout(()=>{ if(!q) prefetch(); else search(q); }, 220);
+    });
+
+    input.addEventListener('keydown', (e)=>{
+      if (e.key === 'Enter'){
+        if (lastResults && lastResults.length){
+          e.preventDefault();
+          setSelected(lastResults[0]);
+        }
+      }
+      if (e.key === 'Escape'){ hideBox(); }
+    });
+
+    // Hide when clicking outside this row/card
+    document.addEventListener('click', (e)=>{
+      if (!rootEl.contains(e.target)) hideBox();
+    });
+  }
+
+  // ----- Add line (creates BOTH desktop row + mobile card, linked by data-line) -----
+  function newLineId(){ return 'ln_' + Math.random().toString(16).slice(2) + Date.now().toString(16); }
+
+  function addLine(v={name:'',product_id:'',qty:1,expected_date:'',notes:''}){
+    const lineId = newLineId();
+
+    // Desktop row
+    const tr = document.createElement('tr');
+    tr.dataset.line = lineId;
+    tr.innerHTML = desktopRowHTML(v);
+    rows.appendChild(tr);
+
+    // Mobile card
+    const cardWrap = document.createElement('div');
+    cardWrap.dataset.line = lineId;
+    cardWrap.innerHTML = mobileCardHTML(v);
+    mobileRows.appendChild(cardWrap.firstElementChild);
+
+    // Remove handlers (remove both)
+    tr.querySelector('.btn-remove').addEventListener('click', (e)=>{
+      e.preventDefault();
+      removeLine(lineId);
+    });
+    const mCard = mobileRows.querySelector(`[data-line="${lineId}"]`) || mobileRows.lastElementChild;
+    mCard.querySelector('.m-remove').addEventListener('click', (e)=>{
+      e.preventDefault();
+      removeLine(lineId);
+    });
+
+    // Bind autocomplete desktop
+    bindAutocomplete({
+      input: tr.querySelector('.prod-name'),
+      hid: tr.querySelector('.prod-id'),
+      box: tr.querySelector('.suggest-box'),
+      meta: tr.querySelector('.sel-meta'),
+      qtyEl: tr.querySelector('.prod-qty'),
+      rootEl: tr
+    });
+
+    // Bind autocomplete mobile
+    bindAutocomplete({
+      input: mCard.querySelector('.m-name'),
+      hid: mCard.querySelector('.m-id'),
+      box: mCard.querySelector('.suggest-box'),
+      meta: mCard.querySelector('.m-meta'),
+      qtyEl: mCard.querySelector('.m-qty'),
+      rootEl: mCard
+    });
+
+    // Keep desktop/mobile values in sync (basic)
+    syncPair(lineId);
+
+    updateCounts();
+  }
+
+  function removeLine(lineId){
+    rows.querySelector(`[data-line="${lineId}"]`)?.remove();
+    mobileRows.querySelector(`[data-line="${lineId}"]`)?.remove();
+    // Always keep at least 1 line
+    if (!rows.querySelector('tr')) addLine();
+    updateCounts();
+  }
+
+  function syncPair(lineId){
+    const tr = rows.querySelector(`[data-line="${lineId}"]`);
+    const card = mobileRows.querySelector(`[data-line="${lineId}"]`);
+    if (!tr || !card) return;
+
+    // When desktop changes -> mirror mobile
+    const dName = tr.querySelector('.prod-name');
+    const dId   = tr.querySelector('.prod-id');
+    const dQty  = tr.querySelector('.prod-qty');
+    const dExp  = tr.querySelector('.prod-exp');
+    const dNote = tr.querySelector('.prod-notes');
+
+    const mName = card.querySelector('.m-name');
+    const mId   = card.querySelector('.m-id');
+    const mQty  = card.querySelector('.m-qty');
+    const mExp  = card.querySelector('.m-exp');
+    const mNote = card.querySelector('.m-notes');
+
+    function mirrorDToM(){
+      mName.value = dName.value;
+      mId.value   = dId.value;
+      mQty.value  = dQty.value;
+      mExp.value  = dExp.value;
+      mNote.value = dNote.value;
+    }
+    function mirrorMToD(){
+      dName.value = mName.value;
+      dId.value   = mId.value;
+      dQty.value  = mQty.value;
+      dExp.value  = mExp.value;
+      dNote.value = mNote.value;
+    }
+
+    ['input','change'].forEach(evt=>{
+      dQty.addEventListener(evt, mirrorDToM);
+      dExp.addEventListener(evt, mirrorDToM);
+      dNote.addEventListener(evt, mirrorDToM);
+      // name/id change too (typing)
+      dName.addEventListener(evt, mirrorDToM);
+      dId.addEventListener(evt, mirrorDToM);
+
+      mQty.addEventListener(evt, mirrorMToD);
+      mExp.addEventListener(evt, mirrorMToD);
+      mNote.addEventListener(evt, mirrorMToD);
+      mName.addEventListener(evt, mirrorMToD);
+      mId.addEventListener(evt, mirrorMToD);
+    });
+  }
+
+  // ----- Gather items (use DESKTOP rows as source of truth) -----
+  function gatherItems(){
+    const items = [];
+    const errors = [];
+
+    rows.querySelectorAll('tr').forEach((tr, idx)=>{
+      const name = (tr.querySelector('.prod-name').value||'').trim();
+      const pid  = (tr.querySelector('.prod-id').value||'').trim();
+      const qty  = parseInt(tr.querySelector('.prod-qty').value||'0', 10);
+      const exp  = tr.querySelector('.prod-exp').value || null;
+      const notes = (tr.querySelector('.prod-notes').value||'').trim();
+
+      if (!name && !pid) return;
+
+      if (!pid){
+        errors.push(`Line ${idx+1}: select a product from the dropdown (don’t just type).`);
+        return;
+      }
+      if (!qty || qty <= 0){
+        errors.push(`Line ${idx+1}: quantity must be at least 1.`);
+        return;
+      }
+      items.push({ product_id: pid, qty, expected_date: exp, notes });
+    });
+
+    return { items, errors };
+  }
+
+  async function submit(){
+    const { items, errors } = gatherItems();
+    if (errors.length){ showAlert(errors[0], 'danger'); return; }
+    if (!items.length){ showAlert('Please add at least one item.', 'danger'); return; }
+
+    const payload = {
+      notes: (document.getElementById('notes').value||'').trim(),
+      items
+    };
+
+    try{
+      const r = await fetch('/manager/orders/create', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify(payload)
+      });
+      const j = await r.json();
+      if (!j.ok) throw new Error(j.message || 'Failed to create order');
+
+      showAlert('Order submitted successfully.', 'success');
+
+      // reset
+      rows.innerHTML = '';
+      mobileRows.innerHTML = '';
+      addLine();
+      document.getElementById('notes').value = '';
+
+      setTimeout(()=>{ window.location.href = '/manager/orders'; }, 700);
+    }catch(err){
+      showAlert(err.message || 'Failed to submit order.', 'danger');
+    }
+  }
+
+  // ----- UI hooks -----
+  document.getElementById('add').addEventListener('click', (e)=>{ e.preventDefault(); addLine(); });
+  document.getElementById('addTop').addEventListener('click', (e)=>{ e.preventDefault(); addLine(); });
+  document.getElementById('save').addEventListener('click', (e)=>{ e.preventDefault(); submit(); });
+
+  // init
+  addLine();
+</script>
+  {% include 'app_footer.html' %}
+
+</body>
+</html>

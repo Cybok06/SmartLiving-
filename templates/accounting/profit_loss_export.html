@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Profit &amp; Loss - {{ period_label }}</title>
+  <style>
+    body { font-family: Arial, sans-serif; font-size: 12px; color: #111827; }
+    h1 { font-size: 20px; margin-bottom: 4px; }
+    h2 { font-size: 14px; margin-top: 16px; margin-bottom: 4px; }
+    table { border-collapse: collapse; width: 100%; margin-top: 4px; }
+    th, td { border: 1px solid #e5e7eb; padding: 4px 6px; }
+    th { background: #f3f4f6; text-align: left; }
+    .text-right { text-align: right; }
+  </style>
+</head>
+<body>
+  <h1>Profit &amp; Loss Statement</h1>
+  <p><strong>Period:</strong> {{ period_label }}</p>
+
+  <h2>Summary</h2>
+  <table>
+    <tbody>
+      <tr>
+        <td>Sales</td>
+        <td class="text-right">GH₵ {{ total_revenue|money }}</td>
+      </tr>
+      <tr>
+        <td>Cost of Sales (AP Bills)</td>
+        <td class="text-right">(GH₵ {{ ap_cogs|money }})</td>
+      </tr>
+      <tr>
+        <td>Stock Purchases (Exec Stock Entry - Period)</td>
+        <td class="text-right">(GH₵ {{ stock_total_period|money }})</td>
+      </tr>
+      <tr>
+        <td><strong>Total Cost of Sales</strong></td>
+        <td class="text-right"><strong>(GH₵ {{ total_cogs|money }})</strong></td>
+      </tr>
+      <tr>
+        <td><strong>Gross Profit</strong></td>
+        <td class="text-right"><strong>GH₵ {{ gross_profit|money }}</strong></td>
+      </tr>
+      <tr>
+        <td>Operating Expenses</td>
+        <td class="text-right">(GH₵ {{ total_opex|money }})</td>
+      </tr>
+      <tr>
+        <td>Depreciation</td>
+        <td class="text-right">(GH₵ {{ total_dep|money }})</td>
+      </tr>
+      <tr>
+        <td><strong>Operating Profit</strong></td>
+        <td class="text-right"><strong>GH₵ {{ operating_profit|money }}</strong></td>
+      </tr>
+      <tr>
+        <td>Manual Adjustments (Net)</td>
+        <td class="text-right">
+          {% if manual_net >= 0 %}+{% endif %}GH₵ {{ manual_net|money }}
+        </td>
+      </tr>
+      <tr>
+        <td><strong>Adjusted Net Profit</strong></td>
+        <td class="text-right"><strong>GH₵ {{ adjusted_net_profit|money }}</strong></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- Optional: additional info to match what you see on the main UI -->
+  <h2>Additional Info</h2>
+  <table>
+    <tbody>
+      <tr>
+        <td>Stock Purchases (Exec Stock Entry - All Time)</td>
+        <td class="text-right">GH₵ {{ stock_total_all|money }}</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>Operating Expenses (by Category)</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Category</th>
+        <th class="text-right">Amount (GH₵)</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in opex_info.breakdown %}
+      <tr>
+        <td>{{ row.label }}</td>
+        <td class="text-right">{{ row.amount|money }}</td>
+      </tr>
+      {% else %}
+      <tr>
+        <td colspan="2">No expenses for this period.</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <h2>Manual Adjustments</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Label</th>
+        <th>Type</th>
+        <th class="text-right">Amount (GH₵)</th>
+        <th>Notes</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in manual_info['items'] %}
+      <tr>
+        <td>{{ item.label }}</td>
+        <td>{{ item.kind }}</td>
+        <td class="text-right">{{ item.amount|money }}</td>
+        <td>{{ item.notes }}</td>
+      </tr>
+      {% else %}
+      <tr>
+        <td colspan="4">No manual adjustments.</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</body>
+</html>

@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>My Targets</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <!-- Bootstrap 5 -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+<link rel="icon"
+          href="https://imagedelivery.net/h9fmMoa1o2c2P55TcWJGOg/10283f28-b9a0-4100-b254-19a854386800/public"
+          type="image/png">
+  <style>
+    body { background-color:#f4f6f9; font-family:'Segoe UI',sans-serif; }
+    .card { border-radius:12px; box-shadow:0 3px 10px rgba(0,0,0,0.05); }
+    .progress { height:20px; }
+    .progress-label { font-weight:600; font-size:0.95rem; }
+    .badge-pill { border-radius:50rem; }
+    .target-header { font-size:1.3rem; font-weight:600; }
+    .kv { font-size:.9rem; color:#6c757d; }
+    .kv b { color:#0b2e13; }
+    .agent-row { border:1px solid #e9ecef; border-radius:10px; padding:14px; background:#fff; }
+    .agent-avatar { width:40px; height:40px; border-radius:50%; object-fit:cover; border:1px solid #e2e8f0; }
+    .mini { font-size:.85rem; }
+    .btn-soft { background:#f1f5f9; border:1px solid #e2e8f0; }
+    .btn-soft:hover { background:#e9eef6; }
+  </style>
+</head>
+<body>
+{% include 'manager_sidebar.html' %}
+
+<div class="container py-4">
+  <h3 class="mb-4 text-center">🎯 My Assigned Targets</h3>
+
+  {% if results %}
+    <div class="row g-4">
+      {% for item in results %}
+      <div class="col-md-6">
+        <div class="card p-4 h-100 d-flex flex-column">
+          <div class="mb-2 text-muted">
+            <i class="bi bi-calendar-event"></i> {{ item.duration|capitalize }} Target <br>
+            <small class="text-secondary">From {{ item.start_date }} to {{ item.end_date }}</small>
+          </div>
+
+          <h5 class="target-header mb-2">{{ item.title }}</h5>
+
+          <div class="row g-2 mb-3">
+            <div class="col-auto kv">🧮 <b>Totals</b></div>
+            <div class="col-auto kv">🛒 <b>{{ item.product_achieved }}</b> / {{ item.product_target }} units</div>
+            <div class="col-auto kv">💰 <b>{{ item.cash_achieved }}</b> / {{ item.cash_target }}</div>
+            <div class="col-auto kv">👥 <b>{{ item.customer_achieved }}</b> / {{ item.customer_target }}</div>
+          </div>
+
+          <!-- Product -->
+          <p class="progress-label mb-1">
+            🛒 Product Target
+            <span class="float-end">{{ item.product_pct }}%</span>
+          </p>
+          <div class="progress mb-3">
+            <div class="progress-bar bg-success" role="progressbar" data-value="{{ item.product_pct }}"></div>
+          </div>
+
+          <!-- Cash -->
+          <p class="progress-label mb-1">
+            💰 Cash Target
+            <span class="float-end">{{ item.payment_pct }}%</span>
+          </p>
+          <div class="progress mb-3">
+            <div class="progress-bar bg-primary" role="progressbar" data-value="{{ item.payment_pct }}"></div>
+          </div>
+
+          <!-- Customers -->
+          <p class="progress-label mb-1">
+            👥 Customer Target
+            <span class="float-end">{{ item.customer_pct }}%</span>
+          </p>
+          <div class="progress mb-3">
+            <div class="progress-bar bg-warning text-dark" role="progressbar" data-value="{{ item.customer_pct }}"></div>
+          </div>
+
+          <!-- Overall -->
+          <div class="d-flex justify-content-between align-items-center mt-2">
+            <span class="badge bg-dark text-light px-3 py-2">🔥 Overall: {{ item.overall }}%</span>
+
+            <div class="btn-group">
+              {% if item.target_id %}
+                <a class="btn btn-sm btn-primary" href="/manager/targets/distribute/{{ item.target_id }}">
+                  <i class="bi bi-sliders"></i> Distribute
+                </a>
+              {% endif %}
+              {% if item.agents and item.agents|length > 0 %}
+                <button class="btn btn-sm btn-soft" type="button"
+                        data-bs-toggle="collapse"
+                        data-bs-target="#agents-{{ loop.index }}"
+                        aria-expanded="false"
+                        aria-controls="agents-{{ loop.index }}">
+                  <i class="bi bi-people"></i> Per‑Agent Progress
+                </button>
+              {% endif %}
+            </div>
+          </div>
+
+          {% if item.agents and item.agents|length > 0 %}
+          <div class="collapse mt-3" id="agents-{{ loop.index }}">
+            <div class="vstack gap-3">
+              {% for ag in item.agents %}
+                <div class="agent-row">
+                  <div class="d-flex align-items-center gap-3 mb-2">
+                    <img class="agent-avatar" src="{{ ag.image_url or 'https://via.placeholder.com/80' }}" alt="agent">
+                    <div>
+                      <div class="fw-semibold">{{ ag.agent_name }}</div>
+                      <div class="text-muted mini">
+                        Allocation →
+                        🛒 {{ ag.alloc_product_pct }}% &nbsp;|&nbsp;
+                        💰 {{ ag.alloc_cash_pct }}% &nbsp;|&nbsp;
+                        👥 {{ ag.alloc_customer_pct }}%
+                      </div>
+                    </div>
+                    <div class="ms-auto">
+                      <span class="badge bg-secondary">Overall: {{ ag.overall }}%</span>
+                    </div>
+                  </div>
+
+                  <div class="row g-3">
+                    <!-- Product -->
+                    <div class="col-12">
+                      <div class="d-flex justify-content-between mini">
+                        <span>🛒 Product</span>
+                        <span>{{ ag.product_achieved }} / {{ ag.product_quota }}</span>
+                      </div>
+                      <div class="progress">
+                        <div class="progress-bar bg-success" role="progressbar" data-value="{{ ag.product_pct }}"></div>
+                      </div>
+                    </div>
+
+                    <!-- Cash -->
+                    <div class="col-12">
+                      <div class="d-flex justify-content-between mini">
+                        <span>💰 Cash</span>
+                        <span>{{ ag.cash_achieved }} / {{ ag.cash_quota }}</span>
+                      </div>
+                      <div class="progress">
+                        <div class="progress-bar bg-primary" role="progressbar" data-value="{{ ag.payment_pct }}"></div>
+                      </div>
+                    </div>
+
+                    <!-- Customers -->
+                    <div class="col-12">
+                      <div class="d-flex justify-content-between mini">
+                        <span>👥 Customers</span>
+                        <span>{{ ag.customer_achieved }} / {{ ag.customer_quota }}</span>
+                      </div>
+                      <div class="progress">
+                        <div class="progress-bar bg-warning text-dark" role="progressbar" data-value="{{ ag.customer_pct }}"></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="alert alert-info text-center mt-5">
+      No targets have been assigned to you yet.
+    </div>
+  {% endif %}
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+  // Animate all progress bars based on data-value
+  document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.progress-bar').forEach(bar => {
+      const value = parseFloat(bar.getAttribute('data-value')) || 0;
+      bar.style.width = Math.min(value, 100) + '%';
+      bar.setAttribute('aria-valuenow', Math.min(value, 100));
+    });
+  });
+</script>
+{% include 'app_footer.html' %}
+
+</body>
+</html>

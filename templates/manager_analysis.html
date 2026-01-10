@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Manager Analysis Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="icon" href="https://res.cloudinary.com/dljpgzbto/image/upload/v1743993646/company-logo_dksb23.jpg" type="image/png"/>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f6f9;
+      color: #222;
+      transition: background 0.3s, color 0.3s;
+    }
+
+    .dark-mode {
+      background-color: #121212;
+      color: #f1f1f1;
+    }
+
+    .navbar {
+      margin-bottom: 20px;
+    }
+
+    .chart-container {
+      padding: 20px;
+      background: white;
+      border-radius: 10px;
+      margin-bottom: 30px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+
+    .dark-mode .chart-container {
+      background: #1e1e1e;
+    }
+
+    canvas {
+      width: 100% !important;
+      height: auto !important;
+    }
+
+    h2 {
+      margin-bottom: 20px;
+      font-size: 1.3rem;
+      font-weight: 600;
+    }
+
+    @media (max-width: 768px) {
+      h1 {
+        font-size: 1.4rem;
+        text-align: center;
+      }
+
+      .chart-container {
+        padding: 15px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Navbar -->
+<nav class="navbar navbar-expand-lg navbar-light bg-light px-3 shadow-sm">
+  <a class="navbar-brand fw-bold" href="{{ url_for('manager_dashboard.manager_dashboard_view') }}">🏠 Dashboard</a>
+  <div class="ms-auto">
+    <button class="btn btn-outline-dark" onclick="toggleDarkMode()" id="modeToggle">🌙</button>
+  </div>
+</nav>
+
+<div class="container">
+  <h1 class="text-center mb-4">📊 Manager Analysis Dashboard</h1>
+
+  <!-- Pie Chart: Top Customer Locations -->
+  <div class="chart-container">
+    <h2>Top Customer Locations (Pie Chart)</h2>
+    <canvas id="locationPieChart"></canvas>
+  </div>
+
+  <!-- Bar Chart: Most Purchased Products -->
+  <div class="chart-container">
+    <h2>Top Purchased Products (Bar Chart)</h2>
+    <canvas id="productBarChart"></canvas>
+  </div>
+
+  <!-- Bar Chart: Agents Ranked by Total Customers -->
+  <div class="chart-container">
+    <h2>Agents by Total Customers (Bar Chart)</h2>
+    <canvas id="agentsBarChart"></canvas>
+  </div>
+
+  <!-- Bar Chart: Customer Retention / Repeat Purchases -->
+  <div class="chart-container">
+    <h2>Customer Retention / Repeat Purchases (Bar Chart)</h2>
+    <canvas id="retentionBarChart"></canvas>
+  </div>
+</div>
+
+<script>
+  const locationData = JSON.parse('{{ location_data | safe }}');
+  const productRanking = JSON.parse('{{ product_ranking | safe }}');
+  const agents = JSON.parse('{{ agents | safe }}');
+
+  // Pie Chart
+  const ctxLocation = document.getElementById('locationPieChart').getContext('2d');
+  new Chart(ctxLocation, {
+    type: 'pie',
+    data: {
+      labels: locationData.map(loc => loc._id || 'Unknown'),
+      datasets: [{
+        data: locationData.map(loc => loc.count),
+        backgroundColor: [
+          '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF',
+          '#FF9F40', '#66FF66', '#FF6666', '#66CCFF', '#CCCC00'
+        ]
+      }]
+    },
+    options: { responsive: true }
+  });
+
+  // Product Chart
+  const ctxProduct = document.getElementById('productBarChart').getContext('2d');
+  new Chart(ctxProduct, {
+    type: 'bar',
+    data: {
+      labels: productRanking.map(p => p._id),
+      datasets: [{
+        label: 'Quantity Purchased',
+        data: productRanking.map(p => p.total_quantity),
+        backgroundColor: '#36A2EB'
+      }]
+    },
+    options: { responsive: true, scales: { y: { beginAtZero: true } } }
+  });
+
+  // Agents Chart
+  const ctxAgents = document.getElementById('agentsBarChart').getContext('2d');
+  new Chart(ctxAgents, {
+    type: 'bar',
+    data: {
+      labels: agents.map(a => a.name),
+      datasets: [{
+        label: 'Total Customers',
+        data: agents.map(a => a.customer_count),
+        backgroundColor: '#9966FF'
+      }]
+    },
+    options: { responsive: true, scales: { y: { beginAtZero: true } } }
+  });
+
+  // Retention Chart
+  const ctxRetention = document.getElementById('retentionBarChart').getContext('2d');
+  new Chart(ctxRetention, {
+    type: 'bar',
+    data: {
+      labels: agents.map(a => a.name),
+      datasets: [{
+        label: 'Repeat Purchases',
+        data: agents.map(a => a.retention_count || 0),
+        backgroundColor: '#FF9F40'
+      }]
+    },
+    options: { responsive: true, scales: { y: { beginAtZero: true } } }
+  });
+
+  // Dark Mode Toggle
+  function toggleDarkMode() {
+    const body = document.body;
+    const toggle = document.getElementById('modeToggle');
+    body.classList.toggle('dark-mode');
+    toggle.textContent = body.classList.contains('dark-mode') ? '🌞' : '🌙';
+  }
+</script>
+{% include 'app_footer.html' %}
+
+</body>
+</html>
+

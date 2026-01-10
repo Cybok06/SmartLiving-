@@ -1,0 +1,805 @@
+<!-- Bootstrap Icons -->
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+<link rel="icon"
+      href="https://imagedelivery.net/h9fmMoa1o2c2P55TcWJGOg/10283f28-b9a0-4100-b254-19a854386800/public"
+      type="image/png">
+
+<style>
+  :root{
+    /* Same theme family */
+    --ax-navy:#074073;
+    --ax-gold:#facc15;
+
+    /* Sidebar look */
+    --sb-bg-1:#081f3b;
+    --sb-bg-2:#020816;
+    --sb-text:#ffffff;
+    --sb-muted: rgba(255,255,255,.72);
+    --sb-line: rgba(255,255,255,.12);
+    --sb-hover: rgba(255,255,255,.08);
+    --sb-active: rgba(250,204,21,.14);
+
+    --shadow: 4px 0 18px rgba(0,0,0,.30);
+  }
+
+  body.sidebar-open{ overflow:hidden; }
+
+  /* SIDEBAR */
+  .sidebar{
+    width: 290px;
+    background: radial-gradient(circle at top left, var(--sb-bg-1), var(--sb-bg-2));
+    color: var(--sb-text);
+    position: fixed;
+    top: 0; bottom: 0;
+    left: -290px;
+    transition: left .32s ease, box-shadow .32s ease;
+    z-index: 1050;
+    overflow: hidden;
+    box-shadow: var(--shadow);
+    border-right: 1px solid var(--sb-line);
+    display:flex;
+    flex-direction:column;
+  }
+  .sidebar.active{ left:0; }
+
+  /* Header */
+  .sidebar-header{
+    padding: 16px 16px 12px;
+    display:flex;
+    align-items:center;
+    gap: 12px;
+    background: linear-gradient(135deg, rgba(250,204,21,.12), rgba(2,8,22,.70));
+    border-bottom: 1px solid var(--sb-line);
+  }
+  .sidebar-header img{
+    width: 46px; height: 46px;
+    padding: 6px;
+    background: #fff;
+    border-radius: 14px;
+    box-shadow: 0 6px 15px rgba(0,0,0,0.25);
+    object-fit: contain;
+  }
+  .sidebar-header h2{
+    font-size: .95rem;
+    font-weight: 900;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    margin: 0;
+    line-height: 1.1;
+  }
+  .sidebar-header small{
+    display:block;
+    margin-top: 2px;
+    color: var(--sb-muted);
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    font-size: .68rem;
+    font-weight: 800;
+  }
+  .close-btn{
+    margin-left:auto;
+    background: transparent;
+    border: none;
+    color: var(--sb-text);
+    font-size: 2.0rem;
+    cursor: pointer;
+    line-height: 1;
+    opacity: .9;
+  }
+  .close-btn:hover{ opacity:1; }
+
+  /* Search */
+  .sidebar-search{
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--sb-line);
+  }
+  .sidebar-search .search-wrap{
+    position: relative;
+  }
+  .sidebar-search input{
+    width: 100%;
+    border-radius: 999px;
+    border: 1px solid rgba(255,255,255,.14);
+    background: rgba(255,255,255,.08);
+    color: #fff;
+    padding: 10px 38px 10px 40px;
+    outline: none;
+    font-size: .92rem;
+  }
+  .sidebar-search input::placeholder{ color: rgba(255,255,255,.60); }
+  .sidebar-search .bi-search{
+    position:absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: rgba(255,255,255,.70);
+    font-size: 1.0rem;
+  }
+  .sidebar-search .clear-btn{
+    position:absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    border: none;
+    background: transparent;
+    color: rgba(255,255,255,.70);
+    font-size: 1.15rem;
+    display:none;
+    cursor:pointer;
+  }
+
+  /* Scroll area */
+  .sidebar-scroll{
+    overflow-y:auto;
+    padding: 10px 0 14px;
+    flex: 1 1 auto;
+  }
+
+  /* Group headings */
+  .nav-group{
+    padding: 10px 0 6px;
+  }
+  .nav-group-title{
+    padding: 8px 18px 6px;
+    font-size: .70rem;
+    letter-spacing: .16em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,.62);
+    font-weight: 900;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+  }
+  .nav-group-title .count{
+    font-size: .68rem;
+    letter-spacing: .08em;
+    padding: 2px 8px;
+    border-radius: 999px;
+    border: 1px solid rgba(255,255,255,.14);
+    background: rgba(255,255,255,.06);
+    color: rgba(255,255,255,.80);
+  }
+
+  /* LINKS (base) */
+  .sidebar a,
+  .sidebar .dropdown-toggle{
+    display:flex;
+    align-items:center;
+    gap: 12px;
+    padding: 11px 18px;
+    color: var(--sb-muted);
+    text-decoration:none;
+    font-size: .93rem;
+    font-weight: 700;
+    cursor:pointer;
+    border-left: 3px solid transparent;
+    transition: background .2s ease, padding-left .2s ease, color .2s ease;
+    user-select:none;
+  }
+
+  .sidebar a i,
+  .sidebar .dropdown-toggle i{
+    color: var(--ax-gold);
+    font-size: 1.05rem;
+    min-width: 18px;
+  }
+
+  .sidebar a:hover,
+  .sidebar .dropdown-toggle:hover{
+    background: var(--sb-hover);
+    padding-left: 22px;
+    color: #fff;
+  }
+
+  .sidebar a.active{
+    background: linear-gradient(90deg, rgba(250,204,21,.20), rgba(250,204,21,.06));
+    border-left-color: var(--ax-gold);
+    color: #fff;
+  }
+  .sidebar a.active i{ color:#fff; }
+
+  /* Dropdown chevron */
+  .dropdown-toggle .chev{
+    margin-left:auto;
+    color: rgba(255,255,255,.65);
+    transition: transform .18s ease;
+  }
+  .dropdown-toggle.active .chev{
+    transform: rotate(180deg);
+  }
+
+  /* SUBMENU */
+  .submenu{
+    display:none;
+    flex-direction:column;
+    background: rgba(255,255,255,.04);
+    border-left: 3px solid rgba(250,204,21,.22);
+    margin-left: 10px;
+    margin-right: 10px;
+    border-radius: 14px;
+    overflow:hidden;
+  }
+  .submenu.show{ display:flex; }
+  .submenu a{
+    padding-left: 34px;
+    font-size: .90rem;
+    font-weight: 650;
+  }
+  .submenu a:hover{ padding-left: 38px; }
+
+  /* badges */
+  .badge-new{
+    margin-left:auto;
+    background: var(--ax-gold);
+    color:#000;
+    font-size: .68rem;
+    padding: 2px 7px;
+    border-radius: 999px;
+    font-weight: 900;
+    letter-spacing: .05em;
+  }
+  .badge-count{
+    margin-left:auto;
+    background:#ef4444;
+    color:#fff;
+    font-size:.70rem;
+    padding:2px 7px;
+    border-radius:999px;
+    font-weight: 900;
+  }
+  .badge-blink{
+    margin-left:auto;
+    background:#ef4444;
+    color:#fff;
+    font-size:.70rem;
+    padding:2px 7px;
+    border-radius:999px;
+    font-weight: 900;
+    animation: blink 1s steps(2, start) infinite;
+  }
+  @keyframes blink{ to{ visibility:hidden; } }
+  .badge-pulse{
+    margin-left:auto;
+    background:#ef4444;
+    color:#fff;
+    font-size:.70rem;
+    padding:2px 7px;
+    border-radius:999px;
+    font-weight: 900;
+    animation: softPulse 1.8s ease-in-out infinite;
+  }
+  .pulse-dot{
+    width: 8px; height: 8px;
+    border-radius: 999px;
+    background:#ef4444;
+    margin-left: 6px;
+    box-shadow: 0 0 0 rgba(239,68,68,.4);
+    animation: softPulse 1.8s ease-in-out infinite;
+  }
+  @keyframes softPulse{
+    0% { box-shadow: 0 0 0 0 rgba(239,68,68,.35); }
+    70%{ box-shadow: 0 0 0 8px rgba(239,68,68,0); }
+    100%{ box-shadow: 0 0 0 0 rgba(239,68,68,0); }
+  }
+
+  /* Search filter hidden state */
+  .nav-item-hidden{ display:none !important; }
+  .nav-group-hidden{ display:none !important; }
+
+  /* Toggle button + overlay */
+  .toggle-btn{
+    position: fixed;
+    top: 16px;
+    left: 16px;
+    font-size: 1.6rem;
+    background: linear-gradient(135deg, var(--ax-gold), var(--ax-navy));
+    border: none;
+    color: #fff;
+    border-radius: 999px;
+    padding: 8px 12px;
+    z-index: 1100;
+    cursor: pointer;
+    transition: all .22s ease-in-out;
+    box-shadow: 0 8px 20px rgba(0,0,0,.45);
+  }
+  .toggle-btn.hide{ opacity:0; pointer-events:none; }
+
+  .overlay{
+    position: fixed;
+    top:0; left:0;
+    width:100%; height:100%;
+    background: rgba(15,23,42,.55);
+    z-index: 1049;
+    display:none;
+  }
+  .overlay.show{ display:block; }
+</style>
+
+<!-- Toggle Button & Overlay -->
+<button class="toggle-btn" id="menuToggle" onclick="toggleSidebar()">
+  <i class="bi bi-list"></i>
+</button>
+<div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
+
+<!-- Sidebar -->
+<div class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <img src="https://imagedelivery.net/h9fmMoa1o2c2P55TcWJGOg/8744779c-1300-4a50-49de-b143d24da300/public" alt="Logo">
+    <div>
+      <h2>Axelera Flux</h2>
+      <small>Manager Panel</small>
+    </div>
+    <button class="close-btn" onclick="toggleSidebar()" aria-label="Close sidebar">&times;</button>
+  </div>
+
+  <!-- Search -->
+  <div class="sidebar-search">
+    <div class="search-wrap">
+      <i class="bi bi-search"></i>
+      <input id="sidebarSearch" type="search" placeholder="Search menu…" autocomplete="off" />
+      <button class="clear-btn" id="sidebarSearchClear" type="button" aria-label="Clear search">
+        <i class="bi bi-x-circle"></i>
+      </button>
+    </div>
+  </div>
+
+  <div class="sidebar-scroll" id="sidebarScroll">
+
+    <!-- GROUP: OVERVIEW -->
+    <div class="nav-group" data-group>
+      <div class="nav-group-title">
+        <span>Overview</span>
+        <span class="count">2</span>
+      </div>
+
+      <!-- NEW: Dashboard FIRST -->
+      <a class="nav-link" href="http://127.0.0.1:5000/manager/dashboard" data-label="Dashboard overview home manager dashboard">
+        <i class="bi bi-speedometer2"></i> Dashboard
+      </a>
+
+      <a class="nav-link" href="{{ url_for('manager_analysis.manager_analysis') }}" data-label="CRM Analysis analytics performance">
+        <i class="bi bi-bar-chart-line"></i> CRM Analysis
+      </a>
+    </div>
+
+    <!-- GROUP: SALES & ORDERS -->
+    <div class="nav-group" data-group>
+      <div class="nav-group-title">
+        <span>Sales & Orders</span>
+        <span class="count">5</span>
+      </div>
+
+      <div class="dropdown-toggle nav-link" onclick="toggleMenu('orderMenu')" data-label="Orders my orders">
+        <i class="bi bi-bag"></i> Orders
+        <i class="bi bi-chevron-down chev"></i>
+      </div>
+      <div class="submenu" id="orderMenu" data-submenu>
+        <a class="nav-link" href="{{ url_for('manager_orders.orders_page') }}" data-label="My Orders list">
+          <i class="bi bi-inboxes"></i> My Orders
+        </a>
+      </div>
+
+      <div class="dropdown-toggle nav-link" onclick="toggleMenu('productMenu')" data-label="Products view products instant sales">
+        <i class="bi bi-box"></i> Products
+        <i class="bi bi-chevron-down chev"></i>
+      </div>
+      <div class="submenu" id="productMenu" data-submenu>
+        <a class="nav-link" href="{{ url_for('manager_product.view_products') }}" data-label="View Products catalog">
+          <i class="bi bi-eye"></i> View Products
+        </a>
+        <a class="nav-link" href="{{ url_for('sell.sell_product_page') }}" data-label="Instant Sales sell product">
+          <i class="bi bi-bag-check"></i> Instant Sales
+          <span class="badge-new">NEW</span>
+        </a>
+      </div>
+
+      <a class="nav-link" href="{{ url_for('payments.payments_list') }}" data-label="Payments credit card">
+        <i class="bi bi-credit-card"></i> Payments
+      </a>
+
+      <a class="nav-link" href="{{ url_for('manager_sales_close.manager_close_page') }}" data-label="Sales Close close sales">
+        <i class="bi bi-cash-coin"></i> Sales Close
+      </a>
+
+      <a class="nav-link" href="{{ url_for('sales_summary.sales_summary') }}" data-label="Sales Summary receipt summary">
+        <i class="bi bi-receipt-cutoff"></i> Sales Summary
+      </a>
+    </div>
+
+    <!-- GROUP: CUSTOMERS -->
+    <div class="nav-group" data-group>
+      <div class="nav-group-title">
+        <span>Customers</span>
+        <span class="count">4</span>
+      </div>
+
+      <a class="nav-link" href="{{ url_for('customers.customers_list') }}" data-label="Customer List customers">
+        <i class="bi bi-people"></i> Customer List
+      </a>
+
+      <a class="nav-link" href="/close_card" data-label="Close Customer close card">
+        <i class="bi bi-x-octagon"></i> Close Customer
+      </a>
+
+      <div class="dropdown-toggle nav-link" onclick="toggleMenu('transferMenu')" data-label="Transfer Customers transfer logs">
+        <i class="bi bi-arrow-left-right"></i> Transfer Customers
+        <i class="bi bi-chevron-down chev"></i>
+      </div>
+      <div class="submenu" id="transferMenu" data-submenu>
+        <a class="nav-link" href="{{ url_for('transfer_customer.transfer_page') }}" data-label="Transfer Customers page">
+          <i class="bi bi-arrow-left-right"></i> Transfer Customers
+        </a>
+        <a class="nav-link" href="{{ url_for('transfer_customer.transfer_logs_page') }}" data-label="Transfer Logs logs journal">
+          <i class="bi bi-journal-text"></i> Transfer Logs
+        </a>
+      </div>
+
+      <a class="nav-link" href="{{ url_for('undelivered_items.undelivered_items_page') }}" data-label="Undelivered Items overdue due soon">
+        <i class="bi bi-exclamation-triangle"></i> Undelivered Items
+        <span id="undeliveredBadge" class="badge-blink d-none">0</span>
+      </a>
+    </div>
+
+    <!-- GROUP: INVENTORY & WAREHOUSE -->
+    <div class="nav-group" data-group>
+      <div class="nav-group-title">
+        <span>Inventory</span>
+        <span class="count">4</span>
+      </div>
+
+      <div class="dropdown-toggle nav-link" onclick="toggleMenu('productTransferMenu')" data-label="Product Transfers new transfer history">
+        <i class="bi bi-arrow-left-right"></i> Product Transfers
+        <i class="bi bi-chevron-down chev"></i>
+      </div>
+      <div class="submenu" id="productTransferMenu" data-submenu>
+        <a class="nav-link" href="{{ url_for('transfer.manager_transfer_new') }}" data-label="New Transfer">
+          <i class="bi bi-arrow-left-right"></i> New Transfer
+        </a>
+        <a class="nav-link" href="{{ url_for('transfer.manager_transfer_history') }}" data-label="Transfer History clock history">
+          <i class="bi bi-clock-history"></i> Transfer History
+        </a>
+      </div>
+
+      <a class="nav-link" href="{{ url_for('manager_inventory.view_manager_inventory') }}" data-label="Warehouse inventory stock">
+        <i class="bi bi-box-seam"></i> Warehouse
+      </a>
+
+      <a class="nav-link" href="{{ url_for('manager_inventory.manager_low_stocks') }}" data-label="Low Stocks low stock alert">
+        <i class="bi bi-exclamation-diamond"></i> Low Stocks
+        <span id="managerLowStockDot" class="pulse-dot d-none"></span>
+        <span id="managerLowStockBadge" class="badge-pulse d-none">0</span>
+      </a>
+
+      <a class="nav-link" href="{{ url_for('manager_inventory_analysis.manager_inventory_analysis') }}" data-label="Warehouse Analysis inventory analysis">
+        <i class="bi bi-clipboard-data"></i> Warehouse Analysis
+      </a>
+    </div>
+
+    <!-- GROUP: RETURNS & FINANCE -->
+    <div class="nav-group" data-group>
+      <div class="nav-group-title">
+        <span>Finance</span>
+        <span class="count">6</span>
+      </div>
+
+      <a class="nav-link" href="{{ url_for('manager_expense.expense_page') }}" data-label="Manager Expenses expense">
+        <i class="bi bi-cash-stack"></i> Manager Expenses
+      </a>
+
+      <a class="nav-link" href="{{ url_for('manager_deposits.form_and_list') }}" data-label="Cash Deposits deposits wallet">
+        <i class="bi bi-wallet2"></i> Cash Deposits
+      </a>
+
+      <a class="nav-link" href="{{ url_for('returns_inwards.manager_returns_inwards_page') }}" data-label="Returns Inwards returns inward">
+        <i class="bi bi-arrow-return-left"></i> Returns Inwards
+      </a>
+
+      <a class="nav-link" href="{{ url_for('returns_inwards.manager_returns_inwards_history') }}" data-label="Returns History history">
+        <i class="bi bi-clock-history"></i> Returns History
+      </a>
+
+      <a class="nav-link" href="{{ url_for('manager_payroll.payroll_home') }}" data-label="Payroll salary wages">
+        <i class="bi bi-cash-coin"></i> Payroll
+        <span class="badge-new">NEW</span>
+      </a>
+
+      <a class="nav-link" href="{{ url_for('manager_susu.susu_dashboard') }}" data-label="SUSU savings piggy bank">
+        <i class="bi bi-piggy-bank"></i> SUSU
+        <span class="badge-new">NEW</span>
+      </a>
+    </div>
+
+    <!-- GROUP: PEOPLE & COMMUNICATION -->
+    <div class="nav-group" data-group>
+      <div class="nav-group-title">
+        <span>People</span>
+        <span class="count">5</span>
+      </div>
+
+      <a class="nav-link" href="{{ url_for('agent.agent_list') }}" data-label="Agents List agents">
+        <i class="bi bi-person-lines-fill"></i> Agents List
+      </a>
+
+      <a class="nav-link" href="{{ url_for('complaints.list_complaints') }}" data-label="Complaints issues">
+        <i class="bi bi-exclamation-diamond"></i> Complaints
+        {% if manager_unsolved_complaints and manager_unsolved_complaints > 0 %}
+          <span class="badge-count">{{ manager_unsolved_complaints }}</span>
+        {% endif %}
+      </a>
+
+      <a class="nav-link" href="{{ url_for('task_messages.manager_tasks') }}" data-label="Task Messages messages chat">
+        <i class="bi bi-chat-left-text"></i> Task Messages
+      </a>
+
+      <a class="nav-link" href="{{ url_for('agent_lead.agent_leads') }}" data-label="Leads new leads">
+        <i class="bi bi-person-plus"></i> Leads
+      </a>
+
+      <a class="nav-link" href="{{ url_for('manager_meeting_report.overview') }}" data-label="Meeting Report meeting report">
+        <i class="bi bi-clipboard-check"></i> Meeting Report
+        <span class="badge-new">NEW</span>
+      </a>
+    </div>
+
+    <!-- GROUP: REPORTS & TOOLS -->
+    <div class="nav-group" data-group>
+      <div class="nav-group-title">
+        <span>Reports & Tools</span>
+        <span class="count">6</span>
+      </div>
+
+      <a class="nav-link" href="{{ url_for('agents_report.agents_report') }}" data-label="Reports analytics report">
+        <i class="bi bi-file-earmark-bar-graph"></i> Reports
+      </a>
+
+      <a class="nav-link" href="{{ url_for('packages.list_packages_manager') }}" data-label="Packages packages">
+        <i class="bi bi-file-earmark-check"></i> Packages
+      </a>
+
+      <div class="dropdown-toggle nav-link" onclick="toggleMenu('cardTrackerMenu')" data-label="Card Tracker cards stock distribute history">
+        <i class="bi bi-credit-card-2-front"></i> Card Tracker
+        <i class="bi bi-chevron-down chev"></i>
+      </div>
+      <div class="submenu" id="cardTrackerMenu" data-submenu>
+        <a class="nav-link" href="/cards/manager/stock" data-label="My Card Stock">
+          <i class="bi bi-box-seam"></i> My Card Stock
+        </a>
+        <a class="nav-link" href="/cards/manager/distribute" data-label="Distribute to Agents">
+          <i class="bi bi-arrow-right-square"></i> Distribute to Agents
+        </a>
+        <a class="nav-link" href="/cards/manager/history" data-label="My History">
+          <i class="bi bi-clock-history"></i> My History
+        </a>
+      </div>
+
+      <a class="nav-link" href="/todo" data-label="Todo List tasks">
+        <i class="bi bi-list-task"></i> Todo List
+      </a>
+
+      <a class="nav-link" href="{{ url_for('login_logs.login_logs') }}" data-label="Login Logs security">
+        <i class="bi bi-lock"></i> Login Logs
+      </a>
+
+      <a class="nav-link" href="{{ url_for('manager_target.manager_targets') }}" data-label="Sales Target target bullseye">
+        <i class="bi bi-bullseye"></i> Sales Target
+      </a>
+
+      <a class="nav-link" href="{{ url_for('manager_profile.manager_profile') }}" data-label="Profile account">
+        <i class="bi bi-person-circle"></i> Profile
+      </a>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  function toggleSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('overlay');
+    const toggleBtn = document.getElementById('menuToggle');
+
+    const isActive = sidebar.classList.toggle('active');
+    overlay.classList.toggle('show', isActive);
+    document.body.classList.toggle('sidebar-open', isActive);
+    toggleBtn.classList.toggle('hide', isActive);
+
+    // Focus search when opened
+    if(isActive){
+      setTimeout(() => document.getElementById('sidebarSearch')?.focus(), 120);
+    }
+  }
+
+  function toggleMenu(menuId) {
+    const menu = document.getElementById(menuId);
+    if(!menu) return;
+
+    const parentToggle = menu.previousElementSibling;
+    const isOpen = menu.classList.toggle('show');
+
+    if(parentToggle && parentToggle.classList.contains('dropdown-toggle')){
+      parentToggle.classList.toggle('active', isOpen);
+    }
+
+    if (isOpen) localStorage.setItem(menuId, 'open');
+    else localStorage.removeItem(menuId);
+  }
+
+  function normalizePath(p){
+    return (p || '').split('?')[0].replace(/\/+$/, '') || '/';
+  }
+
+  function highlightActiveLink(){
+    const currentPath = normalizePath(window.location.pathname);
+    document.querySelectorAll('.sidebar a.nav-link').forEach(link => {
+      const href = normalizePath(link.getAttribute('href') || '');
+      if (href && href === currentPath) link.classList.add('active');
+    });
+  }
+
+  function restoreMenus(){
+    const ids = ['orderMenu','productMenu','transferMenu','productTransferMenu','cardTrackerMenu'];
+    ids.forEach(id => {
+      if(localStorage.getItem(id) === 'open'){
+        const el = document.getElementById(id);
+        if(el){
+          el.classList.add('show');
+          const t = el.previousElementSibling;
+          if(t && t.classList.contains('dropdown-toggle')) t.classList.add('active');
+        }
+      }
+    });
+  }
+
+  /* SEARCH: filters links + groups, auto-opens submenus on match */
+  function setupSidebarSearch(){
+    const input = document.getElementById('sidebarSearch');
+    const clearBtn = document.getElementById('sidebarSearchClear');
+    const groups = document.querySelectorAll('.nav-group[data-group]');
+    const allLinks = document.querySelectorAll('.sidebar a.nav-link, .sidebar .dropdown-toggle.nav-link');
+
+    function setClearVisible(v){
+      if(!clearBtn) return;
+      clearBtn.style.display = v ? 'block' : 'none';
+    }
+
+    function resetFilter(){
+      allLinks.forEach(el => el.classList.remove('nav-item-hidden'));
+      groups.forEach(g => g.classList.remove('nav-group-hidden'));
+      setClearVisible(false);
+      // when cleared, go back to saved submenu state
+      document.querySelectorAll('.submenu[data-submenu]').forEach(sm => sm.classList.remove('show'));
+      document.querySelectorAll('.dropdown-toggle.nav-link').forEach(t => t.classList.remove('active'));
+      restoreMenus();
+    }
+
+    function filter(q){
+      const query = (q || '').trim().toLowerCase();
+      if(!query){
+        resetFilter();
+        return;
+      }
+
+      setClearVisible(true);
+
+      // hide everything by default
+      allLinks.forEach(el => el.classList.add('nav-item-hidden'));
+
+      // show matched links/toggles; also open submenu if any child matches
+      const submenus = document.querySelectorAll('.submenu[data-submenu]');
+      submenus.forEach(sm => {
+        const toggle = sm.previousElementSibling;
+        let anyChildMatch = false;
+
+        sm.querySelectorAll('a.nav-link').forEach(a => {
+          const hay = (a.getAttribute('data-label') || a.textContent || '').toLowerCase();
+          if(hay.includes(query)){
+            a.classList.remove('nav-item-hidden');
+            anyChildMatch = true;
+          }
+        });
+
+        if(toggle){
+          const toggleHay = (toggle.getAttribute('data-label') || toggle.textContent || '').toLowerCase();
+          const toggleMatch = toggleHay.includes(query);
+
+          if(toggleMatch){
+            toggle.classList.remove('nav-item-hidden');
+          }
+
+          if(anyChildMatch){
+            // show toggle + open submenu
+            toggle.classList.remove('nav-item-hidden');
+            sm.classList.add('show');
+            toggle.classList.add('active');
+          }else{
+            sm.classList.remove('show');
+            toggle.classList.remove('active');
+          }
+        }
+      });
+
+      // show top-level (non-submenu) links that match
+      document.querySelectorAll('.sidebar-scroll > .nav-group a.nav-link').forEach(a => {
+        // only top-level anchors that are NOT inside a submenu
+        if(a.closest('.submenu')) return;
+        const hay = (a.getAttribute('data-label') || a.textContent || '').toLowerCase();
+        if(hay.includes(query)){
+          a.classList.remove('nav-item-hidden');
+        }
+      });
+
+      // show groups if they contain at least one visible item
+      groups.forEach(g => {
+        const visible = g.querySelectorAll('.nav-link:not(.nav-item-hidden), .dropdown-toggle.nav-link:not(.nav-item-hidden)').length > 0;
+        g.classList.toggle('nav-group-hidden', !visible);
+      });
+    }
+
+    input?.addEventListener('input', (e) => filter(e.target.value));
+    clearBtn?.addEventListener('click', () => {
+      if(input) input.value = '';
+      resetFilter();
+      input?.focus();
+    });
+
+    // ESC clears search (nice UX)
+    input?.addEventListener('keydown', (e) => {
+      if(e.key === 'Escape'){
+        input.value = '';
+        resetFilter();
+      }
+    });
+
+    // initial
+    resetFilter();
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    highlightActiveLink();
+    restoreMenus();
+    setupSidebarSearch();
+
+    refreshUndeliveredBadge();
+    refreshLowStockBadge();
+    setInterval(refreshUndeliveredBadge, 30000);
+    setInterval(refreshLowStockBadge, 30000);
+  });
+
+  async function refreshUndeliveredBadge(){
+    try{
+      const res = await fetch("{{ url_for('undelivered_items.undelivered_items_count_due') }}", { credentials: "same-origin" });
+      if(!res.ok) throw new Error("HTTP "+res.status);
+      const data = await res.json();
+      if(!data.ok) return;
+
+      const n = Number(data.due_soon || 0) + Number(data.overdue || 0);
+      const badge = document.getElementById("undeliveredBadge");
+      if(badge){
+        badge.textContent = n;
+        badge.classList.toggle("d-none", n <= 0);
+      }
+    }catch(e){ /* silent */ }
+  }
+
+  async function refreshLowStockBadge(){
+    try{
+      const res = await fetch("/manager/inventory/low-stocks/count", { credentials: "same-origin" });
+      if(!res.ok) throw new Error("HTTP "+res.status);
+      const data = await res.json();
+      if(!data.ok) return;
+
+      const n = Number(data.low_stock_count || 0);
+      const badge = document.getElementById("managerLowStockBadge");
+      const dot = document.getElementById("managerLowStockDot");
+
+      if(badge){
+        badge.textContent = n;
+        badge.classList.toggle("d-none", n <= 0);
+      }
+      if(dot){
+        dot.classList.toggle("d-none", n <= 0);
+      }
+    }catch(e){ /* silent */ }
+  }
+</script>

@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Agents Report</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="icon" href="https://res.cloudinary.com/dljpgzbto/image/upload/v1743993646/company-logo_dksb23.jpg" type="image/png" />
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <style>
+    body {
+      background-color: #f8f9fa;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    .rank-badge {
+      display: inline-block;
+      color: #fff;
+      font-weight: bold;
+      padding: 6px 12px;
+      border-radius: 20px;
+    }
+
+    .rank-1 { background-color: #28a745; }
+    .rank-2 { background-color: #52b788; }
+    .rank-3 { background-color: #74c69d; }
+    .rank-4 { background-color: #f6c453; }
+    .rank-5 { background-color: #f77f00; }
+    .rank-default { background-color: #e63946; }
+
+    .scroll-btn {
+      position: fixed;
+      bottom: 30px;
+      right: 20px;
+      z-index: 999;
+      background-color: #007BFF;
+      color: white;
+      border: none;
+      padding: 10px 14px;
+      border-radius: 50%;
+      font-size: 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+      cursor: pointer;
+    }
+
+    .navbar-dark-mode {
+      cursor: pointer;
+      font-size: 20px;
+    }
+  </style>
+</head>
+<body>
+
+<!-- 🌐 Navbar -->
+<nav class="navbar navbar-expand-lg bg-white shadow-sm px-3 mb-4">
+  <div class="container-fluid">
+    <a class="navbar-brand fw-bold text-dark" href="{{ url_for('manager_dashboard.manager_dashboard_view') }}">
+      <img src="https://res.cloudinary.com/dljpgzbto/image/upload/v1743993646/company-logo_dksb23.jpg" height="35" class="me-2" alt="Logo">
+      Dashboard
+    </a>
+    <div class="ms-auto">
+      <span class="navbar-dark-mode" onclick="toggleDarkMode()">🌓</span>
+    </div>
+  </div>
+</nav>
+
+<div class="container mb-5">
+  <h1 class="mb-4">Agents & Customers Report</h1>
+
+  <div class="row g-3 mb-4">
+    <div class="col-md-3">
+      <div class="card text-bg-primary">
+        <div class="card-header">Total Agents</div>
+        <div class="card-body"><h3 class="card-title">{{ total_agents }}</h3></div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card text-bg-success">
+        <div class="card-header">Active Agents</div>
+        <div class="card-body"><h3 class="card-title">{{ active_agents }}</h3></div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card text-bg-secondary">
+        <div class="card-header">Not Active Agents</div>
+        <div class="card-body"><h3 class="card-title">{{ not_active_agents }}</h3></div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card text-bg-info">
+        <div class="card-header">Total Customers</div>
+        <div class="card-body"><h3 class="card-title">{{ total_customers }}</h3></div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card text-bg-success">
+        <div class="card-header">Active Customers</div>
+        <div class="card-body"><h3 class="card-title">{{ active_customers }}</h3></div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card text-bg-secondary">
+        <div class="card-header">Not Active Customers</div>
+        <div class="card-body"><h3 class="card-title">{{ not_active_customers }}</h3></div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card text-bg-warning">
+        <div class="card-header">New Customers This Month</div>
+        <div class="card-body"><h3 class="card-title">{{ new_customers_this_month }}</h3></div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card text-bg-dark">
+        <div class="card-header">Payment Collection Efficiency</div>
+        <div class="card-body"><h3 class="card-title">{{ "%.2f"|format(payment_collection_efficiency) }}%</h3></div>
+      </div>
+    </div>
+  </div>
+
+  <h2 class="mt-5">Agent Activity Report</h2>
+  <div class="table-responsive">
+    <table class="table table-striped">
+      <thead class="table-primary">
+        <tr>
+          <th>Agent Name</th>
+          <th>Status</th>
+          <th>Total Customers</th>
+          <th>Active Customers</th>
+          <th>Recent Payments (last 30 days)</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for a in agent_activity %}
+        <tr>
+          <td>{{ a.agent_name }}</td>
+          <td>{{ a.status }}</td>
+          <td>{{ a.total_customers }}</td>
+          <td>{{ a.active_customers }}</td>
+          <td>{{ a.recent_payments }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <h2 class="mt-5">Top Performing Agents</h2>
+  <div class="table-responsive">
+    <table class="table table-bordered">
+      <thead class="table-success">
+        <tr>
+          <th>Rank</th>
+          <th>Agent Name</th>
+          <th>Status</th>
+          <th>Total Sales</th>
+          <th>Customer Count</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for agent in top_agents %}
+        <tr>
+          <td>
+            <span class="rank-badge 
+              {% if loop.index == 1 %}rank-1{% 
+              elif loop.index == 2 %}rank-2{% 
+              elif loop.index == 3 %}rank-3{% 
+              elif loop.index == 4 %}rank-4{% 
+              elif loop.index == 5 %}rank-5{% 
+              else %}rank-default{% endif %}">
+              {{ loop.index }}
+            </span>
+          </td>
+          <td>{{ agent.agent_name }}</td>
+          <td>{{ agent.status }}</td>
+          <td>{{ agent.total_sales }}</td>
+          <td>{{ agent.customer_count }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Scroll to bottom button -->
+<button class="scroll-btn" onclick="scrollToBottom()">↓</button>
+
+<script>
+  function toggleDarkMode() {
+    document.body.classList.toggle("bg-dark");
+    document.body.classList.toggle("text-white");
+    document.querySelectorAll('.card').forEach(c => c.classList.toggle("bg-secondary"));
+    document.querySelectorAll('table').forEach(t => t.classList.toggle("table-dark"));
+  }
+
+  function scrollToBottom() {
+    window.scrollTo({
+      top: document.body.scrollHeight,
+      behavior: 'smooth'
+    });
+  }
+</script>
+  {% include 'app_footer.html' %}
+
+</body>
+</html>
+

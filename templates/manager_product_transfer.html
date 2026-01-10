@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Product Transfer</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="icon"
+          href="https://imagedelivery.net/h9fmMoa1o2c2P55TcWJGOg/10283f28-b9a0-4100-b254-19a854386800/public"
+          type="image/png">
+  <style>
+    :root{
+      --ink:#0f172a;
+      --muted:#64748b;
+      --panel:#ffffff;
+      --edge:#e2e8f0;
+      --accent:#2563eb;
+    }
+    *{box-sizing:border-box;}
+    body{
+      font-family:"Manrope", sans-serif;
+      background: radial-gradient(circle at top, #eef2ff 0%, #f8fafc 45%, #f5f6fb 100%);
+      color:var(--ink);
+      min-height:100vh;
+    }
+    .page-shell{padding:1.5rem 1.25rem 3rem;}
+    .page-header{
+      background:linear-gradient(120deg,#0f172a,#1e3a8a);
+      color:#fff;
+      border-radius:18px;
+      padding:1.2rem 1.4rem;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:1rem;
+      box-shadow:0 16px 30px rgba(15,23,42,.18);
+      margin-bottom:1.5rem;
+    }
+    .page-header h1{font-size:1.35rem;margin:0;font-weight:700;}
+    .chip{
+      background:rgba(255,255,255,.16);
+      border:1px solid rgba(255,255,255,.25);
+      color:#fff;
+      border-radius:999px;
+      padding:.25rem .7rem;
+      font-size:.75rem;
+      font-weight:600;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+    }
+    .panel{
+      background:var(--panel);
+      border:1px solid var(--edge);
+      border-radius:16px;
+      box-shadow:0 12px 24px rgba(15,23,42,.06);
+      padding:1.25rem;
+    }
+    .section-title{font-size:.9rem;text-transform:uppercase;letter-spacing:.08em;color:#475569;font-weight:700;}
+    .form-control, .form-select{
+      border-radius:12px;
+      border-color:#d9e1ec;
+      padding:.6rem .75rem;
+    }
+    .select2-container--default .select2-selection--single{
+      height:42px;
+      border-radius:12px;
+      border-color:#d9e1ec;
+      display:flex;
+      align-items:center;
+      padding:0 .75rem;
+    }
+    .select2-container--default .select2-selection--single .select2-selection__rendered{
+      padding-left:0;
+      color:var(--ink);
+    }
+    .select2-container--default .select2-selection--single .select2-selection__arrow{
+      height:40px;
+    }
+    .stat-pill{
+      background:#f8fafc;
+      border:1px solid #e2e8f0;
+      border-radius:12px;
+      padding:.6rem .75rem;
+      font-size:.85rem;
+      color:#334155;
+    }
+    .btn-brand{
+      background:var(--accent);
+      border:none;
+      color:#fff;
+      border-radius:12px;
+      padding:.65rem 1.1rem;
+      font-weight:600;
+    }
+    .btn-brand:disabled{opacity:.6;}
+    .note{font-size:.8rem;color:var(--muted);}
+    .alert-inline{display:none;}
+    .spinner-border-sm{width:1rem;height:1rem;}
+  </style>
+</head>
+<body>
+{% include 'manager_sidebar.html' %}
+
+  <div class="page-shell">
+    <div class="page-header">
+      <div>
+        <div class="chip mb-2">Manager Transfer</div>
+        <h1>Product Paid Value Transfer</h1>
+      </div>
+      <div class="chip">Partial Transfer</div>
+    </div>
+
+    <div class="panel">
+      <form id="transferForm">
+        <input type="hidden" name="transfer_id" id="transferId">
+
+        <div class="row g-4">
+          <div class="col-lg-6">
+            <div class="section-title mb-2">From</div>
+            <div class="mb-3">
+              <label class="form-label">From Customer</label>
+              <select class="form-select" name="from_customer_id" id="fromCustomer"></select>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">From Product</label>
+              <select class="form-select" name="from_product_index" id="fromProduct"></select>
+            </div>
+            <div class="d-flex flex-wrap gap-2">
+              <div class="stat-pill">Paid: <strong id="fromPaid">GHS 0.00</strong></div>
+              <div class="stat-pill">Left: <strong id="fromLeft">GHS 0.00</strong></div>
+              <div class="stat-pill">Max: <strong id="fromMax">GHS 0.00</strong></div>
+            </div>
+          </div>
+
+          <div class="col-lg-6">
+            <div class="section-title mb-2">To</div>
+            <div class="form-check mb-3">
+              <input class="form-check-input" type="checkbox" id="sameCustomerToggle" checked>
+              <label class="form-check-label" for="sameCustomerToggle">Transfer within same customer</label>
+            </div>
+            <div class="mb-3" id="toCustomerWrap">
+              <label class="form-label">To Customer</label>
+              <select class="form-select" name="to_customer_id" id="toCustomer"></select>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">To Product</label>
+              <select class="form-select" name="to_product_index" id="toProduct"></select>
+            </div>
+            <div class="d-flex flex-wrap gap-2">
+              <div class="stat-pill">Paid: <strong id="toPaid">GHS 0.00</strong></div>
+              <div class="stat-pill">Left: <strong id="toLeft">GHS 0.00</strong></div>
+            </div>
+          </div>
+
+          <div class="col-12">
+            <div class="section-title mb-2">Transfer Details</div>
+            <div class="row g-3">
+              <div class="col-md-4">
+                <label class="form-label">Transfer Amount (GHS)</label>
+                <input type="number" step="0.01" min="0" class="form-control" name="transfer_amount" id="transferAmount" required>
+              </div>
+              <div class="col-md-8">
+                <label class="form-label">Note</label>
+                <div class="form-control-plaintext note" id="noteText">Note: Transfer of product to product</div>
+              </div>
+            </div>
+            <div class="note mt-2">Transfer must be at least GHS 20 and less than the paid balance.</div>
+          </div>
+        </div>
+
+        <div class="alert alert-danger alert-inline mt-3" id="formError"></div>
+
+        <div class="d-flex justify-content-end mt-4">
+          <button type="submit" class="btn btn-brand" id="submitBtn">
+            <span class="spinner-border spinner-border-sm d-none" id="submitSpinner" role="status"></span>
+            <span id="submitLabel">Execute Transfer</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+  <script>
+    const URLS = {
+      customers: "{{ url_for('transfer.manager_transfer_customers') }}",
+      products: "{{ url_for('transfer.manager_transfer_customer_products') }}",
+      balance: "{{ url_for('transfer.manager_transfer_product_balance') }}",
+      execute: "{{ url_for('transfer.manager_transfer_execute') }}"
+    };
+
+    const nf2 = new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+    const fromProduct = document.getElementById('fromProduct');
+    const toProduct = document.getElementById('toProduct');
+    const transferAmount = document.getElementById('transferAmount');
+    const formError = document.getElementById('formError');
+    const sameCustomerToggle = document.getElementById('sameCustomerToggle');
+    const toCustomerWrap = document.getElementById('toCustomerWrap');
+    const noteText = document.getElementById('noteText');
+    let fromPaidValue = 0;
+
+    document.getElementById('transferId').value = Math.random().toString(36).slice(2, 10);
+
+    function showError(msg) {
+      formError.textContent = msg;
+      formError.style.display = 'block';
+    }
+
+    function clearError() {
+      formError.textContent = '';
+      formError.style.display = 'none';
+    }
+
+    function updateNote() {
+      const fromName = fromProduct.selectedOptions[0]?.dataset?.name || 'product';
+      const toName = toProduct.selectedOptions[0]?.dataset?.name || 'product';
+      noteText.textContent = `Note: Transfer of ${fromName} to ${toName}`;
+    }
+
+    async function safeJsonFetch(url, options) {
+      const res = await fetch(url, options);
+      const ct = res.headers.get('content-type') || '';
+      if (!ct.includes('application/json')) {
+        const text = await res.text();
+        throw new Error(text.slice(0, 200) || 'Non-JSON response');
+      }
+      const data = await res.json();
+      if (!res.ok || !data.ok) {
+        throw new Error(data.message || 'Request failed');
+      }
+      return data;
+    }
+
+    function initCustomerSelects() {
+      const opts = {
+        width: '100%',
+        placeholder: 'Search customer',
+        minimumInputLength: 1,
+        ajax: {
+          delay: 250,
+          transport: function (params, success, failure) {
+            const q = params.data.q || '';
+            safeJsonFetch(`${URLS.customers}?q=${encodeURIComponent(q)}`)
+              .then(data => success({ results: data.customers }))
+              .catch(err => failure(err));
+          },
+          processResults: function (data) {
+            return { results: data.results || [] };
+          }
+        },
+        templateResult: function (item) {
+          if (item.loading) return item.text;
+          const phone = item.phone ? ` - ${item.phone}` : '';
+          return `${item.text || item.name}${phone}`;
+        },
+        templateSelection: function (item) {
+          const phone = item.phone ? ` - ${item.phone}` : '';
+          return `${item.text || item.name}${phone}`;
+        }
+      };
+
+      $('#fromCustomer').select2({
+        ...opts,
+        placeholder: 'Search from customer'
+      }).on('select2:select', async (e) => {
+        clearError();
+        await loadProducts(e.params.data.id, fromProduct);
+        if (sameCustomerToggle.checked) {
+          $('#toCustomer').val(e.params.data.id).trigger('change.select2');
+          await loadProducts(e.params.data.id, toProduct);
+          updateNote();
+        }
+      });
+
+      $('#toCustomer').select2({
+        ...opts,
+        placeholder: 'Search to customer'
+      }).on('select2:select', async (e) => {
+        clearError();
+        await loadProducts(e.params.data.id, toProduct);
+        updateNote();
+      });
+    }
+
+    async function loadProducts(customerId, targetSelect) {
+      targetSelect.innerHTML = '';
+      if (!customerId) return;
+      const data = await safeJsonFetch(`${URLS.products}?customer_id=${encodeURIComponent(customerId)}`);
+      const options = data.products.map(p => {
+        const status = p.status || 'active';
+        const transfer = p.transfer_status ? ` / ${p.transfer_status}` : '';
+        return `<option value="${p.index}" data-name="${p.name}">${p.index + 1}. ${p.name} - Total GHS ${nf2.format(p.total)} - Paid GHS ${nf2.format(p.paid)} - Left GHS ${nf2.format(p.left)} (${status}${transfer})</option>`;
+      });
+      targetSelect.innerHTML = options.join('');
+      if (targetSelect.value) {
+        await loadBalance(customerId, targetSelect.value, targetSelect === fromProduct ? 'from' : 'to');
+      }
+      updateNote();
+    }
+
+    async function loadBalance(customerId, productIndex, side) {
+      if (!customerId || productIndex === null) return;
+      const data = await safeJsonFetch(`${URLS.balance}?customer_id=${encodeURIComponent(customerId)}&product_index=${encodeURIComponent(productIndex)}`);
+      if (side === 'from') {
+        fromPaidValue = Number(data.paid || 0);
+        document.getElementById('fromPaid').textContent = `GHS ${nf2.format(fromPaidValue)}`;
+        document.getElementById('fromLeft').textContent = `GHS ${nf2.format(data.left)}`;
+        document.getElementById('fromMax').textContent = `GHS ${nf2.format(fromPaidValue)}`;
+      } else {
+        document.getElementById('toPaid').textContent = `GHS ${nf2.format(data.paid)}`;
+        document.getElementById('toLeft').textContent = `GHS ${nf2.format(data.left)}`;
+      }
+      updateNote();
+    }
+
+    sameCustomerToggle.addEventListener('change', () => {
+      toCustomerWrap.style.display = sameCustomerToggle.checked ? 'none' : 'block';
+      if (sameCustomerToggle.checked) {
+        const fromId = $('#fromCustomer').val();
+        if (fromId) {
+          $('#toCustomer').val(fromId).trigger('change.select2');
+          loadProducts(fromId, toProduct);
+        }
+      } else {
+        toProduct.innerHTML = '';
+      }
+      updateNote();
+    });
+
+    fromProduct.addEventListener('change', async () => {
+      clearError();
+      const customerId = $('#fromCustomer').val();
+      await loadBalance(customerId, fromProduct.value, 'from');
+      updateNote();
+    });
+
+    toProduct.addEventListener('change', async () => {
+      clearError();
+      const customerId = sameCustomerToggle.checked ? $('#fromCustomer').val() : $('#toCustomer').val();
+      await loadBalance(customerId, toProduct.value, 'to');
+      updateNote();
+    });
+
+    transferAmount.addEventListener('input', () => {
+      clearError();
+    });
+
+    document.getElementById('transferForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      clearError();
+      const btn = document.getElementById('submitBtn');
+      const spinner = document.getElementById('submitSpinner');
+      const label = document.getElementById('submitLabel');
+      const fromId = $('#fromCustomer').val();
+      const toId = sameCustomerToggle.checked ? fromId : $('#toCustomer').val();
+      if (!fromId || !toId) {
+        showError('Select both customers.');
+        return;
+      }
+      if (sameCustomerToggle.checked && String(fromProduct.value) === String(toProduct.value)) {
+        showError('From and To products must be different.');
+        return;
+      }
+      if (fromPaidValue <= 0) {
+        showError('Cannot transfer: amount paid not found.');
+        return;
+      }
+      const amount = parseFloat(transferAmount.value || '0');
+      if (amount < 20) {
+        showError('Transfer amount must be at least GHS 20.');
+        return;
+      }
+      if (Math.round(amount * 100) >= Math.round(fromPaidValue * 100)) {
+        showError(`Transfer amount must be less than the amount paid (GHS ${fromPaidValue.toFixed(2)}).`);
+        return;
+      }
+
+      const form = e.target;
+      if (sameCustomerToggle.checked) {
+        const toSelect = document.getElementById('toCustomer');
+        if (!toSelect.querySelector(`option[value="${fromId}"]`)) {
+          const opt = new Option('', fromId, true, true);
+          toSelect.appendChild(opt);
+        }
+        toSelect.value = fromId;
+      }
+
+      btn.disabled = true;
+      spinner.classList.remove('d-none');
+      label.textContent = 'Processing...';
+
+      try {
+        const formData = new FormData(form);
+        const data = await safeJsonFetch(URLS.execute, { method: 'POST', body: formData });
+        alert('Transfer successful.');
+        if (data.redirect_to) {
+          window.location.href = data.redirect_to;
+        } else {
+          window.location.reload();
+        }
+      } catch (err) {
+        showError(err.message || 'Transfer failed');
+      } finally {
+        btn.disabled = false;
+        spinner.classList.add('d-none');
+        label.textContent = 'Execute Transfer';
+      }
+    });
+
+    toCustomerWrap.style.display = 'none';
+    initCustomerSelects();
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  {% include 'app_footer.html' %}
+
+</body>
+</html>

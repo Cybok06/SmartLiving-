@@ -1,0 +1,1065 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Inventory & Sales Operations Analytics</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <!-- Bootstrap + Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <link rel="icon"
+          href="https://imagedelivery.net/h9fmMoa1o2c2P55TcWJGOg/10283f28-b9a0-4100-b254-19a854386800/public"
+          type="image/png">
+
+  <!-- Font -->
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <style>
+    :root{
+      --bg:#f4f6fb;
+      --panel:#ffffff;
+      --edge:#e7ebf3;
+      --ink:#0f172a;
+      --muted:#64748b;
+      --muted2:#94a3b8;
+
+      --nav1:#1f2a44;
+      --nav2:#243255;
+
+      --primary:#2f5fd3;
+      --primary2:#5aa4ff;
+
+      --good:#16a34a;
+      --warn:#f59e0b;
+      --bad:#dc2626;
+
+      --shadow: 0 10px 25px rgba(15,23,42,.07);
+      --shadow2: 0 12px 28px rgba(15,23,42,.10);
+      --radius: 14px;
+      --radius2: 12px;
+    }
+
+    *{box-sizing:border-box;}
+    body{
+      font-family:"Manrope",system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+      background: radial-gradient(1200px 700px at 20% -10%, rgba(90,164,255,.16), transparent 55%),
+                  radial-gradient(900px 600px at 90% 0%, rgba(47,95,211,.14), transparent 50%),
+                  linear-gradient(180deg, #f7f9ff 0%, var(--bg) 70%, #f2f5fb 100%);
+      color:var(--ink);
+      min-height:100vh;
+    }
+
+    .page-wrap{padding:0 1.25rem 3.5rem; margin-left:0;}
+    @media (min-width: 992px){
+      .page-wrap{margin-left:260px;}
+      #sidebar.collapsed ~ .page-wrap{margin-left:0;}
+    }
+
+    /* Topbar */
+    .topbar{
+      margin: 0 0 1rem;
+      padding: .9rem 1.15rem;
+      border-radius: 0 0 16px 16px;
+      background: linear-gradient(90deg, var(--nav1), var(--nav2));
+      box-shadow: 0 12px 30px rgba(15,23,42,.20);
+      color:#fff;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap: 1rem;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+    .brand{
+      display:flex;
+      align-items:center;
+      gap:.8rem;
+      min-width: 220px;
+    }
+    .brand-mark{
+      width:40px;height:40px;border-radius:12px;
+      background: rgba(255,255,255,.14);
+      border: 1px solid rgba(255,255,255,.18);
+      display:flex;align-items:center;justify-content:center;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.06);
+    }
+    .brand-mark i{font-size:1.1rem;}
+    .brand h1{
+      font-size: 1.05rem;
+      font-weight: 800;
+      margin: 0;
+      letter-spacing: .02em;
+      white-space: nowrap;
+    }
+
+    .topbar-right{
+      display:flex;
+      align-items:center;
+      gap:.6rem;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+    .range-chip{
+      display:inline-flex;
+      align-items:center;
+      gap:.45rem;
+      padding:.35rem .7rem;
+      border-radius: 999px;
+      background: rgba(255,255,255,.13);
+      border: 1px solid rgba(255,255,255,.18);
+      font-weight: 800;
+      font-size: .78rem;
+      white-space: nowrap;
+    }
+    .icon-btn{
+      width:36px;height:36px;border-radius:999px;
+      background: rgba(255,255,255,.12);
+      border: 1px solid rgba(255,255,255,.18);
+      display:flex;align-items:center;justify-content:center;
+      color:#fff;
+      cursor:pointer;
+      transition: transform .12s ease, background .12s ease;
+    }
+    .icon-btn:hover{transform: translateY(-1px); background: rgba(255,255,255,.16);}
+    .icon-btn i{font-size:1rem;}
+
+    /* Filter Bar */
+    .filters{
+      background: rgba(255,255,255,.75);
+      border: 1px solid var(--edge);
+      backdrop-filter: blur(10px);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: .85rem;
+      position: sticky;
+      top: 74px; /* below topbar */
+      z-index: 40;
+      display: none;
+    }
+    .filters.is-open{
+      display: block;
+    }
+    @media (max-width: 992px){
+      .filters{position: relative; top:auto;}
+    }
+
+    .f-label{
+      font-size:.70rem;
+      text-transform:uppercase;
+      letter-spacing:.09em;
+      color: var(--muted);
+      font-weight: 900;
+      margin-bottom: .25rem;
+      display:flex;
+      align-items:center;
+      gap:.35rem;
+    }
+
+    .f-control{
+      background: #fff;
+      border: 1px solid #e6ebf5;
+      border-radius: 12px;
+      padding: .55rem .75rem;
+      font-weight: 700;
+      color: #0f172a;
+      box-shadow: 0 1px 0 rgba(15,23,42,.02);
+    }
+    .f-control:focus{
+      border-color: rgba(47,95,211,.35);
+      box-shadow: 0 0 0 .2rem rgba(47,95,211,.12);
+    }
+
+    .apply-btn{
+      border-radius: 12px;
+      padding: .62rem .9rem;
+      font-weight: 900;
+      background: linear-gradient(180deg, #2f5fd3, #2856c5);
+      border: 1px solid rgba(255,255,255,.08);
+      box-shadow: 0 10px 20px rgba(47,95,211,.25);
+    }
+    .apply-btn:hover{filter: brightness(1.02);}
+    .form-check-label{color: var(--muted); font-weight: 800;}
+
+    /* KPI Cards */
+    .kpi-card{
+      background: var(--panel);
+      border: 1px solid var(--edge);
+      border-radius: 14px;
+      box-shadow: var(--shadow);
+      padding: .95rem 1rem;
+      height: 100%;
+    }
+    .kpi-top{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:.6rem;
+    }
+    .kpi-label{
+      font-size: .78rem;
+      font-weight: 900;
+      color: #1f2a44;
+      letter-spacing: .01em;
+    }
+    .kpi-value{
+      font-size: 1.45rem;
+      font-weight: 900;
+      margin-top: .25rem;
+      line-height: 1.15;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .kpi-sub{
+      font-size: .76rem;
+      color: var(--muted);
+      font-weight: 700;
+      margin-top: .15rem;
+    }
+    .trend{
+      display:inline-flex;
+      align-items:center;
+      gap:.25rem;
+      padding: .2rem .55rem;
+      border-radius: 999px;
+      font-size: .75rem;
+      font-weight: 900;
+      background: #f1f5ff;
+      border: 1px solid #dfe8ff;
+      color: #1d4ed8;
+      white-space: nowrap;
+    }
+    .trend.good{background:#ecfdf3;border-color:#c9f6d8;color:var(--good);}
+    .trend.bad{background:#fff1f2;border-color:#ffd0d5;color:var(--bad);}
+    .trend.warn{background:#fff7ed;border-color:#ffdfb6;color:var(--warn);}
+
+    /* Section Cards */
+    .section-card{
+      background: var(--panel);
+      border: 1px solid var(--edge);
+      border-radius: 14px;
+      box-shadow: var(--shadow);
+      padding: 1rem 1.05rem;
+      height: 100%;
+    }
+    .section-hd{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap: .75rem;
+      margin-bottom: .75rem;
+    }
+    .section-title{
+      font-weight: 900;
+      font-size: .95rem;
+      margin: 0;
+      color: #1f2a44;
+      letter-spacing: .01em;
+    }
+    .section-chip{
+      display:inline-flex;
+      align-items:center;
+      gap:.35rem;
+      padding:.22rem .6rem;
+      border-radius:999px;
+      font-weight:900;
+      font-size:.72rem;
+      background:#f3f6ff;
+      border:1px solid #e1e8ff;
+      color:#1d4ed8;
+    }
+
+    .chart-box{
+      background: linear-gradient(180deg, #ffffff 0%, #fbfcff 100%);
+      border: 1px solid #eef2fb;
+      border-radius: 12px;
+      padding: .75rem;
+      min-height: 240px;
+      position: relative;
+    }
+    .chart-box canvas{
+      width:100% !important;
+      height: 215px !important; /* consistent chart height */
+    }
+    .empty-note{
+      position:absolute;
+      inset:0;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      text-align:center;
+      padding: 1rem;
+      color: var(--muted);
+      font-weight: 800;
+      font-size: .9rem;
+      background: rgba(255,255,255,.75);
+      border-radius: 12px;
+    }
+    .empty-note.d-none{display:none !important;}
+
+    /* Insight Panel */
+    .insight-panel{
+      background: linear-gradient(135deg, #f8fbff 0%, #ffffff 60%);
+      border: 1px solid var(--edge);
+      border-radius: 14px;
+      padding: 1rem;
+      box-shadow: var(--shadow);
+      height: 100%;
+    }
+    .insight-item{
+      display:flex;
+      gap:.65rem;
+      padding:.6rem .1rem;
+      border-top: 1px solid #eef2fb;
+      align-items:flex-start;
+    }
+    .insight-item:first-child{border-top:none; padding-top:.25rem;}
+    .insight-ic{
+      width: 32px; height: 32px;
+      border-radius: 10px;
+      display:flex;align-items:center;justify-content:center;
+      background: #f1f5ff;
+      border: 1px solid #dfe8ff;
+      color: #1d4ed8;
+      flex: 0 0 auto;
+    }
+    .insight-ic.warn{background:#fff7ed;border-color:#ffdfb6;color:var(--warn);}
+    .insight-ic.bad{background:#fff1f2;border-color:#ffd0d5;color:var(--bad);}
+    .insight-ic.good{background:#ecfdf3;border-color:#c9f6d8;color:var(--good);}
+    .insight-text{
+      font-size: .88rem;
+      color: #1f2a44;
+      font-weight: 800;
+      line-height: 1.25rem;
+    }
+    .insight-sub{
+      display:block;
+      font-size: .78rem;
+      font-weight: 800;
+      color: var(--muted);
+      margin-top: .1rem;
+    }
+
+    /* Mini metric blocks */
+    .mini-metric{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      padding: .55rem 0;
+      border-top: 1px solid #eef2fb;
+    }
+    .mini-metric:first-of-type{border-top:none;}
+    .mini-label{
+      font-size: .85rem;
+      color: #334155;
+      font-weight: 900;
+    }
+    .mini-val{
+      font-size: 1.05rem;
+      font-weight: 900;
+      color: #0f172a;
+    }
+
+    /* Tables */
+    .table thead th{
+      font-size: .78rem;
+      font-weight: 900;
+      color: #334155;
+      background: #f8fafc;
+      border-bottom: 1px solid #e8eef8;
+    }
+    .table tbody td{
+      font-weight: 800;
+      color: #0f172a;
+      border-top: 1px solid #eef2fb;
+      font-size: .85rem;
+    }
+
+    /* Small helper */
+    .soft-muted{color: var(--muted2); font-weight: 800;}
+  </style>
+</head>
+
+<body>
+  {% include "executive_sidebar.html" %}
+
+  <div class="page-wrap">
+
+    <!-- TOPBAR -->
+    <div class="topbar">
+      <div class="brand">
+        <div class="brand-mark"><i class="bi bi-graph-up-arrow"></i></div>
+        <h1>Inventory & Sales Operations Analytics</h1>
+      </div>
+
+      <div class="topbar-right">
+        <span class="range-chip"><i class="bi bi-calendar3"></i> {{ range_label }}</span>
+        <button class="icon-btn" type="button" id="filterToggleBtn" title="Filters">
+          <i class="bi bi-funnel"></i>
+        </button>
+        <div class="icon-btn" title="Help"><i class="bi bi-question-circle"></i></div>
+        <div class="icon-btn" title="Messages"><i class="bi bi-chat-left-text"></i></div>
+        <div class="icon-btn" title="Notifications"><i class="bi bi-bell"></i></div>
+      </div>
+    </div>
+
+    <!-- FILTERS -->
+    <form class="filters mb-3" method="get" id="filtersForm">
+      <div class="row g-2 align-items-end">
+        <div class="col-6 col-lg-2">
+          <div class="f-label"><i class="bi bi-diagram-3"></i> Branch</div>
+          <select class="form-select f-control" name="branch">
+            <option value="">All Branches</option>
+            {% for b in branches %}
+              <option value="{{ b }}" {% if filters.branch == b %}selected{% endif %}>{{ b }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="col-6 col-lg-2">
+          <div class="f-label"><i class="bi bi-clock-history"></i> Range</div>
+          <select class="form-select f-control" name="range" id="rangeSelect">
+            <option value="7"  {% if filters.range == "7" %}selected{% endif %}>Last 7 Days</option>
+            <option value="30" {% if filters.range == "30" %}selected{% endif %}>Last 30 Days</option>
+            <option value="90" {% if filters.range == "90" %}selected{% endif %}>Last 90 Days</option>
+            <option value="custom" {% if filters.range not in ["7","30","90"] %}selected{% endif %}>Custom</option>
+          </select>
+        </div>
+
+        <div class="col-6 col-lg-2">
+          <div class="f-label"><i class="bi bi-tags"></i> Category</div>
+          <select class="form-select f-control" name="category" {% if not categories %}disabled{% endif %}>
+            <option value="">{% if categories %}All Categories{% else %}Not Available{% endif %}</option>
+            {% for c in categories %}
+              <option value="{{ c }}" {% if filters.category == c %}selected{% endif %}>{{ c }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="col-6 col-lg-2">
+          <div class="f-label"><i class="bi bi-person-badge"></i> Agent</div>
+          <select class="form-select f-control" name="agent">
+            <option value="">All Agents</option>
+            {% for a in agents %}
+              <option value="{{ a.id }}" {% if filters.agent == a.id %}selected{% endif %}>
+                {{ a.name }}{% if a.branch %} - {{ a.branch }}{% endif %}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="col-6 col-lg-2">
+          <div class="f-label"><i class="bi bi-calendar-event"></i> Start</div>
+          <input type="date" class="form-control f-control" name="start" id="startDate" value="{{ filters.start }}">
+        </div>
+
+        <div class="col-6 col-lg-2">
+          <div class="f-label"><i class="bi bi-calendar-check"></i> End</div>
+          <input type="date" class="form-control f-control" name="end" id="endDate" value="{{ filters.end }}">
+        </div>
+
+        <div class="col-6 col-lg-2">
+          <div class="form-check mt-2">
+            <input class="form-check-input" type="checkbox" id="includeTransfers" name="include_transfers" value="1" {% if filters.include_transfers %}checked{% endif %}>
+            <label class="form-check-label" for="includeTransfers">Include Transfers</label>
+          </div>
+        </div>
+
+        <div class="col-6 col-lg-2">
+          <div class="form-check mt-2">
+            <input class="form-check-input" type="checkbox" id="includeAdjustments" name="include_adjustments" value="1" {% if filters.include_adjustments %}checked{% endif %}>
+            <label class="form-check-label" for="includeAdjustments">Include Adjustments</label>
+          </div>
+        </div>
+
+        <div class="col-12 col-lg-2 text-lg-end">
+          <button class="btn btn-primary apply-btn w-100">
+            <i class="bi bi-funnel"></i> Apply Filters
+          </button>
+        </div>
+      </div>
+    </form>
+
+    <!-- KPI ROW -->
+    <div class="row g-3 mb-3">
+      {% for k in kpis %}
+        <div class="col-6 col-lg-3 col-xl-3">
+          <div class="kpi-card">
+            <div class="kpi-top">
+              <div>
+                <div class="kpi-label">{{ k.label }}</div>
+
+                {% if k.available is defined and not k.available %}
+                  <div class="kpi-value text-muted">Not available</div>
+                  <div class="kpi-sub">Missing required logs</div>
+                {% elif k.value is none %}
+                  <div class="kpi-value text-muted">Not available</div>
+                  <div class="kpi-sub">Missing required logs</div>
+                {% else %}
+                  <div class="kpi-value">
+                    {% if k.unit %}
+                      {{ k.value | money_gh }}
+                    {% else %}
+                      {{ k.value | number_fmt }}
+                    {% endif %}
+                  </div>
+                  <div class="kpi-sub">Snapshot</div>
+                {% endif %}
+              </div>
+
+              {# Optional: show trend chip if you pass k.trend_type and k.trend_text #}
+              {% if k.trend_type and k.trend_text %}
+                <span class="trend {{ k.trend_type }}">
+                  {% if k.trend_type == "good" %}<i class="bi bi-arrow-up-right"></i>{% endif %}
+                  {% if k.trend_type == "bad"  %}<i class="bi bi-arrow-down-right"></i>{% endif %}
+                  {% if k.trend_type == "warn" %}<i class="bi bi-dash"></i>{% endif %}
+                  {{ k.trend_text }}
+                </span>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+
+    <!-- CHARTS ROW -->
+    <div class="row g-3 mb-3">
+      <div class="col-lg-4">
+        <div class="section-card">
+          <div class="section-hd">
+            <h3 class="section-title">Stock Value by Branch (Cost)</h3>
+            <span class="section-chip"><i class="bi bi-bar-chart"></i> Branch</span>
+          </div>
+          <div class="chart-box">
+            <canvas id="stockByBranchChart"></canvas>
+            <div id="stockByBranchEmpty" class="empty-note d-none">Not available (missing inventory branch data)</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-lg-4">
+        <div class="section-card">
+          <div class="section-hd">
+            <h3 class="section-title">Stock In vs Stock Out</h3>
+            <span class="section-chip"><i class="bi bi-activity"></i> Flow</span>
+          </div>
+          {% if stock_in_note or stock_out_note %}
+            <div class="small text-muted mb-2">
+              {% if stock_in_note %}<span class="me-2">{{ stock_in_note }}</span>{% endif %}
+              {% if stock_out_note %}<span>{{ stock_out_note }}</span>{% endif %}
+            </div>
+          {% endif %}
+          <div class="chart-box">
+            <canvas id="stockInOutChart"></canvas>
+            <div id="stockInOutEmpty" class="empty-note d-none">Not available (missing stock-in/out logs)</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-lg-4">
+        <div class="section-card">
+          <div class="section-hd">
+            <h3 class="section-title">Instant Purchase Revenue by Branch</h3>
+            <span class="section-chip"><i class="bi bi-cash-coin"></i> Instant</span>
+          </div>
+          <div class="chart-box">
+            <canvas id="instantByBranchChart"></canvas>
+            <div id="instantByBranchEmpty" class="empty-note d-none">Not available (missing instant sales)</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TOP PRODUCTS + INSIGHTS -->
+    <div class="row g-3 mb-3">
+      <div class="col-lg-8">
+        <div class="section-card">
+          <div class="section-hd">
+            <h3 class="section-title">Top Products by Stock Value (Selling)</h3>
+            <span class="section-chip"><i class="bi bi-box-seam"></i> Products</span>
+          </div>
+          <div class="chart-box">
+            <canvas id="topProductsChart"></canvas>
+            <div id="topProductsEmpty" class="empty-note d-none">Not available (missing inventory data)</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-lg-4">
+        <div class="insight-panel">
+          <div class="section-hd mb-2">
+            <h3 class="section-title">Action Insights</h3>
+            <span class="section-chip"><i class="bi bi-lightbulb"></i> Auto</span>
+          </div>
+
+          {% if insights %}
+            {% for i in insights %}
+              <div class="insight-item">
+                <div class="insight-ic warn"><i class="bi bi-exclamation-triangle"></i></div>
+                <div>
+                  <div class="insight-text">{{ i }}</div>
+                  <span class="insight-sub">Updated by filters</span>
+                </div>
+              </div>
+            {% endfor %}
+          {% else %}
+            <div class="insight-item">
+              <div class="insight-ic"><i class="bi bi-info-circle"></i></div>
+              <div>
+                <div class="insight-text">Not enough signals yet.</div>
+                <span class="insight-sub">Data will appear as logs grow.</span>
+              </div>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- 3 MINI SECTIONS (Instant / Closed / Deliveries) -->
+    <div class="row g-3 mb-3">
+      <div class="col-lg-4">
+        <div class="section-card">
+          <div class="section-hd">
+            <h3 class="section-title">Instant Purchase Analysis</h3>
+            <span class="section-chip"><i class="bi bi-cash-stack"></i> Revenue</span>
+          </div>
+
+          <div class="mini-metric">
+            <div class="mini-label">Instant Purchases</div>
+            <div class="mini-val">{{ instant_count | number_fmt }}</div>
+          </div>
+          <div class="mini-metric">
+            <div class="mini-label">Revenue</div>
+            <div class="mini-val">{{ instant_revenue | money_gh }}</div>
+          </div>
+
+          <div class="chart-box mt-2">
+            <canvas id="instantTrendChart"></canvas>
+            <div id="instantTrendEmpty" class="empty-note d-none">Not available (missing instant sales)</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-lg-4">
+        <div class="section-card">
+          <div class="section-hd">
+            <h3 class="section-title">Closed Cards Metrics</h3>
+            <span class="section-chip"><i class="bi bi-check2-circle"></i> Closures</span>
+          </div>
+
+          <div class="mini-metric">
+            <div class="mini-label">Closed Cards</div>
+            <div class="mini-val">{{ closed_count | number_fmt }}</div>
+          </div>
+          <div class="mini-metric">
+            <div class="mini-label">Total Value</div>
+            <div class="mini-val">{{ closed_value | money_gh }}</div>
+          </div>
+
+          <div class="chart-box mt-2">
+            <canvas id="closedTrendChart"></canvas>
+            <div id="closedTrendEmpty" class="empty-note d-none">Not available (missing closures)</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-lg-4">
+        <div class="section-card">
+          <div class="section-hd">
+            <h3 class="section-title">Delivery Performance</h3>
+            <span class="section-chip"><i class="bi bi-truck"></i> Ops</span>
+          </div>
+
+          <div class="mini-metric">
+            <div class="mini-label">Total Deliveries</div>
+            <div class="mini-val">{{ deliveries_count | number_fmt }}</div>
+          </div>
+          <div class="mini-metric">
+            <div class="mini-label">Top Branch</div>
+            <div class="mini-val">
+              {% if charts.deliveries_by_branch %}
+                {{ charts.deliveries_by_branch[0][0] }}
+              {% else %}
+                <span class="soft-muted">N/A</span>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="chart-box mt-2">
+            <canvas id="deliveriesTrendChart"></canvas>
+            <div id="deliveriesTrendEmpty" class="empty-note d-none">Not available (missing deliveries)</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TABLES -->
+    <div class="row g-3">
+      <div class="col-lg-4">
+        <div class="section-card">
+          <div class="section-hd">
+            <h3 class="section-title">Closed Cards by Branch</h3>
+            <span class="section-chip"><i class="bi bi-diagram-3"></i> Branch</span>
+          </div>
+
+          <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+              <thead>
+                <tr>
+                  <th>Branch</th>
+                  <th class="text-end">Value (GHS)</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% if tables.closed_by_branch %}
+                  {% for b, v in tables.closed_by_branch %}
+                    <tr>
+                      <td>{{ b }}</td>
+                      <td class="text-end">{{ v | money_gh }}</td>
+                    </tr>
+                  {% endfor %}
+                {% else %}
+                  <tr><td colspan="2" class="text-muted">Not available (missing closure branch data).</td></tr>
+                {% endif %}
+              </tbody>
+            </table>
+          </div>
+
+        </div>
+      </div>
+
+      <div class="col-lg-4">
+        <div class="section-card">
+          <div class="section-hd">
+            <h3 class="section-title">Recent Instant Purchases</h3>
+            <span class="section-chip"><i class="bi bi-receipt"></i> Recent</span>
+          </div>
+
+          <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Customer</th>
+                  <th class="text-end">Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% if tables.instant_recent %}
+                  {% for row in tables.instant_recent %}
+                    <tr>
+                      <td>{{ row.date.strftime("%Y-%m-%d") if row.date }}</td>
+                      <td>{{ row.customer }}</td>
+                      <td class="text-end">{{ row.amount | money_gh }}</td>
+                    </tr>
+                  {% endfor %}
+                {% else %}
+                  <tr><td colspan="3" class="text-muted">No instant purchases in this period.</td></tr>
+                {% endif %}
+              </tbody>
+            </table>
+          </div>
+
+        </div>
+      </div>
+
+      <div class="col-lg-4">
+        <div class="section-card">
+          <div class="section-hd">
+            <h3 class="section-title">Recent Deliveries</h3>
+            <span class="section-chip"><i class="bi bi-truck-flatbed"></i> Recent</span>
+          </div>
+
+          <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Branch</th>
+                  <th>Item</th>
+                  <th class="text-end">Qty</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% if tables.deliveries_recent %}
+                  {% for row in tables.deliveries_recent %}
+                    <tr>
+                      <td>{{ row.date.strftime("%Y-%m-%d") if row.date }}</td>
+                      <td>{{ row.branch }}</td>
+                      <td>{{ row.item }}</td>
+                      <td class="text-end">{{ row.qty | number_fmt }}</td>
+                    </tr>
+                  {% endfor %}
+                {% else %}
+                  <tr><td colspan="4" class="text-muted">No deliveries in this period.</td></tr>
+                {% endif %}
+              </tbody>
+            </table>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script type="application/json" id="chartsData">
+    {{ charts | tojson }}
+  </script>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+  <script>
+    const chartsNode = document.getElementById("chartsData");
+    const chartsData = chartsNode ? JSON.parse(chartsNode.textContent || "{}") : {};
+
+    // Range UX: enable/disable date inputs unless custom
+    (function rangeUX(){
+      const rangeSel = document.getElementById("rangeSelect");
+      const startEl = document.getElementById("startDate");
+      const endEl = document.getElementById("endDate");
+
+      function applyState(){
+        const isCustom = (rangeSel.value === "custom");
+        startEl.disabled = !isCustom;
+        endEl.disabled   = !isCustom;
+        startEl.style.opacity = isCustom ? "1" : ".65";
+        endEl.style.opacity   = isCustom ? "1" : ".65";
+      }
+      rangeSel.addEventListener("change", applyState);
+      applyState();
+    })();
+
+    // Filters toggle
+    (function filterToggle(){
+      const btn = document.getElementById("filterToggleBtn");
+      const panel = document.getElementById("filtersForm");
+      if (!btn || !panel) return;
+      btn.addEventListener("click", () => {
+        panel.classList.toggle("is-open");
+      });
+    })();
+
+    function buildSeries(obj) {
+      const keys = Object.keys(obj || {});
+      keys.sort();
+      const values = keys.map(k => obj[k]);
+      return { labels: keys, values };
+    }
+
+    const nf2 = new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const nf0 = new Intl.NumberFormat("en-US");
+
+    function buildChart(ctx, type, labels, datasets) {
+      return new Chart(ctx, {
+        type,
+        data: { labels, datasets },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { mode: "index", intersect: false },
+          scales: {
+            x: { grid: { display: false }, ticks: { font: { weight: "700" } } },
+            y: { beginAtZero: true, grid: { color: "rgba(148,163,184,.25)" }, ticks: { font: { weight: "700" } } }
+          },
+          plugins: {
+            legend: { position: "bottom", labels: { boxWidth: 10, boxHeight: 10, font: { weight: "800" } } },
+            tooltip: {
+              titleFont: { weight: "900" },
+              bodyFont: { weight: "800" },
+              callbacks: {
+                label: (ctx) => {
+                  const raw = typeof ctx.parsed === "object" ? ctx.parsed.y : ctx.parsed;
+                  const val = Number.isFinite(raw) ? raw : 0;
+                  const isCurrency = (ctx.dataset && ctx.dataset._isCurrency) || (ctx.dataset.label || "").includes("GHS");
+                  return `${ctx.dataset.label || ""}: ${isCurrency ? "GHS " + nf2.format(val) : nf0.format(val)}`;
+                }
+              }
+            }
+          },
+          elements: {
+            line: { tension: 0.32, borderWidth: 3 },
+            point: { radius: 3, hoverRadius: 5 }
+          }
+        }
+      });
+    }
+
+    function showEmpty(id) {
+      const el = document.getElementById(id);
+      if (el) el.classList.remove("d-none");
+    }
+
+    // STOCK BY BRANCH
+    if (chartsData.stock_by_branch && chartsData.stock_by_branch.length) {
+      const labels = chartsData.stock_by_branch.map(x => x[0]);
+      const values = chartsData.stock_by_branch.map(x => x[1]);
+      buildChart(document.getElementById("stockByBranchChart"), "bar", labels, [{
+        label: "GHS",
+        data: values,
+        backgroundColor: "rgba(47,95,211,.85)",
+        borderRadius: 10,
+        _isCurrency: true
+      }]);
+    } else {
+      showEmpty("stockByBranchEmpty");
+    }
+
+    // STOCK IN vs OUT (stacked bar)
+    if (chartsData.stock_in_out && chartsData.stock_in_out.labels && chartsData.stock_in_out.labels.length) {
+      const labels = chartsData.stock_in_out.labels;
+      const inValues = chartsData.stock_in_out.in || [];
+      const outValues = chartsData.stock_in_out.out || [];
+      new Chart(document.getElementById("stockInOutChart"), {
+        type: "bar",
+        data: {
+          labels: labels,
+          datasets: [
+            {
+              label: "Stock In",
+              data: inValues,
+              backgroundColor: "rgba(90,164,255,.75)",
+              borderRadius: 6,
+              _isCurrency: true
+            },
+            {
+              label: "Stock Out",
+              data: outValues,
+              backgroundColor: "rgba(220,38,38,.65)",
+              borderRadius: 6,
+              _isCurrency: true
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { mode: "index", intersect: false },
+          scales: {
+            x: { stacked: true, grid: { display: false }, ticks: { font: { weight: "700" } } },
+            y: {
+              stacked: true,
+              beginAtZero: true,
+              grid: { color: "rgba(148,163,184,.25)" },
+              ticks: {
+                font: { weight: "700" },
+                callback: (value) => "GHS " + nf2.format(value)
+              }
+            }
+          },
+          plugins: {
+            legend: { position: "bottom", labels: { boxWidth: 10, boxHeight: 10, font: { weight: "800" } } },
+            tooltip: {
+              titleFont: { weight: "900" },
+              bodyFont: { weight: "800" },
+              callbacks: {
+                label: (ctx) => {
+                  const raw = typeof ctx.parsed === "object" ? ctx.parsed.y : ctx.parsed;
+                  const val = Number.isFinite(raw) ? raw : 0;
+                  return `${ctx.dataset.label || ""}: GHS ${nf2.format(val)}`;
+                }
+              }
+            }
+          }
+        }
+      });
+    } else {
+      showEmpty("stockInOutEmpty");
+    }
+
+    // INSTANT BY BRANCH
+    if (chartsData.instant_by_branch && chartsData.instant_by_branch.length) {
+      const labels = chartsData.instant_by_branch.map(x => x[0]);
+      const values = chartsData.instant_by_branch.map(x => x[1]);
+      buildChart(document.getElementById("instantByBranchChart"), "bar", labels, [{
+        label: "GHS",
+        data: values,
+        backgroundColor: "rgba(90,164,255,.85)",
+        borderRadius: 10,
+        _isCurrency: true
+      }]);
+    } else {
+      showEmpty("instantByBranchEmpty");
+    }
+
+    // TOP PRODUCTS
+    if (chartsData.top_products && chartsData.top_products.length) {
+      const labels = chartsData.top_products.map(x => x[0]);
+      const values = chartsData.top_products.map(x => x[1]);
+      buildChart(document.getElementById("topProductsChart"), "bar", labels, [{
+        label: "GHS",
+        data: values,
+        backgroundColor: "rgba(47,95,211,.85)",
+        borderRadius: 10,
+        _isCurrency: true
+      }]);
+    } else {
+      showEmpty("topProductsEmpty");
+    }
+
+    // INSTANT TREND
+    if (chartsData.instant_trend) {
+      const s = buildSeries(chartsData.instant_trend);
+      if (s.labels.length) {
+        buildChart(document.getElementById("instantTrendChart"), "line", s.labels, [{
+          label: "GHS",
+          data: s.values,
+          borderColor: "rgba(22,163,74,.92)",
+          backgroundColor: "rgba(22,163,74,.14)",
+          fill: true,
+          _isCurrency: true
+        }]);
+      } else {
+        showEmpty("instantTrendEmpty");
+      }
+    } else {
+      showEmpty("instantTrendEmpty");
+    }
+
+    // CLOSED TREND
+    if (chartsData.closed_trend) {
+      const s = buildSeries(chartsData.closed_trend);
+      if (s.labels.length) {
+        buildChart(document.getElementById("closedTrendChart"), "line", s.labels, [{
+          label: "Closures",
+          data: s.values,
+          borderColor: "rgba(245,158,11,.95)",
+          backgroundColor: "rgba(245,158,11,.16)",
+          fill: true,
+          _isCurrency: false
+        }]);
+      } else {
+        showEmpty("closedTrendEmpty");
+      }
+    } else {
+      showEmpty("closedTrendEmpty");
+    }
+
+    // DELIVERIES TREND
+    if (chartsData.deliveries_trend) {
+      const s = buildSeries(chartsData.deliveries_trend);
+      if (s.labels.length) {
+        buildChart(document.getElementById("deliveriesTrendChart"), "line", s.labels, [{
+          label: "Deliveries",
+          data: s.values,
+          borderColor: "rgba(29,78,216,.95)",
+          backgroundColor: "rgba(29,78,216,.14)",
+          fill: true,
+          _isCurrency: false
+        }]);
+      } else {
+        showEmpty("deliveriesTrendEmpty");
+      }
+    } else {
+      showEmpty("deliveriesTrendEmpty");
+    }
+  </script>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    {% include 'app_footer.html' %}
+
+</body>
+</html>

@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Leads Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root{
+      --ink:#0f172a;
+      --muted:#64748b;
+      --panel:#ffffff;
+      --edge:#e2e8f0;
+      --soft:#f6f8fb;
+      --accent:#2563eb;
+      --accent-2:#0ea5e9;
+      --good:#16a34a;
+      --warn:#f59e0b;
+    }
+    *{box-sizing:border-box;}
+    body{
+      font-family:"Manrope", sans-serif;
+      background: radial-gradient(circle at top, #eef2ff 0%, #f8fafc 45%, #f5f6fb 100%);
+      color:var(--ink);
+      min-height:100vh;
+    }
+    .page-shell{
+      padding:1.5rem 1.25rem 3rem;
+    }
+    .page-header{
+      background:linear-gradient(120deg,#0f172a,#1e3a8a);
+      color:#fff;
+      border-radius:18px;
+      padding:1.2rem 1.4rem;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:1rem;
+      box-shadow:0 16px 30px rgba(15,23,42,.18);
+      margin-bottom:1.5rem;
+    }
+    .page-header h1{
+      font-size:1.35rem;
+      margin:0;
+      font-weight:700;
+      letter-spacing:.01em;
+    }
+    .header-actions{
+      display:flex;
+      align-items:center;
+      gap:.6rem;
+      flex-wrap:wrap;
+      justify-content:flex-end;
+    }
+    .chip{
+      background:rgba(255,255,255,.15);
+      border:1px solid rgba(255,255,255,.25);
+      color:#fff;
+      border-radius:999px;
+      padding:.25rem .7rem;
+      font-size:.75rem;
+      font-weight:600;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+    }
+    .panel{
+      background:var(--panel);
+      border:1px solid var(--edge);
+      border-radius:16px;
+      box-shadow:0 12px 24px rgba(15,23,42,.06);
+    }
+    .panel-header{
+      padding:1rem 1.2rem .75rem;
+      border-bottom:1px solid var(--edge);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:.75rem;
+    }
+    .panel-title{
+      font-weight:700;
+      font-size:1rem;
+      margin:0;
+    }
+    .panel-body{
+      padding:1.2rem;
+    }
+    .stat-card{
+      background:var(--panel);
+      border:1px solid var(--edge);
+      border-radius:14px;
+      padding:1rem;
+      box-shadow:0 10px 18px rgba(15,23,42,.06);
+      height:100%;
+    }
+    .stat-label{
+      font-size:.75rem;
+      color:var(--muted);
+      text-transform:uppercase;
+      letter-spacing:.08em;
+      font-weight:700;
+    }
+    .stat-value{
+      font-size:1.35rem;
+      font-weight:800;
+      margin-top:.3rem;
+    }
+    .stat-foot{
+      font-size:.78rem;
+      color:var(--muted);
+    }
+    .form-control, .form-select{
+      border-radius:12px;
+      border-color:#d9e1ec;
+      padding:.6rem .75rem;
+    }
+    .form-label{
+      font-size:.82rem;
+      font-weight:700;
+      color:#334155;
+      text-transform:uppercase;
+      letter-spacing:.06em;
+    }
+    .btn-brand{
+      background:var(--accent);
+      border:none;
+      color:#fff;
+      border-radius:12px;
+      padding:.65rem 1.1rem;
+      font-weight:600;
+    }
+    .btn-brand:hover{
+      background:#1d4ed8;
+      color:#fff;
+    }
+    .btn-outline{
+      border-radius:12px;
+      border:1px solid rgba(255,255,255,.4);
+      color:#fff;
+      background:transparent;
+      padding:.55rem 1rem;
+      font-weight:600;
+    }
+    .table thead th{
+      font-size:.75rem;
+      text-transform:uppercase;
+      letter-spacing:.06em;
+      color:#475569;
+    }
+    .status-pill{
+      padding:.2rem .6rem;
+      border-radius:999px;
+      font-size:.75rem;
+      font-weight:600;
+      border:1px solid transparent;
+    }
+    .status-new{background:#e0f2fe;color:#0369a1;border-color:#bae6fd;}
+    .status-converted{background:#dcfce7;color:#166534;border-color:#bbf7d0;}
+    .status-other{background:#fef3c7;color:#92400e;border-color:#fde68a;}
+    .notes-box{
+      background:#f8fafc;
+      border:1px solid #e2e8f0;
+      border-radius:10px;
+      padding:.6rem;
+      max-height:90px;
+      overflow:auto;
+      font-size:.85rem;
+      color:#475569;
+    }
+    .lead-avatar{
+      width:42px;
+      height:42px;
+      border-radius:50%;
+      object-fit:cover;
+      border:2px solid #bfdbfe;
+    }
+    .chart-wrap{
+      padding:1rem;
+      border-radius:12px;
+      background:#f8fafc;
+      border:1px solid #e2e8f0;
+    }
+    @media (max-width: 768px){
+      .page-header{flex-direction:column;align-items:flex-start;}
+      .header-actions{justify-content:flex-start;}
+    }
+  </style>
+</head>
+<body>
+{% include 'side_bar.html' %}
+
+  <div class="page-shell">
+    <div class="page-header">
+      <div>
+        <div class="chip mb-2">Agent Leads</div>
+        <h1>Leads Dashboard</h1>
+      </div>
+      <div class="header-actions">
+        <span class="chip">Total: {{ total_leads }}</span>
+        <span class="chip">Converted: {{ total_converted }}</span>
+        <button class="btn-outline" type="button" data-bs-toggle="collapse" data-bs-target="#leadFormWrap" aria-expanded="false" aria-controls="leadFormWrap">
+          Add New Lead
+        </button>
+      </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+      <div class="col-12 col-md-4">
+        <div class="stat-card">
+          <div class="stat-label">Total Leads</div>
+          <div class="stat-value">{{ total_leads }}</div>
+          <div class="stat-foot">All time</div>
+        </div>
+      </div>
+      <div class="col-6 col-md-4">
+        <div class="stat-card">
+          <div class="stat-label">Converted</div>
+          <div class="stat-value text-success">{{ total_converted }}</div>
+          <div class="stat-foot">Converted leads</div>
+        </div>
+      </div>
+      <div class="col-6 col-md-4">
+        <div class="stat-card">
+          <div class="stat-label">Open Leads</div>
+          <div class="stat-value text-warning">{{ total_leads - total_converted }}</div>
+          <div class="stat-foot">Pending conversion</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel mb-4 collapse" id="leadFormWrap">
+      <div class="panel-header">
+        <h2 class="panel-title">Add New Lead</h2>
+        <span class="text-muted small">Capture fresh prospects quickly.</span>
+      </div>
+      <div class="panel-body">
+        <form action="{{ url_for('lead_bp.add_lead') }}" method="POST" class="add-lead" id="leadForm" enctype="multipart/form-data">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label for="name" class="form-label">Full Name</label>
+              <input type="text" id="name" name="name" class="form-control" required />
+            </div>
+            <div class="col-md-6">
+              <label for="phone_number" class="form-label">Phone Number</label>
+              <input type="text" id="phone_number" name="phone_number" class="form-control" required />
+            </div>
+            <div class="col-md-6">
+              <label for="image" class="form-label">Lead Image</label>
+              <input type="file" id="image" name="image" class="form-control" accept="image/*" required>
+              <input type="hidden" id="image_url" name="image_url">
+              <div id="upload-status" class="small text-muted mt-1"></div>
+            </div>
+            <div class="col-md-6">
+              <label for="location" class="form-label">Location</label>
+              <input type="text" id="location" name="location" class="form-control" />
+            </div>
+            <div class="col-md-6">
+              <label for="occupation" class="form-label">Occupation</label>
+              <input type="text" id="occupation" name="occupation" class="form-control" />
+            </div>
+            <div class="col-md-6">
+              <label for="source" class="form-label">Source</label>
+              <select id="source" name="source" class="form-select">
+                <option value="In person">In person</option>
+                <option value="Website">Website</option>
+                <option value="Referral">Referral</option>
+                <option value="Social Media">Social Media</option>
+                <option value="Ads">Ads</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label for="status" class="form-label">Status</label>
+              <select id="status" name="status" class="form-select">
+                <option value="New" selected>New</option>
+                <option value="Contacted">Contacted</option>
+                <option value="Follow-up">Follow-up</option>
+                <option value="Converted">Converted</option>
+                <option value="Lost">Lost</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label for="priority" class="form-label">Priority</label>
+              <select id="priority" name="priority" class="form-select">
+                <option value="High">High</option>
+                <option value="Medium" selected>Medium</option>
+                <option value="Low">Low</option>
+              </select>
+            </div>
+            <div class="col-12">
+              <label for="comments" class="form-label">Comments</label>
+              <textarea id="comments" name="comments" class="form-control" rows="3"></textarea>
+            </div>
+            <div class="col-12 text-end">
+              <button type="submit" class="btn btn-brand">Save Lead</button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+      <div class="col-lg-4">
+        <div class="panel h-100">
+          <div class="panel-header">
+            <h2 class="panel-title">Lead Conversion</h2>
+          </div>
+          <div class="panel-body">
+            <div class="chart-wrap">
+              <canvas id="statusPieChart" width="300" height="300"></canvas>
+            </div>
+            <div class="small text-muted mt-3">Converted vs open leads.</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-8">
+        <div class="panel h-100">
+          <div class="panel-header">
+            <h2 class="panel-title">Lead Pipeline</h2>
+          </div>
+          <div class="panel-body">
+            <div class="table-responsive">
+              <table class="table align-middle mb-0">
+                <thead>
+                  <tr>
+                    <th>Lead</th>
+                    <th>Contact</th>
+                    <th>Status</th>
+                    <th>Priority</th>
+                    <th>Registered</th>
+                    <th>Notes</th>
+                    <th class="text-end">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for lead in leads %}
+                  <tr>
+                    <td>
+                      <div class="d-flex align-items-center gap-2">
+                        <img src="{{ lead.image_url }}" alt="{{ lead.name }}" class="lead-avatar">
+                        <div>
+                          <div class="fw-semibold">{{ lead.name }}</div>
+                          <div class="small text-muted">{{ lead.location or 'No location' }}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td>
+                      <div class="small">{{ lead.phone_number }}</div>
+                      <div class="small text-muted">{{ lead.occupation or 'Occupation N/A' }}</div>
+                    </td>
+                    <td>
+                      {% set status = lead.status or 'New' %}
+                      <span class="status-pill {{ 'status-converted' if status == 'Converted' else 'status-new' if status == 'New' else 'status-other' }}">
+                        {{ status }}
+                      </span>
+                    </td>
+                    <td>{{ lead.priority or 'Medium' }}</td>
+                    <td>{{ lead.created_at.strftime('%Y-%m-%d') if lead.created_at else 'N/A' }}</td>
+                    <td><div class="notes-box">{{ lead.comments or 'No notes' }}</div></td>
+                    <td class="text-end">
+                      {% if not lead.converted %}
+                      <form action="{{ url_for('lead_bp.convert_lead', lead_id=lead._id) }}" method="POST" class="d-inline">
+                        <button type="submit" class="btn btn-sm btn-outline-success">Convert</button>
+                      </form>
+                      {% else %}
+                      <span class="text-success fw-semibold">Converted</span>
+                      {% endif %}
+                    </td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const statusData = JSON.parse('{{ leads_by_status | tojson | safe }}');
+    const labels = Object.keys(statusData);
+    const data = Object.values(statusData);
+    const colors = ['#16a34a', '#f59e0b', '#94a3b8', '#38bdf8', '#fb7185'];
+
+    new Chart(document.getElementById('statusPieChart').getContext('2d'), {
+      type: 'doughnut',
+      data: {
+        labels: labels,
+        datasets: [{
+          data: data,
+          backgroundColor: colors.slice(0, labels.length),
+          borderWidth: 0
+        }]
+      },
+      options: {
+        responsive: true,
+        cutout: '62%',
+        plugins: {
+          legend: { position: 'bottom' }
+        }
+      }
+    });
+  </script>
+  <script>
+    document.getElementById('image').addEventListener('change', async function (event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const uploadStatus = document.getElementById('upload-status');
+      uploadStatus.textContent = "Uploading image...";
+
+      const formData = new FormData();
+      formData.append('image', file);
+
+      try {
+        const response = await fetch('/leads/upload_image', {
+          method: 'POST',
+          body: formData
+        });
+
+        const data = await response.json();
+
+        if (data.success && data.image_url) {
+          document.getElementById('image_url').value = data.image_url;
+          uploadStatus.textContent = "Image uploaded successfully.";
+        } else {
+          uploadStatus.textContent = "Upload failed.";
+          console.error(data);
+        }
+      } catch (err) {
+        console.error(err);
+        uploadStatus.textContent = "Upload error.";
+      }
+    });
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    {% include 'app_footer.html' %}
+
+</body>
+</html>

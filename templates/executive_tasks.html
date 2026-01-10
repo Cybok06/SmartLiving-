@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Executive - Send Task</title>
+
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet" />
+  <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+  <link rel="icon" href="https://res.cloudinary.com/dljpgzbto/image/upload/v1743993646/company-logo_dksb23.jpg" type="image/png">
+
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f4f4f4;
+      padding: 30px;
+      transition: background-color 0.3s, color 0.3s;
+    }
+
+    body.dark-mode {
+      background-color: #181818;
+      color: #f0f0f0;
+    }
+
+    .container {
+      background: #fff;
+      max-width: 900px;
+      margin: auto;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+    }
+
+    body.dark-mode .container {
+      background-color: #2c2c2c;
+    }
+
+    h2, h3 {
+      text-align: center;
+      color: #007bff;
+    }
+
+    body.dark-mode h2, body.dark-mode h3 {
+      color: #66b2ff;
+    }
+
+    label {
+      margin-top: 15px;
+      font-weight: 600;
+    }
+
+    select, textarea, input[type="file"], input[type="text"], button {
+      width: 100%;
+      margin-top: 5px;
+      padding: 10px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+    }
+
+    button {
+      background-color: #007bff;
+      color: white;
+      font-weight: bold;
+      border: none;
+      margin-top: 25px;
+    }
+
+    textarea {
+      resize: vertical;
+      height: 120px;
+    }
+
+    .flash.success { background: #d4edda; color: #155724; padding: 10px; border-radius: 5px; }
+    .flash.danger { background: #f8d7da; color: #721c24; padding: 10px; border-radius: 5px; }
+
+    .preview img {
+      max-width: 100%;
+      margin-top: 10px;
+      border-radius: 6px;
+    }
+
+    table {
+      width: 100%;
+      margin-top: 30px;
+      border-collapse: collapse;
+    }
+
+    th, td {
+      padding: 10px;
+      border-bottom: 1px solid #ccc;
+    }
+
+    .dark-mode table {
+      color: #f0f0f0;
+    }
+
+    @media (max-width: 768px) {
+      .container {
+        padding: 20px;
+      }
+
+      h2, h3 {
+        font-size: 1.4rem;
+      }
+
+      select, input, textarea, button {
+        font-size: 1rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  {% include 'executive_sidebar.html' %}
+
+
+<div class="container">
+  <h2>📩 Send Task</h2>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      {% for category, message in messages %}
+        <div class="flash {{ category }}">{{ message }}</div>
+      {% endfor %}
+    {% endif %}
+  {% endwith %}
+
+  <form action="{{ url_for('executive_task.executive_tasks') }}" method="POST" enctype="multipart/form-data">
+    <label for="target_type">Target Role:</label>
+    <select name="target_type" id="target_type" required onchange="loadTargets(this.value)">
+      <option value="">-- Select Role --</option>
+      <option value="manager">Managers</option>
+      <option value="agent">Agents</option>
+      <option value="admin">Admins</option>
+    </select>
+
+    <label for="user_id">Select User:</label>
+    <select name="user_id" id="user_id" required></select>
+
+    <div id="branch-container" style="display: none;">
+      <label for="branch_name">Branch:</label>
+      <input type="text" name="branch_name" id="branch_name" readonly>
+    </div>
+
+    <label for="message">Message:</label>
+    <textarea name="message" required></textarea>
+
+    <label for="image">Attach Image (Optional):</label>
+    <input type="file" name="image" id="image" accept="image/*">
+    <p id="upload-status" class="small text-success mt-1"></p>
+
+    <div class="preview" id="image-preview" style="display: none;">
+      <strong>Image Preview:</strong>
+      <img id="preview-img" src="#" alt="Preview">
+    </div>
+
+    <button type="submit">Send Task</button>
+  </form>
+</div>
+
+<div class="container">
+  <h3>📜 Task History</h3>
+  <label for="status-filter">Filter by Status:</label>
+  <select id="status-filter" onchange="filterStatus(this.value)" class="form-select w-auto mb-3">
+    <option value="pending" {% if current_status == 'pending' %}selected{% endif %}>Pending</option>
+    <option value="completed" {% if current_status == 'completed' %}selected{% endif %}>Completed</option>
+  </select>
+
+  <table>
+    <thead>
+      <tr>
+        <th>To</th>
+        <th>Branch</th>
+        <th>Message</th>
+        <th>Status</th>
+        <th>Time</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for task in tasks %}
+      <tr>
+        <td>{{ task.target_name }}</td>
+        <td>{{ task.branch_display }}</td>
+        <td>{{ task.message }}</td>
+        <td>{{ task.status }}</td>
+        <td>{{ task.timestamp.strftime('%Y-%m-%d %H:%M') }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/jquery@3.6.4/dist/jquery.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script>
+  async function loadTargets(role) {
+    const userSelect = document.getElementById('user_id');
+    const branchField = document.getElementById('branch_name');
+    const branchContainer = document.getElementById('branch-container');
+
+    userSelect.innerHTML = '<option value="">-- Select User --</option>';
+    if (!role) return;
+
+    try {
+      const res = await fetch(`/executive/tasks/get_users/${role}`);
+      const users = await res.json();
+
+      users.forEach(user => {
+        const opt = document.createElement('option');
+        opt.value = user._id;
+        opt.textContent = `${user.username} (${user.branch || 'N/A'})`;
+        userSelect.appendChild(opt);
+      });
+
+      $('#user_id').select2({ width: '100%', placeholder: "Select user...", allowClear: true });
+
+    } catch (error) {
+      console.error("User fetch error:", error);
+    }
+
+    branchField.value = '';
+    branchContainer.style.display = 'none';
+  }
+
+  document.getElementById('user_id').addEventListener('change', async function () {
+    const userId = this.value;
+    const branchField = document.getElementById('branch_name');
+    const branchContainer = document.getElementById('branch-container');
+
+    if (!userId || userId === 'all') {
+      branchField.value = '';
+      branchContainer.style.display = 'none';
+      return;
+    }
+
+    try {
+      const res = await fetch(`/executive/tasks/branches/${userId}`);
+      const data = await res.json();
+      if (data.branch) {
+        branchField.value = data.branch;
+        branchContainer.style.display = 'block';
+      }
+    } catch (err) {
+      console.error("Branch fetch error:", err);
+    }
+  });
+
+  document.getElementById('image').addEventListener('change', function (e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+
+    reader.onload = function (e) {
+      const preview = document.getElementById('preview-img');
+      preview.src = e.target.result;
+      document.getElementById('image-preview').style.display = 'block';
+    };
+    reader.readAsDataURL(file);
+  });
+
+  function filterStatus(status) {
+    window.location.href = `?status=${status}`;
+  }
+
+  function toggleDarkMode() {
+    document.body.classList.toggle('dark-mode');
+    document.getElementById('darkModeToggle').textContent = document.body.classList.contains('dark-mode') ? '🌞' : '🌙';
+  }
+</script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  {% include 'app_footer.html' %}
+
+</body>
+</html>

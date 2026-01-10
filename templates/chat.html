@@ -1,0 +1,314 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chat</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="icon"
+          href="https://imagedelivery.net/h9fmMoa1o2c2P55TcWJGOg/10283f28-b9a0-4100-b254-19a854386800/public"
+          type="image/png">
+  <style>
+    body {
+      background-color: #e5ddd5;
+      font-family: 'Segoe UI', sans-serif;
+      margin: 0;
+      padding: 0;
+    }
+
+    .chat-container {
+      display: flex;
+      height: 90vh;
+      margin: 20px auto;
+      max-width: 100%;
+      background: #fff;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      position: relative;
+    }
+
+    .sidebar-toggle {
+      display: none;
+      position: fixed;
+      top: 10px;
+      right: 10px; /* Moved to right */
+      z-index: 1101;
+      background: #28a745;
+      color: white;
+      border: none;
+      padding: 8px 12px;
+      border-radius: 5px;
+    }
+
+    .user-list {
+      width: 30%;
+      min-width: 250px;
+      background-color: #f8f9fa;
+      border-right: 1px solid #dee2e6;
+      overflow-y: auto;
+    }
+
+    .user-list.mobile {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 100%;
+      width: 75%;
+      max-width: 300px;
+      z-index: 1100;
+      background: #fff;
+      box-shadow: 2px 0 10px rgba(0,0,0,0.2);
+      flex-direction: column;
+    }
+
+    .user-list.mobile.show {
+      display: flex;
+    }
+
+    .search-box {
+      padding: 10px;
+      border-bottom: 1px solid #ccc;
+    }
+
+    .user-item {
+      padding: 12px 15px;
+      display: flex;
+      align-items: center;
+      cursor: pointer;
+      border-bottom: 1px solid #eee;
+    }
+
+    .user-item:hover {
+      background-color: #e9ecef;
+    }
+
+    .user-item img {
+      width: 45px;
+      height: 45px;
+      border-radius: 50%;
+      object-fit: cover;
+      margin-right: 12px;
+    }
+
+    .badge {
+      position: absolute;
+      top: 8px;
+      left: 45px;
+      background: red;
+      color: white;
+      font-size: 12px;
+      border-radius: 50%;
+      padding: 2px 6px;
+    }
+
+    .chat-box {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .messages {
+      flex-grow: 1;
+      padding: 20px;
+      overflow-y: auto;
+      background-color: #e5ddd5;
+    }
+
+    .message {
+      margin-bottom: 15px;
+      max-width: 70%;
+      padding: 10px 15px;
+      border-radius: 7.5px;
+      font-size: 15px;
+      word-wrap: break-word;
+      display: inline-block;
+      clear: both;
+    }
+
+    .sent {
+      float: right;
+      background-color: #dcf8c6;
+      color: #000;
+      border-bottom-right-radius: 0;
+    }
+
+    .received {
+      float: left;
+      background-color: #ffffff;
+      border-bottom-left-radius: 0;
+    }
+
+    .timestamp {
+      font-size: 0.75rem;
+      color: #888;
+      margin-top: 3px;
+      text-align: right;
+    }
+
+    .chat-input {
+      display: flex;
+      padding: 10px;
+      border-top: 1px solid #ccc;
+      background-color: #f0f0f0;
+    }
+
+    .chat-input input {
+      flex-grow: 1;
+      margin-right: 10px;
+    }
+
+    @media (max-width: 768px) {
+      .sidebar-toggle {
+        display: block;
+      }
+
+      .user-list.desktop {
+        display: none;
+      }
+    }
+
+    @media (min-width: 769px) {
+      .user-list.mobile {
+        display: none !important;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <button class="sidebar-toggle" onclick="toggleSidebar()">☰ Users</button>
+
+  <div class="container chat-container">
+    <!-- Sidebar (mobile only) -->
+    <div class="user-list mobile" id="userListSidebar">
+      <div class="search-box">
+        <input type="text" id="searchUserMobile" class="form-control" placeholder="Search by name..." onkeyup="filterUsers('searchUserMobile')">
+      </div>
+      <div id="userListMobile">
+        {% for user in users %}
+        <div class="user-item" onclick="loadMessages('{{ user._id }}', '{{ user.name }}')">
+          <img src="{{ user.image_url or '/static/default-profile.png' }}" alt="Profile">
+          <span>{{ user.name }} ({{ user.role.capitalize() }})</span>
+          <span class="badge d-none" id="badge-{{ user._id }}"></span>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Sidebar (desktop only) -->
+    <div class="user-list desktop">
+      <div class="search-box">
+        <input type="text" id="searchUserDesktop" class="form-control" placeholder="Search by name..." onkeyup="filterUsers('searchUserDesktop')">
+      </div>
+      <div id="userListDesktop">
+        {% for user in users %}
+        <div class="user-item" onclick="loadMessages('{{ user._id }}', '{{ user.name }}')">
+          <img src="{{ user.image_url or '/static/default-profile.png' }}" alt="Profile">
+          <span>{{ user.name }} ({{ user.role.capitalize() }})</span>
+          <span class="badge d-none" id="badge-{{ user._id }}"></span>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Chat Area -->
+    <div class="chat-box">
+      <div class="messages" id="message-area">
+        <p class="text-muted">Select a user to start chatting...</p>
+      </div>
+      <form class="chat-input" onsubmit="sendMessage(event)">
+        <input type="hidden" id="receiver_id">
+        <input type="text" class="form-control" id="message_input" placeholder="Type a message..." required>
+        <button type="submit" class="btn btn-success">Send</button>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    const currentUserId = '{{ current_user._id }}';
+    let selectedUserId = null;
+    let selectedUserName = "";
+
+    function toggleSidebar() {
+      const sidebar = document.getElementById('userListSidebar');
+      const toggleBtn = document.querySelector('.sidebar-toggle');
+      sidebar.classList.toggle('show');
+
+      if (sidebar.classList.contains('show')) {
+        toggleBtn.style.display = 'none';
+      }
+    }
+
+    function loadMessages(receiverId, name) {
+      selectedUserId = receiverId;
+      selectedUserName = name;
+      document.getElementById('receiver_id').value = receiverId;
+
+      const sidebar = document.getElementById('userListSidebar');
+      if (window.innerWidth <= 768 && sidebar.classList.contains('show')) {
+        sidebar.classList.remove('show');
+        document.querySelector('.sidebar-toggle').style.display = 'block';
+      }
+
+      fetch(`/get_messages/${receiverId}`)
+        .then(res => res.json())
+        .then(messages => {
+          const area = document.getElementById('message-area');
+          area.innerHTML = `<h6 class="text-center text-muted mb-3">Chat with ${name}</h6>`;
+          messages.forEach(msg => {
+            const div = document.createElement('div');
+            div.className = 'message ' + (msg.sender_id === currentUserId ? 'sent' : 'received');
+            div.innerHTML = `<div>${msg.content}</div><div class="timestamp">${msg.timestamp}</div>`;
+            area.appendChild(div);
+          });
+          area.scrollTop = area.scrollHeight;
+
+          const badge = document.getElementById(`badge-${receiverId}`);
+          if (badge) badge.classList.add('d-none');
+        });
+    }
+
+    function sendMessage(e) {
+      e.preventDefault();
+      const content = document.getElementById('message_input').value;
+      fetch('/send_message', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: `receiver_id=${selectedUserId}&content=${encodeURIComponent(content)}`
+      }).then(() => {
+        document.getElementById('message_input').value = '';
+        loadMessages(selectedUserId, selectedUserName);
+      });
+    }
+
+    function filterUsers(inputId) {
+      const input = document.getElementById(inputId).value.toLowerCase();
+      const items = document.querySelectorAll(`#${inputId.includes('Mobile') ? 'userListMobile' : 'userListDesktop'} .user-item`);
+      items.forEach(item => {
+        const name = item.innerText.toLowerCase();
+        item.style.display = name.includes(input) ? 'flex' : 'none';
+      });
+    }
+
+    setInterval(() => {
+      fetch('/unread_counts')
+        .then(res => res.json())
+        .then(counts => {
+          for (const [uid, count] of Object.entries(counts)) {
+            const badge = document.getElementById(`badge-${uid}`);
+            if (badge) {
+              badge.textContent = count;
+              badge.classList.toggle('d-none', count === 0);
+            }
+          }
+        });
+    }, 5000);
+  </script>
+    {% include 'app_footer.html' %}
+
+</body>
+</html>
+

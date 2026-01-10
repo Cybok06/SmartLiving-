@@ -1,0 +1,623 @@
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+
+<style>
+  :root{
+    --ax-navy:#074073;
+    --ax-gold:#facc15;
+
+    --sb-bg-1:#0a2550;
+    --sb-bg-2:#020816;
+    --sb-text:#ffffff;
+    --sb-muted: rgba(255,255,255,.72);
+    --sb-line: rgba(148,163,184,.25);
+    --sb-hover: rgba(255,255,255,.08);
+    --sb-active: rgba(250,204,21,.14);
+
+    --shadow: 0 18px 40px rgba(15,23,42,.45);
+  }
+
+  body.sidebar-open{ overflow:hidden; }
+
+  /* TOGGLE BUTTON */
+  .toggle-btn{
+    position: fixed;
+    top: 16px;
+    left: 16px;
+    font-size: 1.35rem;
+    background: linear-gradient(135deg, var(--ax-gold), var(--ax-navy));
+    border: none;
+    color: #ffffff;
+    border-radius: 999px;
+    padding: 9px 12px;
+    z-index: 1100;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: var(--shadow);
+    cursor: pointer;
+    transition: transform .18s ease, box-shadow .18s ease, opacity .18s ease;
+  }
+  .toggle-btn span{
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    font-weight: 800;
+  }
+  .toggle-btn:hover{
+    transform: translateY(-1px);
+    box-shadow: 0 22px 52px rgba(15,23,42,.55);
+  }
+  .toggle-btn.hide{ opacity:0; pointer-events:none; }
+
+  /* OVERLAY */
+  .overlay{
+    position: fixed;
+    inset: 0;
+    background-color: rgba(15,23,42,0.55);
+    z-index: 1049;
+    display:none;
+  }
+  .overlay.show{ display:block; }
+
+  /* SIDEBAR */
+  .sidebar{
+    width: 290px;
+    background: radial-gradient(circle at top left, var(--sb-bg-1), var(--sb-bg-2));
+    color: var(--sb-text);
+    position: fixed;
+    top: 0; bottom: 0;
+    left: -290px;
+    transition: left .30s ease-in-out;
+    z-index: 1050;
+    box-shadow: 4px 0 18px rgba(0,0,0,.35);
+    border-right: 1px solid rgba(255,255,255,.12);
+    display:flex;
+    flex-direction:column;
+    overflow:hidden;
+  }
+  .sidebar.active{ left:0; }
+
+  .sidebar-scroll{
+    overflow-y:auto;
+    padding: 10px 0 14px;
+    flex: 1 1 auto;
+  }
+
+  .sidebar::-webkit-scrollbar{ width: 6px; }
+  .sidebar::-webkit-scrollbar-thumb{
+    background: rgba(100, 116, 139, 0.7);
+    border-radius: 999px;
+  }
+
+  /* HEADER */
+  .sidebar-header{
+    padding: 16px 16px 12px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border-bottom: 1px solid rgba(255,255,255,.12);
+    background: linear-gradient(135deg, rgba(250,204,21,.12), rgba(2, 8, 23, 0.9));
+  }
+
+  .brand-logo-shell{
+    width: 52px;
+    height: 52px;
+    border-radius: 16px;
+    background: radial-gradient(circle at 20% 0, #ffffff, #e0f0ff);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    overflow:hidden;
+    border: 1px solid rgba(148, 163, 184, 0.45);
+    box-shadow: 0 10px 22px rgba(15, 23, 42, 0.7);
+    flex: 0 0 auto;
+  }
+  .brand-logo-shell img{
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+
+  .brand-text{
+    flex:1;
+    display:flex;
+    flex-direction:column;
+    gap:3px;
+    min-width:0;
+  }
+  .brand-text h2{
+    font-size: 1.02rem;
+    margin: 0;
+    font-weight: 900;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #f9fafb;
+    line-height: 1.05;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+  .brand-text span{
+    font-size: 0.70rem;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    color: rgba(250,204,21,.90);
+    font-weight: 800;
+  }
+
+  .close-btn{
+    background: transparent;
+    border: none;
+    color: #e5e7eb;
+    font-size: 2.0rem;
+    cursor: pointer;
+    line-height: 1;
+    opacity: .9;
+  }
+  .close-btn:hover{ opacity:1; }
+
+  /* SEARCH */
+  .sidebar-search{
+    padding: 12px 14px;
+    border-bottom: 1px solid rgba(255,255,255,.12);
+  }
+  .sidebar-search .search-wrap{
+    position: relative;
+  }
+  .sidebar-search input{
+    width: 100%;
+    border-radius: 999px;
+    border: 1px solid rgba(255,255,255,.14);
+    background: rgba(255,255,255,.08);
+    color: #fff;
+    padding: 10px 38px 10px 40px;
+    outline: none;
+    font-size: .92rem;
+  }
+  .sidebar-search input::placeholder{ color: rgba(255,255,255,.60); }
+  .sidebar-search .bi-search{
+    position:absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: rgba(255,255,255,.70);
+    font-size: 1.0rem;
+  }
+  .sidebar-search .clear-btn{
+    position:absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    border: none;
+    background: transparent;
+    color: rgba(255,255,255,.70);
+    font-size: 1.15rem;
+    display:none;
+    cursor:pointer;
+  }
+
+  /* GROUP HEADINGS */
+  .nav-group{ padding: 10px 0 6px; }
+  .nav-group-title{
+    padding: 8px 18px 6px;
+    font-size: 0.70rem;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: rgba(255,255,255,.62);
+    font-weight: 900;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+  }
+  .nav-group-title .count{
+    font-size: .68rem;
+    letter-spacing: .08em;
+    padding: 2px 8px;
+    border-radius: 999px;
+    border: 1px solid rgba(255,255,255,.14);
+    background: rgba(255,255,255,.06);
+    color: rgba(255,255,255,.80);
+  }
+
+  /* LINKS */
+  .sidebar a,
+  .sidebar .dropdown-toggle{
+    display:flex;
+    align-items:center;
+    gap: 10px;
+    padding: 11px 18px;
+    color: var(--sb-muted);
+    text-decoration:none;
+    font-weight: 750;
+    font-size: 0.92rem;
+    cursor: pointer;
+    position: relative;
+    border-left: 3px solid transparent;
+    transition: background .2s ease, padding-left .2s ease, color .2s ease, border-color .2s ease;
+    user-select:none;
+  }
+  .sidebar a i,
+  .sidebar .dropdown-toggle i{
+    font-size: 1.05rem;
+    color: rgba(250,204,21,.95);
+    min-width: 18px;
+  }
+  .sidebar a:hover,
+  .sidebar .dropdown-toggle:hover{
+    background: var(--sb-hover);
+    padding-left: 22px;
+    color: #fff;
+  }
+  .sidebar a.active{
+    background: linear-gradient(90deg, rgba(250,204,21,.22), rgba(250,204,21,.06));
+    border-left-color: var(--ax-gold);
+    color: #fff;
+  }
+  .sidebar a.active i{ color:#fff; }
+
+  /* Dropdown chevron */
+  .dropdown-toggle .chev{
+    margin-left:auto;
+    color: rgba(255,255,255,.65);
+    transition: transform .18s ease;
+  }
+  .dropdown-toggle.active .chev{ transform: rotate(180deg); }
+
+  /* SUBMENU */
+  .submenu{
+    display:none;
+    flex-direction: column;
+    background: rgba(15, 23, 42, 0.72);
+    border-left: 1px solid rgba(148, 163, 184, 0.35);
+    margin: 0 10px 6px;
+    border-radius: 14px;
+    overflow:hidden;
+  }
+  .submenu.show{ display:flex; }
+  .submenu a{
+    padding-left: 34px;
+    font-size: 0.90rem;
+    color: rgba(255,255,255,.80);
+  }
+  .submenu a:hover{
+    background: rgba(15,23,42,0.92);
+    padding-left: 38px;
+  }
+
+  /* BADGE */
+  .badge-counter{
+    margin-left: auto;
+    background: var(--ax-gold);
+    color: #111827;
+    border-radius: 999px;
+    padding: 2px 8px;
+    font-size: 0.72rem;
+    font-weight: 900;
+    letter-spacing:.06em;
+  }
+
+  /* SEARCH HIDE HELPERS */
+  .nav-item-hidden{ display:none !important; }
+  .nav-group-hidden{ display:none !important; }
+
+  @media (max-width: 768px){
+    .sidebar{ width: 260px; left: -260px; }
+  }
+</style>
+
+<button class="toggle-btn" id="menuToggle" onclick="toggleSidebar()">
+  <i class="bi bi-list"></i>
+  <span>Menu</span>
+</button>
+
+<div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
+
+<div class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <div class="brand-logo-shell">
+      <img src="https://imagedelivery.net/h9fmMoa1o2c2P55TcWJGOg/10283f28-b9a0-4100-b254-19a854386800/public"
+           alt="Axelera Flux Logo">
+    </div>
+    <div class="brand-text">
+      <h2></h2>
+      <span>Agent Panel</span>
+    </div>
+    <button class="close-btn" onclick="toggleSidebar()" aria-label="Close sidebar">&times;</button>
+  </div>
+
+  <!-- SEARCH -->
+  <div class="sidebar-search">
+    <div class="search-wrap">
+      <i class="bi bi-search"></i>
+      <input id="sidebarSearch" type="search" placeholder="Search menu…" autocomplete="off" />
+      <button class="clear-btn" id="sidebarSearchClear" type="button" aria-label="Clear search">
+        <i class="bi bi-x-circle"></i>
+      </button>
+    </div>
+  </div>
+
+  <div class="sidebar-scroll" id="sidebarScroll">
+
+    <!-- GROUP: OVERVIEW -->
+    <div class="nav-group" data-group>
+      <div class="nav-group-title"><span>Overview</span><span class="count">2</span></div>
+      <a class="nav-link" href="/dashboard/agent" data-label="dashboard overview home agent dashboard">
+        <i class="bi bi-speedometer2"></i> Dashboard
+      </a>
+      <a class="nav-link" href="/analysis/" data-label="crm analysis analytics performance">
+        <i class="bi bi-bar-chart-line"></i> CRM Analysis
+      </a>
+    </div>
+
+    <!-- GROUP: SALES & PRODUCTS -->
+    <div class="nav-group" data-group>
+      <div class="nav-group-title"><span>Sales & Products</span><span class="count">4</span></div>
+
+      <div class="dropdown-toggle nav-link" onclick="toggleMenu('productMenu')" data-label="products view products sell product">
+        <i class="bi bi-box"></i> Products
+        <i class="bi bi-chevron-down chev"></i>
+      </div>
+      <div class="submenu" id="productMenu" data-submenu>
+        <a class="nav-link" href="/product/products" data-label="view products products catalog">
+          <i class="bi bi-eye"></i> View Products
+        </a>
+        <a class="nav-link" href="/sell" data-label="sell product instant sales">
+          <i class="bi bi-bag-check"></i> Sell Product
+        </a>
+      </div>
+
+      <a class="nav-link" href="{{ url_for('sales_close_agent.view_sales_close') }}" data-label="sales close close sales">
+        <i class="bi bi-cash-coin"></i> Sales Close
+      </a>
+
+      <a class="nav-link" href="/cards/agent/my" data-label="my cards card tracker cards">
+        <i class="bi bi-credit-card-2-front"></i> My Cards
+      </a>
+    </div>
+
+    <!-- GROUP: CUSTOMERS & PAYMENTS -->
+    <div class="nav-group" data-group>
+      <div class="nav-group-title"><span>Customers & Payments</span><span class="count">5</span></div>
+
+      <div class="dropdown-toggle nav-link" onclick="toggleMenu('customerMenu')" data-label="customers view customers register customer">
+        <i class="bi bi-people"></i> Customers
+        <i class="bi bi-chevron-down chev"></i>
+      </div>
+      <div class="submenu" id="customerMenu" data-submenu>
+        <a class="nav-link" href="/view/customers" data-label="view customers customer list">
+          <i class="bi bi-person-lines-fill"></i> View Customers
+        </a>
+        <a class="nav-link" href="/customer/register" data-label="register customer add customer">
+          <i class="bi bi-person-plus"></i> Register Customer
+        </a>
+      </div>
+
+      <div class="dropdown-toggle nav-link" onclick="toggleMenu('paymentMenu')" data-label="payments add payment view payments">
+        <i class="bi bi-credit-card"></i> Payments
+        <i class="bi bi-chevron-down chev"></i>
+      </div>
+      <div class="submenu" id="paymentMenu" data-submenu>
+        <a class="nav-link" href="/payment/add_payment" data-label="add payment take payment">
+          <i class="bi bi-plus-circle"></i> Add Payment
+        </a>
+        <a class="nav-link" href="/payment/all_payments" data-label="view payments payments list">
+          <i class="bi bi-list-ul"></i> View Payments
+        </a>
+      </div>
+    </div>
+
+    <!-- GROUP: SUPPORT & ACTIVITY -->
+    <div class="nav-group" data-group>
+      <div class="nav-group-title"><span>Support & Activity</span><span class="count">6</span></div>
+
+      <a class="nav-link" href="{{ url_for('agent_complaints.agent_complaints_home') }}" data-label="my complaints complaints issues">
+        <i class="bi bi-exclamation-octagon"></i>
+        My Complaints
+        {% if agent_unsolved_complaints and agent_unsolved_complaints > 0 %}
+          <span class="badge-counter">{{ agent_unsolved_complaints }}</span>
+        {% endif %}
+      </a>
+
+      <a class="nav-link" href="/report/reports" data-label="reports report journal">
+        <i class="bi bi-journal-text"></i> Reports
+      </a>
+
+      <a class="nav-link" href="/leads" data-label="leads prospects">
+        <i class="bi bi-graph-up-arrow"></i> Leads
+      </a>
+
+      <a class="nav-link" href="{{ url_for('agent_tasks.view_tasks') }}" data-label="task messages tasks messages">
+        <i class="bi bi-envelope-open"></i> Task Messages
+      </a>
+
+      <a class="nav-link" href="{{ url_for('chat.chat') }}" data-label="chat messages chat">
+        <i class="bi bi-chat-dots"></i> Chat
+      </a>
+
+      <a class="nav-link" href="/todo" data-label="todo list checklist tasks">
+        <i class="bi bi-check2-square"></i> Todo List
+      </a>
+
+      <a class="nav-link" href="{{ url_for('login_logs.login_logs') }}" data-label="login logs security">
+        <i class="bi bi-shield-lock"></i> Login Logs
+      </a>
+    </div>
+
+    <!-- GROUP: PAYROLL -->
+    <div class="nav-group" data-group>
+      <div class="nav-group-title"><span>Payroll</span><span class="count">1</span></div>
+      <a class="nav-link" href="/agent/payroll" data-label="my payroll salary wages">
+        <i class="bi bi-wallet2"></i> My Payroll
+        <span class="badge-counter">NEW</span>
+      </a>
+    </div>
+
+    <!-- GROUP: PROFILE -->
+    <div class="nav-group" data-group>
+      <div class="nav-group-title"><span>Profile</span><span class="count">1</span></div>
+      <a class="nav-link" href="/agent/profile" data-label="agent profile profile account">
+        <i class="bi bi-person-circle"></i> Agent Profile
+      </a>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  function toggleSidebar(){
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('overlay');
+    const toggleBtn = document.getElementById('menuToggle');
+
+    const isActive = sidebar.classList.toggle('active');
+    overlay.classList.toggle('show', isActive);
+    document.body.classList.toggle('sidebar-open', isActive);
+    toggleBtn.classList.toggle('hide', isActive);
+
+    if(isActive){
+      setTimeout(() => document.getElementById('sidebarSearch')?.focus(), 120);
+    }
+  }
+
+  function toggleMenu(menuId){
+    const menu = document.getElementById(menuId);
+    if(!menu) return;
+
+    const toggle = menu.previousElementSibling;
+    const isOpen = menu.classList.toggle('show');
+
+    if(toggle && toggle.classList.contains('dropdown-toggle')){
+      toggle.classList.toggle('active', isOpen);
+    }
+
+    if(isOpen) localStorage.setItem(menuId, 'open');
+    else localStorage.removeItem(menuId);
+  }
+
+  function normalizePath(p){
+    return (p || '').split('?')[0].replace(/\/+$/, '') || '/';
+  }
+
+  function highlightActive(){
+    const currentPath = normalizePath(window.location.pathname);
+    document.querySelectorAll('.sidebar a.nav-link').forEach(link => {
+      const href = normalizePath(link.getAttribute('href') || '');
+      if(href && href === currentPath) link.classList.add('active');
+    });
+  }
+
+  function restoreMenus(){
+    ['productMenu','customerMenu','paymentMenu'].forEach(id => {
+      if(localStorage.getItem(id) === 'open'){
+        const el = document.getElementById(id);
+        if(el){
+          el.classList.add('show');
+          const t = el.previousElementSibling;
+          if(t && t.classList.contains('dropdown-toggle')) t.classList.add('active');
+        }
+      }
+    });
+  }
+
+  /* SEARCH: filters links + groups, auto-opens submenus on match */
+  function setupSidebarSearch(){
+    const input = document.getElementById('sidebarSearch');
+    const clearBtn = document.getElementById('sidebarSearchClear');
+    const groups = document.querySelectorAll('.nav-group[data-group]');
+    const allLinks = document.querySelectorAll('.sidebar a.nav-link, .sidebar .dropdown-toggle.nav-link');
+
+    function setClearVisible(v){
+      if(!clearBtn) return;
+      clearBtn.style.display = v ? 'block' : 'none';
+    }
+
+    function resetFilter(){
+      allLinks.forEach(el => el.classList.remove('nav-item-hidden'));
+      groups.forEach(g => g.classList.remove('nav-group-hidden'));
+      setClearVisible(false);
+
+      // revert to saved state
+      document.querySelectorAll('.submenu[data-submenu]').forEach(sm => sm.classList.remove('show'));
+      document.querySelectorAll('.dropdown-toggle.nav-link').forEach(t => t.classList.remove('active'));
+      restoreMenus();
+    }
+
+    function filter(q){
+      const query = (q || '').trim().toLowerCase();
+      if(!query){ resetFilter(); return; }
+
+      setClearVisible(true);
+
+      allLinks.forEach(el => el.classList.add('nav-item-hidden'));
+
+      // submenus: show children matches + open submenu
+      document.querySelectorAll('.submenu[data-submenu]').forEach(sm => {
+        const toggle = sm.previousElementSibling;
+        let anyChild = false;
+
+        sm.querySelectorAll('a.nav-link').forEach(a => {
+          const hay = ((a.getAttribute('data-label') || '') + ' ' + (a.textContent || '')).toLowerCase();
+          if(hay.includes(query)){
+            a.classList.remove('nav-item-hidden');
+            anyChild = true;
+          }
+        });
+
+        if(toggle){
+          const toggleHay = ((toggle.getAttribute('data-label') || '') + ' ' + (toggle.textContent || '')).toLowerCase();
+          const toggleMatch = toggleHay.includes(query);
+
+          if(toggleMatch) toggle.classList.remove('nav-item-hidden');
+
+          if(anyChild){
+            toggle.classList.remove('nav-item-hidden');
+            sm.classList.add('show');
+            toggle.classList.add('active');
+          }else{
+            sm.classList.remove('show');
+            toggle.classList.remove('active');
+          }
+        }
+      });
+
+      // top-level links that match
+      document.querySelectorAll('.sidebar-scroll a.nav-link').forEach(a => {
+        if(a.closest('.submenu')) return;
+        const hay = ((a.getAttribute('data-label') || '') + ' ' + (a.textContent || '')).toLowerCase();
+        if(hay.includes(query)){
+          a.classList.remove('nav-item-hidden');
+        }
+      });
+
+      // hide groups with no visible items
+      groups.forEach(g => {
+        const visible = g.querySelectorAll('.nav-link:not(.nav-item-hidden), .dropdown-toggle.nav-link:not(.nav-item-hidden)').length > 0;
+        g.classList.toggle('nav-group-hidden', !visible);
+      });
+    }
+
+    input?.addEventListener('input', e => filter(e.target.value));
+
+    clearBtn?.addEventListener('click', () => {
+      if(input) input.value = '';
+      resetFilter();
+      input?.focus();
+    });
+
+    input?.addEventListener('keydown', e => {
+      if(e.key === 'Escape'){
+        input.value = '';
+        resetFilter();
+      }
+    });
+
+    resetFilter();
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    highlightActive();
+    restoreMenus();
+    setupSidebarSearch();
+  });
+</script>

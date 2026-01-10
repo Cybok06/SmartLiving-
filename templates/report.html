@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>CRM Report</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet"/>
+  <link rel="icon"
+        href="https://imagedelivery.net/h9fmMoa1o2c2P55TcWJGOg/10283f28-b9a0-4100-b254-19a854386800/public"
+        type="image/png">
+
+
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #f9f9f9;
+      color: #333;
+      transition: background-color 0.3s, color 0.3s;
+    }
+
+    body.dark-mode {
+      background-color: #121212;
+      color: #f5f5f5;
+    }
+
+    .container {
+      max-width: 1000px;
+      margin: 40px auto;
+      padding: 20px;
+    }
+
+    h1, h2, h3 {
+      font-weight: bold;
+      margin-top: 30px;
+    }
+
+    .highlight-card {
+      background: linear-gradient(135deg, #6f42c1, #a15eff);
+      color: white;
+      padding: 25px;
+      border-radius: 10px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+      font-size: 1.3rem;
+      margin-bottom: 30px;
+    }
+
+    .highlight-card.dark-mode {
+      background: linear-gradient(135deg, #8f5eff, #b982ff);
+    }
+
+    .section-box {
+      background-color: #fff;
+      border-radius: 10px;
+      padding: 20px;
+      margin-bottom: 30px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      transition: background-color 0.3s ease;
+    }
+    .section-box.debt-section {
+  background-color: #dc3545; /* Bootstrap red */
+  color: white;
+}
+
+.section-box.debt-section.dark-mode {
+  background-color: #a71d2a; /* Darker red for dark mode */
+}
+
+
+
+.section-box2.debt-section2 {
+  background-color: #1da75b; /* Bootstrap red */
+  color: white;
+}
+
+.section-box2.debt-section2.dark-mode {
+  background-color: #1da75b; /* Darker red for dark mode */
+}
+
+
+    .section-box.dark-mode {
+      background-color: #2a2a2a;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+    }
+
+    table, th, td {
+      border: 1px solid #ccc;
+    }
+
+    th {
+      background-color: #6f42c1;
+      color: white;
+      padding: 10px;
+    }
+
+    td {
+      padding: 8px;
+    }
+
+    .dark-mode th {
+      background-color: #8f5eff;
+    }
+
+    .dark-mode td {
+      background-color: #2e2e2e;
+    }
+
+    .btn-toggle-mode {
+      background-color: transparent;
+      border: none;
+      font-size: 1.4rem;
+      cursor: pointer;
+    }
+
+    .navbar {
+      background-color: #fff;
+    }
+
+    .navbar.dark-mode {
+      background-color: #1f1f1f;
+    }
+
+    .navbar a,
+    .navbar .nav-link {
+      color: #333;
+      transition: color 0.3s;
+    }
+
+    .navbar.dark-mode a,
+    .navbar.dark-mode .nav-link {
+      color: #f5f5f5;
+    }
+
+    .navbar-brand span {
+      font-weight: bold;
+      font-size: 1.2rem;
+    }
+
+  </style>
+</head>
+
+<body>
+  <!-- Navbar -->
+ {% include 'side_bar.html' %}
+
+
+  <!-- Main Report Content -->
+  <div class="container">
+    <h1>CRM Report</h1>
+
+    <!-- Highlighted Today's Payments -->
+    <div class="highlight-card" id="highlightCard">
+      <h2>Today's Payments</h2>
+      <p>Total Payments for Today: <strong>GHS {{ report.today_payments }}</strong></p>
+    </div>
+
+    <!-- Customer Overview -->
+    <div class="section-box" id="customerOverview">
+      <h2>Customer Overview</h2>
+      <p>Total Customers: <strong>{{ report.customer_count }}</strong></p>
+      <p>New Customers in the Last Month: <strong>{{ report.new_customers_count }}</strong></p>
+    </div>
+
+    <!-- Payment Summary -->
+    <div class="section-box">
+      <h2>Payment Summary</h2>
+      <p>Total Payments: <strong>GHS {{ report.total_payments }}</strong></p>
+      <p>Payments This Month: <strong>GHS {{ report.payments_this_month }}</strong></p>
+    </div>
+
+    <!-- Sales Summary -->
+    <div class="section-box2 debt-section2" id="debtSection2">
+        <h3>Sales Summary</h3>
+      <p><strong>Total Sales Value:</strong> GHS {{ report.total_sales }}</p>
+    </div>
+
+    <!-- Product Sales Report -->
+    <div class="section-box">
+      <h2>Product Sales Report</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Product Name</th>
+            <th>Quantity Sold</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for product in report.product_report %}
+          <tr>
+            <td>{{ product.name }}</td>
+            <td>{{ product.count }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Debt Analysis -->
+    <div class="section-box debt-section" id="debtSection">
+      <h2>Debt Analysis</h2>
+      <p>Total Debt: <strong>GHS {{ report.total_debt }}</strong></p>
+      <p>Average Debt: <strong>GHS {{ report.average_debt }}</strong></p>
+    </div>
+
+    <!-- Activity Metrics -->
+    <div class="section-box">
+      <h2>Activity Metrics</h2>
+      <p>Active Customers: <strong>{{ report.active_count }}</strong></p>
+      <p>Inactive Customers: <strong>{{ report.inactive_count }}</strong></p>
+    </div>
+  </div>
+
+  <script>
+    const toggleBtn = document.getElementById("mode-toggle");
+
+    toggleBtn.addEventListener("click", () => {
+      document.body.classList.toggle("dark-mode");
+      document.querySelectorAll('.section-box').forEach(el => el.classList.toggle('dark-mode'));
+      document.getElementById('highlightCard').classList.toggle('dark-mode');
+      document.getElementById('mainNavbar').classList.toggle('dark-mode');
+    });
+  </script>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    window.cbConfig = {
+      chatId: "acac0de2-5c91-4eae-9354-1376e3093d91"
+    };
+  </script>
+  <script src="https://app.chatbit.co/embed.min.js" defer></script>
+  {% include 'app_footer.html' %}
+
+</body>
+</html>

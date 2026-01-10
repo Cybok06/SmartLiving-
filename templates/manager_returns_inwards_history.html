@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Returns Inwards History</title>
+  <link rel="icon"
+          href="https://imagedelivery.net/h9fmMoa1o2c2P55TcWJGOg/10283f28-b9a0-4100-b254-19a854386800/public"
+          type="image/png">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+  {% include 'manager_sidebar.html' %}
+
+  <main class="container" style="max-width: 1200px; margin-top: 40px;">
+    <div class="d-flex align-items-center justify-content-between mb-3">
+      <h3 class="mb-0">Returns Inwards History</h3>
+      <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('returns_inwards.manager_returns_inwards_page') }}">Record Return</a>
+    </div>
+
+    <div class="row g-3 mb-3">
+      <div class="col-md-4">
+        <div class="card shadow-sm">
+          <div class="card-body">
+            <div class="text-muted">Total Returns</div>
+            <div class="fs-4 fw-semibold">{{ metrics.count }}</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="card shadow-sm">
+          <div class="card-body">
+            <div class="text-muted">Total Components Returned</div>
+            <div class="fs-4 fw-semibold">{{ metrics.total_qty|round(2) }}</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="card shadow-sm">
+          <div class="card-body">
+            <div class="text-muted">Total Value Returned</div>
+            <div class="fs-4 fw-semibold">GHS {{ metrics.total_value|money }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {% if metrics.top_components %}
+    <div class="card shadow-sm mb-3">
+      <div class="card-body">
+        <div class="fw-semibold mb-2">Top Returned Components</div>
+        <div class="d-flex flex-wrap gap-2">
+          {% for c in metrics.top_components %}
+            <span class="badge bg-secondary">{{ c.name }} x{{ c.qty|round(2) }}</span>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    <div class="card shadow-sm mb-3">
+      <div class="card-body">
+        <form class="row g-3">
+          <div class="col-md-2">
+            <label class="form-label">From</label>
+            <input type="date" name="from" value="{{ from_str }}" class="form-control">
+          </div>
+          <div class="col-md-2">
+            <label class="form-label">To</label>
+            <input type="date" name="to" value="{{ to_str }}" class="form-control">
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Status</label>
+            <select name="status" class="form-select">
+              <option value="">All</option>
+              <option value="Recorded" {% if status == 'Recorded' %}selected{% endif %}>Recorded</option>
+              <option value="Approved" {% if status == 'Approved' %}selected{% endif %}>Approved</option>
+              <option value="Voided" {% if status == 'Voided' %}selected{% endif %}>Voided</option>
+            </select>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Customer</label>
+            <input type="text" name="customer" value="{{ customer_q }}" class="form-control" placeholder="Name or phone">
+          </div>
+          <div class="col-md-2 d-flex align-items-end gap-2">
+            <button class="btn btn-primary">Filter</button>
+            <a class="btn btn-outline-secondary" href="{{ url_for('returns_inwards.manager_returns_inwards_history') }}">Reset</a>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <div class="table-responsive">
+          <table class="table table-sm align-middle">
+            <thead>
+              <tr>
+                <th>Return No</th>
+                <th>Date</th>
+                <th>Customer</th>
+                <th>Product</th>
+                <th>Qty Returned</th>
+                <th class="text-end">Value</th>
+                <th>Status</th>
+                <th>Details</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for r in returns %}
+              <tr>
+                <td>{{ r.return_no }}</td>
+                <td>{{ r.return_date }}</td>
+                <td>
+                  <div>{{ r.customer_name }}</div>
+                  <div class="text-muted small">{{ r.customer_phone }}</div>
+                </td>
+                <td>{{ r.product_return_ref.purchased_product_name or r.product_ref.product_name }}</td>
+                <td>{{ r.returns_qty_total|round(2) }}</td>
+                <td class="text-end">{{ r.sales_reduction_amount|money }}</td>
+                <td>
+                  <span class="badge {% if r.status == 'Approved' %}bg-success{% elif r.status == 'Voided' %}bg-secondary{% else %}bg-warning text-dark{% endif %}">
+                    {{ r.status }}
+                  </span>
+                </td>
+                <td>
+                  <details>
+                    <summary>View</summary>
+                    {% if r.components_returned %}
+                      <ul class="mb-0">
+                        {% for c in r.components_returned %}
+                          <li>{{ c.component_name }} x{{ c.returned_qty }} (GHS {{ c.line_sales_value|money }})</li>
+                        {% endfor %}
+                      </ul>
+                    {% else %}
+                      <div class="text-muted">No component details.</div>
+                    {% endif %}
+                  </details>
+                </td>
+              </tr>
+              {% else %}
+              <tr>
+                <td colspan="8" class="text-center text-muted">No returns found.</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
+  {% include 'app_footer.html' %}
+
+</body>
+
+</html>

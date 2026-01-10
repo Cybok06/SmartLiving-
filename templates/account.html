@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Agent Accountability</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" href="https://res.cloudinary.com/dljpgzbto/image/upload/v1743993646/company-logo_dksb23.jpg" type="image/png" />
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <style>
+    body {
+      background-color: #f8f9fa;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      padding-bottom: 80px;
+    }
+    h2 {
+      text-align: center;
+      margin: 30px 0;
+    }
+    .card {
+      margin-bottom: 30px;
+      border: 1px solid #dee2e6;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+    }
+    .card-header {
+      background-color: #e9ecef;
+      font-weight: bold;
+      font-size: 1.2rem;
+    }
+    .agent-image {
+      border-radius: 50%;
+      margin-bottom: 10px;
+    }
+    .submit-btn {
+      display: block;
+      width: 100%;
+      font-weight: bold;
+      padding: 12px;
+      font-size: 1.1rem;
+    }
+    .expenses-container .expense-entry > div {
+      padding-right: 10px;
+    }
+    .remove-expense-btn {
+      margin-top: 5px;
+    }
+    #scrollBottomBtn {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background-color: #007BFF;
+      color: white;
+      border: none;
+      padding: 10px 16px;
+      border-radius: 50%;
+      font-size: 20px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+<!-- 🌐 Navbar -->
+<nav class="navbar navbar-expand-lg bg-white shadow-sm px-3">
+  <div class="container-fluid">
+    <a class="navbar-brand fw-bold text-dark" href="{{ url_for('manager_dashboard.manager_dashboard_view') }}">
+      <img src="https://res.cloudinary.com/dljpgzbto/image/upload/v1743993646/company-logo_dksb23.jpg" height="35" class="me-2">
+      Dashboard
+    </a>
+    <div class="ms-auto">
+      <a href="{{ url_for('login.logout') }}" class="btn btn-outline-danger">Logout</a>
+    </div>
+  </div>
+</nav>
+
+<div class="container mt-4">
+  <h2>Daily Agent Accountability</h2>
+
+  <!-- ✅ Search Bar -->
+  <div class="mb-4">
+    <input type="text" id="agentSearch" class="form-control" placeholder="Search agent by name..." oninput="filterAgents()" />
+  </div>
+
+  {% if submission_done %}
+    <div class="alert alert-danger text-center">
+      Payments submitted already. Contact the admin for further payments.
+    </div>
+  {% else %}
+    <form method="POST" id="accountability-form">
+      {% for agent in data %}
+        <div class="card" data-agent-id="{{ agent.agent_id }}">
+          <div class="card-header d-flex align-items-center">
+            <img src="{{ agent.image_url }}" alt="Agent Image" width="60" height="60" class="agent-image me-3" />
+            <div>
+              <div>{{ agent.name }}</div>
+              <small class="text-muted">Total Payments Today: GH₵{{ agent.total_payment }}</small>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="mt-3">
+              <label for="surplus_{{ agent.agent_id }}" class="form-label">Surplus</label>
+              <input type="number" step="0.01" name="surplus_{{ agent.agent_id }}" class="form-control" placeholder="e.g. 20.00" />
+            </div>
+            <div class="mt-2">
+              <label for="shortage_{{ agent.agent_id }}" class="form-label">Shortage</label>
+              <input type="number" step="0.01" name="shortage_{{ agent.agent_id }}" class="form-control" placeholder="e.g. 15.00" />
+            </div>
+
+            <div class="mt-4">
+              <strong>Expenses</strong>
+              <div class="expenses-container" id="expenses-container-{{ agent.agent_id }}"></div>
+              <button type="button" class="btn btn-secondary btn-sm mt-2" onclick="addExpense('{{ agent.agent_id }}')">Add Expense</button>
+            </div>
+
+            <!-- ✅ Confirm Button -->
+            <div class="mt-4 text-end">
+              <button type="button" class="btn btn-outline-success confirm-btn" onclick="toggleConfirm('{{ agent.agent_id }}')">✅ Confirm</button>
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+<!-- 🔽 Submit Button -->
+<button type="submit" class="btn btn-primary submit-btn" id="submitBtn" disabled>
+  Submit (Confirm All First)
+</button>
+    </form>
+  {% endif %}
+</div>
+
+<!-- 🔽 Scroll to Bottom -->
+<button id="scrollBottomBtn" onclick="window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' })">↓</button>
+
+<!-- ✅ Scripts -->
+<script>
+  const form = document.getElementById('accountability-form');
+  const submitBtn = document.getElementById('submitBtn');
+
+  function saveToLocalStorage() {
+    const data = {};
+    document.querySelectorAll('[data-agent-id]').forEach(card => {
+      const agentId = card.getAttribute('data-agent-id');
+      const surplus = card.querySelector(`input[name="surplus_${agentId}"]`)?.value || "";
+      const shortage = card.querySelector(`input[name="shortage_${agentId}"]`)?.value || "";
+      const expenses = [];
+
+      card.querySelectorAll(`#expenses-container-${agentId} .expense-entry`).forEach(entry => {
+        const amount = entry.querySelector(`input[name="expense_amount_${agentId}[]"]`)?.value || "";
+        const desc = entry.querySelector(`input[name="expense_description_${agentId}[]"]`)?.value || "";
+        if (amount || desc) expenses.push({ amount, desc });
+      });
+
+      data[agentId] = { surplus, shortage, expenses };
+    });
+    localStorage.setItem('accountability_form', JSON.stringify(data));
+  }
+
+  function loadFromLocalStorage() {
+    const saved = localStorage.getItem('accountability_form');
+    if (!saved) return;
+    const data = JSON.parse(saved);
+
+    Object.keys(data).forEach(agentId => {
+      const agentCard = document.querySelector(`[data-agent-id="${agentId}"]`);
+      if (!agentCard) return;
+
+      const { surplus, shortage, expenses } = data[agentId];
+      agentCard.querySelector(`input[name="surplus_${agentId}"]`).value = surplus || "";
+      agentCard.querySelector(`input[name="shortage_${agentId}"]`).value = shortage || "";
+
+      const container = agentCard.querySelector(`#expenses-container-${agentId}`);
+      expenses.forEach(exp => {
+        const entry = document.createElement('div');
+        entry.className = 'expense-entry row mb-2';
+        entry.innerHTML = `
+          <div class="col-md-4">
+            <input type="number" step="0.01" name="expense_amount_${agentId}[]" class="form-control" placeholder="Amount (GH₵)" value="${exp.amount}" />
+          </div>
+          <div class="col-md-6">
+            <input type="text" name="expense_description_${agentId}[]" class="form-control" placeholder="Description" value="${exp.desc}" />
+          </div>
+          <div class="col-md-2">
+            <button type="button" class="btn btn-danger btn-sm remove-expense-btn">Remove</button>
+          </div>
+        `;
+        container.appendChild(entry);
+      });
+    });
+  }
+
+  function addExpense(agentId) {
+    const container = document.getElementById('expenses-container-' + agentId);
+    const entry = document.createElement('div');
+    entry.className = 'expense-entry row mb-2';
+    entry.innerHTML = `
+      <div class="col-md-4">
+        <input type="number" step="0.01" name="expense_amount_${agentId}[]" class="form-control" placeholder="Amount (GH₵)" />
+      </div>
+      <div class="col-md-6">
+        <input type="text" name="expense_description_${agentId}[]" class="form-control" placeholder="Description" />
+      </div>
+      <div class="col-md-2">
+        <button type="button" class="btn btn-danger btn-sm remove-expense-btn">Remove</button>
+      </div>
+    `;
+    container.appendChild(entry);
+  }
+
+  document.addEventListener('click', function (e) {
+    if (e.target.classList.contains('remove-expense-btn')) {
+      e.target.closest('.expense-entry').remove();
+      saveToLocalStorage();
+    }
+  });
+
+  form?.addEventListener('input', saveToLocalStorage);
+  form?.addEventListener('change', saveToLocalStorage);
+
+  window.addEventListener('load', () => {
+    loadFromLocalStorage();
+    loadConfirmStatus();
+  });
+
+  // ✅ Confirm Status Logic
+  function toggleConfirm(agentId) {
+    const confirmed = localStorage.getItem(`confirm_${agentId}`) === 'true';
+    localStorage.setItem(`confirm_${agentId}`, !confirmed);
+    updateCardStatus(agentId);
+    checkSubmitEligibility();
+  }
+
+  function updateCardStatus(agentId) {
+    const card = document.querySelector(`[data-agent-id="${agentId}"]`);
+    const btn = card.querySelector('.confirm-btn');
+    const confirmed = localStorage.getItem(`confirm_${agentId}`) === 'true';
+
+    if (confirmed) {
+      card.style.borderColor = '#28a745';
+      card.style.backgroundColor = '#e6ffee';
+      btn.textContent = '✅ Confirmed';
+      btn.classList.remove('btn-outline-success');
+      btn.classList.add('btn-success');
+    } else {
+      card.style.borderColor = '#dc3545';
+      card.style.backgroundColor = '#ffe6e6';
+      btn.textContent = '❌ Not Confirmed';
+      btn.classList.remove('btn-success');
+      btn.classList.add('btn-outline-success');
+    }
+  }
+
+  function loadConfirmStatus() {
+    document.querySelectorAll('[data-agent-id]').forEach(card => {
+      const agentId = card.getAttribute('data-agent-id');
+      updateCardStatus(agentId);
+    });
+    checkSubmitEligibility();
+  }
+
+  function checkSubmitEligibility() {
+    const allCards = document.querySelectorAll('[data-agent-id]');
+    let allConfirmed = true;
+    allCards.forEach(card => {
+      const agentId = card.getAttribute('data-agent-id');
+      if (localStorage.getItem(`confirm_${agentId}`) !== 'true') {
+        allConfirmed = false;
+      }
+    });
+
+    submitBtn.disabled = !allConfirmed;
+    submitBtn.innerText = allConfirmed ? "Submit" : "Submit (Confirm All First)";
+  }
+
+  function filterAgents() {
+    const query = document.getElementById('agentSearch').value.toLowerCase();
+    document.querySelectorAll('[data-agent-id]').forEach(card => {
+      const name = card.querySelector('.card-header div').textContent.toLowerCase();
+      card.style.display = name.includes(query) ? '' : 'none';
+    });
+  }
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  {% include 'app_footer.html' %}
+
+</body>
+</html>
+

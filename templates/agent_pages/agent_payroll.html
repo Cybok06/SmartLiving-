@@ -1,0 +1,214 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>My Payroll</title>
+
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+
+  <link rel="icon"
+        href="https://imagedelivery.net/h9fmMoa1o2c2P55TcWJGOg/8744779c-1300-4a50-49de-b143d24da300/public"
+        type="image/png"/>
+
+  <style>
+    :root{
+      --ink:#0f172a;
+      --muted:#64748b;
+      --border:#e2e8f0;
+      --bg:#f8fafc;
+      --soft:#f1f5f9;
+    }
+    body{
+      background: var(--bg);
+      color: var(--ink);
+    }
+    .card{ border:0; border-radius:14px; box-shadow: 0 10px 28px rgba(2,8,23,.08); }
+    .mono{ font-variant-numeric: tabular-nums; }
+  </style>
+</head>
+<body>
+  {% include 'side_bar.html' %}
+
+  <div class="container-xxl py-3">
+    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
+      <div>
+        <div class="fw-bold fs-4 d-flex align-items-center gap-2">
+          <span class="badge text-bg-light border"><i class="bi bi-wallet2"></i></span>
+          My Payroll
+        </div>
+        <div class="text-muted">Current month pay and deductions history.</div>
+      </div>
+      <div class="d-flex align-items-center gap-2">
+        <span class="badge text-bg-primary-subtle border px-3 py-2">
+          <i class="bi bi-person-badge me-1"></i> {{ agent_name }}
+        </span>
+        <div class="input-group" style="min-width:200px;">
+          <span class="input-group-text"><i class="bi bi-calendar2-week"></i></span>
+          <input type="month" class="form-control" id="monthPick">
+        </div>
+        <button class="btn btn-outline-primary" id="btnRefresh">
+          <i class="bi bi-arrow-repeat me-1"></i> Refresh
+        </button>
+      </div>
+    </div>
+
+    <div class="row g-3">
+      <div class="col-12">
+        <div class="card">
+          <div class="card-header bg-white d-flex justify-content-between align-items-center">
+            <div>
+              <div class="fw-semibold">Current Month Pay</div>
+              <div class="small text-muted">After deductions.</div>
+            </div>
+            <span class="badge text-bg-light border" id="statusBadge">N/A</span>
+          </div>
+          <div class="card-body">
+            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+              <div class="text-muted">Net Pay (current month)</div>
+              <div class="fw-bold mono" style="font-size:1.6rem;" id="netAmt">GHS 0.00</div>
+            </div>
+            <div class="small text-muted mt-2" id="payHint">No approved payroll for this month.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-12">
+        <div class="card">
+          <div class="card-header bg-white d-flex justify-content-between align-items-center">
+            <div>
+              <div class="fw-semibold">Deductions History</div>
+              <div class="small text-muted">For the selected month.</div>
+            </div>
+            <div class="small text-muted" id="dedMonthLabel">Month: N/A</div>
+          </div>
+          <div class="card-body p-0">
+            <div class="table-responsive">
+              <table class="table table-hover mb-0 align-middle">
+                <thead class="table-light">
+                  <tr>
+                    <th>Date</th>
+                    <th>Reason</th>
+                    <th class="text-end">Amount</th>
+                  </tr>
+                </thead>
+                <tbody id="dedHistoryBody">
+                  <tr><td colspan="3" class="text-center text-muted py-4">Loading...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast-container position-fixed top-0 end-0 p-3" style="z-index:2000;">
+    <div id="appToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+      <div class="d-flex">
+        <div class="toast-body" id="toastMsg">Ready</div>
+        <button class="btn-close me-2 m-auto" data-bs-dismiss="toast"></button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    const toastEl = document.getElementById("appToast");
+    const toastMsg = document.getElementById("toastMsg");
+    const toast = toastEl ? new bootstrap.Toast(toastEl, { delay: 2300 }) : null;
+    const notify = (m) => { if(!toast) return alert(m); toastMsg.innerText=m; toast.show(); };
+
+    const monthPick = document.getElementById("monthPick");
+    const btnRefresh = document.getElementById("btnRefresh");
+    const statusBadge = document.getElementById("statusBadge");
+    const netAmt = document.getElementById("netAmt");
+    const payHint = document.getElementById("payHint");
+    const dedHistoryBody = document.getElementById("dedHistoryBody");
+    const dedMonthLabel = document.getElementById("dedMonthLabel");
+
+    function money(n){
+      try { return "GHS " + Number(n||0).toLocaleString(undefined,{minimumFractionDigits:2, maximumFractionDigits:2}); }
+      catch(e){ return "GHS " + (Number(n||0).toFixed(2)); }
+    }
+    function esc(s){
+      return String(s||"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;");
+    }
+
+    function setStatus(status){
+      statusBadge.className = "badge text-bg-light border";
+      const map = { "Approved":"text-bg-success", "Paid":"text-bg-success" };
+      statusBadge.classList.add(map[status] || "text-bg-light");
+      statusBadge.innerText = status || "N/A";
+    }
+
+    async function loadMonthPayroll(month){
+      setStatus("N/A");
+      netAmt.innerText = money(0);
+      payHint.innerText = "Loading payroll...";
+
+      const res = await fetch(`/agent/payroll/month/${month}`);
+      const data = await res.json();
+      if(!data.ok) return notify(data.message || "Failed to load payroll.");
+
+      if(!data.found){
+        setStatus("N/A");
+        payHint.innerText = "No approved payroll for this month.";
+        return;
+      }
+
+      const payroll = data.payroll || {};
+      const item = payroll.item || {};
+      setStatus(payroll.status || "Approved");
+      netAmt.innerText = money(item.net_final || 0);
+      payHint.innerText = "Net pay is after deductions.";
+    }
+
+    async function loadDeductionHistory(month){
+      if (!dedHistoryBody) return;
+      dedMonthLabel.innerText = `Month: ${month || "N/A"}`;
+      const q = new URLSearchParams({ month: month });
+      const res = await fetch(`/agent/payroll/deductions?` + q.toString());
+      const data = await res.json();
+      if(!data.ok){
+        dedHistoryBody.innerHTML = `<tr><td colspan="3" class="text-center text-danger py-4">${esc(data.message || "Failed to load deductions.")}</td></tr>`;
+        return;
+      }
+      const rows = data.rows || [];
+      if (!rows.length) {
+        dedHistoryBody.innerHTML = `<tr><td colspan="3" class="text-center text-muted py-4">No deductions found for this month.</td></tr>`;
+        return;
+      }
+      dedHistoryBody.innerHTML = rows.map(r => `
+        <tr>
+          <td class="mono">${esc(r.date || "")}</td>
+          <td>${esc(r.reason || "")}</td>
+          <td class="text-end mono">${money(r.amount || 0)}</td>
+        </tr>
+      `).join("");
+    }
+
+    btnRefresh.addEventListener("click", async ()=>{
+      await loadMonthPayroll(monthPick.value);
+      await loadDeductionHistory(monthPick.value);
+      notify("Refreshed.");
+    });
+
+    monthPick.addEventListener("change", async ()=>{
+      await loadMonthPayroll(monthPick.value);
+      await loadDeductionHistory(monthPick.value);
+    });
+
+    (function init(){
+      const d = new Date();
+      const mm = String(d.getMonth()+1).padStart(2,'0');
+      const yyyy = d.getFullYear();
+      monthPick.value = `${yyyy}-${mm}`;
+
+      loadMonthPayroll(monthPick.value);
+      loadDeductionHistory(monthPick.value);
+    })();
+  </script>
+</body>
+</html>

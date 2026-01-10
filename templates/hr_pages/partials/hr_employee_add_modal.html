@@ -1,0 +1,748 @@
+{# templates/hr_pages/partials/hr_employee_add_modal.html #}
+
+<style>
+  #hrAddEmployeeModal .modal-dialog{
+    height: calc(100vh - 2rem);
+  }
+  #hrAddEmployeeModal .modal-content{
+    height: 100%;
+    overflow: hidden;
+  }
+  #hrAddEmployeeModal .hr-modal-form{
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+  #hrAddEmployeeModal .modal-header,
+  #hrAddEmployeeModal .modal-footer{
+    flex: 0 0 auto;
+  }
+  #hrAddEmployeeModal .modal-body{
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .hr-soft-card{
+    border:1px solid rgba(15,23,42,.08);
+    border-radius:16px;
+    background:#fff;
+    box-shadow:0 .35rem 1.1rem rgba(15,23,42,.06);
+  }
+  .hr-section-title{
+    font-weight:700;
+    letter-spacing:-.01em;
+  }
+  .hr-muted{ color: rgba(15,23,42,.65); }
+  .extra-small{ font-size:.78rem; }
+  .btn-xs{ padding:.25rem .5rem; font-size:.78rem; }
+  .avatar-preview{
+    width:120px;height:120px;border-radius:999px;
+    object-fit:cover; display:none;
+    border: 3px solid rgba(15,23,42,.06);
+  }
+</style>
+
+<div class="modal fade" id="hrAddEmployeeModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-fullscreen-lg-down">
+    <div class="modal-content">
+
+      <form id="hrAddEmployeeForm" class="hr-modal-form"
+            method="POST"
+            action="{{ url_for('hr.add_employee') }}"
+            enctype="multipart/form-data">
+
+        <div class="modal-header">
+          <div>
+            <h5 class="modal-title mb-0">Add Employee</h5>
+            <div class="small text-muted">Create staff profile, attach recruitment checklist & probation tracking.</div>
+          </div>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+
+        <div class="modal-body">
+
+          <div class="hr-soft-card p-3 mb-3">
+            <div class="d-flex justify-content-between flex-wrap gap-2">
+              <div class="small text-muted">
+                Default password is <strong>1234</strong> (encrypted with Bcrypt).
+              </div>
+              <div class="small text-muted">
+                Fields marked <span class="text-danger">*</span> are required.
+              </div>
+            </div>
+          </div>
+
+          <!-- BASIC INFO -->
+          <div class="hr-soft-card p-3 mb-3">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+              <div class="hr-section-title">Basic Information</div>
+              <span class="badge rounded-pill text-bg-light border">Core</span>
+            </div>
+
+            <div class="row g-2">
+              <div class="col-12 col-md-6">
+                <label class="form-label small mb-1">Full Name <span class="text-danger">*</span></label>
+                <input type="text" class="form-control form-control-sm" name="name" required placeholder="e.g., Ama Mensah">
+              </div>
+
+              <div class="col-6 col-md-3">
+                <label class="form-label small mb-1">Username <span class="text-danger">*</span></label>
+                <input type="text" class="form-control form-control-sm" name="username" required placeholder="unique login ID">
+                <div class="extra-small text-muted mt-1">No spaces. Must be unique.</div>
+              </div>
+
+              <div class="col-6 col-md-3">
+                <label class="form-label small mb-1">Phone <span class="text-danger">*</span></label>
+                <input type="text" class="form-control form-control-sm" name="phone" required placeholder="e.g., 024xxxxxxx">
+              </div>
+
+              <div class="col-12 col-md-4">
+                <label class="form-label small mb-1">Email</label>
+                <input type="email" class="form-control form-control-sm" name="email" placeholder="optional">
+              </div>
+
+              <div class="col-6 col-md-4">
+                <label class="form-label small mb-1">Role <span class="text-danger">*</span></label>
+                <div class="d-flex gap-2 align-items-center">
+                  <select name="role" class="form-select form-select-sm" id="hrAddEmployeeRole" required>
+                    <option value="">Select role</option>
+                    {% for r in hr_roles %}
+                      <option value="{{ r.key }}">{{ r.name }}</option>
+                    {% endfor %}
+                  </select>
+                  <button type="button" class="btn btn-xs btn-outline-primary" id="hrAddRoleBtn">
+                    + Add role
+                  </button>
+                </div>
+                <div id="hrAddRoleInline" class="mt-2 d-none">
+                  <div class="input-group input-group-sm">
+                    <input type="text" class="form-control" id="hrAddRoleName" placeholder="e.g., Customer Care">
+                    <button type="button" class="btn btn-primary" id="hrAddRoleSaveBtn">Save</button>
+                    <button type="button" class="btn btn-outline-secondary" id="hrAddRoleCancelBtn">Cancel</button>
+                  </div>
+                  <div class="extra-small text-muted mt-1">Role key will be auto-normalized.</div>
+                </div>
+              </div>
+
+              <div class="col-6 col-md-4">
+                <label class="form-label small mb-1">Branch / Manager Branch <span class="text-danger">*</span></label>
+                <select class="form-select form-select-sm" id="hrAddEmployeeBranchSelect">
+                  <option value="">Select branch</option>
+                  {% for b in branches %}
+                    {% if b != "All Branches" %}
+                      <option value="{{ b }}">{{ b }}</option>
+                    {% endif %}
+                  {% endfor %}
+                  <option value="__other__">Other (type manually)</option>
+                </select>
+                <input type="text" class="form-control form-control-sm mt-2 d-none" id="hrAddEmployeeBranchOther" placeholder="Enter branch name">
+                <input type="hidden" name="branch" id="hrAddEmployeeBranchHidden">
+                <input type="text" class="form-control form-control-sm mt-2 d-none" id="hrAddEmployeeBranchDisplay" readonly placeholder="Manager branch">
+              </div>
+            </div>
+
+            <div class="row g-2 mt-2" id="hrAddEmployeeManagerRow" style="display:none;">
+              <div class="col-12 col-md-6">
+                <label class="form-label small mb-1">
+                  Manager <span class="text-danger">*</span>
+                  <span class="text-muted extra-small">(required when role is not Manager)</span>
+                </label>
+                <select name="manager_id" class="form-select form-select-sm" id="hrAddEmployeeManagerSelect">
+                  <option value="">Select manager</option>
+                  {% if hr_managers %}
+                    {% for mgr in hr_managers %}
+                      <option value="{{ mgr._id }}" data-branch="{{ mgr.branch or '' }}">{{ mgr.name }} - {{ mgr.branch or 'No Branch' }}</option>
+                    {% endfor %}
+                  {% endif %}
+                </select>
+              </div>
+            </div>
+
+          <!-- PERSONAL & EMPLOYMENT -->
+          <div class="hr-soft-card p-3 mb-3">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+              <div class="hr-section-title">Personal & Employment</div>
+              <span class="badge rounded-pill text-bg-light border">HR</span>
+            </div>
+
+            <div class="row g-2">
+              <div class="col-6 col-md-3">
+                <label class="form-label small mb-1">Gender</label>
+                <select name="gender" class="form-select form-select-sm">
+                  <option value="">Select</option>
+                  <option value="Male">Male</option>
+                  <option value="Female">Female</option>
+                </select>
+              </div>
+
+              <div class="col-6 col-md-3">
+                <label class="form-label small mb-1">Position</label>
+                <input type="text" class="form-control form-control-sm" name="position" placeholder="Agent / Acting Manager">
+              </div>
+
+              <div class="col-6 col-md-3">
+                <label class="form-label small mb-1">Employment Status</label>
+                <select name="status" class="form-select form-select-sm">
+                  <option value="Probation" selected>Probation (3 months)</option>
+                  <option value="Active">Active</option>
+                </select>
+              </div>
+
+              <div class="col-6 col-md-3">
+                <label class="form-label small mb-1">Start Date</label>
+                <input type="date" class="form-control form-control-sm" name="start_date">
+              </div>
+
+              <div class="col-12 col-md-4">
+                <label class="form-label small mb-1">Birthday / Date of Birth</label>
+                <input type="date" class="form-control form-control-sm" name="dob">
+                <div class="extra-small text-muted mt-1">
+                  Used for <b>upcoming birthdays</b> on the HR Dashboard (Top 10).
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ADDRESS / ID -->
+          <div class="hr-soft-card p-3 mb-3">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+              <div class="hr-section-title">Address & Identification</div>
+              <span class="badge rounded-pill text-bg-light border">Compliance</span>
+            </div>
+
+            <div class="row g-2">
+              <div class="col-12 col-md-4">
+                <label class="form-label small mb-1">Residential Location</label>
+                <input type="text" class="form-control form-control-sm" name="location" placeholder="Korle Gonno">
+              </div>
+              <div class="col-12 col-md-4">
+                <label class="form-label small mb-1">GPS Address</label>
+                <input type="text" class="form-control form-control-sm" name="gps_address" placeholder="GA-123-4567">
+              </div>
+              <div class="col-12 col-md-4">
+                <label class="form-label small mb-1">Ghana Card / ID</label>
+                <input type="text" class="form-control form-control-sm" name="ghana_card">
+              </div>
+            </div>
+          </div>
+
+          <!-- OTHER INCOME -->
+          <div class="hr-soft-card p-3 mb-3">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+              <div class="hr-section-title">Risk & Compliance Notes</div>
+              <span class="badge rounded-pill text-bg-light border">Internal</span>
+            </div>
+
+            <label class="form-label small mb-1">Other Source of Income (optional)</label>
+            <textarea name="other_income" class="form-control form-control-sm" rows="2"
+                      placeholder="e.g., side business, part-time work"></textarea>
+            <div class="extra-small text-muted mt-1">
+              For internal risk & compliance only (not external).
+            </div>
+          </div>
+
+          <!-- RECRUITMENT SOURCE -->
+          <div class="hr-soft-card p-3 mb-3">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+              <div class="hr-section-title">Recruitment Source</div>
+              <span class="badge rounded-pill text-bg-light border">Recruitment</span>
+            </div>
+
+            <div class="row g-2">
+              <div class="col-12 col-md-4">
+                <label class="form-label small mb-1">Source Type</label>
+                <select name="source_type" class="form-select form-select-sm">
+                  <option value="Walk-in">Walk-in</option>
+                  <option value="Referral">Referral</option>
+                  <option value="Job Post">Job Post</option>
+                  <option value="Other" selected>Other</option>
+                </select>
+              </div>
+              <div class="col-12 col-md-4">
+                <label class="form-label small mb-1">Referrer Name</label>
+                <input type="text" class="form-control form-control-sm" name="referrer_name">
+              </div>
+              <div class="col-12 col-md-4">
+                <label class="form-label small mb-1">Referrer Phone</label>
+                <input type="text" class="form-control form-control-sm" name="referrer_phone">
+              </div>
+            </div>
+          </div>
+
+          <!-- GUARANTOR -->
+          <div class="hr-soft-card p-3 mb-3">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+              <div class="hr-section-title">Guarantor Details</div>
+              <span class="badge rounded-pill text-bg-light border">Security</span>
+            </div>
+
+            <div class="row g-2">
+              <div class="col-12 col-md-4">
+                <label class="form-label small mb-1">Guarantor Name</label>
+                <input type="text" class="form-control form-control-sm" name="guarantor_name">
+              </div>
+              <div class="col-12 col-md-4">
+                <label class="form-label small mb-1">Guarantor Phone</label>
+                <input type="text" class="form-control form-control-sm" name="guarantor_phone">
+              </div>
+              <div class="col-12 col-md-4">
+                <label class="form-label small mb-1">Relationship</label>
+                <input type="text" class="form-control form-control-sm" name="guarantor_relationship" placeholder="Brother / Father / Friend">
+              </div>
+
+              <div class="col-12">
+                <label class="form-label small mb-1">Guarantor Address</label>
+                <input type="text" class="form-control form-control-sm" name="guarantor_address">
+              </div>
+            </div>
+          </div>
+
+          <!-- PROFILE IMAGE -->
+          <div class="hr-soft-card p-3 mb-3">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+              <div class="hr-section-title">Profile Photo</div>
+              <span class="badge rounded-pill text-bg-light border">Cloudflare</span>
+            </div>
+
+            <div class="row g-2 align-items-end">
+              <div class="col-12 col-md-4">
+                <label class="form-label small mb-1">Upload Image</label>
+                <input type="file" class="form-control form-control-sm" name="image_file" id="hrAddEmployeeImageFile" accept="image/*">
+                <div class="extra-small text-muted mt-1">Uploaded securely to Cloudflare Images.</div>
+              </div>
+
+              <div class="col-12 col-md-4">
+                <label class="form-label small mb-1">Or Image URL (optional)</label>
+                <input type="text" class="form-control form-control-sm" name="image_url" id="hrAddEmployeeImageUrl" placeholder="https://...">
+              </div>
+
+              <div class="col-12 col-md-4">
+                <label class="form-label small mb-1">Preview</label>
+                <div class="d-flex align-items-center gap-2">
+                  <img id="hrAddEmployeePreview" class="avatar-preview" src="" alt="Preview">
+                  <div class="extra-small text-muted">Photo helps with HR identity verification.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- CUSTOM FIELDS -->
+          <div class="hr-soft-card p-3 mb-3">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+              <div class="hr-section-title">Custom Fields</div>
+              <span class="badge rounded-pill text-bg-light border">Flexible</span>
+            </div>
+
+            <div class="extra-small text-muted mb-2">
+              Add extra HR attributes (Tax ID, Bank Name, Next of Kin, etc.).
+            </div>
+
+            <div id="customFieldsContainer">
+              <div class="row g-2 mb-2 custom-field-row">
+                <div class="col-md-5">
+                  <input type="text" name="custom_field_label[]" class="form-control form-control-sm" placeholder="Field label e.g., Bank Name">
+                </div>
+                <div class="col-md-5">
+                  <input type="text" name="custom_field_value[]" class="form-control form-control-sm" placeholder="Field value">
+                </div>
+                <div class="col-md-2 d-flex align-items-center">
+                  <button type="button" class="btn btn-xs btn-outline-danger w-100" onclick="this.closest('.custom-field-row').remove()">
+                    Remove
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <button type="button" class="btn btn-xs btn-outline-secondary" id="addCustomFieldBtn">
+              <i class="bi bi-plus-circle me-1"></i>Add Custom Field
+            </button>
+
+            <div class="extra-small text-muted mt-2">
+              Recruitment process & probation tracking will be attached automatically.
+            </div>
+          </div>
+
+        </div>
+
+        <div class="modal-footer justify-content-between">
+          <span class="text-muted extra-small">
+            Default password <strong>1234</strong> will be set (change later).
+          </span>
+
+          <div class="d-flex gap-2">
+            <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">
+              Cancel
+            </button>
+
+            <button type="submit" class="btn btn-sm btn-primary" id="hrAddEmployeeSubmitBtn">
+              <span class="submit-label"><i class="bi bi-check2-circle me-1"></i>Save Employee</span>
+              <span class="submit-spinner d-none">
+                <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+              </span>
+            </button>
+          </div>
+        </div>
+
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- EMPLOYEE PROFILE MODAL -->
+<div class="modal fade" id="hrEmployeeProfileModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-scrollable">
+    <div class="modal-content" id="hrEmployeeProfileModalContent">
+      <div class="modal-body d-flex align-items-center justify-content-center py-5 text-muted">
+        Loading profile...
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ---------------- Custom fields ---------------- */
+(function () {
+  const container = document.getElementById('customFieldsContainer');
+  const addBtn = document.getElementById('addCustomFieldBtn');
+  if (!container || !addBtn) return;
+
+  addBtn.addEventListener('click', function () {
+    const row = document.createElement('div');
+    row.className = 'row g-2 mb-2 custom-field-row';
+    row.innerHTML = `
+      <div class="col-md-5">
+        <input type="text" name="custom_field_label[]" class="form-control form-control-sm" placeholder="Field label e.g., Tax ID">
+      </div>
+      <div class="col-md-5">
+        <input type="text" name="custom_field_value[]" class="form-control form-control-sm" placeholder="Field value">
+      </div>
+      <div class="col-md-2 d-flex align-items-center">
+        <button type="button" class="btn btn-xs btn-outline-danger w-100" onclick="this.closest('.custom-field-row').remove()">
+          Remove
+        </button>
+      </div>
+    `;
+    container.appendChild(row);
+  });
+})();
+
+/* ---------------- Roles + Branch handling ---------------- */
+(function () {
+  const roleSelect = document.getElementById('hrAddEmployeeRole');
+  const managerRow = document.getElementById('hrAddEmployeeManagerRow');
+  const managerSelect = document.getElementById('hrAddEmployeeManagerSelect');
+  const branchSelect = document.getElementById('hrAddEmployeeBranchSelect');
+  const branchOther = document.getElementById('hrAddEmployeeBranchOther');
+  const branchHidden = document.getElementById('hrAddEmployeeBranchHidden');
+  const branchDisplay = document.getElementById('hrAddEmployeeBranchDisplay');
+
+  const addRoleBtn = document.getElementById('hrAddRoleBtn');
+  const addRoleInline = document.getElementById('hrAddRoleInline');
+  const addRoleName = document.getElementById('hrAddRoleName');
+  const addRoleSaveBtn = document.getElementById('hrAddRoleSaveBtn');
+  const addRoleCancelBtn = document.getElementById('hrAddRoleCancelBtn');
+
+  if (!roleSelect) return;
+
+  function setBranchValue(val) {
+    if (branchHidden) branchHidden.value = val || '';
+    if (branchDisplay) branchDisplay.value = val || '';
+  }
+
+  function updateBranchFromManager() {
+    if (!managerSelect) return;
+    const opt = managerSelect.options[managerSelect.selectedIndex];
+    const branch = (opt && opt.getAttribute('data-branch')) || '';
+    setBranchValue(branch);
+  }
+
+  function updateBranchFromSelect() {
+    if (!branchSelect) return;
+    const val = branchSelect.value || '';
+    if (val === '__other__') {
+      if (branchOther) {
+        branchOther.classList.remove('d-none');
+        branchOther.required = true;
+      }
+      setBranchValue(branchOther ? branchOther.value.trim() : '');
+      return;
+    }
+    if (branchOther) {
+      branchOther.classList.add('d-none');
+      branchOther.required = false;
+    }
+    setBranchValue(val);
+  }
+
+  function updateVisibility() {
+    const role = (roleSelect.value || '').toLowerCase();
+    const isManager = role === 'manager';
+    const hasRole = !!role;
+
+    if (!hasRole) {
+      if (managerRow) managerRow.style.display = 'none';
+      if (managerSelect) managerSelect.required = false;
+      if (branchSelect) {
+        branchSelect.classList.remove('d-none');
+        branchSelect.required = false;
+      }
+      if (branchOther) {
+        branchOther.classList.add('d-none');
+        branchOther.required = false;
+      }
+      if (branchDisplay) branchDisplay.classList.add('d-none');
+      setBranchValue('');
+      return;
+    }
+
+    if (managerRow) managerRow.style.display = isManager ? 'none' : '';
+    if (managerSelect) managerSelect.required = !isManager;
+    if (branchSelect) branchSelect.required = isManager;
+    if (branchOther) branchOther.required = isManager && branchSelect && branchSelect.value === '__other__';
+
+    if (branchSelect) branchSelect.classList.toggle('d-none', !isManager);
+    if (branchOther) branchOther.classList.toggle('d-none', !isManager || (branchSelect && branchSelect.value !== '__other__'));
+    if (branchDisplay) branchDisplay.classList.toggle('d-none', isManager);
+
+    if (isManager) {
+      updateBranchFromSelect();
+      if (managerSelect) managerSelect.value = '';
+    } else {
+      updateBranchFromManager();
+    }
+  }
+
+  roleSelect.addEventListener('change', updateVisibility);
+  managerSelect && managerSelect.addEventListener('change', updateBranchFromManager);
+  branchSelect && branchSelect.addEventListener('change', updateBranchFromSelect);
+  branchOther && branchOther.addEventListener('input', updateBranchFromSelect);
+
+  if (addRoleBtn && addRoleInline) {
+    addRoleBtn.addEventListener('click', function () {
+      addRoleInline.classList.toggle('d-none');
+      addRoleName && addRoleName.focus();
+    });
+  }
+
+  if (addRoleCancelBtn && addRoleInline) {
+    addRoleCancelBtn.addEventListener('click', function () {
+      addRoleInline.classList.add('d-none');
+      if (addRoleName) addRoleName.value = '';
+    });
+  }
+
+  if (addRoleSaveBtn) {
+    addRoleSaveBtn.addEventListener('click', async function () {
+      const name = (addRoleName && addRoleName.value || '').trim();
+      if (!name) {
+        window.showToast ? window.showToast('warning', 'Please enter a role name.') : alert('Role name required.');
+        return;
+      }
+
+      addRoleSaveBtn.disabled = true;
+      try {
+        const resp = await fetch('{{ url_for("hr.add_role") }}', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+          body: JSON.stringify({ name })
+        });
+
+        const data = await resp.json().catch(() => ({}));
+        if (!resp.ok || !data.success) {
+          const msg = data.message || 'Unable to add role.';
+          window.showToast ? window.showToast('danger', msg) : alert(msg);
+          return;
+        }
+
+        const role = data.role || {};
+        if (role.key) {
+          let opt = roleSelect.querySelector(`option[value="${role.key}"]`);
+          if (!opt) {
+            opt = document.createElement('option');
+            opt.value = role.key;
+            opt.textContent = role.name || role.key;
+            roleSelect.appendChild(opt);
+          }
+          roleSelect.value = role.key;
+        }
+
+        window.showToast ? window.showToast('success', 'Role added successfully.') : alert('Role added.');
+        addRoleInline && addRoleInline.classList.add('d-none');
+        addRoleName && (addRoleName.value = '');
+        updateVisibility();
+      } catch (err) {
+        console.error(err);
+        window.showToast ? window.showToast('danger', 'Failed to add role.') : alert('Failed to add role.');
+      } finally {
+        addRoleSaveBtn.disabled = false;
+      }
+    });
+  }
+
+  updateVisibility();
+})();
+
+/* ---------------- Image preview ---------------- */
+(function () {
+  const fileInput = document.getElementById('hrAddEmployeeImageFile');
+  const urlInput  = document.getElementById('hrAddEmployeeImageUrl');
+  const preview   = document.getElementById('hrAddEmployeePreview');
+
+  function show(src) {
+    if (!preview) return;
+    if (src) {
+      preview.src = src;
+      preview.style.display = 'block';
+    } else {
+      preview.src = '';
+      preview.style.display = 'none';
+    }
+  }
+
+  if (fileInput) {
+    fileInput.addEventListener('change', function () {
+      const file = this.files && this.files[0];
+      if (!file) return show('');
+      const reader = new FileReader();
+      reader.onload = e => show(e.target.result);
+      reader.readAsDataURL(file);
+    });
+  }
+
+  if (urlInput) {
+    urlInput.addEventListener('input', function () {
+      const val = (this.value || '').trim();
+      if (val.startsWith('http')) show(val);
+      else if (!val && !(fileInput && fileInput.files && fileInput.files[0])) show('');
+    });
+  }
+})();
+
+/* ---------------- Profile loader ---------------- */
+(function () {
+  const profileModalEl = document.getElementById('hrEmployeeProfileModal');
+  const profileModalContentEl = document.getElementById('hrEmployeeProfileModalContent');
+  if (!profileModalEl || !profileModalContentEl) return;
+
+  document.addEventListener('click', async function (ev) {
+    const btn = ev.target.closest('[data-hr-employee-profile="true"]');
+    if (!btn) return;
+
+    const url = btn.getAttribute('data-profile-url');
+    if (!url) return;
+
+    profileModalContentEl.innerHTML = `
+      <div class="modal-body d-flex align-items-center justify-content-center py-5 text-muted">
+        <div class="d-flex align-items-center gap-2">
+          <div class="spinner-border spinner-border-sm" role="status"></div>
+          <span>Loading employee profile...</span>
+        </div>
+      </div>
+    `;
+
+    try {
+      const resp = await fetch(url, { headers: { "X-Requested-With": "XMLHttpRequest" } });
+      if (!resp.ok) {
+        profileModalContentEl.innerHTML = `
+          <div class="modal-body d-flex align-items-center justify-content-center py-5 text-danger small">
+            Failed to load profile (status ${resp.status}).
+          </div>
+        `;
+      } else {
+        profileModalContentEl.innerHTML = await resp.text();
+      }
+    } catch (err) {
+      console.error(err);
+      profileModalContentEl.innerHTML = `
+        <div class="modal-body d-flex align-items-center justify-content-center py-5 text-danger small">
+          Error loading profile. Please try again.
+        </div>
+      `;
+    }
+
+    if (window.bootstrap && bootstrap.Modal) {
+      bootstrap.Modal.getOrCreateInstance(profileModalEl).show();
+    }
+  });
+})();
+
+/* ---------------- AJAX submit (SPA-style) ---------------- */
+(function () {
+  const formEl   = document.getElementById('hrAddEmployeeForm');
+  const modalEl  = document.getElementById('hrAddEmployeeModal');
+  const submitBtn = document.getElementById('hrAddEmployeeSubmitBtn');
+  const mainContentEl = document.getElementById('hr-main-content');
+
+  if (!formEl) return;
+
+  function setLoading(isLoading) {
+    if (!submitBtn) return;
+    const labelEl   = submitBtn.querySelector('.submit-label');
+    const spinnerEl = submitBtn.querySelector('.submit-spinner');
+
+    submitBtn.disabled = isLoading;
+    if (labelEl && spinnerEl) {
+      labelEl.classList.toggle('d-none', isLoading);
+      spinnerEl.classList.toggle('d-none', !isLoading);
+    }
+  }
+
+  formEl.addEventListener('submit', async function (e) {
+    e.preventDefault();
+
+    const formData = new FormData(formEl);
+    setLoading(true);
+
+    try {
+      const resp = await fetch(formEl.action, {
+        method: 'POST',
+        body: formData,
+        headers: { "X-Requested-With": "XMLHttpRequest" }
+      });
+
+      const data = await resp.json().catch(() => ({}));
+
+      if (!resp.ok || !data.success) {
+        const msg = data.message || 'Unable to add employee.';
+        window.showToast ? window.showToast('danger', msg) : alert(msg);
+        return;
+      }
+
+      window.showToast ? window.showToast('success', data.message || 'Employee added successfully.') : alert('Employee added.');
+
+      // Close modal
+      if (window.bootstrap && modalEl) {
+        bootstrap.Modal.getOrCreateInstance(modalEl).hide();
+      }
+
+      // Reset
+      formEl.reset();
+      const preview = document.getElementById('hrAddEmployeePreview');
+      if (preview) { preview.src = ''; preview.style.display = 'none'; }
+
+      // Refresh employees list (SPA)
+      const redirectUrl = data.redirect_url || "{{ url_for('hr.employees') }}";
+      if (mainContentEl && window.fetch) {
+        mainContentEl.innerHTML = `
+          <div class="d-flex align-items-center justify-content-center py-5 text-muted">
+            <div class="spinner-border" role="status" aria-hidden="true"></div>
+            <span class="ms-2">Refreshing employees...</span>
+          </div>
+        `;
+        const pageResp = await fetch(redirectUrl, { headers: { "X-Requested-With": "XMLHttpRequest" } });
+        mainContentEl.innerHTML = await pageResp.text();
+      } else {
+        window.location.href = redirectUrl;
+      }
+
+    } catch (err) {
+      console.error(err);
+      window.showToast ? window.showToast('danger', 'Unexpected error while adding employee.') : alert('Unexpected error.');
+    } finally {
+      setLoading(false);
+    }
+  });
+})();
+</script>
