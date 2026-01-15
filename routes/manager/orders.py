@@ -292,13 +292,6 @@ def create_order():
         if not inv_doc:
             return jsonify(ok=False, message="Selected product was not found in your inventory."), 400
 
-        available = int(inv_doc.get("qty", 0) or 0)
-        if qty > available:
-            return jsonify(
-                ok=False,
-                message=f"Requested qty ({qty}) exceeds availability ({available}) for {inv_doc.get('name')}.",
-            ), 400
-
         shaped.append({
             "line_id": str(uuid4()),
             "product_id": pid,
