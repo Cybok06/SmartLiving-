@@ -6,7 +6,7 @@ import os
 
 # Shared Util
 from user_model import get_user_by_id
-import hr_backend.hr_recruitment 
+import hr_backend.hr_recruitment
 import hr_backend.hr_wages
 
 # ---------------- Admin Blueprints ----------------
@@ -102,6 +102,7 @@ from manager_sales_close import manager_sales_close_bp
 from admin_sales_close import admin_sales_close_bp
 from executive_sales_close import executive_sales_close_bp
 from transfer_product import transfer_product_bp
+from close_card import close_card_bp
 from packages import packages_bp
 from routes.executive_pricing import executive_pricing_bp
 from assign_products import assign_bp
@@ -239,6 +240,7 @@ app.register_blueprint(admin_sales_close_bp)
 app.register_blueprint(executive_sales_close_bp)
 app.register_blueprint(inventory_dashboard)
 app.register_blueprint(transfer_product_bp)
+app.register_blueprint(close_card_bp)
 app.register_blueprint(assign_bp)
 app.register_blueprint(manager_deposits_bp)
 app.register_blueprint(executive_deposits_bp)
