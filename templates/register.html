@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register Agent - CRM System</title>
+    <link rel="icon"
+          href="https://imagedelivery.net/h9fmMoa1o2c2P55TcWJGOg/10283f28-b9a0-4100-b254-19a854386800/public"
+          type="image/png">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #eef2f7;
+            padding: 30px;
+        }
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+            background: #fff;
+            padding: 25px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            border-radius: 10px;
+        }
+        h2 {
+            text-align: center;
+            color: #007BFF;
+        }
+        label {
+            display: block;
+            margin-top: 10px;
+            font-weight: bold;
+        }
+        input[type="text"], input[type="password"], input[type="email"], input[type="date"], input[type="file"],
+        select {
+            width: 100%;
+            padding: 8px;
+            margin-top: 5px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        input[type="submit"] {
+            width: 100%;
+            padding: 10px;
+            margin-top: 20px;
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        input[type="submit"]:hover {
+            background-color: #0056b3;
+        }
+        .form-group {
+            margin-top: 10px;
+        }
+        #upload-status {
+            font-size: 0.9em;
+            color: #086b2e;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h2>Register Agent</h2>
+    <form method="POST" enctype="multipart/form-data">
+        <label>Username:</label>
+        <input name="username" required>
+
+        <label>Password:</label>
+        <input type="password" name="password" required>
+
+        <label>Full Name:</label>
+        <input name="name" required>
+
+        <label>Phone:</label>
+        <input type="text" name="phone">
+
+        <label>Email:</label>
+        <input type="email" name="email">
+
+        <label>Gender:</label>
+        <select name="gender">
+            <option>Male</option>
+            <option>Female</option>
+            <option>Other</option>
+        </select>
+
+        <label>Branch:</label>
+        <input name="branch">
+
+        <label>Position:</label>
+        <input name="position">
+
+        <label>Location:</label>
+        <input name="location">
+
+        <label>Start Date:</label>
+        <input type="date" name="start_date">
+
+        <div class="form-group">
+            <label for="image">Upload Image:</label>
+            <input type="file" id="image" name="image" accept="image/*" required>
+            <input type="hidden" id="image_url" name="image_url">
+            <p id="upload-status"></p>
+        </div>
+
+        <label>Status:</label>
+        <select name="status">
+            <option>Active</option>
+            <option>Inactive</option>
+        </select>
+
+        <label>Assets (comma-separated):</label>
+        <input name="assets">
+
+        <input type="submit" value="Register Agent">
+    </form>
+</div>
+
+<script>
+document.getElementById('image').addEventListener('change', async function (event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const uploadStatus = document.getElementById('upload-status');
+    uploadStatus.textContent = "Uploading image...";
+
+    const formData = new FormData();
+    formData.append('image', file);
+
+    try {
+        const response = await fetch('/register/upload_image', {
+            method: 'POST',
+            body: formData
+        });
+
+        const data = await response.json();
+
+        if (data.success && data.image_url) {
+            document.getElementById('image_url').value = data.image_url;
+            uploadStatus.textContent = "✅ Image uploaded successfully.";
+        } else {
+            uploadStatus.textContent = "❌ Upload failed.";
+            console.error(data);
+        }
+    } catch (error) {
+        uploadStatus.textContent = "❌ Upload error.";
+        console.error(error);
+    }
+});
+</script>
+{% include 'app_footer.html' %}
+
+</body>
+</html>
+    

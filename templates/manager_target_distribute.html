@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Distribute Target</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <!-- Bootstrap 5 -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<link rel="icon"
+          href="https://imagedelivery.net/h9fmMoa1o2c2P55TcWJGOg/10283f28-b9a0-4100-b254-19a854386800/public"
+          type="image/png">
+  <style>
+    body { background:#f4f6f9; font-family: 'Segoe UI', sans-serif; }
+    .card { border-radius: 12px; box-shadow: 0 3px 10px rgba(0,0,0,0.05); }
+    .muted { color:#6c757d; }
+    .table thead th { background:#f8fafc; }
+    .table tbody tr:hover { background:#fcfcff; }
+    .quota { font-size:.85rem; color:#475569; }
+    .sticky-tools { position: sticky; top: 0; background: #fff; z-index: 2; padding: .75rem; border: 1px solid #e2e8f0; border-radius: .5rem; }
+    .small-help { font-size: .85rem; color: #64748b; }
+    .is-invalid { border-color: #dc3545 !important; }
+    .totals-ok { color:#16a34a; }
+    .totals-bad { color:#b91c1c; }
+    .w-7rem { width: 7rem; }
+  </style>
+</head>
+<body>
+  {% include 'manager_sidebar.html' %}
+
+  <div class="container py-4">
+    <div class="d-flex align-items-center justify-content-between mb-3">
+      <div>
+        <h3 class="mb-1">🎯 Distribute Target</h3>
+        <div class="muted">
+          <span class="me-2"><strong>Title:</strong> {{ title }}</span>
+          <span class="me-2"><strong>Duration:</strong> {{ duration|capitalize }}</span>
+          <span class="me-2"><strong>Window:</strong> {{ start_date }} → {{ end_date }}</span>
+        </div>
+      </div>
+      <a class="btn btn-outline-secondary" href="{{ url_for('manager_target.manager_targets') }}">← Back to My Targets</a>
+    </div>
+
+    <div class="row g-4">
+      <!-- Summary card -->
+      <div class="col-12 col-lg-4">
+        <div class="card p-3">
+          <div class="mb-2"><strong>Target Summary</strong></div>
+          <ul class="list-unstyled mb-0">
+            <li class="mb-1">🛒 Products (units): <strong id="sum-product">{{ product_target }}</strong></li>
+            <li class="mb-1">💰 Cash (GH₵): <strong id="sum-cash">{{ '%.2f'|format(cash_target or 0) }}</strong></li>
+            <li class="mb-1">👥 Customers: <strong id="sum-customers">{{ customer_target }}</strong></li>
+          </ul>
+          <hr>
+          <div class="small-help">
+            Assign <b>percentages</b> to agents. Totals per metric must be <b>100%</b> (or <b>0%</b> if you're not allocating that metric yet).
+          </div>
+        </div>
+        <div class="card p-3 mt-3">
+          <div class="sticky-tools">
+            <div class="d-flex flex-wrap gap-2">
+              <button type="button" class="btn btn-sm btn-primary" id="btn-equal">Equal split (all)</button>
+              <button type="button" class="btn btn-sm btn-outline-primary" id="btn-equal-prod">Equal Products</button>
+              <button type="button" class="btn btn-sm btn-outline-primary" id="btn-equal-cash">Equal Cash</button>
+              <button type="button" class="btn btn-sm btn-outline-primary" id="btn-equal-cust">Equal Customers</button>
+              <button type="button" class="btn btn-sm btn-outline-secondary" id="btn-copy-to-cash">Copy Product → Cash</button>
+              <button type="button" class="btn btn-sm btn-outline-secondary" id="btn-copy-to-cust">Copy Product → Customers</button>
+              <button type="button" class="btn btn-sm btn-outline-danger" id="btn-clear">Clear all</button>
+            </div>
+            <div class="mt-3 small-help">
+              Pro tip: You can mix manual edits after using equal/copy buttons.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Form card -->
+      <div class="col-12 col-lg-8">
+        <form method="POST" action="{{ url_for('manager_target.distribute_target_post', target_id=target_id) }}" id="alloc-form">
+          {% if csrf_token %}
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          {% endif %}
+          <div class="card p-3">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+              <strong>Agents & Allocations</strong>
+              <div class="d-flex align-items-center gap-3 small-help">
+                <span>🛒 Total: <b id="total-prod" class="totals-badge">0%</b></span>
+                <span>💰 Total: <b id="total-cash" class="totals-badge">0%</b></span>
+                <span>👥 Total: <b id="total-cust" class="totals-badge">0%</b></span>
+              </div>
+            </div>
+
+            <div class="table-responsive">
+              <table class="table align-middle">
+                <thead>
+                  <tr>
+                    <th>Agent</th>
+                    <th class="text-center">🛒 Product %</th>
+                    <th class="text-center">💰 Cash %</th>
+                    <th class="text-center">👥 Customer %</th>
+                    <th>Preview Quotas</th>
+                  </tr>
+                </thead>
+                <tbody id="agents-body"
+                       data-product-total="{{ product_target|default(0) }}"
+                       data-cash-total="{{ '%.2f'|format(cash_target or 0) }}"
+                       data-customer-total="{{ customer_target|default(0) }}">
+                  {% for a in agents %}
+                  <tr>
+                    <td>
+                      <div class="d-flex align-items-center gap-2">
+                        <img src="{{ a.image_url or 'https://via.placeholder.com/80' }}" alt="" style="width:36px;height:36px;border-radius:50%;object-fit:cover;border:1px solid #e2e8f0;">
+                        <div>
+                          <div class="fw-semibold">{{ a.agent_name }}</div>
+                          <div class="text-muted small">{{ a.agent_id }}</div>
+                        </div>
+                      </div>
+                      <input type="hidden" name="agent_id[]" value="{{ a.agent_id }}">
+                    </td>
+
+                    <td class="text-center">
+                      <input type="number" class="form-control form-control-sm pct-input w-7rem text-end"
+                             name="product_pct[]" min="0" max="100" step="0.01"
+                             value="{{ '%.2f'|format(a.product_pct or 0) }}"
+                             data-role="prod">
+                    </td>
+
+                    <td class="text-center">
+                      <input type="number" class="form-control form-control-sm pct-input w-7rem text-end"
+                             name="cash_pct[]" min="0" max="100" step="0.01"
+                             value="{{ '%.2f'|format(a.cash_pct or 0) }}"
+                             data-role="cash">
+                    </td>
+
+                    <td class="text-center">
+                      <input type="number" class="form-control form-control-sm pct-input w-7rem text-end"
+                             name="customer_pct[]" min="0" max="100" step="0.01"
+                             value="{{ '%.2f'|format(a.customer_pct or 0) }}"
+                             data-role="cust">
+                    </td>
+
+                    <td>
+                      <div class="quota">
+                        🛒 <span class="q-prod">0</span> / {{ product_target }} units<br>
+                        💰 <span class="q-cash">0.00</span> / {{ '%.2f'|format(cash_target or 0) }} GH₵<br>
+                        👥 <span class="q-cust">0</span> / {{ customer_target }}
+                      </div>
+                    </td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+
+            <div class="d-flex align-items-center justify-content-between">
+              <div class="small-help">
+                Totals must be <span class="badge bg-success">100%</span> (or <span class="badge bg-secondary">0%</span>) per metric.
+              </div>
+              <button type="submit" class="btn btn-primary" id="btn-save">Save Allocations</button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div><!-- /row -->
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    (function(){
+      var body = document.getElementById('agents-body');
+
+      // Read totals from data-* so there is NO Jinja inside JS expressions
+      var productTotal  = parseFloat(body.dataset.productTotal || '0') || 0;
+      var cashTotal     = parseFloat(body.dataset.cashTotal || '0') || 0;
+      var customerTotal = parseFloat(body.dataset.customerTotal || '0') || 0;
+
+      var fmt2 = function(n){ return (Math.round((Number(n) + Number.EPSILON) * 100) / 100).toFixed(2); };
+
+      var totals = {
+        prod: document.getElementById('total-prod'),
+        cash: document.getElementById('total-cash'),
+        cust: document.getElementById('total-cust')
+      };
+      var allocForm = document.getElementById('alloc-form');   /* <-- single declaration */
+      var btnSave = document.getElementById('btn-save');
+
+      function clamp(val){
+        val = Number(val || 0);
+        if (isNaN(val)) return 0;
+        return Math.max(0, Math.min(100, val));
+      }
+
+      function recalc(){
+        var sumProd=0, sumCash=0, sumCust=0;
+
+        var rows = body.querySelectorAll('tr');
+        for (var i=0; i<rows.length; i++){
+          var tr = rows[i];
+          var ipProd = tr.querySelector('input[data-role="prod"]');
+          var ipCash = tr.querySelector('input[data-role="cash"]');
+          var ipCust = tr.querySelector('input[data-role="cust"]');
+
+          var p = clamp(ipProd.value);
+          var c = clamp(ipCash.value);
+          var u = clamp(ipCust.value);
+
+          // Write back clamped (2dp)
+          ipProd.value = fmt2(p);
+          ipCash.value = fmt2(c);
+          ipCust.value = fmt2(u);
+
+          sumProd += p;
+          sumCash += c;
+          sumCust += u;
+
+          // quotas preview
+          var qProd = tr.querySelector('.q-prod');
+          var qCash = tr.querySelector('.q-cash');
+          var qCust = tr.querySelector('.q-cust');
+
+          if (qProd) qProd.textContent = Math.round(productTotal * (p/100));
+          if (qCash) qCash.textContent = fmt2(cashTotal * (c/100));
+          if (qCust) qCust.textContent = Math.round(customerTotal * (u/100));
+        }
+
+        // Totals badge + validity
+        setTotalBadge(totals.prod, sumProd);
+        setTotalBadge(totals.cash, sumCash);
+        setTotalBadge(totals.cust, sumCust);
+
+        // Toggle invalid styling
+        toggleInvalid('prod', sumProd);
+        toggleInvalid('cash', sumCash);
+        toggleInvalid('cust', sumCust);
+
+        // Enable/disable save
+        btnSave.disabled = !isValidTotals(sumProd, sumCash, sumCust);
+      }
+
+      function setTotalBadge(el, sum){
+        var ok = near100(sum) || sum === 0;
+        el.textContent = fmt2(sum) + '%';
+        el.classList.toggle('totals-ok', ok);
+        el.classList.toggle('totals-bad', !ok);
+      }
+
+      function near100(x){ return Math.abs(x - 100) <= 0.5; }
+      function isValidTotals(a,b,c){ return (near100(a)||a===0) && (near100(b)||b===0) && (near100(c)||c===0); }
+
+      function toggleInvalid(role, sum){
+        var ok = near100(sum) || sum === 0;
+        var inputs = body.querySelectorAll('input[data-role="'+role+'"]');
+        for (var i=0; i<inputs.length; i++){
+          inputs[i].classList.toggle('is-invalid', !ok);
+        }
+      }
+
+      // Buttons
+      function setEqual(role){
+        var rows = body.querySelectorAll('tr');
+        if (!rows.length) return;
+        var pct = 100 / rows.length;
+        for (var i=0; i<rows.length; i++){
+          rows[i].querySelector('input[data-role="'+role+'"]').value = fmt2(pct);
+        }
+        recalc();
+      }
+
+      function setEqualAll(){ setEqual('prod'); setEqual('cash'); setEqual('cust'); }
+      function clearAll(){
+        var inputs = body.querySelectorAll('.pct-input');
+        for (var i=0; i<inputs.length; i++){ inputs[i].value = '0.00'; }
+        recalc();
+      }
+      function copyProductTo(role){
+        var rows = body.querySelectorAll('tr');
+        for (var i=0; i<rows.length; i++){
+          var from = rows[i].querySelector('input[data-role="prod"]').value;
+          rows[i].querySelector('input[data-role="'+role+'"]').value = from;
+        }
+        recalc();
+      }
+
+      var btnEqual = document.getElementById('btn-equal');
+      var btnEqP = document.getElementById('btn-equal-prod');
+      var btnEqC = document.getElementById('btn-equal-cash');
+      var btnEqU = document.getElementById('btn-equal-cust');
+      var btnCopyCash = document.getElementById('btn-copy-to-cash');
+      var btnCopyCust = document.getElementById('btn-copy-to-cust');
+      var btnClear = document.getElementById('btn-clear');
+
+      if (btnEqual) btnEqual.addEventListener('click', setEqualAll);
+      if (btnEqP) btnEqP.addEventListener('click', function(){ setEqual('prod'); });
+      if (btnEqC) btnEqC.addEventListener('click', function(){ setEqual('cash'); });
+      if (btnEqU) btnEqU.addEventListener('click', function(){ setEqual('cust'); });
+      if (btnCopyCash) btnCopyCash.addEventListener('click', function(){ copyProductTo('cash'); });
+      if (btnCopyCust) btnCopyCust.addEventListener('click', function(){ copyProductTo('cust'); });
+      if (btnClear) btnClear.addEventListener('click', clearAll);
+
+      // Recalc on input changes
+      body.addEventListener('input', function(e){
+        if (e.target && e.target.classList.contains('pct-input')) recalc();
+      });
+
+      // Final guard on submit (client-side; server validates too)
+      allocForm.addEventListener('submit', function(e){
+        var sumProd=0, sumCash=0, sumCust=0;
+        var prodInputs = body.querySelectorAll('input[data-role="prod"]');
+        var cashInputs = body.querySelectorAll('input[data-role="cash"]');
+        var custInputs = body.querySelectorAll('input[data-role="cust"]');
+        for (var i=0;i<prodInputs.length;i++) sumProd += Number(prodInputs[i].value||0);
+        for (var i=0;i<cashInputs.length;i++) sumCash += Number(cashInputs[i].value||0);
+        for (var i=0;i<custInputs.length;i++) sumCust += Number(custInputs[i].value||0);
+
+        if (!isValidTotals(sumProd, sumCash, sumCust)) {
+          e.preventDefault();
+          alert('Each metric total must be 100% (or 0% if you are not allocating it yet).');
+        }
+      });
+
+      // Initial compute
+      recalc();
+    })();
+  </script>
+  {% include 'app_footer.html' %}
+
+</body>
+</html>

@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Agent List</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" href="https://res.cloudinary.com/dljpgzbto/image/upload/v1743993646/company-logo_dksb23.jpg" type="image/png"/>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"/>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet"/>
+  <style>
+    :root{
+      --ink:#0f172a;    
+      --muted:#64748b;
+      --panel:#ffffff;
+      --edge:#e2e8f0;
+      --accent:#2563eb;
+      --soft:#f1f5f9;
+      --good:#16a34a;
+      --bad:#dc2626;
+    }
+    *{box-sizing:border-box;}
+    body{
+      font-family:"Manrope", sans-serif;
+      background: radial-gradient(circle at top, #eef2ff 0%, #f8fafc 45%, #f5f6fb 100%);
+      color:var(--ink);
+      min-height:100vh;
+    }
+    .page-shell{padding:1.5rem 1.25rem 3rem;}
+    .page-header{
+      background:linear-gradient(120deg,#0f172a,#1e3a8a);
+      color:#fff;
+      border-radius:18px;
+      padding:1.2rem 1.4rem;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:1rem;
+      box-shadow:0 16px 30px rgba(15,23,42,.18);
+      margin-bottom:1.25rem;
+    }
+    .page-header h1{font-size:1.35rem;margin:0;font-weight:700;}
+    .chip{
+      background:rgba(255,255,255,.16);
+      border:1px solid rgba(255,255,255,.25);
+      color:#fff;
+      border-radius:999px;
+      padding:.25rem .7rem;
+      font-size:.75rem;
+      font-weight:600;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+    }
+    .stat-card{
+      background:var(--panel);
+      border:1px solid var(--edge);
+      border-radius:16px;
+      padding:1rem 1.1rem;
+      box-shadow:0 10px 24px rgba(15,23,42,.08);
+      height:100%;
+    }
+    .stat-label{font-size:.75rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:700;}
+    .stat-value{font-size:1.5rem;font-weight:800;margin-top:.2rem;}
+    .toolbar{
+      background:rgba(255,255,255,.92);
+      border:1px solid var(--edge);
+      border-radius:16px;
+      padding:1rem 1.2rem;
+      box-shadow:0 10px 24px rgba(15,23,42,.08);
+      margin-bottom:1.25rem;
+      display:flex;
+      flex-wrap:wrap;
+      align-items:center;
+      gap:.75rem;
+      justify-content:space-between;
+    }
+    .search-input{
+      border-radius:12px;
+      border:1px solid #d9e1ec;
+      padding:.6rem .75rem;
+      min-width:260px;
+    }
+    .action-links a{margin-left:.6rem;}
+    .card-grid{
+      display:grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap:1rem;
+    }
+    .agent-card{
+      background:var(--panel);
+      border:1px solid var(--edge);
+      border-radius:16px;
+      padding:1rem;
+      box-shadow:0 10px 24px rgba(15,23,42,.06);
+      transition:transform .15s ease, box-shadow .15s ease;
+      position:relative;
+    }
+    .agent-card:hover{transform:translateY(-2px);box-shadow:0 14px 28px rgba(15,23,42,.12);}
+    .avatar{
+      width:60px;
+      height:60px;
+      border-radius:50%;
+      object-fit:cover;
+      border:2px solid #e2e8f0;
+    }
+    .status-pill{
+      padding:.2rem .6rem;
+      border-radius:999px;
+      font-size:.75rem;
+      font-weight:600;
+    }
+    .status-active{background:#dcfce7;color:#166534;}
+    .status-not-active{background:#fee2e2;color:#b91c1c;}
+    .cred-box{
+      background:#f8fafc;
+      border:1px solid #e2e8f0;
+      border-radius:12px;
+      padding:.6rem .75rem;
+      font-size:.85rem;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:.5rem;
+    }
+    .cred-value{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; font-size:.78rem; color:#0f172a;}
+    .cred-actions{display:flex; gap:.4rem;}
+    .btn-ghost{
+      border:1px solid #dbe4f0;
+      background:#fff;
+      color:#1f2937;
+      border-radius:10px;
+      padding:.25rem .5rem;
+      font-size:.75rem;
+    }
+    .skeleton-card{
+      background:var(--panel);
+      border:1px solid var(--edge);
+      border-radius:16px;
+      padding:1rem;
+      box-shadow:0 10px 24px rgba(15,23,42,.06);
+    }
+    .skeleton-line{
+      height:12px;
+      border-radius:999px;
+      background:linear-gradient(90deg,#e9eef7 25%,#f8fafc 37%,#e9eef7 63%);
+      background-size:400% 100%;
+      animation:shimmer 1.2s ease infinite;
+      margin-bottom:10px;
+    }
+    .skeleton-avatar{
+      width:60px;
+      height:60px;
+      border-radius:50%;
+      background:linear-gradient(90deg,#e9eef7 25%,#f8fafc 37%,#e9eef7 63%);
+      background-size:400% 100%;
+      animation:shimmer 1.2s ease infinite;
+      border:2px solid #e2e8f0;
+    }
+    @keyframes shimmer{
+      0%{background-position:100% 0;}
+      100%{background-position:0 0;}
+    }
+  </style>
+</head>
+<body>
+
+<nav class="navbar navbar-expand-lg bg-white shadow-sm">
+  <div class="container-fluid px-3">
+    <a class="navbar-brand d-flex align-items-center" href="{{ url_for('manager_dashboard.manager_dashboard_view') }}">
+      <img src="https://res.cloudinary.com/dljpgzbto/image/upload/v1743993646/company-logo_dksb23.jpg" alt="Logo" height="36" class="me-2"> Dashboard
+    </a>
+    <div class="ms-auto action-links">
+      <a class="btn btn-outline-primary btn-sm" href="{{ url_for('register.register') }}">Register Agent</a>
+      <a class="btn btn-outline-danger btn-sm" href="{{ url_for('login.logout') }}">Logout</a>
+    </div>
+  </div>
+</nav>
+
+<div class="page-shell">
+  <div class="page-header">
+    <div>
+      <div class="chip mb-2">Manager</div>
+      <h1>Agent Directory</h1>
+    </div>
+    <div class="chip">Credentials Ready</div>
+  </div>
+
+  <div class="row g-3 mb-4">
+    <div class="col-md-4">
+      <div class="stat-card">
+        <div class="stat-label">Total Agents</div>
+        <div class="stat-value">{{ total_agents }}</div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="stat-card">
+        <div class="stat-label">Active Agents</div>
+        <div class="stat-value text-success">{{ total_active }}</div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="stat-card">
+        <div class="stat-label">Not Active</div>
+        <div class="stat-value text-danger">{{ total_not_active }}</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toolbar">
+    <form method="get" class="d-flex flex-wrap gap-2 align-items-center">
+      <input type="text" name="search" class="search-input" placeholder="Search by name or phone" value="{{ search }}">
+      <select name="status" class="form-select" style="min-width:180px;" onchange="this.form.submit()">
+        <option value="all" {% if status == 'all' %}selected{% endif %}>All Status</option>
+        <option value="active" {% if status == 'active' %}selected{% endif %}>Active</option>
+        <option value="not_active" {% if status == 'not_active' %}selected{% endif %}>Not Active</option>
+      </select>
+      <button class="btn btn-primary">Search</button>
+    </form>
+  </div>
+
+  <div id="agentSkeleton" class="card-grid">
+    {% for _ in range(6) %}
+      <div class="skeleton-card">
+        <div class="d-flex align-items-center gap-3 mb-3">
+          <div class="skeleton-avatar"></div>
+          <div class="flex-grow-1">
+            <div class="skeleton-line" style="width:70%;"></div>
+            <div class="skeleton-line" style="width:50%;"></div>
+            <div class="skeleton-line" style="width:40%;"></div>
+          </div>
+        </div>
+        <div class="skeleton-line" style="width:60%;"></div>
+        <div class="skeleton-line" style="width:80%;"></div>
+      </div>
+    {% endfor %}
+  </div>
+
+  <div id="agentGrid" class="card-grid d-none">
+    {% if agents %}
+      {% set default_avatar = "https://imagedelivery.net/h9fmMoa1o2c2P55TcWJGOg/f1b8f81c-1aac-4580-6b1c-869ffafcb400/public" %}
+      {% for agent in agents %}
+        {% set is_active = agent.status in ['Active','active'] %}
+        <div class="agent-card">
+          <div class="d-flex align-items-center gap-3 mb-3">
+            <img src="{{ agent.image_url or default_avatar }}"
+                 alt="Agent Image"
+                 class="avatar"
+                 onerror="this.onerror=null;this.src='{{ default_avatar }}';">
+            <div class="flex-grow-1">
+              <div class="fw-semibold">{{ agent.name }}</div>
+              <div class="text-muted small">{{ agent.phone }}</div>
+              <div class="text-muted small">{{ agent.email }}</div>
+            </div>
+            <span class="status-pill {{ 'status-active' if is_active else 'status-not-active' }}">
+              {{ agent.status or 'Not Active' }}
+            </span>
+          </div>
+          <div class="mb-2 text-muted small">Credentials</div>
+          <div class="cred-box mb-2">
+            <div>
+              <div class="text-muted small">Username</div>
+              <div class="cred-value" data-cred="{{ agent.username or '' }}">{{ agent.username or 'N/A' }}</div>
+            </div>
+            <div class="cred-actions">
+              <button type="button" class="btn-ghost copy-btn" data-copy="{{ agent.username or '' }}">Copy</button>
+            </div>
+          </div>
+          <div class="cred-box">
+            <div>
+              <div class="text-muted small">Password</div>
+              <div class="cred-value">Hidden</div>
+            </div>
+          </div>
+          <div class="mt-3">
+            <a class="btn btn-outline-primary btn-sm" href="{{ url_for('login.view_agent', agent_id=agent._id) }}">View Profile</a>
+          </div>
+        </div>
+      {% endfor %}
+    {% else %}
+      <p class="text-muted">No agents found.</p>
+    {% endif %}
+  </div>
+
+  {% if total_pages and total_pages > 1 %}
+  <nav class="mt-4">
+    <ul class="pagination justify-content-center">
+      {% set prev_page = page - 1 %}
+      {% set next_page = page + 1 %}
+      <li class="page-item {% if page <= 1 %}disabled{% endif %}">
+        <a class="page-link" href="{{ url_for(request.endpoint, page=prev_page, search=search, status=status) }}">Previous</a>
+      </li>
+      {% set start_page = 1 if page - 2 < 1 else page - 2 %}
+      {% set end_page = total_pages if page + 2 > total_pages else page + 2 %}
+      {% for p in range(start_page, end_page + 1) %}
+        <li class="page-item {% if p == page %}active{% endif %}">
+          <a class="page-link" href="{{ url_for(request.endpoint, page=p, search=search, status=status) }}">{{ p }}</a>
+        </li>
+      {% endfor %}
+      <li class="page-item {% if page >= total_pages %}disabled{% endif %}">
+        <a class="page-link" href="{{ url_for(request.endpoint, page=next_page, search=search, status=status) }}">Next</a>
+      </li>
+    </ul>
+  </nav>
+  {% endif %}
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const minDelay = 250;
+    const start = Date.now();
+    const done = () => {
+      const skeleton = document.getElementById('agentSkeleton');
+      const grid = document.getElementById('agentGrid');
+      if (skeleton) skeleton.classList.add('d-none');
+      if (grid) grid.classList.remove('d-none');
+    };
+    const elapsed = Date.now() - start;
+    if (elapsed >= minDelay) done();
+    else setTimeout(done, minDelay - elapsed);
+  });
+
+  document.querySelectorAll('.copy-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const value = btn.getAttribute('data-copy') || '';
+      if (!value) return;
+      try {
+        await navigator.clipboard.writeText(value);
+        btn.textContent = 'Copied';
+        setTimeout(() => { btn.textContent = 'Copy'; }, 1200);
+      } catch (e) {
+        // silent
+      }
+    });
+  });
+</script>
+  {% include 'app_footer.html' %}
+
+</body>
+
+</html>

@@ -1,0 +1,996 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>User Profile</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+  <link rel="icon" href="https://res.cloudinary.com/dljpgzbto/image/upload/v1743993646/company-logo_dksb23.jpg" type="image/png" />
+  <style>
+    body {
+      background-color: #f8f9fa;
+      padding-left: 260px;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    @media (max-width: 768px) { body { padding-left: 0; } }
+    .page-wrap { opacity: 0; transform: translateY(6px); transition: opacity .25s ease-out, transform .25s ease-out; }
+    body.page-ready .page-wrap { opacity: 1; transform: translateY(0); }
+    .profile-card {
+      background: #fff;
+      border: 1px solid rgba(226, 232, 240, 0.9);
+      border-radius: 14px;
+      padding: 18px;
+      box-shadow: 0 8px 18px rgba(15, 23, 42, 0.06);
+    }
+    .profile-avatar {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      object-fit: cover;
+      background: #e5e7eb;
+    }
+    .badge-status {
+      font-size: 0.72rem;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-weight: 700;
+    }
+    .badge-active { background: #dcfce7; color: #166534; }
+    .badge-inactive { background: #fee2e2; color: #b91c1c; }
+    .kpi-card {
+      background: #fff;
+      border: 1px solid rgba(226, 232, 240, 0.9);
+      border-radius: 14px;
+      padding: 16px;
+      box-shadow: 0 6px 16px rgba(15, 23, 42, 0.06);
+      height: 100%;
+    }
+    .kpi-label {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #6b7280;
+      font-weight: 600;
+    }
+    .kpi-value {
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: #111827;
+    }
+    .chart-card {
+      background: #fff;
+      border: 1px solid rgba(226, 232, 240, 0.9);
+      border-radius: 14px;
+      padding: 16px;
+      box-shadow: 0 6px 16px rgba(15, 23, 42, 0.06);
+    }
+    .chart-skeleton {
+      width: 100%;
+      height: 220px;
+      border-radius: 10px;
+      background: linear-gradient(90deg, #f3f4f6 25%, #e5e7eb 37%, #f3f4f6 63%);
+      background-size: 400% 100%;
+      animation: shimmer 1.2s ease-in-out infinite;
+    }
+    .mini-skeleton {
+      display: inline-block;
+      width: 80px;
+      height: 0.8rem;
+      border-radius: 6px;
+      background: linear-gradient(90deg, #f3f4f6 25%, #e5e7eb 37%, #f3f4f6 63%);
+      background-size: 400% 100%;
+      animation: shimmer 1.2s ease-in-out infinite;
+    }
+    @keyframes shimmer {
+      0% { background-position: -400px 0; }
+      100% { background-position: 400px 0; }
+    }
+    .pill-group .btn {
+      border-radius: 999px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    .badge-meta {
+      background: #eef2ff;
+      border: 1px solid #c7d2fe;
+      color: #1d4ed8;
+      border-radius: 999px;
+      padding: 2px 10px;
+      font-size: 0.7rem;
+      font-weight: 700;
+    }
+  </style>
+</head>
+<body>
+  {% include 'executive_sidebar.html' %}
+
+  <div class="container mt-4 page-wrap">
+      <div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
+        <div>
+          <a href="/executive/users" class="btn btn-sm btn-outline-secondary mb-2">
+            <i class="bi bi-arrow-left"></i> Back to Users
+          </a>
+          <h4 class="mb-1">User Profile</h4>
+          <div class="text-muted">Login analytics and account details.</div>
+        </div>
+        {% if user %}
+          <div class="d-flex gap-2 flex-wrap">
+            <a class="btn btn-outline-primary" href="/executive/users/{{ user._id }}/export_logs.csv">
+              <i class="bi bi-download"></i> Export Logs
+            </a>
+            {% if can_manage %}
+              <button class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#editUserModal">
+                <i class="bi bi-pencil"></i> Edit Details
+              </button>
+              <button class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#passwordModal">
+                <i class="bi bi-key"></i> Change Password
+              </button>
+              <button class="btn btn-outline-warning" id="toggleStatusBtn">
+                <i class="bi bi-shield-slash"></i> {{ 'Deactivate' if user.status_display == 'Active' else 'Activate' }}
+              </button>
+              <button class="btn btn-outline-danger" id="deleteUserBtn">
+                <i class="bi bi-trash"></i> Delete User
+              </button>
+            {% endif %}
+          </div>
+        {% endif %}
+      </div>
+
+    {% if not user %}
+      <div class="alert alert-warning">User not found.</div>
+    {% else %}
+      <div class="profile-card mb-3">
+        <div class="d-flex flex-wrap gap-3 align-items-center">
+          <img src="{{ user.image_url or DEFAULT_PROFILE_IMAGE_URL }}" alt="{{ user.name }}" class="profile-avatar" onerror="this.src='{{ DEFAULT_PROFILE_IMAGE_URL }}'">
+          <div>
+            <h5 class="mb-1">{{ user.name or 'Unknown' }}</h5>
+            <div class="text-muted">@{{ user.username or '---' }}</div>
+            <div class="mt-2">
+              <span class="badge-status {{ 'badge-active' if user.status_display == 'Active' else 'badge-inactive' }}">{{ user.status_display }}</span>
+            </div>
+          </div>
+          <div class="ms-auto">
+            <div class="text-muted small">Role</div>
+            <div class="fw-semibold text-capitalize">{{ user.role or 'unknown' }}</div>
+          </div>
+          <div>
+            <div class="text-muted small">Branch</div>
+            <div class="fw-semibold">{{ user.branch or 'Unassigned' }}</div>
+          </div>
+        </div>
+        <hr>
+        <div class="row g-3">
+          <div class="col-md-3">
+            <div class="text-muted small">Phone</div>
+            <div class="fw-semibold">{{ user.phone or '---' }}</div>
+          </div>
+          <div class="col-md-3">
+            <div class="text-muted small">Email</div>
+            <div class="fw-semibold">{{ user.email or '---' }}</div>
+          </div>
+          <div class="col-md-3">
+            <div class="text-muted small">Date Registered</div>
+            <div class="fw-semibold">{{ user.date_registered or user.created_at or '---' }}</div>
+          </div>
+          <div class="col-md-3">
+            <div class="text-muted small">User ID</div>
+            <div class="fw-semibold">{{ user._id }}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="row g-3 mb-3">
+        <div class="col-md-3 col-sm-6">
+          <div class="kpi-card">
+            <div class="kpi-label">Total Logins</div>
+            <div class="kpi-value" id="kpiTotal"><span class="mini-skeleton"></span></div>
+          </div>
+        </div>
+        <div class="col-md-3 col-sm-6">
+          <div class="kpi-card">
+            <div class="kpi-label">Logins (7d)</div>
+            <div class="kpi-value" id="kpi7d"><span class="mini-skeleton"></span></div>
+          </div>
+        </div>
+        <div class="col-md-3 col-sm-6">
+          <div class="kpi-card">
+            <div class="kpi-label">Logins (30d)</div>
+            <div class="kpi-value" id="kpi30d"><span class="mini-skeleton"></span></div>
+          </div>
+        </div>
+        <div class="col-md-3 col-sm-6">
+          <div class="kpi-card">
+            <div class="kpi-label">Last Login</div>
+            <div class="kpi-value" id="kpiLast"><span class="mini-skeleton"></span></div>
+          </div>
+        </div>
+        <div class="col-md-3 col-sm-6">
+          <div class="kpi-card">
+            <div class="kpi-label">Unique IPs (30d)</div>
+            <div class="kpi-value" id="kpiIps"><span class="mini-skeleton"></span></div>
+          </div>
+        </div>
+        <div class="col-md-3 col-sm-6">
+          <div class="kpi-card">
+            <div class="kpi-label">Unique Devices (30d)</div>
+            <div class="kpi-value" id="kpiDevices"><span class="mini-skeleton"></span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="row g-3 mb-3">
+        <div class="col-lg-8">
+          <div class="chart-card h-100">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <div class="fw-semibold">Login Trend</div>
+              <div class="btn-group btn-group-sm" role="group">
+                <button class="btn btn-outline-secondary" data-trend="14">14d</button>
+                <button class="btn btn-outline-secondary active" data-trend="30">30d</button>
+              </div>
+            </div>
+            <div id="trendSkeleton" class="chart-skeleton"></div>
+            <canvas id="trendChart" height="220" style="display:none;"></canvas>
+          </div>
+        </div>
+        <div class="col-lg-4">
+          <div class="chart-card h-100">
+            <div class="fw-semibold mb-2">Hourly Activity (7d)</div>
+            <div id="hourlySkeleton" class="chart-skeleton"></div>
+            <canvas id="hourlyChart" height="220" style="display:none;"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <div class="row g-3 mb-3">
+        <div class="col-lg-8">
+          <div class="chart-card h-100">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <div class="fw-semibold">Logins for Selected Day</div>
+              <div class="d-flex align-items-center gap-2">
+                <input type="date" class="form-control form-control-sm" id="loginDayDate">
+                <span class="badge-meta" id="loginDayMeta">--</span>
+              </div>
+            </div>
+            <div id="loginDaySkeleton" class="chart-skeleton"></div>
+            <canvas id="loginDayChart" height="220" style="display:none;"></canvas>
+          </div>
+        </div>
+        <div class="col-lg-4">
+          <div class="chart-card h-100">
+            <div class="fw-semibold mb-2">Login KPIs</div>
+            <div class="d-flex flex-column gap-2">
+              <div class="d-flex justify-content-between"><span>Total logins</span><strong id="loginDayTotal">--</strong></div>
+              <div class="d-flex justify-content-between"><span>First login</span><strong id="loginDayFirst">--</strong></div>
+              <div class="d-flex justify-content-between"><span>Last login</span><strong id="loginDayLast">--</strong></div>
+              <div class="d-flex justify-content-between"><span>Unique IPs</span><strong id="loginDayIps">--</strong></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="chart-card mb-3">
+        <div class="d-flex flex-wrap justify-content-between align-items-center mb-2">
+          <div class="fw-semibold">Activities</div>
+          <div class="pill-group btn-group btn-group-sm" role="group" aria-label="Activity range">
+            <button class="btn btn-outline-secondary" data-range="today">Today</button>
+            <button class="btn btn-outline-secondary" data-range="yesterday">Yesterday</button>
+            <button class="btn btn-outline-secondary" data-range="last_7">Last 7</button>
+            <button class="btn btn-outline-secondary active" data-range="last_30">Last 30</button>
+            <button class="btn btn-outline-secondary" data-range="this_month">This Month</button>
+          </div>
+        </div>
+        <div class="row g-3">
+          <div class="col-lg-7">
+            <div class="chart-card h-100 border-0 p-0">
+              <div class="fw-semibold mb-2">Activities Trend</div>
+              <div id="activityTrendSkeleton" class="chart-skeleton"></div>
+              <canvas id="activityTrendChart" height="220" style="display:none;"></canvas>
+            </div>
+          </div>
+          <div class="col-lg-5">
+            <div class="chart-card h-100 border-0 p-0">
+              <div class="fw-semibold mb-2">Top Activities</div>
+              <div id="activityTopList" class="text-muted">Loading...</div>
+              <div class="mt-2 text-muted small">Most active day: <span id="activityMostDay">--</span></div>
+              <div class="text-muted small">Most active action: <span id="activityMostAction">--</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="row g-3 mb-3">
+        <div class="col-lg-7">
+          <div class="chart-card h-100">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <div class="fw-semibold">Activities for Selected Day</div>
+              <input type="date" class="form-control form-control-sm" id="activityDayDate">
+            </div>
+            <div id="activityDaySkeleton" class="chart-skeleton"></div>
+            <canvas id="activityDayChart" height="220" style="display:none;"></canvas>
+          </div>
+        </div>
+        <div class="col-lg-5">
+          <div class="chart-card h-100">
+            <div class="fw-semibold mb-2">Activity KPIs</div>
+            <div class="d-flex flex-column gap-2">
+              <div class="d-flex justify-content-between"><span>Total actions</span><strong id="activityDayTotal">--</strong></div>
+              <div class="d-flex justify-content-between"><span>First action</span><strong id="activityDayFirst">--</strong></div>
+              <div class="d-flex justify-content-between"><span>Last action</span><strong id="activityDayLast">--</strong></div>
+              <div class="d-flex justify-content-between"><span>Unique IPs</span><strong id="activityDayIps">--</strong></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="chart-card mb-3">
+        <div class="d-flex flex-wrap justify-content-between align-items-center mb-2">
+          <div class="fw-semibold">Activity Feed</div>
+          <div class="d-flex gap-2 flex-wrap">
+            <select class="form-select form-select-sm" id="activityRole">
+              <option value="">All roles</option>
+              <option value="admin">Admin</option>
+              <option value="manager">Manager</option>
+              <option value="agent">Agent</option>
+              <option value="executive">Executive</option>
+              <option value="inventory">Inventory</option>
+              <option value="hr">HR</option>
+              <option value="accounting">Accounting</option>
+            </select>
+            <select class="form-select form-select-sm" id="activityAction">
+              <option value="">All actions</option>
+            </select>
+            <select class="form-select form-select-sm" id="activityEntity">
+              <option value="">All entities</option>
+              <option value="customer">Customer</option>
+              <option value="payment">Payment</option>
+              <option value="invoice">Invoice</option>
+              <option value="bill">Bill</option>
+              <option value="expense">Expense</option>
+              <option value="inventory">Inventory</option>
+              <option value="issue">Issue</option>
+              <option value="hr_case">HR Case</option>
+              <option value="hr_exit">HR Exit</option>
+            </select>
+            <input type="date" class="form-control form-control-sm" id="activityDate">
+            <button class="btn btn-sm btn-outline-secondary" id="activityReset">Reset</button>
+          </div>
+        </div>
+        <div class="table-responsive">
+          <table class="table align-middle">
+            <thead>
+              <tr>
+                <th>Timestamp</th>
+                <th>Action</th>
+                <th>Entity</th>
+                <th>Meta</th>
+                <th>IP</th>
+              </tr>
+            </thead>
+            <tbody id="activityFeed">
+              <tr><td colspan="5" class="text-muted">Loading activity...</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="d-flex justify-content-between align-items-center mt-2">
+          <div class="text-muted small" id="activityPagerMeta">--</div>
+          <div class="d-flex gap-2">
+            <button class="btn btn-outline-secondary btn-sm" id="activityPrev">Previous</button>
+            <button class="btn btn-outline-secondary btn-sm" id="activityNext">Next</button>
+            <a class="btn btn-outline-primary btn-sm" id="activityExport" href="#">Export CSV</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="chart-card">
+        <div class="fw-semibold mb-2">Recent Logins</div>
+        <div class="table-responsive">
+          <table class="table align-middle">
+            <thead>
+              <tr>
+                <th>Timestamp</th>
+                <th>IP</th>
+                <th>City</th>
+                <th>Country</th>
+                <th>Browser</th>
+                <th>OS</th>
+                <th>Location</th>
+              </tr>
+            </thead>
+            <tbody id="recentLogs">
+              <tr><td colspan="7" class="text-muted">Loading logs...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    {% endif %}
+  </div>
+
+  {% if user and can_manage %}
+  <div class="modal fade" id="editUserModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+      <div class="modal-content">
+        <form method="post" action="/executive/users/{{ user._id }}/update">
+          <div class="modal-header">
+            <h5 class="modal-title">Edit User Details</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <div class="row g-3">
+              <div class="col-md-4">
+                <label class="form-label">Avatar</label>
+                <div class="d-flex flex-column gap-2">
+                  <img id="editAvatarPreview" src="{{ user.image_url or DEFAULT_PROFILE_IMAGE_URL }}" class="profile-avatar" alt="Avatar" onerror="this.src='{{ DEFAULT_PROFILE_IMAGE_URL }}'">
+                  <input type="file" id="editAvatarInput" class="form-control" accept="image/*">
+                  <input type="hidden" name="image_url" id="editImageUrl" value="{{ user.image_url or '' }}">
+                  <input type="hidden" name="image_id" id="editImageId" value="{{ user.cf_image_id or '' }}">
+                  <div class="text-muted small" id="editAvatarStatus">Upload to update avatar.</div>
+                </div>
+              </div>
+              <div class="col-md-8">
+                <div class="row g-3">
+                  <div class="col-md-6">
+                    <label class="form-label">Name</label>
+                    <input class="form-control" name="name" value="{{ user.name or '' }}">
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label">Phone</label>
+                    <input class="form-control" name="phone" value="{{ user.phone or '' }}">
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label">Email</label>
+                    <input class="form-control" name="email" value="{{ user.email or '' }}">
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label">Gender</label>
+                    <select class="form-select" name="gender">
+                      <option value="">Select</option>
+                      <option value="Male" {% if user.gender == 'Male' %}selected{% endif %}>Male</option>
+                      <option value="Female" {% if user.gender == 'Female' %}selected{% endif %}>Female</option>
+                      <option value="Other" {% if user.gender == 'Other' %}selected{% endif %}>Other</option>
+                    </select>
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label">Branch</label>
+                    <input class="form-control" name="branch" value="{{ user.branch or '' }}">
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label">Position</label>
+                    <input class="form-control" name="position" value="{{ user.position or '' }}">
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label">Location</label>
+                    <input class="form-control" name="location" value="{{ user.location or '' }}">
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label">Start Date</label>
+                    <input type="date" class="form-control" name="start_date" value="{{ user.start_date or '' }}">
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label">Role</label>
+                    <select class="form-select" name="role" required>
+                      {% set role_list = ['admin','executive','manager','inventory','hr','accounting'] %}
+                      {% for r in role_list %}
+                        <option value="{{ r }}" {% if user.role == r %}selected{% endif %}>{{ r.title() }}</option>
+                      {% endfor %}
+                    </select>
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label">Status</label>
+                    <select class="form-select" name="status">
+                      <option value="Active" {% if user.status_display == 'Active' %}selected{% endif %}>Active</option>
+                      <option value="Not Active" {% if user.status_display != 'Active' %}selected{% endif %}>Not Active</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" class="btn btn-primary">Save Changes</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="passwordModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <form method="post" action="/executive/users/{{ user._id }}/change_password">
+          <div class="modal-header">
+            <h5 class="modal-title">Change Password</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <div class="mb-3">
+              <label class="form-label">New Password</label>
+              <input type="password" class="form-control" name="new_password" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Confirm Password</label>
+              <input type="password" class="form-control" name="confirm_password" required>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" class="btn btn-primary">Update Password</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      document.body.classList.add('page-ready');
+
+      const userId = {{ (user._id if user else 'null') | tojson }};
+      if (!userId) return;
+
+      const kpiTotal = document.getElementById('kpiTotal');
+      const kpi7d = document.getElementById('kpi7d');
+      const kpi30d = document.getElementById('kpi30d');
+      const kpiLast = document.getElementById('kpiLast');
+      const kpiIps = document.getElementById('kpiIps');
+      const kpiDevices = document.getElementById('kpiDevices');
+      const recentLogs = document.getElementById('recentLogs');
+      const trendSkeleton = document.getElementById('trendSkeleton');
+      const hourlySkeleton = document.getElementById('hourlySkeleton');
+      const trendCanvas = document.getElementById('trendChart');
+      const hourlyCanvas = document.getElementById('hourlyChart');
+      const loginDayDate = document.getElementById('loginDayDate');
+      const loginDayMeta = document.getElementById('loginDayMeta');
+      const loginDaySkeleton = document.getElementById('loginDaySkeleton');
+      const loginDayCanvas = document.getElementById('loginDayChart');
+      const loginDayTotal = document.getElementById('loginDayTotal');
+      const loginDayFirst = document.getElementById('loginDayFirst');
+      const loginDayLast = document.getElementById('loginDayLast');
+      const loginDayIps = document.getElementById('loginDayIps');
+
+      const activityTrendSkeleton = document.getElementById('activityTrendSkeleton');
+      const activityTrendCanvas = document.getElementById('activityTrendChart');
+      const activityTopList = document.getElementById('activityTopList');
+      const activityMostDay = document.getElementById('activityMostDay');
+      const activityMostAction = document.getElementById('activityMostAction');
+      const activityDayDate = document.getElementById('activityDayDate');
+      const activityDaySkeleton = document.getElementById('activityDaySkeleton');
+      const activityDayCanvas = document.getElementById('activityDayChart');
+      const activityDayTotal = document.getElementById('activityDayTotal');
+      const activityDayFirst = document.getElementById('activityDayFirst');
+      const activityDayLast = document.getElementById('activityDayLast');
+      const activityDayIps = document.getElementById('activityDayIps');
+
+      const activityRole = document.getElementById('activityRole');
+      const activityAction = document.getElementById('activityAction');
+      const activityEntity = document.getElementById('activityEntity');
+      const activityDate = document.getElementById('activityDate');
+      const activityReset = document.getElementById('activityReset');
+      const activityFeed = document.getElementById('activityFeed');
+      const activityPagerMeta = document.getElementById('activityPagerMeta');
+      const activityPrev = document.getElementById('activityPrev');
+      const activityNext = document.getElementById('activityNext');
+      const activityExport = document.getElementById('activityExport');
+
+      let trendChart = null;
+      let hourlyChart = null;
+      let loginDayChart = null;
+      let activityTrendChart = null;
+      let activityDayChart = null;
+
+      const activityState = {
+        page: 1,
+        pageSize: 25,
+        range: 'last_30',
+        role: '',
+        action: '',
+        entity: '',
+        date: ''
+      };
+
+      function fmtDate(value) {
+        if (!value) return '---';
+        const dt = new Date(value);
+        if (Number.isNaN(dt.getTime())) return '---';
+        return dt.toLocaleString();
+      }
+
+      function renderCharts(trend, hourly) {
+        if (trendSkeleton) trendSkeleton.style.display = 'none';
+        if (hourlySkeleton) hourlySkeleton.style.display = 'none';
+        if (trendCanvas) trendCanvas.style.display = 'block';
+        if (hourlyCanvas) hourlyCanvas.style.display = 'block';
+
+        if (trendChart) trendChart.destroy();
+        if (hourlyChart) hourlyChart.destroy();
+
+        if (trendCanvas) {
+          trendChart = new Chart(trendCanvas.getContext('2d'), {
+            type: 'line',
+            data: {
+              labels: trend.labels || [],
+              datasets: [{
+                label: 'Logins',
+                data: trend.values || [],
+                borderColor: '#0d6efd',
+                backgroundColor: 'rgba(13, 110, 253, 0.12)',
+                tension: 0.3,
+                fill: true
+              }]
+            },
+            options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+          });
+        }
+
+        if (hourlyCanvas) {
+          hourlyChart = new Chart(hourlyCanvas.getContext('2d'), {
+            type: 'bar',
+            data: {
+              labels: hourly.labels || [],
+              datasets: [{
+                label: 'Logins',
+                data: hourly.values || [],
+                backgroundColor: '#f59e0b'
+              }]
+            },
+            options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+          });
+        }
+      }
+
+      function loadLogs(days) {
+        fetch(`/executive/users/${userId}/logs?days=${days}`, { credentials: 'same-origin' })
+          .then(res => res.json())
+          .then(data => {
+            if (!data.ok) {
+              return;
+            }
+            const kpis = data.kpis || {};
+            kpiTotal.textContent = Number(kpis.total_logins || 0).toLocaleString();
+            kpi7d.textContent = Number(kpis.logins_7d || 0).toLocaleString();
+            kpi30d.textContent = Number(kpis.logins_30d || 0).toLocaleString();
+            kpiLast.textContent = fmtDate(kpis.last_login);
+            kpiIps.textContent = Number(kpis.unique_ips_30d || 0).toLocaleString();
+            kpiDevices.textContent = Number(kpis.unique_devices_30d || 0).toLocaleString();
+
+            const logs = data.recent_logs || [];
+            if (!logs.length) {
+              recentLogs.innerHTML = '<tr><td colspan="7" class="text-muted">No logs found.</td></tr>';
+            } else {
+              recentLogs.innerHTML = logs.map(row => `
+                <tr>
+                  <td>${fmtDate(row.timestamp)}</td>
+                  <td>${row.ip || '---'}</td>
+                  <td>${row.city || '---'}</td>
+                  <td>${row.country || '---'}</td>
+                  <td>${row.browser || '---'}</td>
+                  <td>${row.os || '---'}</td>
+                  <td>${row.location_available ? 'Yes' : 'No'}</td>
+                </tr>
+              `).join('');
+            }
+
+            renderCharts(data.trend || { labels: [], values: [] }, data.hourly || { labels: [], values: [] });
+          })
+          .catch(() => {
+            recentLogs.innerHTML = '<tr><td colspan="7" class="text-danger">Unable to load logs.</td></tr>';
+          });
+      }
+
+      function loadLoginsByDay(dateStr) {
+        const qs = dateStr ? `?date=${encodeURIComponent(dateStr)}` : '';
+        fetch(`/executive/users/${userId}/logins/by_day${qs}`, { credentials: 'same-origin' })
+          .then(res => res.json())
+          .then(data => {
+            if (!data.ok) return;
+            if (loginDayMeta) loginDayMeta.textContent = data.date || '--';
+            if (loginDayDate && data.date) loginDayDate.value = data.date;
+            if (loginDayTotal) loginDayTotal.textContent = Number(data.kpis.total_logins || 0).toLocaleString();
+            if (loginDayFirst) loginDayFirst.textContent = fmtDate(data.kpis.first_login);
+            if (loginDayLast) loginDayLast.textContent = fmtDate(data.kpis.last_login);
+            if (loginDayIps) loginDayIps.textContent = Number(data.kpis.unique_ips || 0).toLocaleString();
+
+            if (loginDaySkeleton) loginDaySkeleton.style.display = 'none';
+            if (loginDayCanvas) loginDayCanvas.style.display = 'block';
+            if (loginDayChart) loginDayChart.destroy();
+            loginDayChart = new Chart(loginDayCanvas.getContext('2d'), {
+              type: 'bar',
+              data: {
+                labels: data.labels || [],
+                datasets: [{
+                  label: 'Logins',
+                  data: data.values || [],
+                  backgroundColor: '#0d6efd'
+                }]
+              },
+              options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+            });
+          });
+      }
+
+      function loadActivitySummary() {
+        fetch(`/executive/users/${userId}/activities/summary?range=${encodeURIComponent(activityState.range)}`, { credentials: 'same-origin' })
+          .then(res => res.json())
+          .then(data => {
+            if (!data.ok) return;
+            const trend = data.trend || { labels: [], values: [] };
+            if (activityTrendSkeleton) activityTrendSkeleton.style.display = 'none';
+            if (activityTrendCanvas) activityTrendCanvas.style.display = 'block';
+            if (activityTrendChart) activityTrendChart.destroy();
+            activityTrendChart = new Chart(activityTrendCanvas.getContext('2d'), {
+              type: 'line',
+              data: {
+                labels: trend.labels || [],
+                datasets: [{
+                  label: 'Activities',
+                  data: trend.values || [],
+                  borderColor: '#0d6efd',
+                  backgroundColor: 'rgba(13, 110, 253, 0.12)',
+                  tension: 0.3,
+                  fill: true
+                }]
+              },
+              options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+            });
+
+            const tops = data.top_actions || [];
+            if (!tops.length) {
+              activityTopList.innerHTML = '<div class="text-muted">No activity in this range.</div>';
+              if (activityMostAction) activityMostAction.textContent = '--';
+            } else {
+              activityTopList.innerHTML = tops.map(item => `
+                <div class="d-flex justify-content-between mb-1">
+                  <span>${item.label || item.action}</span>
+                  <strong>${Number(item.count || 0).toLocaleString()}</strong>
+                </div>
+              `).join('');
+              if (activityMostAction) activityMostAction.textContent = `${tops[0].label || tops[0].action} (${tops[0].count})`;
+            }
+
+            if (activityMostDay) {
+              let maxIdx = -1;
+              let maxVal = 0;
+              (trend.values || []).forEach((val, idx) => {
+                if (val > maxVal) {
+                  maxVal = val;
+                  maxIdx = idx;
+                }
+              });
+              activityMostDay.textContent = maxIdx >= 0 ? `${trend.labels[maxIdx]} (${maxVal})` : '--';
+            }
+
+            if (activityAction) {
+              const existing = new Set();
+              activityAction.innerHTML = '<option value="">All actions</option>' + tops.map(item => {
+                const val = item.action || '';
+                if (!val || existing.has(val)) return '';
+                existing.add(val);
+                return `<option value="${val}">${item.label || val}</option>`;
+              }).join('');
+            }
+          });
+      }
+
+      function loadActivitiesByDay(dateStr) {
+        const qs = dateStr ? `?date=${encodeURIComponent(dateStr)}` : '';
+        fetch(`/executive/users/${userId}/activities/by_day${qs}`, { credentials: 'same-origin' })
+          .then(res => res.json())
+          .then(data => {
+            if (!data.ok) return;
+            if (activityDayDate && data.date) activityDayDate.value = data.date;
+            if (activityDayTotal) activityDayTotal.textContent = Number(data.kpis.total_actions || 0).toLocaleString();
+            if (activityDayFirst) activityDayFirst.textContent = fmtDate(data.kpis.first_action);
+            if (activityDayLast) activityDayLast.textContent = fmtDate(data.kpis.last_action);
+            if (activityDayIps) activityDayIps.textContent = Number(data.kpis.unique_ips || 0).toLocaleString();
+
+            if (activityDaySkeleton) activityDaySkeleton.style.display = 'none';
+            if (activityDayCanvas) activityDayCanvas.style.display = 'block';
+            if (activityDayChart) activityDayChart.destroy();
+            activityDayChart = new Chart(activityDayCanvas.getContext('2d'), {
+              type: 'bar',
+              data: {
+                labels: data.labels || [],
+                datasets: [{
+                  label: 'Actions',
+                  data: data.values || [],
+                  backgroundColor: '#f59e0b'
+                }]
+              },
+              options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+            });
+          });
+      }
+
+      function loadActivitiesList() {
+        const qs = new URLSearchParams({
+          page: activityState.page,
+          page_size: activityState.pageSize,
+          range: activityState.range,
+          role: activityState.role,
+          action: activityState.action,
+          entity_type: activityState.entity,
+          date: activityState.date
+        });
+        fetch(`/executive/users/${userId}/activities/list?${qs.toString()}`, { credentials: 'same-origin' })
+          .then(res => res.json())
+          .then(data => {
+            if (!data.ok) {
+              activityFeed.innerHTML = '<tr><td colspan="5" class="text-danger">Unable to load activity.</td></tr>';
+              return;
+            }
+            const rows = data.rows || [];
+            if (!rows.length) {
+              activityFeed.innerHTML = '<tr><td colspan="5" class="text-muted">No activity found.</td></tr>';
+            } else {
+              activityFeed.innerHTML = rows.map(row => `
+                <tr>
+                  <td>${fmtDate(row.timestamp)}</td>
+                  <td>${row.action_label || row.action}</td>
+                  <td>${row.entity_type || '---'} ${row.entity_id ? '#' + row.entity_id : ''}</td>
+                  <td>${row.meta && row.meta.amount ? `Amount: ${row.meta.amount}` : (row.meta && row.meta.customer_name ? `Customer: ${row.meta.customer_name}` : '---')}</td>
+                  <td>${row.ip || '---'}</td>
+                </tr>
+              `).join('');
+            }
+            const total = data.pagination ? Number(data.pagination.total || 0) : 0;
+            const page = data.pagination ? Number(data.pagination.page || 1) : 1;
+            const pageSize = data.pagination ? Number(data.pagination.page_size || 25) : 25;
+            const start = total === 0 ? 0 : (page - 1) * pageSize + 1;
+            const end = Math.min(page * pageSize, total);
+            activityPagerMeta.textContent = `Showing ${start}-${end} of ${total}`;
+            activityPrev.disabled = page <= 1;
+            activityNext.disabled = end >= total;
+
+            const exportQs = new URLSearchParams();
+            if (activityState.range) exportQs.set('range', activityState.range);
+            if (activityState.date) exportQs.set('date', activityState.date);
+            activityExport.href = `/executive/users/${userId}/activities/export.csv?${exportQs.toString()}`;
+          });
+      }
+
+      document.querySelectorAll('[data-trend]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('[data-trend]').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          const days = Number(btn.getAttribute('data-trend')) || 30;
+          loadLogs(days);
+        });
+      });
+
+      document.querySelectorAll('[data-range]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('[data-range]').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          activityState.range = btn.getAttribute('data-range');
+          activityState.page = 1;
+          loadActivitySummary();
+          loadActivitiesList();
+        });
+      });
+
+      loginDayDate?.addEventListener('change', () => loadLoginsByDay(loginDayDate.value));
+      activityDayDate?.addEventListener('change', () => loadActivitiesByDay(activityDayDate.value));
+
+      activityRole?.addEventListener('change', () => {
+        activityState.role = activityRole.value;
+        activityState.page = 1;
+        loadActivitiesList();
+      });
+      activityAction?.addEventListener('change', () => {
+        activityState.action = activityAction.value;
+        activityState.page = 1;
+        loadActivitiesList();
+      });
+      activityEntity?.addEventListener('change', () => {
+        activityState.entity = activityEntity.value;
+        activityState.page = 1;
+        loadActivitiesList();
+      });
+      activityDate?.addEventListener('change', () => {
+        activityState.date = activityDate.value;
+        activityState.page = 1;
+        loadActivitiesList();
+      });
+      activityReset?.addEventListener('click', () => {
+        activityState.page = 1;
+        activityState.range = 'last_30';
+        activityState.role = '';
+        activityState.action = '';
+        activityState.entity = '';
+        activityState.date = '';
+        activityRole.value = '';
+        activityAction.value = '';
+        activityEntity.value = '';
+        activityDate.value = '';
+        document.querySelectorAll('[data-range]').forEach(b => b.classList.remove('active'));
+        document.querySelector('[data-range="last_30"]')?.classList.add('active');
+        loadActivitySummary();
+        loadActivitiesList();
+      });
+      activityPrev?.addEventListener('click', () => {
+        if (activityState.page > 1) {
+          activityState.page -= 1;
+          loadActivitiesList();
+        }
+      });
+      activityNext?.addEventListener('click', () => {
+        activityState.page += 1;
+        loadActivitiesList();
+      });
+
+      loadLogs(30);
+      loadLoginsByDay('');
+      loadActivitySummary();
+      loadActivitiesByDay('');
+      loadActivitiesList();
+
+      {% if can_manage and user %}
+      const defaultAvatar = "{{ DEFAULT_PROFILE_IMAGE_URL }}";
+      const toggleBtn = document.getElementById('toggleStatusBtn');
+      const deleteBtn = document.getElementById('deleteUserBtn');
+      toggleBtn?.addEventListener('click', () => {
+        const proceed = confirm('Toggle this user status?');
+        if (!proceed) return;
+        const body = new URLSearchParams({ next: window.location.pathname });
+        fetch(`/executive/users/{{ user._id }}/toggle_status`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body,
+          credentials: 'same-origin'
+        }).then(() => window.location.reload());
+      });
+      deleteBtn?.addEventListener('click', () => {
+        const proceed = confirm('Delete this user? You can restore from Recently Deleted.');
+        if (!proceed) return;
+        const body = new URLSearchParams({ next: '/executive/users' });
+        fetch(`/executive/users/{{ user._id }}/delete`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body,
+          credentials: 'same-origin'
+        }).then(() => window.location.assign('/executive/users'));
+      });
+
+      function wireUpload(inputId, previewId, urlId, imageId, statusId) {
+        const input = document.getElementById(inputId);
+        const preview = document.getElementById(previewId);
+        const urlInput = document.getElementById(urlId);
+        const idInput = document.getElementById(imageId);
+        const statusEl = document.getElementById(statusId);
+        if (!input) return;
+        input.addEventListener('change', () => {
+          const file = input.files && input.files[0];
+          if (!file) return;
+          statusEl.textContent = 'Uploading...';
+          const form = new FormData();
+          form.append('image', file);
+          fetch('/products/upload_image', { method: 'POST', body: form })
+            .then(res => res.json())
+            .then(data => {
+              if (!data.success) {
+                statusEl.textContent = data.error || 'Upload failed';
+                return;
+              }
+              const url = data.image_url || defaultAvatar;
+              preview.src = url;
+              urlInput.value = url;
+              idInput.value = data.image_id || '';
+              statusEl.textContent = 'Uploaded';
+            })
+            .catch(() => { statusEl.textContent = 'Upload failed'; });
+        });
+      }
+
+      wireUpload('editAvatarInput', 'editAvatarPreview', 'editImageUrl', 'editImageId', 'editAvatarStatus');
+      {% endif %}
+    });
+  </script>
+  {% include 'app_footer.html' %}
+</body>
+</html>

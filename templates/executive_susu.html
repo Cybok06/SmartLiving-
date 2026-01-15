@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Executive SUSU Overview - Smart Living</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <!-- Bootstrap + Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <link rel="icon" type="image/png"
+        href="https://res.cloudinary.com/dljpgzbto/image/upload/v1743993646/company-logo_dksb23.jpg">
+
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: radial-gradient(circle at top left, #e0f2fe 0, #f4f5fb 40%, #eef2ff 100%);
+      color: #111827;
+    }
+    .page-header {
+      padding: 1.5rem 0 0.75rem;
+    }
+    .page-header h1 {
+      font-size: 1.8rem;
+      font-weight: 700;
+      margin-bottom: 0.15rem;
+    }
+    .page-header p {
+      margin: 0;
+      color: #6b7280;
+      font-size: 0.9rem;
+    }
+    .badge-pill {
+      border-radius: 999px;
+      font-size: 0.7rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .metric-card {
+      border-radius: 14px;
+      border: 1px solid rgba(148,163,184,0.35);
+      background: #ffffff;
+      box-shadow: 0 12px 25px rgba(15,23,42,0.04);
+      padding: 0.9rem 1rem;
+      height: 100%;
+      position: relative;
+      overflow: hidden;
+    }
+    .metric-card::after {
+      content: "";
+      position: absolute;
+      right: -24px;
+      bottom: -24px;
+      width: 70px;
+      height: 70px;
+      background: radial-gradient(circle, rgba(59,130,246,0.15), transparent 60%);
+      opacity: 0.7;
+    }
+    .metric-label {
+      text-transform: uppercase;
+      font-size: 0.7rem;
+      letter-spacing: 0.08em;
+      color: #6b7280;
+      margin-bottom: 0.1rem;
+    }
+    .metric-title {
+      font-size: 0.95rem;
+      font-weight: 600;
+      margin-bottom: 0.25rem;
+    }
+    .metric-main {
+      font-size: 1.2rem;
+      font-weight: 700;
+    }
+    .metric-sub {
+      font-size: 0.8rem;
+      color: #6b7280;
+      margin-top: 0.15rem;
+    }
+
+    .card-filter {
+      border-radius: 14px;
+      border: 1px solid rgba(148,163,184,0.3);
+      background: #ffffff;
+      box-shadow: 0 10px 22px rgba(15,23,42,0.03);
+    }
+
+    .branch-table-wrapper {
+      border-radius: 16px;
+      border: 1px solid rgba(148,163,184,0.35);
+      background: #ffffff;
+      box-shadow: 0 12px 24px rgba(15,23,42,0.03);
+    }
+    .branch-table thead th {
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #6b7280;
+    }
+    .branch-table tbody td {
+      font-size: 0.85rem;
+    }
+
+    .customer-card {
+      border-radius: 16px;
+      border: 1px solid rgba(148,163,184,0.35);
+      background: #ffffff;
+      box-shadow: 0 10px 20px rgba(15,23,42,0.03);
+      padding: 0.8rem 0.95rem;
+      margin-bottom: 0.7rem;
+    }
+    .customer-header {
+      display: flex;
+      align-items: center;
+      gap: 0.7rem;
+      margin-bottom: 0.4rem;
+    }
+    .avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 999px;
+      background: linear-gradient(135deg,#0ea5e9,#22c55e);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: #f9fafb;
+      font-weight: 700;
+      font-size: 1rem;
+      overflow: hidden;
+    }
+    .avatar img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .customer-name {
+      font-weight: 600;
+      font-size: 0.95rem;
+    }
+    .customer-meta {
+      font-size: 0.78rem;
+      color: #6b7280;
+    }
+    .customer-badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.25rem;
+      margin-top: 0.1rem;
+    }
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      padding: 0.2rem 0.55rem;
+      border-radius: 999px;
+      font-size: 0.72rem;
+      background: #eff6ff;
+      color: #1d4ed8;
+      border: 1px solid rgba(59,130,246,0.2);
+    }
+
+    .stat-row {
+      display: grid;
+      grid-template-columns: repeat(4,minmax(0,1fr));
+      gap: 0.45rem;
+      margin-top: 0.4rem;
+    }
+    .stat-pill {
+      border-radius: 12px;
+      border: 1px solid rgba(209,213,219,0.9);
+      background: #f9fafb;
+      padding: 0.3rem 0.45rem;
+    }
+    .stat-label {
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #9ca3af;
+      margin-bottom: 0.05rem;
+    }
+    .stat-value {
+      font-size: 0.9rem;
+      font-weight: 600;
+    }
+    .stat-available {
+      color: #16a34a;
+      font-weight: 700;
+    }
+
+    .empty-state {
+      padding: 3rem 1rem;
+      text-align: center;
+      color: #6b7280;
+    }
+
+    .chart-card {
+      border-radius: 16px;
+      border: 1px solid rgba(148,163,184,0.35);
+      background: #ffffff;
+      box-shadow: 0 12px 24px rgba(15,23,42,0.04);
+      padding: 0.85rem 1rem;
+      height: 100%;
+    }
+    .chart-title {
+      font-size: 0.9rem;
+      font-weight: 600;
+      margin-bottom: 0.15rem;
+    }
+    .chart-sub {
+      font-size: 0.75rem;
+      color: #6b7280;
+      margin-bottom: 0.4rem;
+    }
+
+    @media (max-width: 992px) {
+      .stat-row {
+        grid-template-columns: repeat(2,minmax(0,1fr));
+      }
+    }
+    @media (max-width: 576px) {
+      .stat-row {
+        grid-template-columns: repeat(2,minmax(0,1fr));
+      }
+    }
+  </style>
+</head>
+<body>
+  {% include 'executive_sidebar.html' %}
+
+<main class="container py-3">
+
+  <!-- Header -->
+  <div class="d-flex flex-wrap justify-content-between align-items-start page-header">
+    <div>
+      <h1>Executive SUSU Overview</h1>
+      <p>
+        Monitor SUSU <strong>collections</strong>, <strong>withdrawals</strong>,
+        <strong>profit</strong>, and <strong>available balances</strong> across all branches.
+      </p>
+      <span class="badge bg-light text-muted border badge-pill mt-1">
+        Period: {{ summary.global.filter_label }}
+      </span>
+    </div>
+    <div class="mt-2 mt-md-0 d-flex flex-column align-items-end gap-1">
+      <span class="badge bg-primary-subtle text-primary-emphasis border border-primary-subtle badge-pill">
+        TODAY NET: GH₵{{ '{:,.2f}'.format(summary.time.today.net) }}
+      </span>
+      <span class="badge bg-light text-muted border badge-pill">
+        TODAY WITHDRAWALS: {{ summary.today_withdrawals_count }}
+      </span>
+    </div>
+  </div>
+
+  <!-- Global Metrics -->
+  <div class="row g-3 mb-3">
+    <!-- Total Available -->
+    <div class="col-12 col-md-3">
+      <div class="metric-card">
+        <div class="metric-label">All Branches</div>
+        <div class="metric-title">Total SUSU Available</div>
+        <div class="metric-main text-success">
+          GH₵{{ '{:,.2f}'.format(summary.global.available) }}
+        </div>
+        <div class="metric-sub">
+          Money currently available in all SUSU customer accounts
+          ({{ summary.global.filter_label }}).
+        </div>
+      </div>
+    </div>
+
+    <!-- Total SUSU Collected -->
+    <div class="col-12 col-md-3">
+      <div class="metric-card">
+        <div class="metric-label">All Branches</div>
+        <div class="metric-title">Total SUSU Collected</div>
+        <div class="metric-main text-primary">
+          GH₵{{ '{:,.2f}'.format(summary.global.total_susu) }}
+        </div>
+        <div class="metric-sub">
+          SUSU contributions in the selected period.
+        </div>
+      </div>
+    </div>
+
+    <!-- Total Withdrawals -->
+    <div class="col-12 col-md-3">
+      <div class="metric-card">
+        <div class="metric-label">All Branches</div>
+        <div class="metric-title">Total Withdrawals</div>
+        <div class="metric-main text-danger">
+          GH₵{{ '{:,.2f}'.format(summary.global.total_withdrawals) }}
+        </div>
+        <div class="metric-sub">
+          Cash paid out to customers in the selected period.
+        </div>
+      </div>
+    </div>
+
+    <!-- Total SUSU Profit -->
+    <div class="col-12 col-md-3">
+      <div class="metric-card">
+        <div class="metric-label">All Branches</div>
+        <div class="metric-title">Total SUSU Profit</div>
+        <div class="metric-main text-warning">
+          GH₵{{ '{:,.2f}'.format(summary.global.total_profit) }}
+        </div>
+        <div class="metric-sub">
+          Company SUSU profit (fees) in this period.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Time Metrics -->
+  <div class="row g-3 mb-4">
+    <!-- Today -->
+    <div class="col-12 col-md-4">
+      <div class="metric-card">
+        <div class="metric-label">Today</div>
+        <div class="metric-title">SUSU In / Out / Profit</div>
+        <div class="metric-main">
+          <span class="text-primary">GH₵{{ '{:,.2f}'.format(summary.time.today.susu) }}</span>
+          <span class="text-muted"> / </span>
+          <span class="text-danger">GH₵{{ '{:,.2f}'.format(summary.time.today.withdraw) }}</span>
+          <span class="text-muted"> / </span>
+          <span class="text-warning">GH₵{{ '{:,.2f}'.format(summary.time.today.profit) }}</span>
+        </div>
+        <div class="metric-sub">
+          Net:
+          <span class="{% if summary.time.today.net >= 0 %}text-success{% else %}text-danger{% endif %}">
+            GH₵{{ '{:,.2f}'.format(summary.time.today.net) }}
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- This Week -->
+    <div class="col-12 col-md-4">
+      <div class="metric-card">
+        <div class="metric-label">This Week</div>
+        <div class="metric-title">SUSU In / Out / Profit</div>
+        <div class="metric-main">
+          <span class="text-primary">GH₵{{ '{:,.2f}'.format(summary.time.week.susu) }}</span>
+          <span class="text-muted"> / </span>
+          <span class="text-danger">GH₵{{ '{:,.2f}'.format(summary.time.week.withdraw) }}</span>
+          <span class="text-muted"> / </span>
+          <span class="text-warning">GH₵{{ '{:,.2f}'.format(summary.time.week.profit) }}</span>
+        </div>
+        <div class="metric-sub">
+          Net:
+          <span class="{% if summary.time.week.net >= 0 %}text-success{% else %}text-danger{% endif %}">
+            GH₵{{ '{:,.2f}'.format(summary.time.week.net) }}
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- This Month -->
+    <div class="col-12 col-md-4">
+      <div class="metric-card">
+        <div class="metric-label">This Month</div>
+        <div class="metric-title">SUSU In / Out / Profit</div>
+        <div class="metric-main">
+          <span class="text-primary">GH₵{{ '{:,.2f}'.format(summary.time.month.susu) }}</span>
+          <span class="text-muted"> / </span>
+          <span class="text-danger">GH₵{{ '{:,.2f}'.format(summary.time.month.withdraw) }}</span>
+          <span class="text-muted"> / </span>
+          <span class="text-warning">GH₵{{ '{:,.2f}'.format(summary.time.month.profit) }}</span>
+        </div>
+        <div class="metric-sub">
+          Net:
+          <span class="{% if summary.time.month.net >= 0 %}text-success{% else %}text-danger{% endif %}">
+            GH₵{{ '{:,.2f}'.format(summary.time.month.net) }}
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filters: Branch + Date Range + Customer Search -->
+  <div class="card card-filter mb-3">
+    <div class="card-body">
+      <form method="get" class="row g-2 align-items-end" id="susu-filter-form">
+        <div class="col-md-3">
+          <label class="form-label mb-1">Branch</label>
+          <select name="branch" class="form-select form-select-sm">
+            <option value="all" {% if branch_filter == 'all' %}selected{% endif %}>All branches</option>
+            {% for br in branches %}
+              <option value="{{ br }}"
+                      {% if branch_filter == br %}selected{% endif %}>
+                {{ br }}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="col-md-3">
+          <label class="form-label mb-1">Period</label>
+          <select name="range" id="range-select" class="form-select form-select-sm">
+            <option value="today"  {% if range_key == 'today' %}selected{% endif %}>Today</option>
+            <option value="week"   {% if range_key == 'week' %}selected{% endif %}>This Week</option>
+            <option value="month"  {% if range_key == 'month' %}selected{% endif %}>This Month</option>
+            <option value="all"    {% if range_key == 'all' %}selected{% endif %}>All Time</option>
+            <option value="custom" {% if range_key == 'custom' %}selected{% endif %}>Custom Range</option>
+          </select>
+        </div>
+
+        <div class="col-md-3 custom-date-field" {% if range_key != 'custom' %}style="display:none"{% endif %}>
+          <label class="form-label mb-1">Start Date</label>
+          <input type="date"
+                 name="start_date"
+                 class="form-control form-control-sm"
+                 value="{{ start_date }}">
+        </div>
+
+        <div class="col-md-3 custom-date-field" {% if range_key != 'custom' %}style="display:none"{% endif %}>
+          <label class="form-label mb-1">End Date</label>
+          <input type="date"
+                 name="end_date"
+                 class="form-control form-control-sm"
+                 value="{{ end_date }}">
+        </div>
+
+        <div class="col-md-4 mt-2">
+          <label class="form-label mb-1">Search customer (name or phone)</label>
+          <input type="text"
+                 name="search"
+                 class="form-control form-control-sm"
+                 placeholder="E.g. Ama Serwaa or 024..."
+                 value="{{ customer_search_term }}">
+        </div>
+
+        <div class="col-md-2 mt-2">
+          <button type="submit" class="btn btn-primary btn-sm w-100">
+            <i class="bi bi-filter me-1"></i> Apply
+          </button>
+        </div>
+
+        {% if branch_filter != 'all' or customer_search_term or range_key != 'month' or start_date or end_date %}
+          <div class="col-md-2 mt-2">
+            <a href="{{ url_for('executive_susu.executive_susu_dashboard') }}"
+               class="btn btn-outline-secondary btn-sm w-100">
+              Clear
+            </a>
+          </div>
+        {% endif %}
+      </form>
+    </div>
+  </div>
+
+  <!-- Charts Row -->
+  <div class="row g-3 mb-4">
+    <div class="col-12 col-lg-5">
+      <div class="chart-card">
+        <div class="chart-title">
+          <i class="bi bi-pie-chart me-1"></i>
+          SUSU Overview ({{ summary.global.filter_label }})
+        </div>
+        <div class="chart-sub">
+          Distribution of collected SUSU, withdrawals, profit and net available.
+        </div>
+        <canvas id="globalSusuChart" height="220"></canvas>
+      </div>
+    </div>
+
+    <div class="col-12 col-lg-7">
+      <div class="chart-card">
+        <div class="chart-title">
+          <i class="bi bi-bar-chart-line me-1"></i>
+          Branch Available SUSU
+        </div>
+        <div class="chart-sub">
+          Available SUSU amount per branch (filtered period).
+        </div>
+        <canvas id="branchSusuChart" height="220"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Selected Branch Highlight (optional) -->
+  {% if selected_branch_stats %}
+    <div class="mb-3">
+      <div class="metric-card">
+        <div class="metric-label">Selected Branch</div>
+        <div class="metric-title">{{ selected_branch_stats.branch }}</div>
+        <div class="metric-main">
+          <span class="text-primary">
+            GH₵{{ '{:,.2f}'.format(selected_branch_stats.total_susu) }} SUSU
+          </span>
+          <span class="text-muted"> -  </span>
+          <span class="text-danger">
+            GH₵{{ '{:,.2f}'.format(selected_branch_stats.total_withdrawals) }} Withdrawn
+          </span>
+          <span class="text-muted"> -  </span>
+          <span class="text-warning">
+            GH₵{{ '{:,.2f}'.format(selected_branch_stats.total_profit) }} Profit
+          </span>
+        </div>
+        <div class="metric-sub">
+          Available:
+          <span class="text-success fw-bold">
+            GH₵{{ '{:,.2f}'.format(selected_branch_stats.available) }}
+          </span>
+        </div>
+      </div>
+    </div>
+  {% endif %}
+
+  <!-- Branch Table -->
+  <div class="branch-table-wrapper mb-4">
+    <div class="p-3 border-bottom">
+      <h6 class="mb-0">
+        <i class="bi bi-diagram-3 me-1"></i>
+        Branch SUSU Breakdown
+      </h6>
+      <small class="text-muted">
+        Overview of SUSU balances per branch ({{ summary.global.filter_label }}).
+      </small>
+    </div>
+    <div class="table-responsive">
+      <table class="table table-sm table-hover align-middle mb-0 branch-table">
+        <thead class="table-light">
+          <tr>
+            <th>Branch</th>
+            <th class="text-end">Total SUSU (₵)</th>
+            <th class="text-end">Withdrawn (₵)</th>
+            <th class="text-end">Profit (₵)</th>
+            <th class="text-end">Available (₵)</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% if branch_rows and branch_rows|length > 0 %}
+            {% for row in branch_rows %}
+              <tr class="{% if branch_filter != 'all' and branch_filter == row.branch %}table-primary{% endif %}">
+                <td>{{ row.branch }}</td>
+                <td class="text-end">GH₵{{ '{:,.2f}'.format(row.total_susu) }}</td>
+                <td class="text-end text-danger">GH₵{{ '{:,.2f}'.format(row.total_withdrawals) }}</td>
+                <td class="text-end text-warning">GH₵{{ '{:,.2f}'.format(row.total_profit) }}</td>
+                <td class="text-end text-success fw-semibold">
+                  GH₵{{ '{:,.2f}'.format(row.available) }}
+                </td>
+              </tr>
+            {% endfor %}
+          {% else %}
+            <tr>
+              <td colspan="5" class="text-center text-muted small">
+                No SUSU data found for this period.
+              </td>
+            </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Customer Search Results -->
+  <section class="mb-4">
+    <div class="d-flex justify-content-between align-items-center mb-2">
+      <h6 class="mb-0">
+        <i class="bi bi-search me-1"></i>
+        Customer SUSU Lookup
+      </h6>
+      {% if customer_search_term %}
+        <small class="text-muted">
+          Showing {{ customer_results|length }} result(s) for
+          "<strong>{{ customer_search_term }}</strong>"
+          {% if branch_filter != 'all' %}
+            in branch <strong>{{ branch_filter }}</strong>
+          {% endif %}
+          -- Period: {{ summary.global.filter_label }}
+        </small>
+      {% else %}
+        <small class="text-muted">
+          Search a customer by name or phone to see SUSU totals in the selected period.
+        </small>
+      {% endif %}
+    </div>
+
+    {% if customer_search_term %}
+      {% if customer_results and customer_results|length > 0 %}
+        {% for c in customer_results %}
+          <div class="customer-card">
+            <div class="customer-header">
+              <div class="avatar">
+                {% if c.image_url %}
+                  <img src="{{ c.image_url }}" alt="{{ c.name }}">
+                {% else %}
+                  {{ c.name[:1] | upper }}
+                {% endif %}
+              </div>
+              <div class="flex-grow-1">
+                <div class="customer-name">{{ c.name }}</div>
+                <div class="customer-meta">
+                  {{ c.phone }}
+                  {% if c.location %} -  {{ c.location }}{% endif %}
+                </div>
+                <div class="customer-badges">
+                  <span class="chip">
+                    <i class="bi bi-building"></i> {{ c.branch }}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div class="stat-row">
+              <div class="stat-pill">
+                <div class="stat-label">Total SUSU</div>
+                <div class="stat-value">GH₵{{ '{:,.2f}'.format(c.total_susu) }}</div>
+              </div>
+              <div class="stat-pill">
+                <div class="stat-label">Withdrawn</div>
+                <div class="stat-value text-danger">GH₵{{ '{:,.2f}'.format(c.total_withdraw) }}</div>
+              </div>
+              <div class="stat-pill">
+                <div class="stat-label">SUSU Profit</div>
+                <div class="stat-value text-warning">GH₵{{ '{:,.2f}'.format(c.total_profit) }}</div>
+              </div>
+              <div class="stat-pill">
+                <div class="stat-label">Available</div>
+                <div class="stat-value stat-available">
+                  GH₵{{ '{:,.2f}'.format(c.available) }}
+                </div>
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+      {% else %}
+        <div class="empty-state py-3">
+          <p class="mb-0">
+            No customer found matching your search and filters for this period.
+          </p>
+        </div>
+      {% endif %}
+    {% endif %}
+  </section>
+
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  // --- Toggle custom date fields based on range selection ---
+  const rangeSelect = document.getElementById('range-select');
+  const customDateFields = document.querySelectorAll('.custom-date-field');
+
+  function toggleCustomDateFields() {
+    const isCustom = rangeSelect && rangeSelect.value === 'custom';
+    customDateFields.forEach(el => {
+      el.style.display = isCustom ? '' : 'none';
+    });
+  }
+
+  if (rangeSelect) {
+    rangeSelect.addEventListener('change', toggleCustomDateFields);
+    toggleCustomDateFields();
+  }
+
+  // --- Chart Data from backend (wrapped in strings so JS parser is happy) ---
+  const globalData = {
+    collected: parseFloat('{{ summary.global.total_susu|default(0, true)|float }}'),
+    withdrawn: parseFloat('{{ summary.global.total_withdrawals|default(0, true)|float }}'),
+    profit:    parseFloat('{{ summary.global.total_profit|default(0, true)|float }}'),
+    available: parseFloat('{{ summary.global.available|default(0, true)|float }}')
+  };
+
+  const branchLabels = JSON.parse(
+    '{{ branch_rows|map(attribute="branch")|list|tojson|safe }}'
+  );
+  const branchAvailable = JSON.parse(
+    '{{ branch_rows|map(attribute="available")|list|tojson|safe }}'
+  );
+
+  // --- Global SUSU breakdown chart (doughnut) ---
+  const globalCtx = document.getElementById('globalSusuChart');
+  if (globalCtx && typeof Chart !== 'undefined') {
+    new Chart(globalCtx, {
+      type: 'doughnut',
+      data: {
+        labels: ['Collected', 'Withdrawn', 'Profit', 'Available'],
+        datasets: [{
+          data: [
+            globalData.collected,
+            globalData.withdrawn,
+            globalData.profit,
+            globalData.available
+          ],
+          borderWidth: 1
+        }]
+      },
+      options: {
+        plugins: {
+          legend: { position: 'bottom' },
+          tooltip: {
+            callbacks: {
+              label: function(ctx) {
+                const label = ctx.label || '';
+                const value = ctx.raw || 0;
+                return label + ': GH₵' + value.toLocaleString(
+                  undefined,
+                  { minimumFractionDigits: 2, maximumFractionDigits: 2 }
+                );
+              }
+            }
+          }
+        }
+      }
+    });
+  }
+
+  // --- Branch available SUSU chart (bar) ---
+  const branchCtx = document.getElementById('branchSusuChart');
+  if (branchCtx && typeof Chart !== 'undefined') {
+    new Chart(branchCtx, {
+      type: 'bar',
+      data: {
+        labels: branchLabels,
+        datasets: [{
+          label: 'Available SUSU (GH₵)',
+          data: branchAvailable,
+          borderWidth: 1
+        }]
+      },
+      options: {
+        indexAxis: 'x',
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: function(ctx) {
+                const value = ctx.raw || 0;
+                return 'Available: GH₵' + value.toLocaleString(
+                  undefined,
+                  { minimumFractionDigits: 2, maximumFractionDigits: 2 }
+                );
+              }
+            }
+          }
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            ticks: {
+              callback: function(value) {
+                return 'GH₵' + value.toLocaleString();
+              }
+            }
+          }
+        }
+      }
+    });
+  }
+</script>
+  {% include 'app_footer.html' %}
+
+</body>
+</html>

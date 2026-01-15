@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Sell Product</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <link rel="icon"
+        href="https://imagedelivery.net/h9fmMoa1o2c2P55TcWJGOg/10283f28-b9a0-4100-b254-19a854386800/public"
+        type="image/png">
+
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+
+  <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+
+
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #f8f9fa;
+      transition: background-color 0.3s, color 0.3s;
+    }
+
+    body.dark {
+      background-color: #121212;
+      color: #f8f9fa;
+    }
+
+    .navbar {
+      backdrop-filter: blur(10px);
+      background-color: rgba(255, 255, 255, 0.8) !important;
+      transition: background-color 0.3s;
+    }
+
+    body.dark .navbar {
+      background-color: rgba(20, 20, 20, 0.95) !important;
+    }
+
+    .navbar-brand,
+    .nav-link,
+    .btn-toggle-mode {
+      color: #000 !important;
+      transition: color 0.3s;
+    }
+
+    body.dark .navbar-brand,
+    body.dark .nav-link,
+    body.dark .btn-toggle-mode {
+      color: #fff !important;
+    }
+
+    .btn-toggle-mode {
+      font-size: 1.3rem;
+      background: transparent;
+      border: none;
+    }
+
+    .container-form {
+      max-width: 600px;
+      margin: 30px auto;
+      background: #fff;
+      padding: 25px;
+      border-radius: 15px;
+      box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+      animation: slideIn 0.6s ease-out;
+    }
+
+    body.dark .container-form {
+      background: #1e1e1e;
+    }
+
+    @keyframes slideIn {
+      from {
+        transform: translateX(-100%);
+        opacity: 0;
+      }
+      to {
+        transform: translateX(0);
+        opacity: 1;
+      }
+    }
+
+    .container-form select,
+.container-form input,
+.container-form button {
+  width: 100%;
+  padding: 10px;
+  margin: 10px 0;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+}
+
+
+    button {
+      background: #28a745;
+      color: white;
+      font-weight: bold;
+      border: none;
+    }
+
+    button:hover {
+      background: #218838;
+    }
+
+    .total {
+      font-weight: bold;
+      text-align: right;
+    }
+
+    footer {
+      text-align: center;
+      margin: 40px auto 10px;
+      font-size: 0.9rem;
+      color: gray;
+    }
+    /* Gradient border and soft focus effect */
+/* Form Fields */
+input.form-control,
+select.form-select {
+  border: 1.8px solid #ced4da;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 1rem;
+  background-color: #fff;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* On focus - clean blue outline */
+input.form-control:focus,
+select.form-select:focus {
+  border-color: #4dabf7;
+  box-shadow: 0 0 0 3px rgba(77, 171, 247, 0.25);
+  outline: none;
+}
+
+/* Submit Button */
+button[type="submit"] {
+  background: linear-gradient(90deg, #28a745, #218838);
+  color: #fff;
+  font-weight: 600;
+  padding: 12px;
+  border: none;
+  border-radius: 8px;
+  font-size: 1.1rem;
+  transition: background 0.3s ease, transform 0.2s ease;
+}
+
+button[type="submit"]:hover {
+  background: linear-gradient(90deg, #218838, #28a745);
+  transform: scale(1.02);
+}
+
+/* Dark Mode Field Styling */
+body.dark input.form-control,
+body.dark select.form-select {
+  background-color: #1f1f1f;
+  color: #f1f1f1;
+  border: 1.5px solid #555;
+}
+
+body.dark input.form-control:focus,
+body.dark select.form-select:focus {
+  border-color: #66b2ff;
+  box-shadow: 0 0 0 3px rgba(102, 178, 255, 0.3);
+}
+input[type="date"] {
+  border: 1px solid #007bff;
+  box-shadow: 0 0 4px rgba(0, 123, 255, 0.4);
+}
+
+  </style>
+</head>
+<body data-is-manager="{{ '1' if is_manager else '0' }}" data-prefill-customer="{{ preselect_customer_id or '' }}">
+
+{% if is_manager %}
+  {% include 'manager_sidebar.html' %}
+{% else %}
+  {% include 'side_bar.html' %}
+{% endif %}
+
+
+<!-- Sell Product Form -->
+<div class="container-form">
+  <h2 class="text-center mb-4">Sell Product</h2>
+  <form id="sellForm">
+    <!-- Agent ID (Hidden) -->
+    <input type="hidden" id="agent_id" value="{{ agent_id }}">
+
+    <div class="row g-3">
+      <!-- Customer Dropdown -->
+      <div class="col-md-6 {% if is_manager %}d-none{% endif %}" id="customer-wrapper">
+        <label for="customer">Select Customer</label>
+        <select id="customer" class="form-select">
+          <option value="">-- Choose Customer --</option>
+          {% for customer in customers %}
+            <option value="{{ customer._id }}">{{ customer.name }} ({{ customer.phone_number }})</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- Purchase Type -->
+      <div class="col-md-6">
+        <label for="purchase_type">Purchase Type</label>
+        {% if is_manager %}
+        <select id="purchase_type" class="form-select" required>
+          <option value="Instant Sale" selected>Instant Sale</option>
+        </select>
+        {% else %}
+        <select id="purchase_type" class="form-select" required>
+          <option value="">-- Choose Purchase Type --</option>
+          <option value="Installment" selected>Layaway</option>
+          <option value="Instant Sale">Instant Sale</option>
+        </select>
+        {% endif %}
+      </div>
+
+      <!-- Product Dropdown -->
+      <div class="col-md-6">
+        <label for="product">Select Product</label>
+        <select id="product" class="form-select" required>
+          <option value="">-- Choose Product --</option>
+          {% for product in products %}
+            <option value="{{ product._id }}"
+                    data-name="{{ product.name }}"
+                    data-price="{{ product.selling_price or product.price }}"
+                    data-cash-price="{{ product.cash_price or 0 }}"
+                    data-qty="{{ product.qty or 0 }}"
+                    data-image="{{ product.image_url }}"
+                    data-term-months="{{ product.default_term_months or '' }}">
+              {{ product.name }} - GHS {{ product.selling_price or product.price }} (Qty: {{ product.qty or 0 }})
+            </option>
+          {% endfor %}
+        </select>
+        <div id="product-meta" class="small text-muted mt-1"></div>
+        <div class="d-flex align-items-center gap-2 mt-2" id="product-preview" style="display:none;">
+          <img id="product-preview-img" src="" alt="Selected product" style="width:40px;height:40px;border-radius:6px;object-fit:cover;">
+          <div class="small text-muted">
+            <div id="product-preview-name"></div>
+            <div id="product-preview-price"></div>
+            <div id="product-preview-term"></div>
+            <div id="product-preview-enddate" class="text-muted"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Instant Sale Fields -->
+    <div id="instant-sale-fields" class="mt-4 {% if is_manager %}d-block{% else %}d-none{% endif %}">
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label for="instant_name">Customer Name</label>
+          <input type="text" id="instant_name" class="form-control" placeholder="Enter name">
+        </div>
+        <div class="col-md-6">
+          <label for="instant_phone">Phone Number</label>
+          <input type="tel" id="instant_phone" class="form-control" placeholder="e.g. 0550000000">
+        </div>
+        <div class="col-md-6">
+          <label for="instant_location">Location</label>
+          <input type="text" id="instant_location" class="form-control" placeholder="e.g. Madina, Accra">
+        </div>
+        <div class="col-md-6">
+          <label for="instant_method">Payment Method</label>
+          <select id="instant_method" class="form-select">
+            <option value="">-- Select Method --</option>
+            <option value="Cash">Cash</option>
+            <option value="MoMo">MoMo</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Total Amount -->
+    <div class="total mt-4">Total: GHS <span id="totalAmount">0.00</span></div>
+    <!-- Purchase Date -->
+    <label for="purchase_date">Purchase Date</label>
+    <input type="date" id="purchase_date" class="form-control" disabled>
+    <div class="small text-muted"></div>
+
+    <div id="end-term-wrapper" class="mt-2">
+      <label for="end_term_months">End Term (Months) <span class="small text-muted">- </span></label>
+      <select id="end_term_months" class="form-select" disabled>
+        <option value="1">1 month</option>
+        <option value="2">2 months</option>
+        <option value="3">3 months</option>
+        <option value="4">4 months</option>
+        <option value="5">5 months</option>
+        <option value="6" selected>6 months</option>
+        <option value="9">9 months</option>
+        <option value="12">12 months</option>
+        <option value="18">18 months</option>
+        <option value="24">24 months</option>
+      </select>
+      <div class="small text-muted"></div>
+    </div>
+
+    <!-- Submit Button -->
+    <button type="submit" class="btn btn-success mt-3 w-100">Sell Product</button>
+  </form>
+  <!-- Message Display -->
+  <div id="message" class="text-center mt-3"></div>
+</div>
+
+
+<!-- Assign Success Modal -->
+<div class="modal fade" id="assignSuccessModal" tabindex="-1" aria-labelledby="assignSuccessLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="assignSuccessLabel">Next Steps</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        Product assigned successfully. Choose what to do next:
+      </div>
+      <div class="modal-footer">
+        <a id="profileLink" class="btn btn-outline-primary" href="#">Profile</a>
+        <a id="paymentLink" class="btn btn-primary" href="/payment/add_payment">Add Payment</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+
+<!-- Scripts -->
+<!-- Scripts -->
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const productSelect = document.getElementById('product');
+    const customerSelect = document.getElementById('customer');
+    const customerWrapper = document.getElementById('customer-wrapper');
+    const totalAmount = document.getElementById('totalAmount');
+    const productMeta = document.getElementById('product-meta');
+    const form = document.getElementById('sellForm');
+    const message = document.getElementById('message');
+    const purchaseTypeSelect = document.getElementById('purchase_type');
+    const agentId = document.getElementById('agent_id').value;
+    const isManager = document.body?.dataset?.isManager === "1";
+    const assignButton = form.querySelector('button[type="submit"]');
+    let isSubmitting = false;
+    const modeToggle = document.getElementById('mode-toggle');
+
+    const instantFields = document.getElementById('instant-sale-fields');
+    const instantName = document.getElementById('instant_name');
+    const instantPhone = document.getElementById('instant_phone');
+    const instantLocation = document.getElementById('instant_location');
+    const instantMethod = document.getElementById('instant_method');
+    const purchaseDateInput = document.getElementById('purchase_date');
+    const endTermWrapper = document.getElementById('end-term-wrapper');
+    const endTermSelect = document.getElementById('end_term_months');
+    const productPreview = document.getElementById('product-preview');
+    const productPreviewImg = document.getElementById('product-preview-img');
+    const productPreviewName = document.getElementById('product-preview-name');
+    const productPreviewPrice = document.getElementById('product-preview-price');
+    const productPreviewTerm = document.getElementById('product-preview-term');
+    const productPreviewEndDate = document.getElementById('product-preview-enddate');
+
+    function formatProductOption(option) {
+      if (!option.id) return option.text;
+      const img = option.element?.dataset?.image;
+      const name = option.element?.dataset?.name || option.text;
+      const price = parseFloat(option.element?.dataset?.price || 0);
+      if (!img) return option.text;
+      const span = document.createElement('span');
+      span.innerHTML = `<img src="${img}" alt="" style="width:22px;height:22px;border-radius:4px;object-fit:cover;margin-right:6px;"><span style="margin-right:6px;">${name}</span><span class="text-muted">GHS ${price.toFixed(2)}</span>`;
+      return span;
+    }
+
+    $('#customer').select2({ placeholder: "Search or select a customer", width: '100%' });
+    $('#product').select2({
+      placeholder: "Search or select a product",
+      width: '100%',
+      templateResult: formatProductOption,
+      templateSelection: formatProductOption
+    });
+    const prefillCustomerId = document.body?.dataset?.prefillCustomer || new URLSearchParams(window.location.search).get("customer_id");
+    if (!isManager && prefillCustomerId) {
+      $('#customer').val(prefillCustomerId).trigger('change');
+    }
+    $('#product').on('select2:select select2:clear change', updateTotal);
+    updateTotal();
+
+    const today = new Date().toISOString().split("T")[0];
+    if (purchaseDateInput) {
+      purchaseDateInput.value = today;
+      purchaseDateInput.setAttribute('disabled', 'disabled');
+    }
+    if (endTermWrapper) endTermWrapper.style.display = isManager ? 'none' : 'block';
+    if (!isManager) syncTermFromProduct();
+
+    function updateTotal() {
+      const selected = productSelect.options[productSelect.selectedIndex];
+      if (!selected || !selected.value) {
+        totalAmount.textContent = '0.00';
+        if (productMeta) productMeta.textContent = '';
+        if (productPreview) productPreview.style.display = 'none';
+        return;
+      }
+      syncTermFromProduct();
+      const isInstant = purchaseTypeSelect.value === "Instant Sale";
+      const price = parseFloat(isInstant ? (selected.dataset.cashPrice || selected.dataset.price || 0) : (selected.dataset.price || 0));
+      const availableQty = parseInt(selected.dataset.qty || 0, 10);
+      if (Number.isFinite(availableQty) && availableQty > 0) {
+        if (productMeta) {
+          productMeta.textContent = `Available: ${availableQty} | Unit price: GHS ${price.toFixed(2)}`;
+        }
+      } else {
+        if (productMeta) {
+          productMeta.textContent = 'No stock available';
+        }
+      }
+      totalAmount.textContent = price.toFixed(2);
+
+      if (productPreview && productPreviewImg && productPreviewName && productPreviewPrice) {
+        const img = selected.dataset.image || '';
+        const name = selected.dataset.name || selected.textContent;
+        const priceText = Number.isFinite(price) ? `GHS ${price.toFixed(2)}` : '';
+        if (img) {
+          productPreviewImg.src = img;
+          productPreviewName.textContent = name;
+          productPreviewPrice.textContent = priceText;
+          productPreview.style.display = 'flex';
+        } else {
+          productPreview.style.display = 'none';
+        }
+      }
+      updateSchedulePreview();
+    }
+
+    productSelect.addEventListener('change', updateTotal);
+
+    function syncTermFromProduct() {
+      if (!endTermSelect) return;
+      const selected = productSelect.options[productSelect.selectedIndex];
+      const isInstant = purchaseTypeSelect.value === "Instant Sale";
+      if (isInstant) return;
+      const raw = selected?.dataset?.termMonths;
+      const parsed = parseInt(raw || '0', 10);
+      const value = (parsed && parsed >= 1 && parsed <= 36) ? String(parsed) : '6';
+      endTermSelect.value = value;
+    }
+
+    function updateSchedulePreview() {
+      const isInstant = purchaseTypeSelect.value === "Instant Sale";
+      if (!productPreviewTerm || !productPreviewEndDate) return;
+      if (isInstant) {
+        productPreviewTerm.textContent = '';
+        productPreviewEndDate.textContent = '';
+        return;
+      }
+
+      const months = parseInt(endTermSelect?.value || '0', 10);
+      const purchaseDate = purchaseDateInput?.value;
+      if (!months || months < 1 || !purchaseDate) {
+        productPreviewTerm.textContent = '';
+        productPreviewEndDate.textContent = '';
+        return;
+      }
+
+      const purchaseDateObj = new Date(purchaseDate + 'T00:00:00');
+      const endDateObj = new Date(purchaseDateObj);
+      endDateObj.setMonth(endDateObj.getMonth() + months);
+      const endDateStr = endDateObj.toISOString().split("T")[0];
+      productPreviewTerm.textContent = `Ends in ${months} month${months === 1 ? '' : 's'} -  ${endDateStr}`;
+      productPreviewEndDate.textContent = '';
+    }
+
+    purchaseTypeSelect.addEventListener('change', () => {
+      const isInstant = purchaseTypeSelect.value === "Instant Sale";
+      customerWrapper.classList.toggle('d-none', isInstant);
+      instantFields.classList.toggle('d-none', !isInstant);
+      instantFields.classList.toggle('d-block', isInstant);
+      isInstant ? customerSelect.removeAttribute('required') : customerSelect.setAttribute('required', '');
+      if (endTermWrapper) endTermWrapper.style.display = isInstant ? 'none' : 'block';
+      if (isInstant && endTermSelect) endTermSelect.value = '';
+      if (!isInstant) syncTermFromProduct();
+      updateTotal();
+    });
+
+    if (isManager) {
+      purchaseTypeSelect.value = "Instant Sale";
+      purchaseTypeSelect.setAttribute('disabled', 'disabled');
+    } else {
+      purchaseTypeSelect.value = "Installment";
+    }
+    purchaseTypeSelect.dispatchEvent(new Event("change"));
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (isSubmitting) return;
+      isSubmitting = true;
+      assignButton.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Sending...`;
+      assignButton.disabled = true;
+      message.textContent = '';
+      message.className = '';
+
+      const selectedProduct = productSelect.options[productSelect.selectedIndex];
+      const quantity = 1;
+      const isInstantSale = purchaseTypeSelect.value === "Instant Sale";
+      const price = parseFloat(isInstantSale ? (selectedProduct.dataset.cashPrice || selectedProduct.dataset.price || 0) : (selectedProduct.dataset.price || 0));
+      const total = price * quantity;
+      const purchaseType = purchaseTypeSelect.value;
+      const purchaseDate = purchaseDateInput?.value || new Date().toISOString().split("T")[0];
+      const purchaseDateObj = new Date(purchaseDate);
+
+      const productData = {
+        _id: selectedProduct.value,
+        name: selectedProduct.dataset.name,
+        image_url: selectedProduct.dataset.image,
+        price: price,
+        quantity: quantity,
+        total: total
+      };
+
+      const bodyData = {
+        agent_id: agentId,
+        product: productData,
+        purchase_type: purchaseType,
+        purchase_date: purchaseDate
+      };
+
+      if (purchaseType === "Instant Sale") {
+        bodyData.customer_name = instantName.value.trim();
+        bodyData.customer_phone = instantPhone.value.trim();
+        bodyData.customer_location = instantLocation.value.trim();
+        bodyData.payment_method = instantMethod.value;
+      } else {
+        bodyData.customer_id = customerSelect.value;
+        let months = parseInt(endTermSelect?.value || '0', 10);
+        if (!months || months < 1) {
+          months = 6;
+        }
+        if (months > 36) {
+          message.className = 'text-danger';
+          message.innerText = 'Please select a valid end term in months.';
+          assignButton.innerHTML = `Assign Product`;
+          assignButton.disabled = false;
+          isSubmitting = false;
+          return;
+        }
+        const endDateObj = new Date(purchaseDateObj);
+        endDateObj.setMonth(endDateObj.getMonth() + months);
+        bodyData.end_date = endDateObj.toISOString().split("T")[0];
+        bodyData.end_term_months = months;
+      }
+
+      try {
+        const res = await fetch('/sell/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(bodyData)
+        });
+
+        const result = await res.json();
+
+        if (res.ok) {
+          if (result.redirect_url) {
+            window.location.href = result.redirect_url;
+            return;
+          }
+          message.className = 'text-success';
+          message.innerText = result.message || 'Product assigned successfully!';
+          if (result.profile_url) {
+            const profileLink = document.getElementById('profileLink');
+            const paymentLink = document.getElementById('paymentLink');
+            if (profileLink) profileLink.href = result.profile_url;
+            if (paymentLink && result.payment_url) paymentLink.href = result.payment_url;
+            const modal = new bootstrap.Modal(document.getElementById('assignSuccessModal'));
+            modal.show();
+          }
+          form.reset();
+          if (purchaseDateInput) purchaseDateInput.value = today;
+          $('#customer').val('').trigger('change');
+          $('#product').val('').trigger('change');
+          updateTotal();
+          instantFields.classList.add('d-none');
+          instantFields.classList.remove('d-block');
+          customerWrapper.classList.remove('d-none');
+          if (endTermSelect) endTermSelect.value = isManager ? '' : '6';
+          updateSchedulePreview();
+        } else {
+          message.className = 'text-danger';
+          message.innerText = result.error || 'Something went wrong.';
+        }
+      } catch (error) {
+        message.className = 'text-danger';
+        message.innerText = "An error occurred. Please try again.";
+        console.error(error);
+      }
+
+      assignButton.innerHTML = `Assign Product`;
+      assignButton.disabled = false;
+      isSubmitting = false;
+    });
+
+    modeToggle?.addEventListener('click', () => {
+      document.body.classList.toggle('dark');
+      modeToggle.textContent = document.body.classList.contains('dark') ? 'Light' : 'Dark';
+    });
+
+    purchaseDateInput?.addEventListener('change', updateSchedulePreview);
+    endTermSelect?.addEventListener('change', updateSchedulePreview);
+  });
+</script>
+<!-- Bootstrap JS -->
+<script>
+  window.cbConfig = {
+    chatId: "acac0de2-5c91-4eae-9354-1376e3093d91"
+  };
+</script>
+<script src="https://app.chatbit.co/embed.min.js" defer></script>
+{% include 'app_footer.html' %}
+
+</body>
+</html>

@@ -1,0 +1,1063 @@
+<!DOCTYPE html><html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ customer.name }}'s Profile</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <link rel="icon" type="image/png" href="https://res.cloudinary.com/dljpgzbto/image/upload/v1743993646/company-logo_dksb23.jpg">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <style>
+    :root{
+      --brand:#0d6efd; --bg:#f7f8fa; --card:#ffffff; --text:#111827; --muted:#6b7280; --border:#e5e7eb;
+      --shadow: 0 12px 30px rgba(15, 23, 42, 0.08); --radius:16px;
+    }
+    body{ font-family: "Segoe UI", system-ui, -apple-system, sans-serif; background:var(--bg); color:var(--text); }
+    .container-xxl{ max-width: 1200px; }
+    .card{ border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow); }
+    .muted{ color:var(--muted); }
+    .navbar{ background:#fff; border-bottom:1px solid var(--border); }
+    .navbar .nav-link{ color:var(--muted); }
+    .navbar .nav-link:hover{ color:var(--text); }
+
+    .profile-header{ padding:20px; }
+    .avatar-wrap{ position:relative; width:92px; height:92px; }
+    .avatar{ width:92px; height:92px; border-radius:50%; object-fit:cover; border:2px solid #fff; box-shadow:0 6px 16px rgba(15,23,42,0.15); }
+     .avatar-fallback{
+      width:92px; height:92px; border-radius:50%;
+      display:flex; align-items:center; justify-content:center;
+      background:linear-gradient(135deg, #e0ecff, #f7f9ff);
+      color:#1f4fd1; font-weight:700; font-size:1.1rem;
+      border:2px solid #fff; box-shadow:0 6px 16px rgba(15,23,42,0.15);
+      text-transform:uppercase; letter-spacing:0.06em;
+    }
+    .avatar-badge{
+      position:absolute; right:-2px; bottom:-2px; width:28px; height:28px; border-radius:50%;
+      background:var(--brand); color:#fff; display:flex; align-items:center; justify-content:center;
+      border:2px solid #fff; font-size:0.8rem;
+    }
+    .profile-actions .btn{ border-radius:999px; }
+
+    .stat-tile{ padding:16px; border-radius:14px; background:#fff; border:1px solid var(--border); }
+    .stat-icon{ width:36px; height:36px; border-radius:10px; display:flex; align-items:center; justify-content:center; }
+    .stat-value{ font-size:1.2rem; font-weight:700; }
+
+    .nav-pills .nav-link{ border-radius:999px; color:var(--muted); }
+    .nav-pills .nav-link.active{ background:var(--brand); color:#fff; }
+    .tab-pane{ animation: fadeInUp .25s ease; }
+    @keyframes fadeInUp{ from{ opacity:0; transform:translateY(6px);} to{ opacity:1; transform:none; } }
+
+    .detail-grid{ display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap:16px; }
+    .detail-item{ padding:12px 14px; border-radius:12px; background:#fbfbfc; border:1px solid var(--border); }
+    .detail-item small{ color:var(--muted); display:block; }
+
+    .stepper{ display:flex; gap:12px; flex-wrap:wrap; }
+    .step{ padding:10px 14px; border-radius:12px; border:1px solid var(--border); background:#fff; }
+    .step.current{ border-color:var(--brand); box-shadow:0 0 0 3px rgba(13,110,253,0.12); }
+    .step.completed{ background:#eef7ff; border-color:#cfe2ff; }
+    .step .btn{ border-radius:999px; }
+
+    .table-wrap{ max-height:420px; overflow:auto; border-radius:14px; border:1px solid var(--border); }
+    .table thead th{ position:sticky; top:0; background:#f9fafb; z-index:1; }
+    .table td, .table th{ vertical-align:middle; }
+    .filter-row input, .filter-row select{ border-radius:10px; }
+
+    .product-card{ border:1px solid var(--border); border-radius:14px; padding:16px; background:#fff; }
+    .product-thumb{ width:84px; height:84px; border-radius:12px; object-fit:cover; background:#f1f5f9; }
+    .product-meta{ display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap:8px 16px; }
+    .product-meta small{ color:var(--muted); display:block; }
+    .progress{ height:6px; border-radius:999px; }
+    .progress-bar{ border-radius:999px; }
+
+    #map{ height:280px; border-radius:14px; border:1px solid var(--border); }
+
+    @media (max-width: 768px){
+      .detail-grid{ grid-template-columns: 1fr; }
+      .product-meta{ grid-template-columns: 1fr; }
+      .profile-actions{ flex-direction:column; align-items:stretch; }
+    }
+
+    /* Undelivered modal UX + loaders */
+    .modal-content{
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+    .modal-body{
+      flex: 1 1 auto;
+      overflow: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    .modal-header,
+    .modal-footer{
+      position: sticky;
+      background: #fff;
+      z-index: 2;
+    }
+    .modal-header{ top: 0; }
+    .modal-footer{ bottom: 0; }
+    .saving-overlay{
+      position: absolute;
+      inset: 0;
+      background: rgba(255,255,255,.75);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      z-index: 3;
+    }
+    .page-loader{
+      position: fixed;
+      inset: 0;
+      background: rgba(255,255,255,.75);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      z-index: 2000;
+    }
+  </style>
+</head>
+<body>
+
+<nav class="navbar navbar-expand-lg px-3 py-2">
+  <div class="container-xxl">
+    <a class="navbar-brand d-flex align-items-center" href="#">
+      <img src="https://res.cloudinary.com/dljpgzbto/image/upload/v1743993646/company-logo_dksb23.jpg"
+           alt="Logo" style="width: 40px; height: 40px; border-radius: 50%;">
+      <span class="ms-2">SMART LIVING</span>
+    </a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
+      <button class="btn btn-outline-secondary btn-sm" type="button" onclick="history.back()">
+        <i class="bi bi-arrow-left me-1"></i> Back
+      </button>
+    </div>
+  </div>
+</nav>
+
+<div class="container-xxl py-4">
+  <div class="card profile-header mb-4">
+    <div class="row align-items-center g-3">
+      <div class="col-12 col-md-auto">
+        <label for="profile-image-input" class="d-inline-block" style="cursor:pointer;">
+          <span class="avatar-wrap">
+            {% if customer.image_url %}
+              <img id="profile-image" class="avatar"
+                src="{{ customer.image_url }}"
+                alt="{{ customer.name }}">
+            {% else %}
+              {% set parts = (customer.name or "").split() %}
+              {% set initials = ((parts[0][0] if parts|length > 0 and parts[0] else "") ~ (parts[1][0] if parts|length > 1 and parts[1] else "")) %}
+              <div id="profile-image" class="avatar-fallback">{{ initials or "NA" }}</div>
+            {% endif %}
+           <span class="avatar-badge"><i class="bi bi-camera"></i></span>
+          </span>
+        </label>
+        <input type="file" id="profile-image-input" accept="image/*" style="display: none;">
+        <small id="image-upload-status" class="text-muted d-block mt-2"></small>
+      </div>
+      <div class="col-12 col-md">
+        <div class="d-flex flex-column gap-1">
+          <h3 id="customerName" class="mb-0">{{ customer.name }}</h3>
+          <div id="customerPhone" class="muted">{{ customer.phone_number }}</div>
+          <div id="customerLocationOccupation" class="muted">{{ customer.location or "N/A" }} - {{ customer.occupation or "N/A" }}</div>
+        </div>
+      </div>
+      <div class="col-12 col-md-auto">
+        <div class="d-flex gap-2 profile-actions">
+          <a href="/payment/add_payment" class="btn btn-primary">
+            <i class="bi bi-cash-coin me-1"></i> Add Payment
+          </a>
+          <button id="generate-location-btn" class="btn btn-outline-primary" onclick="updateCustomerLocation()">
+            <i class="bi bi-geo-alt me-1"></i> Generate Location
+          </button>
+          {% if session.get('agent_id') or session.get('manager_id') %}
+            <button class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#editCustomerModal">
+              <i class="bi bi-pencil-square me-1"></i> Edit Customer
+            </button>
+            <button class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#changeHistoryModal">
+              <i class="bi bi-clock-history me-1"></i> Change History
+            </button>
+          {% endif %}
+          {% if customer.coordinates %}
+            <a class="btn btn-outline-secondary" target="_blank"
+               href="https://www.google.com/maps?q={{ customer.coordinates.latitude }},{{ customer.coordinates.longitude }}">
+              <i class="bi bi-map me-1"></i> View Map
+            </a>
+          {% endif %}
+        </div>
+        <div id="location-status" class="small muted mt-2"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="pageAlerts" class="mb-3">
+    {% with msgs = get_flashed_messages(with_categories=true) %}
+      {% if msgs %}
+        {% for category, message in msgs %}
+          <div class="alert alert-{{ 'success' if category in ['success'] else 'danger' if category in ['danger','error'] else 'warning' if category in ['warning'] else 'info' }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+          </div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+  </div>
+  <div class="row g-3 mb-4">
+    <div class="col-12 col-md-6 col-lg-4">
+      <div class="stat-tile">
+        <div class="d-flex align-items-center gap-3">
+          <div class="stat-icon bg-danger-subtle text-danger"><i class="bi bi-graph-down-arrow"></i></div>
+          <div>
+            <div class="muted small">Product Total Debt</div>
+            <div class="stat-value">GHS {{ "{:,.2f}".format(total_debt or 0) }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-md-6 col-lg-4">
+      <div class="stat-tile">
+        <div class="d-flex align-items-center gap-3">
+          <div class="stat-icon bg-success-subtle text-success"><i class="bi bi-check2-circle"></i></div>
+          <div>
+            <div class="muted small">Product Amount Paid</div>
+            <div class="stat-value">GHS {{ "{:,.2f}".format(total_paid or 0) }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-md-6 col-lg-4">
+      <div class="stat-tile">
+        <div class="d-flex align-items-center gap-3">
+          <div class="stat-icon bg-warning-subtle text-warning"><i class="bi bi-hourglass-split"></i></div>
+          <div>
+            <div class="muted small">Product Amount Left</div>
+            <div class="stat-value">GHS {{ "{:,.2f}".format(amount_left or 0) }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-md-6 col-lg-4">
+      <div class="stat-tile">
+        <div class="d-flex align-items-center gap-3">
+          <div class="stat-icon bg-primary-subtle text-primary"><i class="bi bi-piggy-bank"></i></div>
+          <div>
+            <div class="muted small">SUSU Total</div>
+            <div class="stat-value">GHS {{ "{:,.2f}".format(susu_total or 0) }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-md-6 col-lg-4">
+      <div class="stat-tile">
+        <div class="d-flex align-items-center gap-3">
+          <div class="stat-icon bg-info-subtle text-info"><i class="bi bi-cash-stack"></i></div>
+          <div>
+            <div class="muted small">SUSU Withdrawn</div>
+            <div class="stat-value">GHS {{ "{:,.2f}".format(susu_withdrawn or 0) }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-md-6 col-lg-4">
+      <div class="stat-tile">
+        <div class="d-flex align-items-center gap-3">
+          <div class="stat-icon bg-success-subtle text-success"><i class="bi bi-wallet2"></i></div>
+          <div>
+            <div class="muted small">SUSU Amount Left</div>
+            <div class="stat-value">GHS {{ "{:,.2f}".format(susu_left or 0) }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <ul class="nav nav-pills gap-2 mb-3" id="profileTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+      <button class="nav-link active" id="info-tab" data-bs-toggle="pill" data-bs-target="#tab-info" type="button" role="tab">Info</button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="payments-tab" data-bs-toggle="pill" data-bs-target="#tab-payments" type="button" role="tab">Payment History</button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="withdrawals-tab" data-bs-toggle="pill" data-bs-target="#tab-withdrawals" type="button" role="tab">Withdrawal History</button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="products-tab" data-bs-toggle="pill" data-bs-target="#tab-products" type="button" role="tab">Products</button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="susu-tab" data-bs-toggle="pill" data-bs-target="#tab-susu" type="button" role="tab">SUSU</button>
+    </li>
+    {% if has_penalties %}
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="penalties-tab" data-bs-toggle="pill" data-bs-target="#tab-penalties" type="button" role="tab">Penalties</button>
+    </li>
+    {% endif %}
+  </ul>
+
+  <div class="tab-content">
+    <div class="tab-pane fade show active" id="tab-info" role="tabpanel" aria-labelledby="info-tab">
+      <div class="card p-3 mb-3">
+        <div class="detail-grid">
+          <div class="detail-item">
+            <small>Location</small>
+            <div id="customerLocation">{{ customer.location or "N/A" }}</div>
+          </div>
+          <div class="detail-item">
+            <small>Occupation</small>
+            <div id="customerOccupation">{{ customer.occupation or "N/A" }}</div>
+          </div>
+          <div class="detail-item">
+            <small>Phone</small>
+            <div id="customerPhoneDetail">{{ customer.phone_number }}</div>
+          </div>
+          <div class="detail-item">
+            <small>Agent / Branch</small>
+            <div>
+              {{ customer.agent_name or "Unassigned" }}
+              {% if customer.agent_branch %}-  {{ customer.agent_branch }}{% endif %}
+            </div>
+          </div>
+          <div class="detail-item">
+            <small>Comment</small>
+            <div id="customerComment">{{ customer.comment or "N/A" }}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card p-3 mb-3">
+        <h5 class="mb-3">Status Progress</h5>
+        {% if customer.status == "closed" %}
+          <span class="badge bg-danger">Closed</span>
+        {% else %}
+          {% set steps = ["payment_ongoing", "completed", "approved", "packaging", "delivering", "delivered"] %}
+          {% set current_index = steps.index(customer.status) if customer.status in steps else -1 %}
+          <div class="stepper">
+            {% for step in steps %}
+              {% set cls = "step" %}
+              {% if step == customer.status %}
+                {% set cls = "step current" %}
+              {% elif steps.index(step) < current_index %}
+                {% set cls = "step completed" %}
+              {% endif %}
+              <div class="{{ cls }}">
+                <div class="fw-semibold">{{ step.replace('_', ' ') | capitalize }}</div>
+                {% if customer.status == "approved" and step == "approved" %}
+                  <form class="mt-2" method="POST" action="{{ url_for('view.agent_update_status', customer_id=customer._id, next_status='packaging') }}">
+                    <button type="submit" class="btn btn-sm btn-outline-primary">Start Packaging</button>
+                  </form>
+                {% elif customer.status == "packaging" and step == "packaging" %}
+                  <form class="mt-2" method="POST" action="{{ url_for('view.agent_update_status', customer_id=customer._id, next_status='delivering') }}">
+                    <button type="submit" class="btn btn-sm btn-outline-primary">Start Delivery</button>
+                  </form>
+                {% elif customer.status == "delivering" and step == "delivering" %}
+                  <form class="mt-2" method="POST" action="{{ url_for('view.agent_update_status', customer_id=customer._id, next_status='delivered') }}">
+                    <button type="submit" class="btn btn-sm btn-outline-primary">Mark Delivered</button>
+                  </form>
+                {% endif %}
+              </div>
+            {% endfor %}
+          </div>
+        {% endif %}
+      </div>
+
+      {% if customer.coordinates %}
+      <div class="accordion" id="mapAccordion">
+        <div class="accordion-item border-0">
+          <h2 class="accordion-header">
+            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#mapCollapse">
+              Customer Location Map
+            </button>
+          </h2>
+          <div id="mapCollapse" class="accordion-collapse collapse" data-bs-parent="#mapAccordion">
+            <div class="accordion-body">
+              <div id="map"
+                   data-lat="{{ customer.coordinates.latitude }}"
+                   data-lon="{{ customer.coordinates.longitude }}">
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="tab-pane fade" id="tab-payments" role="tabpanel" aria-labelledby="payments-tab" data-url="{{ url_for('view.customer_tab_payments', customer_id=customer._id) }}">
+      <div class="tab-loader text-center py-5">
+        <div class="spinner-border text-primary" role="status"></div>
+        <div class="small muted mt-2">Loading...</div>
+      </div>
+    </div>
+
+    <div class="tab-pane fade" id="tab-withdrawals" role="tabpanel" aria-labelledby="withdrawals-tab" data-url="{{ url_for('view.customer_tab_withdrawals', customer_id=customer._id) }}">
+      <div class="tab-loader text-center py-5">
+        <div class="spinner-border text-primary" role="status"></div>
+        <div class="small muted mt-2">Loading...</div>
+      </div>
+    </div>
+
+    <div class="tab-pane fade" id="tab-products" role="tabpanel" aria-labelledby="products-tab" data-url="{{ url_for('view.customer_tab_products', customer_id=customer._id) }}">
+      <div class="tab-loader text-center py-5">
+        <div class="spinner-border text-primary" role="status"></div>
+        <div class="small muted mt-2">Loading...</div>
+      </div>
+    </div>
+
+    <div class="tab-pane fade" id="tab-susu" role="tabpanel" aria-labelledby="susu-tab" data-url="{{ url_for('view.customer_tab_susu', customer_id=customer._id) }}">
+      <div class="tab-loader text-center py-5">
+        <div class="spinner-border text-primary" role="status"></div>
+        <div class="small muted mt-2">Loading...</div>
+      </div>
+    </div>
+
+    {% if has_penalties %}
+    <div class="tab-pane fade" id="tab-penalties" role="tabpanel" aria-labelledby="penalties-tab" data-url="{{ url_for('view.customer_tab_penalties', customer_id=customer._id) }}">
+      <div class="tab-loader text-center py-5">
+        <div class="spinner-border text-primary" role="status"></div>
+        <div class="small muted mt-2">Loading...</div>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+{% if session.get('agent_id') or session.get('manager_id') %}
+<!-- Edit Customer Modal -->
+<div class="modal fade" id="editCustomerModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+      <form id="editCustomerForm" data-update-url="{{ url_for('view.update_customer_details', customer_id=customer._id) }}">
+        <div class="modal-header">
+          <h5 class="modal-title">Edit Customer</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div id="editCustomerError" class="alert alert-danger d-none"></div>
+          <div class="row g-3">
+            <div class="col-12 col-md-6">
+              <label class="form-label">Name</label>
+              <input type="text" class="form-control" name="name" value="{{ customer.name or '' }}">
+            </div>
+            <div class="col-12 col-md-6">
+              <label class="form-label">Phone Number</label>
+              <input type="text" class="form-control" name="phone_number" value="{{ customer.phone_number or '' }}">
+            </div>
+            <div class="col-12 col-md-6">
+              <label class="form-label">Location</label>
+              <input type="text" class="form-control" name="location" value="{{ customer.location or '' }}">
+            </div>
+            <div class="col-12 col-md-6">
+              <label class="form-label">Occupation</label>
+              <input type="text" class="form-control" name="occupation" value="{{ customer.occupation or '' }}">
+            </div>
+            <div class="col-12">
+              <label class="form-label">Comment</label>
+              <textarea class="form-control" name="comment" rows="3">{{ customer.comment or '' }}</textarea>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">
+            <span class="spinner-border spinner-border-sm me-1 d-none" aria-hidden="true"></span>
+            Save Changes
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Change History Modal -->
+<div class="modal fade" id="changeHistoryModal" tabindex="-1" aria-hidden="true"
+     data-history-url="{{ url_for('view.get_customer_change_history', customer_id=customer._id) }}">
+  <div class="modal-dialog modal-xl modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Change History</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div id="changeHistoryLoading" class="text-center py-3 d-none">
+          <div class="spinner-border text-primary" role="status"></div>
+          <div class="mt-2 small">Loading history...</div>
+        </div>
+        <div id="changeHistoryEmpty" class="text-muted d-none">No changes recorded yet.</div>
+        <div class="table-wrap">
+          <table class="table table-sm mb-0">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Role</th>
+                <th>Field</th>
+                <th>Old Value</th>
+                <th>New Value</th>
+              </tr>
+            </thead>
+            <tbody id="changeHistoryBody"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+  let mapInstance = null;
+  let mapInitialized = false;
+
+  function initMap(){
+    const mapEl = document.getElementById("map");
+    if (!mapEl || mapInitialized) return;
+    const lat = parseFloat(mapEl.dataset.lat);
+    const lon = parseFloat(mapEl.dataset.lon);
+    if (Number.isNaN(lat) || Number.isNaN(lon)) return;
+    mapInstance = L.map('map').setView([lat, lon], 15);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19, attribution: '(c) OpenStreetMap contributors'
+   }).addTo(mapInstance);
+    const popupContent = `<a href="https://www.google.com/maps?q=${lat},${lon}" target="_blank" style="text-decoration:none; color:#0d6efd; font-weight:600;">Open in Google Maps</a>`;
+    L.marker([lat, lon]).addTo(mapInstance).bindPopup(popupContent).openPopup();
+    mapInitialized = true;
+  }
+
+  const pageAlerts = document.getElementById('pageAlerts');
+  const showPageAlert = (message, type) => {
+    if (!pageAlerts) return;
+    const wrapper = document.createElement('div');
+    wrapper.className = `alert alert-${type} alert-dismissible fade show`;
+    wrapper.role = 'alert';
+    wrapper.textContent = message;
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'btn-close';
+    btn.setAttribute('data-bs-dismiss', 'alert');
+    wrapper.appendChild(btn);
+    pageAlerts.appendChild(wrapper);
+    setTimeout(() => { wrapper.remove(); }, 4000);
+  };
+
+  function initProgressBars(scope){
+    scope.querySelectorAll('.progress-bar[data-progress]').forEach(bar => {
+      const progress = parseInt(bar.getAttribute('data-progress'), 10) || 0;
+      bar.style.width = Math.min(100, Math.max(0, progress)) + '%';
+    });
+  }
+
+  function bindPaymentFilters(scope){
+    const payFilterDate = scope.querySelector('#payFilterDate');
+    const payFilterMethod = scope.querySelector('#payFilterMethod');
+    const payFilterType = scope.querySelector('#payFilterType');
+    const paymentsBody = scope.querySelector('#paymentsBody');
+    if (!paymentsBody) return;
+
+    function filterTable(body, filters){
+      const rows = body.querySelectorAll('tr');
+      rows.forEach(row => {
+        if (row.children.length < 2) return;
+        let visible = true;
+        filters.forEach(f => {
+          const val = (row.getAttribute(f.key) || '').toLowerCase();
+          const q = (f.input.value || '').trim().toLowerCase();
+          if (q && !val.includes(q)) visible = false;
+        });
+        row.style.display = visible ? '' : 'none';
+      });
+    }
+
+    [payFilterDate, payFilterMethod, payFilterType].forEach(inp => {
+      if (!inp) return;
+      inp.addEventListener('input', () => {
+        filterTable(paymentsBody, [
+          { key: 'data-date', input: payFilterDate },
+          { key: 'data-method', input: payFilterMethod },
+          { key: 'data-type', input: payFilterType }
+        ]);
+      });
+    });
+  }
+
+  function bindWithdrawalFilters(scope){
+    const withFilterDate = scope.querySelector('#withFilterDate');
+    const withFilterMethod = scope.querySelector('#withFilterMethod');
+    const withFilterNote = scope.querySelector('#withFilterNote');
+    const withdrawalsBody = scope.querySelector('#withdrawalsBody');
+    if (!withdrawalsBody) return;
+
+    function filterTable(body, filters){
+      const rows = body.querySelectorAll('tr');
+      rows.forEach(row => {
+        if (row.children.length < 2) return;
+        let visible = true;
+        filters.forEach(f => {
+          const val = (row.getAttribute(f.key) || '').toLowerCase();
+          const q = (f.input.value || '').trim().toLowerCase();
+          if (q && !val.includes(q)) visible = false;
+        });
+        row.style.display = visible ? '' : 'none';
+      });
+    }
+
+    [withFilterDate, withFilterMethod, withFilterNote].forEach(inp => {
+      if (!inp) return;
+      inp.addEventListener('input', () => {
+        filterTable(withdrawalsBody, [
+          { key: 'data-date', input: withFilterDate },
+          { key: 'data-method', input: withFilterMethod },
+          { key: 'data-note', input: withFilterNote }
+        ]);
+      });
+    });
+  }
+
+  function bindPackagingForms(scope){
+    scope.querySelectorAll('form[data-packaging-form="1"]').forEach(form => {
+      if (form.dataset.packagingBound) return;
+      form.dataset.packagingBound = '1';
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const ok = confirm('Submit this product for packaging?');
+        if (!ok) return;
+
+        const loader = document.getElementById('pageLoader');
+        const btn = form.querySelector('button[type="submit"]');
+        if (btn) btn.disabled = true;
+        loader?.classList.remove('d-none');
+
+        try {
+          const res = await fetch(form.action, {
+            method: 'POST',
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            body: new FormData(form)
+          });
+          const data = await res.json();
+          if (!res.ok || !data.ok) {
+            throw new Error(data.message || 'Failed to submit for packaging.');
+          }
+          if (btn) {
+            btn.textContent = 'Submitted';
+            btn.classList.remove('btn-success');
+            btn.classList.add('btn-outline-success');
+            btn.disabled = true;
+          }
+          const card = form.closest('.product-card');
+          const statusBadge = card?.querySelector('[data-status-badge="1"]');
+          if (statusBadge) {
+            statusBadge.textContent = 'Submitted';
+            statusBadge.className = 'badge bg-info text-dark';
+          }
+          showPageAlert(data.message || 'Submitted for packaging.', 'success');
+          if (data.outflow_written === false) {
+            showPageAlert('Submitted, but inventory outflow audit failed - check server logs.', 'warning');
+          }
+        } catch (err) {
+          if (btn) btn.disabled = false;
+          showPageAlert(err.message || 'Failed to submit for packaging.', 'danger');
+        } finally {
+          loader?.classList.add('d-none');
+        }
+      });
+    });
+  }
+
+  function addManualRow(container) {
+    const row = document.createElement('div');
+    row.className = 'd-flex gap-2 mb-2 manual-row';
+    row.innerHTML = `
+      <input type="text" class="form-control manual-name" placeholder="Item name">
+      <input type="number" class="form-control manual-qty" style="max-width:140px" min="1" value="1">
+      <button type="button" class="btn btn-outline-danger btn-sm remove-manual">Remove</button>
+    `;
+    container.appendChild(row);
+    row.querySelector('.remove-manual').addEventListener('click', () => row.remove());
+  }
+
+  function bindUndeliveredForms(scope){
+    scope.querySelectorAll('.undelivered-form').forEach(form => {
+      if (form.dataset.undeliveredBound) return;
+      form.dataset.undeliveredBound = '1';
+      const manualWrap = form.querySelector('.manual-items');
+      form.querySelector('.add-manual')?.addEventListener('click', () => addManualRow(manualWrap));
+
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const modalEl = form.closest('.modal');
+        const overlay = modalEl?.querySelector('.saving-overlay');
+        const submitBtn = form.querySelector('button[type="submit"]');
+        const spinner = submitBtn.querySelector('.spinner-border');
+        const errorBox = form.querySelector('.form-error');
+        const expectedDate = form.querySelector('.expected-date').value;
+        const note = form.querySelector('.note').value;
+        const controls = form.querySelectorAll('input,select,textarea,button');
+        let success = false;
+
+        errorBox.classList.add('d-none');
+        if (!expectedDate) {
+          errorBox.textContent = 'Expected delivery date is required.';
+          errorBox.classList.remove('d-none');
+          return;
+        }
+        controls.forEach(el => el.disabled = true);
+        spinner.classList.remove('d-none');
+        overlay?.classList.remove('d-none');
+
+        const components = [];
+        form.querySelectorAll('.undelivered-check').forEach(chk => {
+          if (!chk.checked) return;
+          const row = chk.closest('.list-group-item');
+          const qtyInput = row?.querySelector('.undelivered-qty');
+          const requiredQty = parseInt(chk.getAttribute('data-required') || '0', 10);
+          const undeliveredQty = parseInt(qtyInput?.value || requiredQty || '0', 10);
+          components.push({
+            inventory_id: chk.getAttribute('data-id'),
+            name: chk.getAttribute('data-name'),
+            image_url: chk.getAttribute('data-image'),
+            required_qty: requiredQty,
+            undelivered_qty: undeliveredQty
+          });
+        });
+
+        const manual_items = [];
+        form.querySelectorAll('.manual-row').forEach(row => {
+          const name = row.querySelector('.manual-name')?.value?.trim();
+          const qty = parseInt(row.querySelector('.manual-qty')?.value || '0', 10);
+          if (name && qty > 0) {
+            manual_items.push({ name: name, undelivered_qty: qty });
+          }
+        });
+
+        try {
+          const res = await fetch(form.dataset.url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              expected_delivery_date: expectedDate,
+              note: note,
+              components: components,
+              manual_items: manual_items
+            })
+          });
+          const data = await res.json();
+          if (!data.ok) throw new Error(data.message || 'Failed to save.');
+          success = true;
+          if (modalEl) {
+            const instance = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+            modalEl.addEventListener('hidden.bs.modal', () => {
+              overlay?.classList.add('d-none');
+              location.reload();
+            }, { once: true });
+            instance.hide();
+          } else {
+            location.reload();
+          }
+        } catch (err) {
+          errorBox.textContent = err.message || 'Failed to save.';
+          errorBox.classList.remove('d-none');
+        } finally {
+          if (!success) {
+            controls.forEach(el => el.disabled = false);
+            overlay?.classList.add('d-none');
+            spinner.classList.add('d-none');
+          }
+        }
+      });
+    });
+  }
+
+  function initProductsTab(scope){
+    initProgressBars(scope);
+    bindPackagingForms(scope);
+    bindUndeliveredForms(scope);
+  }
+
+  async function loadTabContent(pane){
+    const url = pane?.dataset?.url;
+    if (!url || pane.dataset.loaded === '1' || pane.dataset.loading === '1') return;
+    pane.dataset.loading = '1';
+    try {
+      const res = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+      if (!res.ok) {
+        throw new Error('Failed to load tab.');
+      }
+      const html = await res.text();
+      pane.innerHTML = html;
+      pane.dataset.loaded = '1';
+      if (pane.id === 'tab-payments') {
+        bindPaymentFilters(pane);
+      } else if (pane.id === 'tab-withdrawals') {
+        bindWithdrawalFilters(pane);
+      } else if (pane.id === 'tab-products') {
+        initProductsTab(pane);
+      } else if (pane.id === 'tab-susu') {
+        // no extra bindings
+      } else if (pane.id === 'tab-penalties') {
+        // no extra bindings
+      }
+    } catch (err) {
+      pane.innerHTML = `<div class="alert alert-danger mb-0">${err.message || 'Failed to load tab.'}</div>`;
+    } finally {
+      pane.dataset.loading = '0';
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    initProgressBars(document);
+
+    const mapCollapse = document.getElementById('mapCollapse');
+    if (mapCollapse) {
+      mapCollapse.addEventListener('shown.bs.collapse', () => {
+        initMap();
+        setTimeout(() => { if (mapInstance) mapInstance.invalidateSize(); }, 200);
+      });
+    }
+    const infoTab = document.getElementById('info-tab');
+    if (infoTab) {
+      infoTab.addEventListener('shown.bs.tab', () => {
+        if (mapInstance) mapInstance.invalidateSize();
+      });
+    }
+
+    document.querySelectorAll('#profileTabs button[data-bs-toggle="pill"]').forEach(btn => {
+      btn.addEventListener('shown.bs.tab', (event) => {
+        const target = event.target.getAttribute('data-bs-target');
+        if (!target) return;
+        const pane = document.querySelector(target);
+        loadTabContent(pane);
+      });
+    });
+
+    const editForm = document.getElementById('editCustomerForm');
+    if (editForm) {
+      editForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const submitBtn = editForm.querySelector('button[type="submit"]');
+        const spinner = submitBtn?.querySelector('.spinner-border');
+        const errorEl = document.getElementById('editCustomerError');
+        const controls = editForm.querySelectorAll('input, textarea, button');
+        errorEl?.classList.add('d-none');
+        controls.forEach(el => { el.disabled = true; });
+        spinner?.classList.remove('d-none');
+
+        const payload = {};
+        editForm.querySelectorAll('input[name], textarea[name]').forEach(input => {
+          payload[input.name] = input.value.trim();
+        });
+
+        try {
+          const res = await fetch(editForm.dataset.updateUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          const data = await res.json();
+          if (!data.ok) throw new Error(data.message || 'Failed to update customer.');
+
+          const safeText = (value) => (value && value.length > 0 ? value : 'N/A');
+          const nameVal = payload.name || '';
+          const phoneVal = payload.phone_number || '';
+          const locationVal = payload.location || '';
+          const occupationVal = payload.occupation || '';
+          const commentVal = payload.comment || '';
+
+          const nameEl = document.getElementById('customerName');
+          const phoneEl = document.getElementById('customerPhone');
+          const phoneDetailEl = document.getElementById('customerPhoneDetail');
+          const locEl = document.getElementById('customerLocation');
+          const occEl = document.getElementById('customerOccupation');
+          const locOccEl = document.getElementById('customerLocationOccupation');
+          const commentEl = document.getElementById('customerComment');
+
+          if (nameEl) nameEl.textContent = nameVal;
+          if (phoneEl) phoneEl.textContent = phoneVal;
+          if (phoneDetailEl) phoneDetailEl.textContent = phoneVal;
+          if (locEl) locEl.textContent = safeText(locationVal);
+          if (occEl) occEl.textContent = safeText(occupationVal);
+          if (locOccEl) locOccEl.textContent = `${safeText(locationVal)} - ${safeText(occupationVal)}`;
+          if (commentEl) commentEl.textContent = safeText(commentVal);
+
+          const modalEl = document.getElementById('editCustomerModal');
+          if (modalEl) {
+            const instance = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+            instance.hide();
+          }
+          showPageAlert('Customer updated successfully.', 'success');
+        } catch (err) {
+          if (errorEl) {
+            errorEl.textContent = err.message || 'Failed to update customer.';
+            errorEl.classList.remove('d-none');
+          }
+        } finally {
+          spinner?.classList.add('d-none');
+          controls.forEach(el => { el.disabled = false; });
+        }
+      });
+    }
+
+    const historyModal = document.getElementById('changeHistoryModal');
+    if (historyModal) {
+      historyModal.addEventListener('show.bs.modal', async () => {
+        const bodyEl = document.getElementById('changeHistoryBody');
+        const emptyEl = document.getElementById('changeHistoryEmpty');
+        const loadingEl = document.getElementById('changeHistoryLoading');
+        if (bodyEl) bodyEl.innerHTML = '';
+        emptyEl?.classList.add('d-none');
+        loadingEl?.classList.remove('d-none');
+
+        try {
+          const res = await fetch(historyModal.dataset.historyUrl);
+          const data = await res.json();
+          if (!data.ok) throw new Error(data.message || 'Failed to load history.');
+
+          const items = data.history || [];
+          if (!items.length) {
+            emptyEl?.classList.remove('d-none');
+            return;
+          }
+
+          const fragment = document.createDocumentFragment();
+          items.forEach(entry => {
+            const changes = entry.changes || {};
+            const fields = Object.keys(changes);
+            if (!fields.length) {
+              const tr = document.createElement('tr');
+              tr.innerHTML = `
+                <td>${new Date(entry.changed_at).toLocaleString()}</td>
+                <td>${entry.changed_by_role || '-'}</td>
+                <td>-</td>
+                <td>-</td>
+                <td>-</td>
+              `;
+              fragment.appendChild(tr);
+              return;
+            }
+            fields.forEach(field => {
+              const change = changes[field] || {};
+              const tr = document.createElement('tr');
+              tr.innerHTML = `
+                <td>${new Date(entry.changed_at).toLocaleString()}</td>
+                <td>${entry.changed_by_role || '-'}</td>
+                <td>${field}</td>
+                <td>${change.from ?? '-'}</td>
+                <td>${change.to ?? '-'}</td>
+              `;
+              fragment.appendChild(tr);
+            });
+          });
+          bodyEl?.appendChild(fragment);
+        } catch (err) {
+          emptyEl.textContent = err.message || 'Failed to load history.';
+          emptyEl?.classList.remove('d-none');
+        } finally {
+          loadingEl?.classList.add('d-none');
+        }
+      });
+    }
+  });
+
+  async function updateCustomerLocation() {
+    const statusEl = document.getElementById("location-status");
+    const button = document.getElementById("generate-location-btn");
+    statusEl.textContent = "Getting current location...";
+    button.disabled = true; button.textContent = "Generating...";
+
+    if (!navigator.geolocation) {
+      statusEl.textContent = "Geolocation not supported.";
+      button.disabled = false; button.textContent = "Generate Location";
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(async (position) => {
+      const latitude = position.coords.latitude;
+      const longitude = position.coords.longitude;
+      try {
+        const customerId = "{{ customer._id }}";
+        const response = await fetch(`/view/customer/${customerId}/update_location`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ latitude, longitude })
+        });
+        const result = await response.json();
+        if (result.success) {
+          statusEl.textContent = "Location updated successfully.";
+          button.textContent = "Location Set"; button.disabled = true;
+        } else {
+          statusEl.textContent = "Failed to update location.";
+          button.disabled = false; button.textContent = "Generate Location";
+        }
+      } catch (err) {
+        statusEl.textContent = "Error updating location.";
+        console.error(err);
+        button.disabled = false; button.textContent = "Generate Location";
+      }
+    }, (error) => {
+      statusEl.textContent = "Failed to get location.";
+      console.error(error);
+      button.disabled = false; button.textContent = "Generate Location";
+    });
+  }
+</script>
+
+<script>
+  document.getElementById('profile-image-input').addEventListener('change', async function (event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const statusEl = document.getElementById("image-upload-status");
+    statusEl.textContent = "Uploading image...";
+
+    const customerId = "{{ customer._id }}";
+    const formData = new FormData();
+    formData.append('image', file);
+
+    try {
+      const response = await fetch(`/view/customer/${customerId}/upload_image`, {
+        method: 'POST',
+        body: formData
+      });
+      const data = await response.json();
+      if (data.success && data.image_url) {
+        const avatarEl = document.getElementById('profile-image');
+        if (avatarEl && avatarEl.tagName !== 'IMG') {
+          const img = document.createElement('img');
+          img.id = 'profile-image';
+          img.className = 'avatar';
+          img.alt = "{{ customer.name }}";
+          img.src = data.image_url;
+          avatarEl.replaceWith(img);
+        } else if (avatarEl) {
+          avatarEl.src = data.image_url;
+        }
+        statusEl.textContent = "Image updated successfully.";
+      } else {
+        statusEl.textContent = "Failed to update image.";
+        console.error('Server error:', data);
+      }
+    } catch (err) {
+      console.error(err);
+      statusEl.textContent = "Upload error.";
+    }
+  });
+</script>
+
+<div id="pageLoader" class="page-loader d-none">
+  <div class="spinner-border text-primary" role="status" aria-label="Processing"></div>
+  <div class="mt-2 small">Processing...</div>
+</div>
+
+<script src="https://app.chatbit.co/embed.min.js" defer></script>
+  {% include 'app_footer.html' %}
+
+</body>
+</html>

@@ -1,0 +1,465 @@
+<!-- executive_sidebar.html (RE-CATEGORISED, KEEP ORIGINAL STYLE, USERS AT BOTTOM, SUITE DROPDOWN ABOVE USERS) -->
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet" />
+
+<style>
+  .sidebar {
+    position: fixed; top: 0; left: 0; width: 250px; height: 100vh;
+    background-color: #ffffff; color: #2c3e50; padding: 1rem;
+    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.05);
+    transition: left 0.3s ease-in-out; z-index: 1050;
+    display: flex; flex-direction: column;
+  }
+  .sidebar.collapsed { left: -260px; }
+
+  .sidebar-header { display: flex; flex-direction: column; align-items: center; margin-bottom: 0.75rem; flex: 0 0 auto; }
+  .sidebar-header img { width: 50px; height: 50px; object-fit: contain; border-radius: 50%; }
+  .sidebar-header strong { margin-top: 0.5rem; font-size: 1.1rem; color: #007bff; font-weight: 600; }
+
+  .sidebar-body {
+    flex: 1 1 auto; overflow-y: auto; -webkit-overflow-scrolling: touch;
+    padding-right: 0.25rem; margin-right: -0.25rem; padding-bottom: 1rem;
+  }
+  .sidebar-body::-webkit-scrollbar { width: 8px; }
+  .sidebar-body::-webkit-scrollbar-thumb { background: #e0e6f6; border-radius: 8px; }
+  .sidebar-body:hover::-webkit-scrollbar-thumb { background: #c9d5fa; }
+
+  .nav-section {
+    font-size: 0.75rem; text-transform: uppercase; color: #888;
+    margin: 1.25rem 0 0.5rem; padding-left: 0.75rem; font-weight: 600;
+  }
+
+  .sidebar a {
+    display: flex; align-items: center; color: #2c3e50; text-decoration: none;
+    padding: 0.55rem 0.75rem; font-size: 0.95rem; font-weight: 500;
+    border-radius: 6px; transition: background-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+  }
+  .sidebar a:hover { background-color: #f0f4ff; color: #007bff; }
+  .sidebar a.text-primary { background-color: #e8f0fe; color: #007bff; }
+
+  .sidebar a i { width: 25px; text-align: center; margin-right: 10px; color: #007bff; font-size: 1.1rem; }
+
+  .sidebar-toggle {
+    position: fixed; top: 1rem; left: 260px; background-color: #007bff; color: #fff;
+    border: none; z-index: 1100; border-radius: 50%; width: 40px; height: 40px;
+    font-size: 1.25rem; display: flex; align-items: center; justify-content: center;
+    transition: left 0.3s ease-in-out;
+  }
+  .sidebar.collapsed + .sidebar-toggle { left: 10px; }
+
+  @media (max-width: 768px) {
+    .sidebar { left: -260px; }
+    .sidebar-toggle { left: 10px; }
+    body.sidebar-open .sidebar { left: 0; }
+    body.sidebar-open .sidebar-toggle { left: 260px; }
+  }
+
+  /* Badges */
+  .notif-badge {
+    margin-left: auto; background: #dc3545; color: #fff;
+    border-radius: 999px; padding: 0.2rem 0.5rem; font-size: 0.75rem; font-weight: 700;
+  }
+  .soft-badge {
+    margin-left: auto; background: #e7f1ff; color: #0d6efd;
+    border-radius: 999px; padding: 0.15rem 0.5rem; font-size: 0.72rem; font-weight: 700;
+  }
+  .soft-badge-yellow {
+    background: #fff3cd; color: #856404; border: 1px solid #ffe69c;
+  }
+  .badge-new {
+    margin-left: auto;
+    background: #ffffff;
+    color: #0d6efd;
+    border-radius: 999px;
+    padding: 0.18rem 0.6rem;
+    font-size: 0.7rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .badge-stock {
+    margin-left: auto;
+    background: #ecfdf5;
+    color: #047857;
+    border-radius: 999px;
+    padding: 0.18rem 0.6rem;
+    font-size: 0.7rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    border: 1px solid #bbf7d0;
+  }
+  .blink-badge {
+    margin-left: auto;
+    background: #dc3545;
+    color: #fff;
+    border-radius: 999px;
+    padding: 0.2rem 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    animation: blink 1s steps(2, start) infinite;
+  }
+  @keyframes blink { to { visibility: hidden; } }
+
+  /* SUITE DROPDOWN */
+  .suite-wrap { margin-top: 0.25rem; }
+  .suite-toggle {
+    width: 100%;
+    background: transparent;
+    border: none;
+    padding: 0;
+  }
+  .suite-toggle a {
+    cursor: pointer;
+    user-select: none;
+  }
+  .suite-caret {
+    margin-left: auto;
+    color: #007bff;
+    transition: transform 0.18s ease;
+  }
+  .suite-open .suite-caret { transform: rotate(180deg); }
+
+  .suite-menu {
+    display: none;
+    margin: 6px 0 0 34px;
+    border-left: 2px solid rgba(13,110,253,0.12);
+    padding-left: 10px;
+  }
+  .suite-open .suite-menu { display: block; }
+
+  .suite-menu a {
+    padding: 0.45rem 0.6rem;
+    font-size: 0.92rem;
+    border-radius: 6px;
+  }
+</style>
+
+<!-- Sidebar -->
+<div class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <img src="https://imagedelivery.net/h9fmMoa1o2c2P55TcWJGOg/10283f28-b9a0-4100-b254-19a854386800/public" alt="SmartLiving Logo" />
+    <strong>SMARTLIVING</strong>
+  </div>
+
+  <div class="sidebar-body">
+
+    <!-- Navigation -->
+    <div class="nav-section">Navigation</div>
+    <a href="/executive/dashboard" class="{% if request.path == '/executive/dashboard' %}text-primary fw-bold{% endif %}">
+      <i class="bi bi-speedometer2"></i> Dashboard
+    </a>
+
+    <a href="{{ url_for('meeting_report.overview') }}"
+       target="_blank" rel="noopener noreferrer"
+       class="{% if request.path.startswith('/meeting-report') %}text-primary fw-bold{% endif %}">
+      <i class="bi bi-people"></i> BUSSINESS HEALTH
+      <span class="soft-badge soft-badge-yellow">NEW</span>
+    </a>
+
+    <!-- Operations -->
+    <div class="nav-section">Operations</div>
+
+    <a href="{{ url_for('executive_deposits.list_view') }}"
+       class="{% if request.path.startswith('/executive/deposits') %}text-primary fw-bold{% endif %}"
+       id="depositLink" title="Unconfirmed deposits">
+      <i class="bi bi-bank"></i> Deposit Confirmations
+      <span id="unconfBadge" class="notif-badge d-none">0</span>
+    </a>
+
+    <a href="{{ url_for('executive_returns_outwards.page') }}"
+       class="{% if request.path.startswith('/executive-returns-outwards') %}text-primary fw-bold{% endif %}">
+      <i class="bi bi-box-fill"></i> Returns Outwards
+    </a>
+
+    <a href="{{ url_for('undelivered_items.undelivered_items_page') }}"
+       class="{% if request.path.startswith('/undelivered_items') %}text-primary fw-bold{% endif %}">
+      <i class="bi bi-exclamation-triangle"></i> Undelivered Items
+      <span id="execUndeliveredBadge" class="blink-badge d-none">0</span>
+    </a>
+
+    <!-- Finance -->
+    <div class="nav-section">Finance</div>
+
+    <a href="{{ url_for('executive_expense.exec_expense_page') }}"
+       class="{% if request.path.startswith('/executive-expense') %}text-primary fw-bold{% endif %}"
+       id="execExpenseLink" title="Executive overview & approvals">
+      <i class="bi bi-cash-stack"></i> Executive Expenses
+      <span id="unapprovedBadge" class="notif-badge d-none">0</span>
+    </a>
+
+    <a href="{{ url_for('executive_stock_entry.stock_entry_page') }}"
+       class="{% if request.path.startswith('/executive-stock') %}text-primary fw-bold{% endif %}">
+      <i class="bi bi-box-seam"></i> Executive Stock Entry
+      <span class="badge-stock">NEW</span>
+    </a>
+
+    <!-- Targets -->
+    <div class="nav-section">Target</div>
+    <a href="/executive/target/set" class="{% if request.path == '/executive/target/set' %}text-primary fw-bold{% endif %}">
+      <i class="bi bi-bullseye"></i> Set Target
+    </a>
+    <a href="/view_targets" class="{% if request.path == '/view_targets' %}text-primary fw-bold{% endif %}">
+      <i class="bi bi-person-badge"></i> Targets
+    </a>
+    <a href="{{ url_for('executive_agent_target.executive_agent_targets_home') }}"
+       class="{% if request.path == url_for('executive_agent_target.executive_agent_targets_home') %}text-primary fw-bold{% endif %}">
+      <i class="bi bi-eye"></i> Agent Targets & Commission
+    </a>
+
+    <!-- Reports -->
+    <div class="nav-section">Reports</div>
+    <a href="/executive/sales" class="{% if request.path == '/executive/sales' %}text-primary fw-bold{% endif %}">
+      <i class="bi bi-graph-up-arrow"></i> Sales
+    </a>
+    {% if (session.get('role') in ['executive','manager']) or session.get('executive_id') or session.get('manager_id') %}
+    <a href="{{ url_for('reports_insights.insights_page') }}"
+       class="{% if request.path.startswith('/reports/insights') %}text-primary fw-bold{% endif %}">
+      <i class="bi bi-graph-up-arrow"></i> Profit &amp; Insights
+    </a>
+    {% endif %}
+    <a href="{{ url_for('executive_inventory_analytics.executive_inventory_analytics') }}"
+       class="{% if request.path.startswith('/executive/analytics/inventory') %}text-primary fw-bold{% endif %}">
+      <i class="bi bi-boxes"></i> Inventory &amp; Ops Analytics
+    </a>
+    <a href="/executive/customers" class="{% if request.path == '/executive/customers' %}text-primary fw-bold{% endif %}">
+      <i class="bi bi-people"></i> Customers
+    </a>
+    <a href="/executive/tasks" class="{% if request.path == '/executive/tasks' %}text-primary fw-bold{% endif %}">
+      <i class="bi bi-check2-circle"></i> Tasks
+    </a>
+
+    <!-- Collections -->
+    <div class="nav-section">Collections</div>
+    <a href="{{ url_for('executive_sales_close.executive_close_page') }}"
+       class="{% if request.path.startswith('/executive-close') %}text-primary fw-bold{% endif %}">
+      <i class="bi bi-cash-coin"></i> Sales Close
+    </a>
+
+    <!-- Pricing -->
+    <div class="nav-section">Pricing</div>
+    <a href="{{ url_for('executive_pricing.pricing_page') }}"
+       class="{% if request.path.startswith('/exec/pricing') %}text-primary fw-bold{% endif %}">
+      <i class="bi bi-tags"></i> Product Pricing
+    </a>
+
+    <!-- Complaints & Issues -->
+    <div class="nav-section">Complaints &amp; Issues</div>
+    <a href="{{ url_for('complaints.executive_view') }}"
+       class="{% if request.path.startswith('/complaints/executive') %}text-primary fw-bold{% endif %}"
+       id="execComplaintsLink" title="Executive Complaints (read-only)">
+      <i class="bi bi-life-preserver"></i> Complaints
+      <span id="complaintsOpenBadge" class="notif-badge d-none">0</span>
+      <span id="complaintsBreachBadge" class="soft-badge d-none ms-1">0</span>
+    </a>
+    <a href="{{ url_for('issues.inbox') }}"
+       class="{% if request.path.startswith('/issues') %}text-primary fw-bold{% endif %}"
+       id="issuesLink" title="Open issues">
+      <i class="bi bi-exclamation-circle"></i> Issues
+      <span id="issuesBadge" class="notif-badge d-none">0</span>
+    </a>
+
+    <!-- SUSU -->
+    <div class="nav-section">SUSU</div>
+    <a href="{{ url_for('executive_susu.executive_susu_dashboard') }}"
+       class="{% if request.path.startswith('/executive/susu') %}text-primary fw-bold{% endif %}">
+      <i class="bi bi-piggy-bank"></i> SUSU Accounts
+      <span class="badge-new">NEW</span>
+    </a>
+
+    <!-- Account -->
+    <div class="nav-section">Account</div>
+    <a href="{{ url_for('executive_profile.profile') }}"
+       class="{% if request.path.startswith('/executive/profile') %}text-primary fw-bold{% endif %}">
+      <i class="bi bi-person-circle"></i> My Profile
+    </a>
+
+    <!-- ✅ SUITE DROPDOWN (2nd to last section before Users/Logout) -->
+    <div class="nav-section">Suite</div>
+
+    <div class="suite-wrap" id="suiteWrap">
+      <a class="suite-toggle-link"
+         href="javascript:void(0)"
+         onclick="toggleSuite()"
+         aria-expanded="false"
+         id="suiteToggleLink"
+         style="display:flex;align-items:center;color:#2c3e50;text-decoration:none;padding:0.55rem 0.75rem;font-size:0.95rem;font-weight:500;border-radius:6px;">
+        <i class="bi bi-grid-3x3-gap-fill" style="width:25px;text-align:center;margin-right:10px;color:#007bff;font-size:1.1rem;"></i>
+        Suit
+        <i class="bi bi-chevron-down suite-caret" id="suiteCaret"></i>
+      </a>
+
+      <div class="suite-menu" id="suiteMenu">
+        <a href="{{ url_for('hr.dashboard') }}"
+           class="{% if request.path.startswith('/hr') %}text-primary fw-bold{% endif %}">
+          <i class="bi bi-person-gear"></i> HR Control Center
+          <span class="badge-new">NEW</span>
+        </a>
+
+        <a href="/accounting/dashboard"
+           target="_blank" rel="noopener noreferrer"
+           class="accounting-link"
+           style="background: linear-gradient(120deg, #0d6efd, #4f46e5); color:#fff !important; box-shadow:0 4px 10px rgba(13,110,253,0.25);">
+          <i class="bi bi-journal-check" style="color:#fff;"></i> Accounting Suite
+          <span class="badge-new" style="color:#0d6efd;background:#fff;">NEW</span>
+        </a>
+      </div>
+    </div>
+
+    <!-- ✅ USERS at bottom (2nd to last before logout) -->
+    <a href="{{ url_for('executive_users.executive_users_list') }}"
+       class="{% if request.path.startswith('/executive/users') %}text-primary fw-bold{% endif %}">
+      <i class="bi bi-people-fill"></i> Users
+    </a>
+
+    <!-- Logout (last) -->
+    <a href="{{ url_for('login.logout') }}" id="logoutLink">
+      <i class="bi bi-box-arrow-right"></i> Logout
+    </a>
+
+    <div style="height: 12px;"></div>
+  </div>
+</div>
+
+<!-- Toggle Button -->
+<button class="sidebar-toggle" onclick="toggleSidebar()" id="sidebarToggle" aria-label="Toggle menu">
+  <i class="bi bi-list"></i>
+</button>
+
+<script>
+  function toggleSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    sidebar.classList.toggle('collapsed');
+    document.body.classList.toggle('sidebar-open');
+  }
+
+  // --- SUITE DROPDOWN ---
+  function toggleSuite(forceOpen) {
+    const wrap = document.getElementById('suiteWrap');
+    const menu = document.getElementById('suiteMenu');
+    const caret = document.getElementById('suiteCaret');
+    const link = document.getElementById('suiteToggleLink');
+
+    const isOpen = wrap.classList.contains('suite-open');
+    const nextOpen = typeof forceOpen === "boolean" ? forceOpen : !isOpen;
+
+    wrap.classList.toggle('suite-open', nextOpen);
+    if (link) link.setAttribute('aria-expanded', nextOpen ? 'true' : 'false');
+  }
+
+  // Auto-open Suite if current page is HR (or if you later add accounting internal route)
+  document.addEventListener('DOMContentLoaded', () => {
+    if (window.location.pathname.startsWith('/hr')) toggleSuite(true);
+
+    refreshUnconfirmedBadge();
+    refreshUnapprovedExpensesBadge();
+    refreshComplaintsBadges();
+    refreshIssuesBadge();
+    refreshExecUndeliveredBadge();
+
+    setInterval(refreshUnconfirmedBadge, 30000);
+    setInterval(refreshUnapprovedExpensesBadge, 30000);
+    setInterval(refreshComplaintsBadges, 30000);
+    setInterval(refreshIssuesBadge, 30000);
+    setInterval(refreshExecUndeliveredBadge, 30000);
+  });
+
+  // --- Deposits badge ---
+  async function refreshUnconfirmedBadge() {
+    try {
+      const res = await fetch("{{ url_for('executive_deposits.unconfirmed_count') }}", { credentials: 'same-origin' });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const data = await res.json();
+      const n = Number(data.count || 0);
+      const badge = document.getElementById('unconfBadge');
+      badge.textContent = n;
+      badge.classList.toggle('d-none', n <= 0);
+      const link = document.getElementById('depositLink');
+      if (link) link.setAttribute('title', n > 0 ? n + ' unconfirmed deposit(s)' : 'No unconfirmed deposits');
+    } catch (e) { /* silent */ }
+  }
+
+  // --- Unapproved expenses badge ---
+  async function refreshUnapprovedExpensesBadge() {
+    try {
+      const url = `/executive-expense/list?status=Unapproved&range=last30`;
+      const res = await fetch(url, { credentials: 'same-origin' });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const data = await res.json();
+      const n = Array.isArray(data.rows) ? data.rows.length : 0;
+      const badge = document.getElementById('unapprovedBadge');
+      badge.textContent = n;
+      badge.classList.toggle('d-none', n <= 0);
+      const link = document.getElementById('execExpenseLink');
+      if (link) link.setAttribute('title', n > 0 ? n + ' unapproved expense(s)' : 'No unapproved expenses');
+    } catch (e) { /* silent */ }
+  }
+
+  // --- Complaints badges ---
+  async function refreshComplaintsBadges(){
+    try{
+      const res = await fetch("{{ url_for('complaints.executive_unresolved_count') }}", { credentials: 'same-origin' });
+      if(!res.ok) throw new Error('HTTP '+res.status);
+      const data = await res.json();
+      if(!data.ok) return;
+
+      const openN   = Number(data.open || 0);
+      const breachN = Number(data.breaching || 0);
+
+      const openBadge   = document.getElementById('complaintsOpenBadge');
+      const breachBadge = document.getElementById('complaintsBreachBadge');
+
+      if(openBadge){
+        openBadge.textContent = openN;
+        openBadge.classList.toggle('d-none', openN <= 0);
+      }
+      if(breachBadge){
+        breachBadge.textContent = breachN;
+        breachBadge.classList.toggle('d-none', breachN <= 0);
+      }
+
+      const link = document.getElementById('execComplaintsLink');
+      if(link){
+        const title = (openN > 0 || breachN > 0)
+          ? `${openN} unresolved; ${breachN} breaching`
+          : 'No unresolved complaints';
+        link.setAttribute('title', title);
+      }
+    }catch(e){ /* silent */ }
+  }
+
+  // --- Issues badge ---
+  async function refreshIssuesBadge(){
+    try{
+      const res = await fetch("{{ url_for('issues.issue_count') }}", { credentials: 'same-origin' });
+      if(!res.ok) throw new Error('HTTP '+res.status);
+      const data = await res.json();
+      if(!data.ok) return;
+
+      const n = Number(data.count || 0);
+      const badge = document.getElementById('issuesBadge');
+      if(badge){
+        badge.textContent = n;
+        badge.classList.toggle('d-none', n <= 0);
+      }
+      const link = document.getElementById('issuesLink');
+      if(link){
+        link.setAttribute('title', n > 0 ? n + ' open issue(s)' : 'No open issues');
+      }
+    }catch(e){ /* silent */ }
+  }
+
+  async function refreshExecUndeliveredBadge(){
+    try{
+      const res = await fetch("{{ url_for('undelivered_items.undelivered_items_count_due') }}", { credentials: 'same-origin' });
+      if(!res.ok) throw new Error('HTTP '+res.status);
+      const d = await res.json();
+      if(!d.ok) return;
+      const n = Number(d.due_soon || 0) + Number(d.overdue || 0);
+      const badge = document.getElementById('execUndeliveredBadge');
+      if(badge){
+        badge.textContent = n;
+        badge.classList.toggle('d-none', n <= 0);
+      }
+    }catch(e){ /* silent */ }
+  }
+</script>

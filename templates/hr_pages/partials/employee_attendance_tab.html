@@ -1,0 +1,356 @@
+{# templates/hr_pages/partials/employee_attendance_tab.html #}
+
+<!-- Chart.js for attendance chart -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<div class="card border-0 shadow-sm mb-3">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <div>
+      <h2 class="h6 mb-0">Attendance &amp; Leave (Last 12 Months)</h2>
+      <p class="small text-muted mb-0">
+        Attendance is auto-calculated from daily payments. A day counts as
+        <strong>Worked</strong> if the employee recorded more than 10 payments.
+        Sundays are excluded.
+      </p>
+    </div>
+  </div>
+
+  <div class="card-body">
+    <!-- Summary row -->
+    <div class="row g-3 mb-3">
+      <div class="col-12 col-md-4">
+        <div class="border rounded-3 p-3 h-100">
+          <div class="small text-muted mb-1">Working days (last 12 months)</div>
+          <div class="h4 mb-0" id="hr-att-summary-working">--</div>
+        </div>
+      </div>
+      <div class="col-12 col-md-4">
+        <div class="border rounded-3 p-3 h-100">
+          <div class="small text-muted mb-1">Days present (payments &gt; 10)</div>
+          <div class="h4 mb-0" id="hr-att-summary-present">--</div>
+        </div>
+      </div>
+      <div class="col-12 col-md-4">
+        <div class="border rounded-3 p-3 h-100">
+          <div class="small text-muted mb-1">Attendance rate</div>
+          <div class="h4 mb-0" id="hr-att-summary-rate">--</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Chart -->
+    <div class="mb-3">
+      <canvas id="hr-attendance-chart" style="max-height: 260px;"></canvas>
+      <small class="text-muted extra-small d-block mt-1">
+        Bars show number of worked days per month, for the last 12 months.
+      </small>
+    </div>
+
+    <!-- Recent 30 days table -->
+    <div class="table-responsive mb-3">
+      <table class="table table-sm align-middle mb-0">
+        <thead class="table-light small">
+          <tr>
+            <th style="width:18%;">Date</th>
+            <th style="width:18%;">Status</th>
+            <th>Payments Count</th>
+          </tr>
+        </thead>
+        <tbody id="hr-att-recent-body" class="small">
+          <tr id="hr-att-loading-row">
+            <td colspan="3" class="text-muted fst-italic">
+              Loading attendance...
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <hr class="my-3">
+
+    <!-- Leave recording + history -->
+    <div class="row g-3">
+      <div class="col-12 col-lg-4">
+        <h6 class="small text-uppercase text-muted mb-2">Record Leave</h6>
+        <form id="hr-leave-form" class="row g-2">
+          <div class="col-12">
+            <label class="form-label small mb-1">Start Date</label>
+            <input type="date"
+                   name="start_date"
+                   class="form-control form-control-sm"
+                   required>
+          </div>
+          <div class="col-6">
+            <label class="form-label small mb-1">Number of Days</label>
+            <input type="number"
+                   name="days"
+                   min="1"
+                   class="form-control form-control-sm"
+                   required>
+          </div>
+          <div class="col-6">
+            <label class="form-label small mb-1">Granted By</label>
+            <input type="text"
+                   name="granted_by"
+                   class="form-control form-control-sm"
+                   placeholder="Manager / HR">
+          </div>
+          <div class="col-12">
+            <label class="form-label small mb-1">Reason</label>
+            <textarea name="reason"
+                      rows="3"
+                      class="form-control form-control-sm"
+                      placeholder="Eg. Sick leave, Family emergency"></textarea>
+          </div>
+          <div class="col-12 d-grid">
+            <button type="submit"
+                    class="btn btn-sm btn-primary"
+                    id="hr-leave-submit-btn">
+              <span class="spinner-border spinner-border-sm me-1 d-none"
+                    id="hr-leave-spinner"
+                    role="status"></span>
+              Record Leave
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <div class="col-12 col-lg-8">
+        <h6 class="small text-uppercase text-muted mb-2">Leave History</h6>
+        <div class="table-responsive">
+          <table class="table table-sm align-middle mb-0">
+            <thead class="table-light small">
+              <tr>
+                <th style="width:18%;">Start Date</th>
+                <th style="width:18%;">End Date</th>
+                <th style="width:10%;">Days</th>
+                <th style="width:20%;">Granted By</th>
+                <th>Reason</th>
+              </tr>
+            </thead>
+            <tbody id="hr-leave-body" class="small">
+              <tr id="hr-leave-empty-row">
+                <td colspan="5" class="text-muted fst-italic">
+                  No leave records yet.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+(function () {
+  const employeeId = "{{ employee._id }}";
+
+  const workingEl = document.getElementById('hr-att-summary-working');
+  const presentEl = document.getElementById('hr-att-summary-present');
+  const rateEl    = document.getElementById('hr-att-summary-rate');
+
+  const recentBody = document.getElementById('hr-att-recent-body');
+  const recentLoadingRow = document.getElementById('hr-att-loading-row');
+
+  const leaveBody   = document.getElementById('hr-leave-body');
+  const leaveEmpty  = document.getElementById('hr-leave-empty-row');
+  const leaveForm   = document.getElementById('hr-leave-form');
+  const leaveBtn    = document.getElementById('hr-leave-submit-btn');
+  const leaveSpinner= document.getElementById('hr-leave-spinner');
+
+  const chartCanvas = document.getElementById('hr-attendance-chart');
+  let   attChart    = null;
+
+  function renderSummary(summary) {
+    if (!summary) return;
+    if (workingEl) workingEl.textContent = summary.total_working_days ?? '0';
+    if (presentEl) presentEl.textContent = summary.days_present ?? '0';
+    if (rateEl)    rateEl.textContent    = summary.attendance_rate
+      ? summary.attendance_rate.toFixed(1) + '%'
+      : '0%';
+  }
+
+  function renderRecentDays(days) {
+    if (!recentBody) return;
+    recentBody.innerHTML = '';
+
+    if (!days || !days.length) {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td colspan="3" class="text-muted fst-italic">
+          No recent attendance data available.
+        </td>
+      `;
+      recentBody.appendChild(tr);
+      return;
+    }
+
+    days.forEach(d => {
+      const tr = document.createElement('tr');
+      const badgeClass = d.status === 'Present'
+        ? 'badge bg-success-subtle text-success-emphasis'
+        : 'badge bg-danger-subtle text-danger-emphasis';
+
+      tr.innerHTML = `
+        <td>${d.date || ''}</td>
+        <td><span class="${badgeClass}">${d.status}</span></td>
+        <td>${d.payments_count ?? 0}</td>
+      `;
+      recentBody.appendChild(tr);
+    });
+  }
+
+  function renderLeaves(leaves) {
+    if (!leaveBody) return;
+    leaveBody.innerHTML = '';
+
+    if (!leaves || !leaves.length) {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td colspan="5" class="text-muted fst-italic">
+          No leave records yet.
+        </td>
+      `;
+      leaveBody.appendChild(tr);
+      return;
+    }
+
+    leaves.forEach(lv => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${lv.start_date || ''}</td>
+        <td>${lv.end_date || ''}</td>
+        <td>${lv.days ?? ''}</td>
+        <td>${lv.granted_by || '--'}</td>
+        <td>${lv.reason || '--'}</td>
+      `;
+      leaveBody.appendChild(tr);
+    });
+  }
+
+  function renderChart(months) {
+    if (!chartCanvas || !months) return;
+    const labels = months.map(m => m.month || '');
+    const presentData = months.map(m => m.present_days || 0);
+    const workingData = months.map(m => m.working_days || 0);
+
+    const data = {
+      labels: labels,
+      datasets: [
+        {
+          label: 'Worked days',
+          data: presentData,
+          borderWidth: 1
+        },
+        {
+          label: 'Working days',
+          data: workingData,
+          borderWidth: 1
+        }
+      ]
+    };
+
+    const config = {
+      type: 'bar',
+      data: data,
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          y: { beginAtZero: true }
+        }
+      }
+    };
+
+    if (attChart) {
+      attChart.destroy();
+    }
+    attChart = new Chart(chartCanvas, config);
+  }
+
+  function loadAttendanceOverview() {
+    fetch("{{ url_for('hr.get_attendance_overview', employee_id=employee._id) }}", {
+      method: 'GET'
+    })
+      .then(resp => resp.json())
+      .then(data => {
+        if (!data.ok) throw new Error(data.message || 'Unable to load attendance.');
+
+        renderSummary(data.summary);
+        renderRecentDays(data.recent_days);
+        renderLeaves(data.leaves);
+        renderChart(data.months);
+      })
+      .catch(err => {
+        console.error(err);
+        if (recentLoadingRow) {
+          recentLoadingRow.innerHTML = `
+            <td colspan="3" class="text-danger small">
+              Failed to load attendance: ${err.message || 'Unknown error'}
+            </td>
+          `;
+        }
+        if (leaveBody && (!leaveBody.children.length)) {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td colspan="5" class="text-danger small">
+              Failed to load leave data.
+            </td>
+          `;
+          leaveBody.appendChild(tr);
+        }
+      });
+  }
+
+  // Record leave
+  if (leaveForm) {
+    leaveForm.addEventListener('submit', function (e) {
+      e.preventDefault();
+
+      const fd = new FormData(leaveForm);
+      const payload = {
+        start_date: fd.get('start_date'),
+        days: fd.get('days'),
+        granted_by: fd.get('granted_by'),
+        reason: fd.get('reason')
+      };
+
+      if (!payload.start_date || !payload.days) {
+        window.showToast && window.showToast('warning', 'Start date and number of days are required.');
+        return;
+      }
+
+      if (leaveBtn) leaveBtn.disabled = true;
+      if (leaveSpinner) leaveSpinner.classList.remove('d-none');
+
+      fetch("{{ url_for('hr.add_leave', employee_id=employee._id) }}", {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+        .then(resp => resp.json())
+        .then(data => {
+          if (!data.ok) throw new Error(data.message || 'Unable to save leave.');
+
+          // Reload overview (will refresh leave list and summary)
+          loadAttendanceOverview();
+          leaveForm.reset();
+          window.showToast && window.showToast('success', 'Leave recorded.');
+        })
+        .catch(err => {
+          console.error(err);
+          window.showToast && window.showToast('danger', err.message || 'Failed to save leave.');
+        })
+        .finally(() => {
+          if (leaveBtn) leaveBtn.disabled = false;
+          if (leaveSpinner) leaveSpinner.classList.add('d-none');
+        });
+    });
+  }
+
+  // Initial load
+  loadAttendanceOverview();
+})();
+</script>

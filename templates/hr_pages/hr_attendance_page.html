@@ -1,0 +1,499 @@
+{# templates/hr_pages/hr_attendance_page.html #}
+{% extends "hr_pages/hr_shell.html" %}
+{% block hr_content %}
+
+<div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
+  <div>
+    <h4 class="mb-1">Attendance</h4>
+    <div class="text-muted small">
+    </div>
+  </div>
+
+  <div class="d-flex gap-2">
+    <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#hrMeetingModal">
+      <i class="bi bi-people-fill me-1"></i>Take Meeting Attendance
+    </button>
+    <button class="btn btn-outline-secondary btn-sm" id="hrMeetingsRefreshBtn">
+      <i class="bi bi-arrow-clockwise me-1"></i>Refresh
+    </button>
+  </div>
+</div>
+
+<div class="row g-3">
+  <!-- Meetings list -->
+  <div class="col-12 col-lg-7">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-white d-flex justify-content-between align-items-center">
+        <div>
+          <div class="fw-semibold">Meeting Attendance History</div>
+          <div class="text-muted small">Recent meetings and who attended.</div>
+        </div>
+        <div class="input-group input-group-sm" style="max-width: 320px;">
+          <span class="input-group-text"><i class="bi bi-search"></i></span>
+          <input type="text" class="form-control" id="hrMeetingSearch" placeholder="Search meeting title...">
+        </div>
+      </div>
+
+      <div class="card-body">
+        <div id="hrMeetingsLoading" class="text-muted small fst-italic">Loading meetings...</div>
+        <div id="hrMeetingsEmpty" class="text-muted small fst-italic d-none">No meeting records yet.</div>
+
+        <div class="list-group list-group-flush" id="hrMeetingsList"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick stats -->
+  <div class="col-12 col-lg-5">
+    <div class="card border-0 shadow-sm mb-3">
+      <div class="card-header bg-white">
+        <div class="fw-semibold">Meeting Stats (Last 60 Days)</div>
+        <div class="text-muted small">Top attendees + totals.</div>
+      </div>
+      <div class="card-body">
+        <div class="row g-2 mb-3">
+          <div class="col-6">
+            <div class="border rounded-3 p-3">
+              <div class="text-muted small">Meetings</div>
+              <div class="h4 mb-0" id="hrStatsMeetings">--</div>
+            </div>
+          </div>
+          <div class="col-6">
+            <div class="border rounded-3 p-3">
+              <div class="text-muted small">Attendances</div>
+              <div class="h4 mb-0" id="hrStatsAttendances">--</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="table table-sm align-middle mb-0">
+            <thead class="table-light small">
+              <tr>
+                <th>Employee</th>
+                <th class="text-end">Times Attended</th>
+              </tr>
+            </thead>
+            <tbody id="hrTopAttendeesBody" class="small">
+              <tr><td colspan="2" class="text-muted fst-italic">Loading...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-white">
+        <div class="fw-semibold">Tip</div>
+      </div>
+      <div class="card-body small text-muted">
+        For performance ratings later, meeting attendance can contribute to "discipline / participation"
+        scoring (optional). Payment-based attendance remains the main "work presence" metric.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- =============== Meeting Attendance Modal =============== -->
+<div class="modal fade" id="hrMeetingModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div>
+          <h5 class="modal-title mb-0">Take Meeting Attendance</h5>
+          <div class="text-muted small">Create a meeting and select employees who attended.</div>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+
+      <div class="modal-body">
+        <div class="row g-3">
+          <div class="col-12 col-lg-4">
+            <div class="border rounded-3 p-3">
+              <div class="mb-2">
+                <label class="form-label small mb-1">Meeting Title</label>
+                <input type="text" class="form-control form-control-sm" id="hrMeetingTitle" placeholder="Eg. Weekly Sales Review" required>
+              </div>
+              <div class="mb-2">
+                <label class="form-label small mb-1">Meeting Date</label>
+                <input type="date" class="form-control form-control-sm" id="hrMeetingDate" required>
+              </div>
+              <div class="mb-2">
+                <label class="form-label small mb-1">Notes (optional)</label>
+                <textarea class="form-control form-control-sm" rows="3" id="hrMeetingNotes" placeholder="Key decisions, action items..."></textarea>
+              </div>
+
+              <div class="d-grid">
+                <button class="btn btn-primary btn-sm" id="hrSaveMeetingBtn">
+                  <span class="spinner-border spinner-border-sm me-1 d-none" id="hrSaveMeetingSpinner"></span>
+                  Save Attendance
+                </button>
+              </div>
+              <div class="small text-muted mt-2">
+                You can search and select multiple employees from the right panel.
+              </div>
+            </div>
+          </div>
+
+          <div class="col-12 col-lg-8">
+            <div class="border rounded-3 p-3">
+              <div class="d-flex justify-content-between align-items-center mb-2 gap-2 flex-wrap">
+                <div class="fw-semibold">Select Attendees</div>
+                <div class="input-group input-group-sm" style="max-width: 360px;">
+                  <span class="input-group-text"><i class="bi bi-search"></i></span>
+                  <input type="text" class="form-control" id="hrEmployeeSearch" placeholder="Search employees (name, branch, role)">
+                </div>
+              </div>
+
+              <div class="d-flex gap-2 mb-2 flex-wrap">
+                <button class="btn btn-outline-secondary btn-sm" id="hrSelectAllBtn"><i class="bi bi-check2-square me-1"></i>Select all</button>
+                <button class="btn btn-outline-secondary btn-sm" id="hrClearAllBtn"><i class="bi bi-x-square me-1"></i>Clear</button>
+                <div class="ms-auto small text-muted">
+                  Selected: <span class="fw-semibold" id="hrSelectedCount">0</span>
+                </div>
+              </div>
+
+              <div id="hrEmployeesLoading" class="text-muted small fst-italic">Loading employees...</div>
+              <div class="table-responsive" style="max-height: 420px; overflow:auto;">
+                <table class="table table-sm align-middle mb-0">
+                  <thead class="table-light small sticky-top" style="top:0;">
+                    <tr>
+                      <th style="width:44px;"></th>
+                      <th>Name</th>
+                      <th style="width:22%;">Role</th>
+                      <th style="width:22%;">Branch</th>
+                    </tr>
+                  </thead>
+                  <tbody id="hrEmployeesBody" class="small"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div><!-- row -->
+      </div><!-- modal-body -->
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const meetingsList   = document.getElementById('hrMeetingsList');
+  const meetingsLoad   = document.getElementById('hrMeetingsLoading');
+  const meetingsEmpty  = document.getElementById('hrMeetingsEmpty');
+  const searchMeetings = document.getElementById('hrMeetingSearch');
+
+  const statsMeetings     = document.getElementById('hrStatsMeetings');
+  const statsAttendances  = document.getElementById('hrStatsAttendances');
+  const topAttendeesBody  = document.getElementById('hrTopAttendeesBody');
+
+  const refreshBtn = document.getElementById('hrMeetingsRefreshBtn');
+
+  // Modal elements
+  const titleEl   = document.getElementById('hrMeetingTitle');
+  const dateEl    = document.getElementById('hrMeetingDate');
+  const notesEl   = document.getElementById('hrMeetingNotes');
+  const saveBtn   = document.getElementById('hrSaveMeetingBtn');
+  const saveSpin  = document.getElementById('hrSaveMeetingSpinner');
+
+  const empLoad   = document.getElementById('hrEmployeesLoading');
+  const empBody   = document.getElementById('hrEmployeesBody');
+  const empSearch = document.getElementById('hrEmployeeSearch');
+
+  const selectAllBtn = document.getElementById('hrSelectAllBtn');
+  const clearAllBtn  = document.getElementById('hrClearAllBtn');
+  const selectedCountEl = document.getElementById('hrSelectedCount');
+
+  let employeesCache = [];
+  let selected = new Set();
+
+  function fmtDate(s){
+    if(!s) return '';
+    return s.slice(0,10);
+  }
+
+  function setSelectedCount(){
+    selectedCountEl.textContent = String(selected.size);
+  }
+
+  function rowMatchesSearch(emp, q){
+    if(!q) return true;
+    q = q.toLowerCase();
+    const name = (emp.name || '').toLowerCase();
+    const role = (emp.role || emp.position || '').toLowerCase();
+    const branch = (emp.branch || emp.store_name || emp.store || '').toLowerCase();
+    return name.includes(q) || role.includes(q) || branch.includes(q);
+  }
+
+  function renderEmployees(){
+    const q = (empSearch.value || '').trim().toLowerCase();
+    empBody.innerHTML = '';
+
+    const filtered = employeesCache.filter(e => rowMatchesSearch(e, q));
+
+    if(!filtered.length){
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td colspan="4" class="text-muted fst-italic">No employees match your search.</td>`;
+      empBody.appendChild(tr);
+      return;
+    }
+
+    filtered.forEach(emp => {
+      const id = emp.id;
+      const isChecked = selected.has(id);
+
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>
+          <input class="form-check-input" type="checkbox" ${isChecked ? 'checked':''} data-emp="${id}">
+        </td>
+        <td>
+          <div class="fw-semibold">${emp.name || '--'}</div>
+          <div class="text-muted extra-small">${emp.employee_code || emp.staff_id || ''}</div>
+        </td>
+        <td>${emp.role || emp.position || '--'}</td>
+        <td>${emp.branch || emp.store_name || emp.store || '--'}</td>
+      `;
+      empBody.appendChild(tr);
+    });
+
+    empBody.querySelectorAll('input[type="checkbox"][data-emp]').forEach(cb => {
+      cb.addEventListener('change', (e) => {
+        const id = e.target.getAttribute('data-emp');
+        if(e.target.checked) selected.add(id);
+        else selected.delete(id);
+        setSelectedCount();
+      });
+    });
+
+    setSelectedCount();
+  }
+
+  function loadEmployees(){
+    empLoad.classList.remove('d-none');
+    empBody.innerHTML = '';
+
+    fetch("{{ url_for('hr.attendance_employees_list') }}")
+      .then(r => r.json())
+      .then(d => {
+        if(!d.ok) throw new Error(d.message || "Failed to load employees");
+        employeesCache = d.employees || [];
+        empLoad.classList.add('d-none');
+        renderEmployees();
+      })
+      .catch(err => {
+        console.error(err);
+        empLoad.textContent = "Failed to load employees.";
+      });
+  }
+
+  function renderMeetings(items){
+    meetingsList.innerHTML = '';
+    meetingsLoad.classList.add('d-none');
+
+    if(!items || !items.length){
+      meetingsEmpty.classList.remove('d-none');
+      return;
+    }
+    meetingsEmpty.classList.add('d-none');
+
+    items.forEach(m => {
+      const attendees = m.attendees || [];
+      const attendeeNames = attendees.slice(0, 6).map(a => a.name).join(', ');
+      const extra = attendees.length > 6 ? ` +${attendees.length - 6} more` : '';
+
+      const el = document.createElement('div');
+      el.className = "list-group-item";
+      el.innerHTML = `
+        <div class="d-flex justify-content-between align-items-start gap-2">
+          <div>
+            <div class="fw-semibold">${m.title || 'Untitled meeting'}</div>
+            <div class="text-muted small">
+              <i class="bi bi-calendar2-week me-1"></i>${fmtDate(m.meeting_date)}
+              <span class="mx-2">- </span>
+              <i class="bi bi-people me-1"></i>${attendees.length} attendees
+            </div>
+            <div class="small mt-1">${attendees.length ? (attendeeNames + extra) : '<span class="text-muted fst-italic">No attendees recorded.</span>'}</div>
+            ${m.notes ? `<div class="text-muted small mt-1">${m.notes}</div>` : ``}
+          </div>
+
+          <div class="d-flex gap-2">
+            <button class="btn btn-outline-danger btn-sm" data-del="${m.id}">
+              <i class="bi bi-trash3"></i>
+            </button>
+          </div>
+        </div>
+      `;
+      meetingsList.appendChild(el);
+    });
+
+    meetingsList.querySelectorAll('button[data-del]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.getAttribute('data-del');
+        if(!confirm("Delete this meeting attendance record?")) return;
+        fetch("{{ url_for('hr.delete_meeting_attendance', meeting_id='__ID__') }}".replace('__ID__', id), { method:'POST' })
+          .then(r => r.json())
+          .then(d => {
+            if(!d.ok) throw new Error(d.message || 'Delete failed');
+            window.showToast && window.showToast('success', 'Meeting deleted.');
+            loadMeetings();
+            loadStats();
+          })
+          .catch(err => {
+            console.error(err);
+            window.showToast && window.showToast('danger', err.message || 'Delete failed');
+          });
+      });
+    });
+  }
+
+  function loadMeetings(){
+    meetingsLoad.classList.remove('d-none');
+    meetingsEmpty.classList.add('d-none');
+    meetingsList.innerHTML = '';
+
+    fetch("{{ url_for('hr.list_meeting_attendance') }}")
+      .then(r => r.json())
+      .then(d => {
+        if(!d.ok) throw new Error(d.message || 'Failed to load meetings');
+        renderMeetings(d.meetings || []);
+      })
+      .catch(err => {
+        console.error(err);
+        meetingsLoad.textContent = "Failed to load meetings.";
+      });
+  }
+
+  function loadStats(){
+    fetch("{{ url_for('hr.meeting_attendance_stats') }}")
+      .then(r => r.json())
+      .then(d => {
+        if(!d.ok) throw new Error(d.message || 'Failed to load stats');
+        statsMeetings.textContent    = d.stats?.meetings ?? 0;
+        statsAttendances.textContent = d.stats?.attendances ?? 0;
+
+        const top = d.top_attendees || [];
+        topAttendeesBody.innerHTML = '';
+        if(!top.length){
+          topAttendeesBody.innerHTML = `<tr><td colspan="2" class="text-muted fst-italic">No data yet.</td></tr>`;
+          return;
+        }
+        top.forEach(x => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td>${x.name || '--'}</td>
+            <td class="text-end fw-semibold">${x.count ?? 0}</td>
+          `;
+          topAttendeesBody.appendChild(tr);
+        });
+      })
+      .catch(err => {
+        console.error(err);
+        topAttendeesBody.innerHTML = `<tr><td colspan="2" class="text-danger small">Failed to load stats.</td></tr>`;
+      });
+  }
+
+  function saveMeeting(){
+    const title = (titleEl.value || '').trim();
+    const date  = (dateEl.value || '').trim();
+    const notes = (notesEl.value || '').trim();
+
+    if(!title || !date){
+      window.showToast && window.showToast('warning', 'Meeting title and date are required.');
+      return;
+    }
+    if(selected.size === 0){
+      window.showToast && window.showToast('warning', 'Select at least one attendee.');
+      return;
+    }
+
+    saveBtn.disabled = true;
+    saveSpin.classList.remove('d-none');
+
+    const payload = {
+      title,
+      meeting_date: date,
+      notes,
+      attendee_ids: Array.from(selected)
+    };
+
+    fetch("{{ url_for('hr.create_meeting_attendance') }}", {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json' },
+      body: JSON.stringify(payload)
+    })
+    .then(r => r.json())
+    .then(d => {
+      if(!d.ok) throw new Error(d.message || 'Save failed');
+
+      window.showToast && window.showToast('success', 'Meeting attendance saved.');
+      titleEl.value = '';
+      notesEl.value = '';
+      selected.clear();
+      setSelectedCount();
+      renderEmployees();
+
+      // refresh panels
+      loadMeetings();
+      loadStats();
+
+      // close modal
+      const modalEl = document.getElementById('hrMeetingModal');
+      const modal = bootstrap.Modal.getInstance(modalEl);
+      modal && modal.hide();
+    })
+    .catch(err => {
+      console.error(err);
+      window.showToast && window.showToast('danger', err.message || 'Save failed');
+    })
+    .finally(() => {
+      saveBtn.disabled = false;
+      saveSpin.classList.add('d-none');
+    });
+  }
+
+  // filters
+  if(searchMeetings){
+    searchMeetings.addEventListener('input', () => {
+      const q = (searchMeetings.value || '').trim().toLowerCase();
+      const items = Array.from(meetingsList.children);
+      items.forEach(li => {
+        const text = (li.innerText || '').toLowerCase();
+        li.style.display = text.includes(q) ? '' : 'none';
+      });
+    });
+  }
+
+  if(empSearch) empSearch.addEventListener('input', renderEmployees);
+
+  selectAllBtn.addEventListener('click', () => {
+    employeesCache.forEach(e => selected.add(e.id));
+    renderEmployees();
+  });
+
+  clearAllBtn.addEventListener('click', () => {
+    selected.clear();
+    renderEmployees();
+  });
+
+  saveBtn.addEventListener('click', saveMeeting);
+
+  refreshBtn.addEventListener('click', () => {
+    loadMeetings();
+    loadStats();
+  });
+
+  // default meeting date = today
+  const today = new Date();
+  const yyyy = today.getFullYear();
+  const mm = String(today.getMonth()+1).padStart(2,'0');
+  const dd = String(today.getDate()).padStart(2,'0');
+  dateEl.value = `${yyyy}-${mm}-${dd}`;
+
+  // init
+  loadEmployees();
+  loadMeetings();
+  loadStats();
+})();
+</script>
+
+{% endblock %}

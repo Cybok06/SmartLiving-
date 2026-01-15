@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Account Summary</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="icon" href="https://res.cloudinary.com/dljpgzbto/image/upload/v1743993646/company-logo_dksb23.jpg" type="image/png" />
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f4f4;
+      padding: 20px;
+      transition: background-color 0.3s, color 0.3s;
+    }
+
+    .dark-mode {
+      background-color: #121212;
+      color: #e4e4e4;
+    }
+
+    .dark-mode .section {
+      background-color: #1e1e1e;
+      color: #e4e4e4;
+    }
+
+    .section {
+      background: white;
+      padding: 20px;
+      margin-bottom: 30px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+
+    .btn-summary {
+      background: linear-gradient(135deg, #007BFF, #0056b3);
+      color: white;
+      border: none;
+      padding: 10px 18px;
+      border-radius: 8px;
+      box-shadow: 0 4px 10px rgba(0, 123, 255, 0.3);
+      transition: background 0.3s ease, transform 0.2s ease;
+    }
+
+    .btn-summary:hover {
+      background: linear-gradient(135deg, #0056b3, #003d80);
+      transform: scale(1.03);
+    }
+
+    th {
+      background-color: #007BFF;
+      color: white;
+    }
+
+    @media (max-width: 768px) {
+      .table-responsive {
+        overflow-x: auto;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<!-- 🌐 Navbar -->
+<nav class="navbar navbar-expand-lg navbar-light bg-white mb-4 shadow-sm px-3">
+  <a class="navbar-brand d-flex align-items-center" href="{{ url_for('manager_dashboard.manager_dashboard_view') }}">
+    <img src="https://res.cloudinary.com/dljpgzbto/image/upload/v1743993646/company-logo_dksb23.jpg" height="40" class="me-2" alt="Logo">
+    Manager Dashboard
+  </a>
+  <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarToggle">
+    <span class="navbar-toggler-icon"></span>
+  </button>
+  <div class="collapse navbar-collapse justify-content-end" id="navbarToggle">
+    <ul class="navbar-nav mb-2 mb-lg-0">
+      <li class="nav-item">
+        <button class="btn btn-outline-dark" onclick="toggleDarkMode()">🌙</button>
+      </li>
+    </ul>
+  </div>
+</nav>
+
+<!-- 📊 Account Summary Section -->
+<div class="section">
+  <div class="d-flex justify-content-end mb-3">
+    <a href="{{ url_for('account_summary.account_summary_aggregate') }}">
+      <button class="btn-summary">View Aggregate Summary</button>
+    </a>
+  </div>
+
+  <h2>Today's Payments</h2>
+
+  {% if submission_done %}
+    <p><strong>Total Payment:</strong> {{ total_payment }}</p>
+    <p><strong>Final Payment:</strong> {{ final_payment }}</p>
+
+    <h3>Shortage & Surplus</h3>
+    {% if total_shortage or total_surplus %}
+      <div class="table-responsive">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Total Shortage</th>
+              <th>Total Surplus</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>{{ total_shortage }}</td>
+              <td>{{ total_surplus }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p>No shortage or surplus reported.</p>
+    {% endif %}
+
+    <h3>Expenses</h3>
+    {% if expenses %}
+      <div class="table-responsive">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Description</th>
+              <th>Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for exp in expenses %}
+              <tr>
+                <td>{{ exp.description }}</td>
+                <td>{{ exp.amount }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p>No expenses submitted today.</p>
+    {% endif %}
+
+    <p><strong>Total Expense:</strong> {{ total_expense }}</p>
+    <p><strong>Settled Payment:</strong> {{ settled_payment }}</p>
+  {% else %}
+    <p class="text-danger fw-bold">Pending - Today's payment has not been submitted yet.</p>
+  {% endif %}
+</div>
+
+<!-- 📅 Past Summary -->
+<div class="section">
+  <h2>Past Summaries</h2>
+
+  <form class="row g-3 align-items-end mb-4" method="get" action="{{ url_for('account_summary.account_summary') }}">
+    <div class="col-md-4">
+      <label for="filter-date" class="form-label">Filter by Date:</label>
+      <input type="date" name="filter_date" id="filter-date" class="form-control">
+    </div>
+    <div class="col-md-2">
+      <button type="submit" class="btn btn-primary w-100">Filter</button>
+    </div>
+  </form>
+
+  {% if past_records %}
+    {% for day_summary in past_records %}
+      <div class="section">
+        <h3>{{ day_summary.date }}</h3>
+        <div class="table-responsive">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Agent Name</th>
+                <th>Total Payment</th>
+                <th>Final Payment</th>
+                <th>Shortage</th>
+                <th>Surplus</th>
+                <th>Total Expense</th>
+                <th>Settled Payment</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for record in day_summary.records %}
+                <tr>
+                  <td>{{ record.agent_name }}</td>
+                  <td>{{ record.total_payment }}</td>
+                  <td>{{ record.final_total }}</td>
+                  <td>{{ record.shortage }}</td>
+                  <td>{{ record.surplus }}</td>
+                  <td>{{ record.total_expense }}</td>
+                  <td>{{ record.settled_payment }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    {% endfor %}
+    <p><strong>Grand Total Settled Payment:</strong> {{ grand_total_settled }}</p>
+  {% else %}
+    <p>No past account records found.</p>
+  {% endif %}
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+  function toggleDarkMode() {
+    document.body.classList.toggle('dark-mode');
+  }
+</script>
+  {% include 'app_footer.html' %}
+
+</body>
+</html>
+

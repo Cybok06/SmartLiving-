@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <title>Transfer Product -  SMARTLIVING EMPORIUM PLUS (Flux360)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="theme-color" content="#0d6efd">
+  <link rel="icon" href="https://imagedelivery.net/h9fmMoa1o2c2P55TcWJGOg/10283f28-b9a0-4100-b254-19a854386800/public" type="image/png"/>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"/>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet"/>
+  <style>
+    :root{ --ink:#0f172a; --muted:#64748b; --line:#e2e8f0; --bg:#fff; --soft:#f8fafc; --brand:#0d6efd }
+    body{ background:var(--soft); color:var(--ink) }
+    .card{ border:1px solid var(--line); box-shadow:0 6px 18px rgba(2,6,23,.06) }
+    .muted{ color:var(--muted) }
+    .pill{ background:#e7f1ff; color:#0b63d1; border-radius:999px; padding:.2rem .6rem; font-size:.8rem }
+    .prod-card{ cursor:pointer; transition:transform .1s ease }
+    .prod-card:hover{ transform:translateY(-2px) }
+    .selected{ outline:2px solid #0d6efd; outline-offset:2px }
+    .totals small{ color:var(--muted) }
+    .totals .v{ font-weight:700 }
+    .btn-wide{ min-width: 220px }
+    .search-empty{ color:var(--muted); font-style:italic }
+    @media (prefers-reduced-motion: reduce){ .prod-card{ transition:none } }
+    .brand-lockup{ display:flex; align-items:center; gap:10px; }
+    .brand-logo{ height:32px; width:auto; object-fit:contain; }
+    .platform-logo{ height:18px; width:auto; object-fit:contain; }
+    .brand-footer{
+      margin-top: 24px;
+      padding-top: 14px;
+      border-top: 1px solid var(--line);
+      color:var(--muted);
+      font-size:.85rem;
+      display:flex;
+      flex-wrap:wrap;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+    }
+    .brand-footer .brand-name-text{
+      font-weight:700;
+      letter-spacing:.04em;
+      text-transform:uppercase;
+      color:var(--ink);
+      font-size:.8rem;
+    }
+  </style>
+</head>
+<body>
+    {% include 'inventory_sidebar.html' %}
+
+<div class="container py-4">
+  <div class="d-flex align-items-center mb-3">
+    <h3 class="me-2 mb-0">Transfer Product</h3>
+    <span class="pill">Agent</span>
+  </div>
+
+  <!-- Search -->
+  <div class="card p-3 mb-3">
+    <div class="row g-2 align-items-center">
+      <div class="col-12 col-md-8">
+        <label class="form-label mb-1">Search customer by name or phone</label>
+        <input id="q" class="form-control form-control-lg" placeholder="e.g. Gifty or 0503..." autocomplete="off"/>
+      </div>
+      <div class="col-12 col-md-4 d-grid">
+        <button id="btnSearch" class="btn btn-primary btn-lg">
+          <i class="bi bi-search"></i> Search
+        </button>
+      </div>
+    </div>
+    <div id="searchNote" class="small muted mt-2">Only your customers are searchable.</div>
+  </div>
+
+  <!-- Results -->
+  <div id="results"></div>
+
+  <!-- Transfer panel -->
+  <div id="transferPanel" class="card p-3 mt-3 d-none">
+    <div class="row g-3 align-items-center">
+      <div class="col-12 col-lg-4">
+        <label class="form-label">FROM product (stopping)</label>
+        <select id="fromSelect" class="form-select form-select-lg"></select>
+      </div>
+      <div class="col-12 col-lg-4">
+        <label class="form-label">TO product (continuing)</label>
+        <select id="toSelect" class="form-select form-select-lg"></select>
+      </div>
+      <div class="col-12 col-lg-4">
+        <label class="form-label">Calculated transfer amount</label>
+        <div class="form-control form-control-lg bg-light" id="calcAmount">GHS 0.00</div>
+        <div class="small muted">= 2/3 × total paid of FROM product</div>
+      </div>
+      <div class="col-12">
+        <label class="form-label">Note (optional)</label>
+        <input id="note" class="form-control" placeholder="Reason / remarks for this transfer"/>
+      </div>
+      <div class="col-12 d-flex gap-2">
+        <button id="btnPreview" class="btn btn-outline-secondary btn-wide" disabled>
+          <i class="bi bi-eye"></i> Preview
+        </button>
+        <button id="btnExecute" class="btn btn-primary btn-wide" disabled>
+          <i class="bi bi-arrow-left-right"></i> Execute Transfer
+        </button>
+        <div id="execMsg" class="ms-2"></div>
+      </div>
+    </div>
+  </div>
+
+  <footer class="brand-footer">
+    <div class="brand-lockup">
+      <img src="https://imagedelivery.net/h9fmMoa1o2c2P55TcWJGOg/10283f28-b9a0-4100-b254-19a854386800/public"
+           alt="SmartLiving Emporium Plus"
+           class="brand-logo">
+      <span class="brand-name-text">SMARTLIVING EMPORIUM PLUS</span>
+    </div>
+    <div class="brand-lockup">
+      <span>Powered by Flux360</span>
+      <img src="https://imagedelivery.net/h9fmMoa1o2c2P55TcWJGOg/237a407f-0df9-4a4b-b777-7ecbaacc0300/public"
+           alt="Flux360"
+           class="platform-logo">
+    </div>
+  </footer>
+</div>
+
+<!-- Preview Modal -->
+<div class="modal fade" id="previewModal" tabindex="-1" aria-labelledby="previewLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h6 class="modal-title" id="previewLabel">Confirm Transfer</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body" id="previewBody"></div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" id="btnConfirm" class="btn btn-primary">Yes, Transfer</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+  let current = null; // {customer_id, name, ... , purchases[]}
+
+  const $q = document.getElementById('q');
+  const $btnSearch = document.getElementById('btnSearch');
+  const $results = document.getElementById('results');
+  const $panel = document.getElementById('transferPanel');
+  const $from = document.getElementById('fromSelect');
+  const $to   = document.getElementById('toSelect');
+  const $calc = document.getElementById('calcAmount');
+  const $note = document.getElementById('note');
+  const $btnPreview = document.getElementById('btnPreview');
+  const $btnExecute = document.getElementById('btnExecute');
+  const $execMsg = document.getElementById('execMsg');
+
+  function money(v){ return 'GHS ' + (Number(v||0).toFixed(2)); }
+
+  async function doSearch(){
+    const q = $q.value.trim();
+    $results.innerHTML = '';
+    $panel.classList.add('d-none');
+    current = null;
+    if(!q){ return; }
+    const res = await fetch(`/transfer_product/search?q=${encodeURIComponent(q)}`, {headers:{'X-Requested-With':'XMLHttpRequest'}});
+    const data = await res.json();
+    if(!data.ok){ $results.innerHTML = `<div class="alert alert-danger">${data.message||'Search failed'}</div>`; return; }
+    if(!data.results.length){ $results.innerHTML = `<div class="search-empty">No customers found.</div>`; return; }
+
+    // Show list (pick one)
+    const items = data.results.map((c, idx) => {
+      const pic = c.image_url ? `<img src="${c.image_url}" class="rounded me-3" style="width:56px;height:56px;object-fit:cover"/>` : `<div class="rounded me-3 bg-light" style="width:56px;height:56px"></div>`;
+      const prods = c.purchases.map(p=>`${p.name} · Paid ${money(p.paid)} / Total ${money(p.total)}`).join('<br/>');
+      return `
+        <div class="card p-3 mb-2">
+          <div class="d-flex align-items-center">
+            ${pic}
+            <div class="flex-grow-1">
+              <div class="d-flex align-items-center gap-2">
+                <strong>${c.name}</strong><span class="text-muted">${c.phone_number||''}</span>
+              </div>
+              <div class="small muted mt-1">${prods || 'No purchases'}</div>
+            </div>
+            <div>
+              <button class="btn btn-outline-primary btn-sm" data-pick="${idx}"><i class="bi bi-check2-circle"></i> Select</button>
+            </div>
+          </div>
+        </div>`;
+    }).join('');
+    $results.innerHTML = items;
+
+    // Attach pick handlers
+    $results.querySelectorAll('[data-pick]').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const idx = Number(btn.getAttribute('data-pick'));
+        current = data.results[idx];
+        hydrateTransferUI(current);
+      });
+    });
+  }
+
+  function hydrateTransferUI(cust){
+    // Fill selects
+    const opts = cust.purchases.map((p, i)=>`<option value="${i}">${p.name} -- Paid ${money(p.paid)} / Total ${money(p.total)}</option>`).join('');
+    $from.innerHTML = `<option value="" disabled selected>Choose product to stop</option>` + opts;
+    $to.innerHTML   = `<option value="" disabled selected>Choose product to continue</option>` + opts;
+    $panel.classList.remove('d-none');
+    $calc.textContent = 'GHS 0.00';
+    $btnPreview.disabled = true;
+    $btnExecute.disabled = true;
+
+    function recalc(){
+      const fi = Number($from.value);
+      const ti = Number($to.value);
+      const valid = !Number.isNaN(fi) && !Number.isNaN(ti) && fi !== ti;
+      if(valid){
+        const paidFrom = Number(cust.purchases[fi].paid||0);
+        const amt = (2/3) * paidFrom;
+        $calc.textContent = money(amt);
+      }else{
+        $calc.textContent = 'GHS 0.00';
+      }
+      $btnPreview.disabled = !valid;
+      $btnExecute.disabled = !valid;
+    }
+    $from.onchange = recalc;
+    $to.onchange   = recalc;
+  }
+
+  async function executeTransfer(confirmOnly=false){
+    if(!current) return;
+    const fi = Number($from.value); const ti = Number($to.value);
+    if(Number.isNaN(fi) || Number.isNaN(ti) || fi===ti) return;
+
+    if(confirmOnly){
+      const paidFrom = Number(current.purchases[fi].paid||0);
+      const amt = (2/3)*paidFrom;
+      const html = `
+        <div class="mb-2"><strong>Customer:</strong> ${current.name} <span class="text-muted">(${current.phone_number||''})</span></div>
+        <div class="mb-2"><strong>From:</strong> ${current.purchases[fi].name} -- Paid ${money(paidFrom)}</div>
+        <div class="mb-2"><strong>To:</strong> ${current.purchases[ti].name} -- Current Paid ${money(current.purchases[ti].paid)}</div>
+        <hr class="my-2"/>
+        <div class="mb-2"><strong>Transfer amount:</strong> ${money(amt)} <span class="text-muted">(2/3 × paid on FROM)</span></div>
+        <div class="small text-muted">The amount will be added to the latest payment on the destination product.</div>
+      `;
+      document.getElementById('previewBody').innerHTML = html;
+      const modal = new bootstrap.Modal('#previewModal');
+      modal.show();
+      document.getElementById('btnConfirm').onclick = async ()=>{
+        modal.hide();
+        await actuallyExecute(fi, ti);
+      };
+      return;
+    }
+    await actuallyExecute(fi, ti);
+  }
+
+  async function actuallyExecute(fi, ti){
+    $execMsg.innerHTML = '<span class="text-muted">Processing…</span>';
+    const resp = await fetch('/transfer_product/execute', {
+      method:'POST',
+      headers:{'Content-Type':'application/json','X-Requested-With':'XMLHttpRequest'},
+      body: JSON.stringify({
+        customer_id: current.customer_id,
+        from_index: fi,
+        to_index: ti,
+        note: $note.value.trim()
+      })
+    });
+    const data = await resp.json();
+    if(!data.ok){
+      $execMsg.innerHTML = `<span class="text-danger">${data.message||'Failed.'}</span>`;
+      return;
+    }
+    $execMsg.innerHTML = `<span class="text-success"><i class="bi bi-check2-circle"></i> ${data.message}</span>`;
+    // Refresh search result for updated totals (FROM removed, TO increased)
+    await doSearch();
+  }
+
+  // Events
+  $btnSearch.addEventListener('click', doSearch);
+  $q.addEventListener('keydown', (e)=>{ if(e.key==='Enter'){ doSearch(); } });
+  $btnPreview.addEventListener('click', ()=> executeTransfer(true));
+  $btnExecute.addEventListener('click', ()=> executeTransfer(false));
+</script>
+</body>
+</html>

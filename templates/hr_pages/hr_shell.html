@@ -1,0 +1,599 @@
+{# templates/hr_pages/hr_shell.html #}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>HR Module - Flux 360 HR</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <link rel="icon" type="image/png"
+        href="https://imagedelivery.net/h9fmMoa1o2c2P55TcWJGOg/8744779c-1300-4a50-49de-b143d24da300/public">
+
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+
+  <style>
+    :root{
+      --hr-primary:#2563EB;
+      --hr-primary-dark:#0F172A;
+      --hr-bg-soft:#F3F4F6;
+      --hr-border:#E5E7EB;
+      --hr-muted:#6B7280;
+
+      --hr-success:#16A34A;
+      --hr-warning:#F59E0B;
+      --hr-danger:#DC2626;
+      --hr-info:#0EA5E9;
+
+      --hr-primary-soft:rgba(37,99,235,.10);
+
+      /* Sidebar */
+      --sb-rail:72px;     /* always visible */
+      --sb-open:280px;    /* expanded */
+      --sb-radius:16px;
+    }
+
+    *{ box-sizing:border-box; }
+    body.hr-body{
+      margin:0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--hr-bg-soft);
+      color:#0F172A;
+      overflow-x:hidden;
+    }
+
+    .hr-shell{ display:flex; min-height:100vh; }
+
+    /* =========================
+       SIDEBAR: rail -> expand
+       ========================= */
+    .hr-sidebar{
+      position:fixed;
+      left:0; top:0;
+      height:100vh;
+      width: var(--sb-rail);
+      background: linear-gradient(180deg,#0B1224,var(--hr-primary-dark));
+      color:#E5E7EB;
+
+      padding: 14px 10px;
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+
+      border-top-right-radius: var(--sb-radius);
+      border-bottom-right-radius: var(--sb-radius);
+      z-index:1050;
+
+      transition: width .22s ease, box-shadow .22s ease;
+      box-shadow: 0 10px 40px rgba(15,23,42,.25);
+      overflow:hidden;
+    }
+
+    body.hr-sb-open .hr-sidebar{
+      width: var(--sb-open);
+      box-shadow: 0 20px 60px rgba(15,23,42,.55);
+    }
+
+    /* Brand */
+    .hr-sidebar-brand{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      padding: 10px 8px 12px;
+      border-bottom: 1px solid rgba(148,163,184,.22);
+    }
+    .hr-sidebar-brand img{
+      width:40px;height:40px;border-radius:50%;
+      object-fit:cover;
+      background:#020617;
+      padding:3px;
+      border:1px solid rgba(148,163,184,.45);
+      flex:0 0 auto;
+    }
+    .hr-sidebar-brand-text{ min-width: 160px; }
+    .hr-sidebar-brand-text .title{
+      font-size:.95rem;
+      font-weight:650;
+      color:#F9FAFB;
+      line-height:1.15;
+      white-space:nowrap;
+    }
+    .hr-sidebar-brand-text .subtitle{
+      font-size:.78rem;
+      color:#9CA3AF;
+      white-space:nowrap;
+    }
+
+    /* Hide brand text when rail-only */
+    body:not(.hr-sb-open) .hr-sidebar-brand-text{ display:none; }
+
+    .hr-sidebar-section-label{
+      font-size:.72rem;
+      text-transform:uppercase;
+      letter-spacing:.09em;
+      color:#9CA3AF;
+      padding: 10px 10px 2px;
+      white-space:nowrap;
+    }
+    body:not(.hr-sb-open) .hr-sidebar-section-label{ display:none; }
+
+    .hr-nav{
+      list-style:none;
+      padding:0;
+      margin:0;
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+      flex: 1 1 auto;
+      overflow-y: auto;
+      padding-right: 6px;
+    }
+    .hr-nav::-webkit-scrollbar{ width:6px; }
+    .hr-nav::-webkit-scrollbar-thumb{ background: rgba(148,163,184,.35); border-radius: 999px; }
+
+    .hr-nav-link{
+      display:flex;
+      align-items:center;
+      gap:12px;
+      padding: 10px 10px;
+      border-radius: 14px;
+      color:#E5E7EB;
+      font-size:.90rem;
+      text-decoration:none;
+
+      border:1px solid rgba(148,163,184,.12);
+      background: rgba(15,23,42,.14);
+      transition: transform .18s ease, background .18s ease, border-color .18s ease;
+      white-space:nowrap;
+    }
+
+    .hr-nav-link i{
+      font-size:1.10rem;
+      width: 22px;
+      text-align:center;
+      flex:0 0 auto;
+    }
+
+    .hr-nav-link span{
+      flex:1;
+      min-width: 160px;
+    }
+
+    /* Hide link text in rail-only */
+    body:not(.hr-sb-open) .hr-nav-link span{ display:none; }
+
+    .hr-nav-link:hover{
+      transform: translateX(2px);
+      background: rgba(31,41,55,.85);
+      border-color: rgba(37,99,235,.35);
+      text-decoration:none;
+      color:#fff;
+    }
+
+    .hr-nav-link.active{
+      background: var(--hr-primary-soft);
+      border-color: rgba(37,99,235,.65);
+      color:#fff;
+    }
+    .hr-nav-link.active i{ color: var(--hr-primary); }
+
+    .hr-nav-link-disabled{
+      opacity:.42;
+      pointer-events:none;
+    }
+
+    /* Tooltip-like label when collapsed (pure CSS) */
+    .hr-nav-link[data-tip]{
+      position:relative;
+    }
+    body:not(.hr-sb-open) .hr-nav-link[data-tip]::after{
+      content: attr(data-tip);
+      position:absolute;
+      left: calc(100% + 10px);
+      top: 50%;
+      transform: translateY(-50%);
+      background:#111827;
+      color:#F9FAFB;
+      border:1px solid rgba(148,163,184,.18);
+      padding: 6px 10px;
+      border-radius: 10px;
+      font-size: .78rem;
+      opacity:0;
+      pointer-events:none;
+      white-space:nowrap;
+      box-shadow: 0 18px 40px rgba(15,23,42,.35);
+      transition: opacity .14s ease;
+    }
+    body:not(.hr-sb-open) .hr-nav-link:hover::after{ opacity:1; }
+
+    /* =========================
+       MAIN AREA (no topbar)
+       ========================= */
+    .hr-main{
+      flex:1;
+      min-width:0;
+      width:100%;
+      padding-left: var(--sb-rail);
+    }
+
+    .hr-main-inner{
+      padding: 18px 20px 26px;
+      min-height:100vh;
+    }
+
+    #hr-main-content{
+      max-width:1280px;
+      margin:0 auto;
+      animation: hr-fade-in .18s ease-out;
+    }
+
+    @keyframes hr-fade-in{
+      from{opacity:0; transform:translateY(4px);}
+      to{opacity:1; transform:translateY(0);}
+    }
+
+    .hr-loading{
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:60px 0;
+      color: var(--hr-muted);
+      font-size:.95rem;
+      background:#fff;
+      border:1px solid var(--hr-border);
+      border-radius:14px;
+    }
+    .hr-loading .spinner-border{ width:1.8rem;height:1.8rem;margin-right:10px; }
+
+    /* TOASTS */
+    .hr-toast-container{
+      position:fixed;
+      right:16px;
+      bottom:16px;
+      z-index:2000;
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+    }
+    .hr-toast{
+      min-width:260px;
+      max-width:340px;
+      padding:10px 12px;
+      border-radius:12px;
+      background:#111827;
+      color:#F9FAFB;
+      font-size:.85rem;
+      box-shadow:0 18px 40px rgba(15,23,42,.35);
+      display:flex;
+      align-items:flex-start;
+      gap:10px;
+      opacity:0;
+      transform:translateY(6px);
+      animation: hr-toast-in .18s ease-out forwards;
+    }
+    .hr-toast-icon{ font-size:1rem; margin-top:2px; }
+    .hr-toast-close{ font-size:1rem; cursor:pointer; margin-left:auto; opacity:.85; }
+    .hr-toast--success{ border-left:3px solid var(--hr-success); }
+    .hr-toast--danger{  border-left:3px solid var(--hr-danger); }
+    .hr-toast--info{    border-left:3px solid var(--hr-info); }
+    .hr-toast--warning{ border-left:3px solid var(--hr-warning); }
+    @keyframes hr-toast-in{ to{ opacity:1; transform:translateY(0);} }
+
+    /* =========================
+       MOBILE: bottom dock
+       ========================= */
+    @media (max-width: 991.98px){
+      .hr-sidebar{
+        position:fixed;
+        left:0; right:0; bottom:0; top:auto;
+        width:100%;
+        height:72px;
+        border-radius:18px 18px 0 0;
+        padding: 8px 10px;
+      }
+      body.hr-sb-open .hr-sidebar{ width:100%; } /* no expand on mobile */
+      .hr-sidebar-brand, .hr-sidebar-section-label{ display:none !important; }
+
+      .hr-nav{
+        flex-direction:row;
+        justify-content:space-around;
+        align-items:center;
+      }
+      .hr-nav-link{
+        flex-direction:column;
+        gap:4px;
+        padding: 8px 10px;
+        min-width:72px;
+        font-size:.72rem;
+      }
+      .hr-nav-link span{ display:block !important; min-width:auto; }
+      .hr-main{ padding-left:0; }
+      .hr-main-inner{ padding-bottom:96px; }
+    }
+  </style>
+</head>
+
+<body class="hr-body">
+<div class="hr-shell">
+
+  <!-- SIDEBAR -->
+  <aside class="hr-sidebar" id="hr-sidebar">
+
+    <div class="hr-sidebar-brand">
+      <img src="https://imagedelivery.net/h9fmMoa1o2c2P55TcWJGOg/8744779c-1300-4a50-49de-b143d24da300/public"
+           alt="Flux 360 HR Logo">
+      <div class="hr-sidebar-brand-text">
+        <div class="title">Flux 360 HR</div>
+        <div class="subtitle">People &amp; Performance</div>
+      </div>
+    </div>
+
+    <div class="hr-sidebar-section-label">HR Navigation</div>
+
+    <ul class="hr-nav">
+      <li class="hr-nav-item">
+        <a href="{{ url_for('hr.dashboard') }}"
+           class="hr-nav-link {% if active_page == 'dashboard' %}active{% endif %}"
+           data-hr-link="true"
+           data-url="{{ url_for('hr.dashboard') }}"
+           data-tip="Dashboard">
+          <i class="bi bi-speedometer2"></i>
+          <span>Dashboard</span>
+        </a>
+      </li>
+
+      <li class="hr-nav-item">
+        <a href="{{ url_for('hr.employees') }}"
+           class="hr-nav-link {% if active_page == 'employees' %}active{% endif %}"
+           data-hr-link="true"
+           data-url="{{ url_for('hr.employees') }}"
+           data-tip="Employees">
+          <i class="bi bi-people"></i>
+          <span>Employees</span>
+        </a>
+      </li>
+
+     <li class="hr-nav-item">
+  <a href="{{ url_for('hr.attendance_page') }}" class="hr-nav-link" data-tip="Attendance">
+    <i class="bi bi-calendar-check"></i><span>Attendance</span>
+  </a>
+</li>
+
+
+      <li class="hr-nav-item">
+  <a href="{{ url_for('hr.leave_page') }}" class="hr-nav-link" data-tip="Leave">
+    <i class="bi bi-calendar-heart"></i><span>Leave</span>
+  </a>
+</li>
+
+      <li class="hr-nav-item">
+  <a href="{{ url_for('hr_payroll.hr_payroll_home') }}"
+     class="hr-nav-link"
+     data-tip="Payroll"
+     target="_blank"
+     rel="noopener noreferrer">
+    <i class="bi bi-cash-stack"></i><span>Payroll</span>
+  </a>
+</li>
+
+      <li class="hr-nav-item">
+  <a href="{{ url_for('hr.performance_page') }}" class="hr-nav-link" data-tip="Performance">
+    <i class="bi bi-graph-up-arrow"></i><span>Performance</span>
+  </a>
+</li>
+
+
+      <li class="hr-nav-item">
+  <a href="{{ url_for('hr.cases_page') }}" class="hr-nav-link" data-tip="Cases" title="Cases">
+    <i class="bi bi-exclamation-triangle"></i><span>Cases</span>
+  </a>
+</li>
+
+  <li class="hr-nav-item">
+  <a href="{{ url_for('hr.reminders_page') }}" class="hr-nav-link" data-tip="Reminders">
+    <i class="bi bi-bell"></i><span>Reminders</span>
+  </a>
+</li>
+
+
+
+      <li class="hr-nav-item">
+  <a href="{{ url_for('hr.exits_page') }}" class="hr-nav-link" data-tip="Exits">
+    <i class="bi bi-door-open"></i><span>Exits</span>
+  </a>
+</li>
+
+      <li class="hr-nav-item">
+        <a href="{{ url_for('hr.profile') }}"
+           class="hr-nav-link {% if active_page == 'profile' %}active{% endif %}"
+           data-tip="My Profile">
+          <i class="bi bi-person-circle"></i><span>My Profile</span>
+        </a>
+      </li>
+
+      <li class="hr-nav-item">
+        <a href="{{ url_for('login.logout') }}" class="hr-nav-link" data-tip="Logout">
+          <i class="bi bi-box-arrow-right"></i><span>Logout</span>
+        </a>
+      </li>
+
+    </ul>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="hr-main">
+    <div class="hr-main-inner">
+      <div id="hr-main-content">
+        {% if hr_content_template %}
+          {% include hr_content_template %}
+        {% else %}
+          {% block hr_content %}{% endblock %}
+        {% endif %}
+      </div>
+    </div>
+  </main>
+</div>
+
+<div class="hr-toast-container" id="hr-toast-container"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+(function () {
+  const mainContentEl  = document.getElementById('hr-main-content');
+  const sidebarEl      = document.getElementById('hr-sidebar');
+  const toastContainer = document.getElementById('hr-toast-container');
+
+  // TOASTS
+  window.showToast = function (type, message) {
+    if (!toastContainer) return;
+
+    const toast = document.createElement('div');
+    toast.className = 'hr-toast hr-toast--' + (type || 'info');
+
+    const iconSpan = document.createElement('div');
+    iconSpan.className = 'hr-toast-icon';
+    switch (type) {
+      case 'success': iconSpan.innerHTML = '<i class="bi bi-check-circle-fill"></i>'; break;
+      case 'danger':  iconSpan.innerHTML = '<i class="bi bi-x-circle-fill"></i>'; break;
+      case 'warning': iconSpan.innerHTML = '<i class="bi bi-exclamation-circle-fill"></i>'; break;
+      default:        iconSpan.innerHTML = '<i class="bi bi-info-circle-fill"></i>';
+    }
+
+    const msgSpan = document.createElement('div');
+    msgSpan.textContent = message || '';
+
+    const closeSpan = document.createElement('div');
+    closeSpan.className = 'hr-toast-close';
+    closeSpan.innerHTML = '&times;';
+    closeSpan.onclick = () => toast.remove();
+
+    toast.appendChild(iconSpan);
+    toast.appendChild(msgSpan);
+    toast.appendChild(closeSpan);
+    toastContainer.appendChild(toast);
+
+    setTimeout(() => {
+      if (toast.parentNode) {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(6px)';
+        setTimeout(() => toast.remove(), 180);
+      }
+    }, 4500);
+  };
+
+  // RAIL -> EXPAND ON HOVER (DESKTOP ONLY)
+  let closeTimer = null;
+  const isDesktop = () => window.matchMedia('(min-width: 992px)').matches;
+
+  function openSidebar(){
+    if (!isDesktop()) return;
+    document.body.classList.add('hr-sb-open');
+    if (closeTimer) { clearTimeout(closeTimer); closeTimer = null; }
+  }
+  function closeSidebarSoon(){
+    if (!isDesktop()) return;
+    if (closeTimer) clearTimeout(closeTimer);
+    closeTimer = setTimeout(() => {
+      document.body.classList.remove('hr-sb-open');
+    }, 140);
+  }
+
+  if (sidebarEl){
+    sidebarEl.addEventListener('mouseenter', openSidebar);
+    sidebarEl.addEventListener('mouseleave', closeSidebarSoon);
+  }
+
+  window.addEventListener('resize', () => {
+    if (!isDesktop()) document.body.classList.remove('hr-sb-open');
+  });
+
+  // AJAX NAV
+  function setActiveLink(url) {
+    if (!sidebarEl) return;
+    const links = sidebarEl.querySelectorAll('[data-hr-link="true"]');
+    links.forEach(link => {
+      const linkUrl = link.getAttribute('data-url');
+      if (linkUrl === url) link.classList.add('active');
+      else link.classList.remove('active');
+    });
+  }
+
+  function showLoading() {
+    if (!mainContentEl) return;
+    mainContentEl.innerHTML = `
+      <div class="hr-loading">
+        <div class="spinner-border" role="status" aria-hidden="true"></div>
+        <span>Loading HR data...</span>
+      </div>
+    `;
+  }
+
+  function loadHrPage(url, pushState = true) {
+    if (!url || !mainContentEl) return;
+    showLoading();
+
+    fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+      .then(resp => {
+        if (!resp.ok) throw new Error('Failed to load HR page.');
+        return resp.text();
+      })
+      .then(html => {
+        const trimmed = html.trim().toLowerCase();
+        if (trimmed.startsWith('<!doctype') || trimmed.startsWith('<html')) {
+          window.location.href = url;
+          return;
+        }
+        mainContentEl.innerHTML = html;
+        setActiveLink(url);
+
+        if (pushState) window.history.pushState({hr:true,url:url}, '', url);
+        if (window.initHrDynamic) window.initHrDynamic(mainContentEl);
+
+        // close after click on desktop (feels pro)
+        if (isDesktop()) document.body.classList.remove('hr-sb-open');
+      })
+      .catch(err => {
+        console.error(err);
+        window.showToast && window.showToast('danger', 'Unable to load HR page. Please try again.');
+      });
+  }
+
+  window.loadHrPage = loadHrPage;
+
+  function handleSidebarLinkClick(e){
+    const link = e.currentTarget;
+    const url = link.getAttribute('data-url') || link.getAttribute('href');
+    if (!url) return;
+    e.preventDefault();
+    loadHrPage(url, true);
+  }
+
+  function initHrLinks(){
+    if (!sidebarEl) return;
+    sidebarEl.querySelectorAll('[data-hr-link="true"]').forEach(link => {
+      link.removeEventListener('click', handleSidebarLinkClick);
+      link.addEventListener('click', handleSidebarLinkClick);
+    });
+  }
+
+  window.addEventListener('popstate', (event) => {
+    if (event.state && event.state.hr && event.state.url) {
+      loadHrPage(event.state.url, false);
+    }
+  });
+
+  window.initHrDynamic = function(){};
+
+  document.addEventListener('DOMContentLoaded', () => {
+    initHrLinks();
+    const currentUrl = window.location.pathname + window.location.search;
+    setActiveLink(currentUrl);
+    window.history.replaceState({hr:true,url:currentUrl}, '', currentUrl);
+  });
+})();
+</script>
+  {% include 'app_footer.html' %}
+
+</body>
+</html>

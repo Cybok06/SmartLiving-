@@ -1,0 +1,363 @@
+<!-- templates/inventory/_sidebar.html -->
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet" />
+
+<style>
+  :root{
+    --ink:#0f172a; --muted:#64748b; --line:rgba(255,255,255,.12);
+    --brand:#0d6efd; --brand-2:#22c1c3; --brand-3:#0ea5e9;
+    --bg: #0b1220; --bg-soft: #0f1a2b; --glass: rgba(255,255,255,.06);
+    --w: 285px; --z: 1050; --btn-z: 1100;
+    --radius:16px; --shadow:0 18px 60px rgba(2,6,23,.28);
+  }
+
+  /* Toggle Button (fixed, no topbar) */
+  .inv-toggle{
+    position: fixed; top: 16px; left: 16px; z-index: var(--btn-z);
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 44px; height: 44px; border-radius: 12px;
+    background: linear-gradient(135deg, var(--brand), var(--brand-3));
+    color: #fff; border: 0; cursor: pointer;
+    box-shadow: var(--shadow);
+    transition: transform .18s ease;
+  }
+  .inv-toggle:active{ transform: scale(.98) }
+  .inv-toggle i{ font-size: 1.25rem }
+
+  /* Overlay (mobile/when open) */
+  .inv-overlay{
+    position: fixed; inset: 0; background: rgba(3,10,20,.55);
+    z-index: calc(var(--z) - 1); opacity: 0; pointer-events: none;
+    transition: opacity .25s ease;
+  }
+  .inv-overlay.show{ opacity: 1; pointer-events: auto }
+
+  /* Sidebar */
+  .inv-side{
+    position: fixed; top: 0; bottom: 0; left: 0; width: var(--w);
+    background: linear-gradient(180deg, rgba(13,110,253,.12), rgba(14,165,233,.10)) , var(--bg);
+    color: #e9f2ff; z-index: var(--z);
+    transform: translateX(-100%); transition: transform .32s ease;
+    backdrop-filter: blur(14px);
+    border-right: 1px solid var(--line);
+    box-shadow: var(--shadow);
+    display: flex; flex-direction: column;
+  }
+  .inv-side.open{ transform: translateX(0) }
+
+  .inv-head{
+    padding: 18px 16px; display: flex; align-items: center; gap: 12px;
+    border-bottom: 1px solid var(--line);
+    background: linear-gradient(135deg, rgba(13,110,253,.18), rgba(34,193,195,.12));
+  }
+  .inv-logo{
+    width: 44px; height: 44px; border-radius: 12px; overflow: hidden;
+    background: #0a1629; display:grid; place-items:center;
+    border: 1px solid var(--line);
+  }
+  .inv-logo img{ width:100%; height:100%; object-fit: cover }
+  .inv-brand{ line-height: 1.1 }
+  .inv-brand .t{ font-weight: 800; letter-spacing: .2px }
+  .inv-brand .s{ font-size: .85rem; color: #b8c7e8 }
+
+  .inv-menu{ padding: 8px; overflow-y: auto; flex: 1 1 auto }
+  .inv-menu::-webkit-scrollbar{ width: 10px }
+  .inv-menu::-webkit-scrollbar-thumb{ background: rgba(255,255,255,.08); border-radius: 8px }
+
+  .inv-link{
+    display:flex; align-items:center; gap:12px; padding: 12px 14px; margin: 6px 6px;
+    color:#e9f2ff; border-radius: 12px; position: relative;
+    background: transparent; border: 1px solid transparent;
+    transition: background .18s ease, transform .12s ease, border-color .18s ease, padding-left .18s ease;
+    text-decoration: none; min-height: 44px;
+  }
+  .inv-link i{ font-size: 1.15rem; opacity: .92 }
+  .inv-link .label{ white-space: nowrap }
+  .inv-link:hover{ background: var(--glass); padding-left: 18px }
+  .inv-link.active{
+    background: linear-gradient(135deg, rgba(13,110,253,.22), rgba(14,165,233,.20));
+    border-color: rgba(13,110,253,.35);
+    box-shadow: 0 10px 24px rgba(13,110,253,.18);
+    color: #ffffff;
+  }
+  .inv-badge{
+    margin-left: auto;
+    background: #ef4444;
+    color: #fff;
+    border-radius: 999px;
+    padding: 2px 7px;
+    font-size: .72rem;
+    font-weight: 700;
+    animation: blink 1s steps(2, start) infinite;
+  }
+  @keyframes blink { to { visibility: hidden; } }
+  .inv-badge-pulse{
+    margin-left: auto;
+    background: #ef4444;
+    color: #fff;
+    border-radius: 999px;
+    padding: 2px 7px;
+    font-size: .72rem;
+    font-weight: 700;
+    animation: softPulse 1.8s ease-in-out infinite;
+  }
+  .inv-low-dot{
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
+    background: #ef4444;
+    margin-left: 6px;
+    box-shadow: 0 0 0 rgba(239,68,68,.4);
+    animation: softPulse 1.8s ease-in-out infinite;
+  }
+  @keyframes softPulse {
+    0% { box-shadow: 0 0 0 0 rgba(239,68,68,.35); }
+    70% { box-shadow: 0 0 0 8px rgba(239,68,68,0); }
+    100% { box-shadow: 0 0 0 0 rgba(239,68,68,0); }
+  }
+
+  /* Submenu */
+  .inv-toggle-row{
+    display:flex; align-items:center; justify-content: space-between;
+    gap:12px; padding: 12px 14px; margin: 6px 6px; cursor:pointer;
+    border-radius: 12px; border:1px solid transparent; min-height:44px;
+    transition: background .18s ease, border-color .18s ease, padding-left .18s ease;
+  }
+  .inv-toggle-row:hover{ background: var(--glass); padding-left: 18px }
+  .inv-toggle-row .left{ display:flex; align-items:center; gap:12px }
+  .inv-caret{ transition: transform .22s ease }
+  .inv-toggle-row.open .inv-caret{ transform: rotate(90deg) }
+
+  .inv-sub{ display:none; padding-left: 6px }
+  .inv-sub.open{ display:block; animation: slideDown .22s ease }
+  @keyframes slideDown{ from{ opacity:0; transform: translateY(-4px) } to{ opacity:1; transform:none } }
+
+  /* Footer action (always visible) */
+  .inv-foot{
+    border-top: 1px solid var(--line); padding: 10px; display:flex; gap:8px; justify-content: space-between;
+    background: rgba(255,255,255,.03);
+  }
+  .inv-foot a{ color:#e9f2ff; text-decoration: none; display:inline-flex; align-items:center; gap:8px; padding:10px 12px; border-radius:10px }
+  .inv-foot a:hover{ background: var(--glass) }
+
+  /* Body lock when open */
+  body.inv-locked{ overflow:hidden }
+  @media (min-width: 992px){
+    /* Optional: keep it docked on desktop if you prefer. Leave as slide-in for now. */
+  }
+</style>
+
+<!-- Toggle button -->
+<button class="inv-toggle" id="invBtn" aria-controls="invSidebar" aria-expanded="false" aria-label="Open menu">
+  <i class="bi bi-list"></i>
+</button>
+
+<!-- Overlay -->
+<div class="inv-overlay" id="invOverlay" aria-hidden="true"></div>
+
+<!-- Sidebar -->
+<aside class="inv-side" id="invSidebar" aria-label="Inventory Sidebar" aria-hidden="true">
+  <div class="inv-head">
+    <div class="inv-logo">
+      <img src="https://res.cloudinary.com/dljpgzbto/image/upload/v1743993646/company-logo_dksb23.jpg" alt="Logo" />
+    </div>
+    <div class="inv-brand">
+      <div class="t">SMART LIVING</div>
+      <div class="s">Hi, {{ session.get('inventory_name','User') }}</div>
+    </div>
+    <button class="inv-toggle" style="position:static; width:36px; height:36px; border-radius:10px; margin-left:auto" aria-label="Close menu" onclick="INV.toggle(false)">
+      <i class="bi bi-x-lg"></i>
+    </button>
+  </div>
+
+  <nav class="inv-menu" id="invMenu">
+    <!-- Home -->
+    <a href="/inventory/dashboard"
+       class="inv-link {{ 'active' if request.path == '/inventory/dashboard' else '' }}"
+       {% if request.path == '/inventory/dashboard' %}aria-current="page"{% endif %}>
+      <i class="bi bi-speedometer2"></i><span class="label">Dashboard</span>
+    </a>
+
+    <!-- Profile (uses your inventory profile route) -->
+    <a href="{{ url_for('inventory_profile.view_profile') }}"
+       class="inv-link {{ 'active' if request.path.startswith('/inventory/profile') else '' }}"
+       {% if request.path.startswith('/inventory/profile') %}aria-current="page"{% endif %}>
+      <i class="bi bi-person-badge"></i><span class="label">My Profile</span>
+    </a>
+
+    <!-- Inventory Actions -->
+    <div class="inv-toggle-row" data-sub="invProducts">
+      <div class="left">
+        <i class="bi bi-box-seam"></i><span class="label">Inventory</span>
+      </div>
+      <i class="bi bi-caret-right-fill inv-caret"></i>
+    </div>
+    <div class="inv-sub" id="invProducts">
+      <a href="/add_inventory" class="inv-link {{ 'active' if request.path == '/add_inventory' else '' }}">
+        <i class="bi bi-plus-square"></i><span class="label">Add to Warehouse</span>
+      </a>
+         <a href="{{ url_for('inventory_orders.inv_orders_page') }}" class="inv-link {{ 'active' if request.path.startswith('/inventory/orders') else '' }}">
+      <i class="bi bi-inboxes"></i><span class="label">Orders Inbox</span>
+      <span id="invOrdersInboxBadge" class="inv-badge d-none">0</span>
+    </a>
+      <a href="/add_product" class="inv-link {{ 'active' if request.path == '/add_product' else '' }}">
+        <i class="bi bi-bag-plus"></i><span class="label">Add Product</span>
+      </a>
+      <a href="/transfer_product" class="inv-link {{ 'active' if request.path == '/transfer_product' else '' }}">
+        <i class="bi bi-arrow-left-right"></i><span class="label">Transfer Product</span>
+      </a>
+      <a href="/inventory_products" class="inv-link {{ 'active' if request.path == '/inventory_products' else '' }}">
+        <i class="bi bi-grid-3x3-gap"></i><span class="label">Inventory Products</span>
+      </a>
+      <a href="/inventory_products?low_stock=1" class="inv-link {{ 'active' if request.path == '/inventory_products' and request.args.get('low_stock') else '' }}">
+        <i class="bi bi-exclamation-diamond"></i><span class="label">Low Stocks</span>
+        <span id="invLowStockDot" class="inv-low-dot d-none"></span>
+        <span id="invLowStockBadge" class="inv-badge-pulse d-none">0</span>
+      </a>
+      <a href="/added_products" class="inv-link {{ 'active' if request.path == '/added_products' else '' }}">
+        <i class="bi bi-journal-check"></i><span class="label">Added Products</span>
+      </a>
+      <a href="{{ url_for('undelivered_items.undelivered_items_page') }}" class="inv-link {{ 'active' if request.path.startswith('/undelivered_items') else '' }}">
+        <i class="bi bi-exclamation-triangle"></i><span class="label">Undelivered Items</span>
+        <span id="invUndeliveredBadge" class="inv-badge d-none">0</span>
+      </a>
+      <a href="{{ url_for('packages.list_packages') }}" class="inv-link {{ 'active' if request.path.startswith('/packages') else '' }}">
+        <i class="bi bi-file-earmark-check"></i><span class="label">Packages Report</span>
+      </a>
+    </div>
+
+    <!-- Finance / Topups (if needed) -->
+    <a href="/admin/topups"
+       class="inv-link {{ 'active' if request.path.startswith('/admin/topups') else '' }}">
+      <i class="bi bi-lightning-charge"></i><span class="label">Top-ups</span>
+    </a>
+
+  </nav>
+
+  <div class="inv-foot">
+    <a href="{{ url_for('login.logout') }}"><i class="bi bi-box-arrow-right"></i> Logout</a>
+    <a href="#" onclick="INV.toggle(false)"><i class="bi bi-chevron-left"></i> Close</a>
+  </div>
+</aside>
+
+<script>
+  // Sidebar controller
+  const INV = (function(){
+    const btn = document.getElementById('invBtn');
+    const side = document.getElementById('invSidebar');
+    const overlay = document.getElementById('invOverlay');
+
+    function toggle(force){
+      const open = (typeof force === 'boolean') ? force : !side.classList.contains('open');
+      side.classList.toggle('open', open);
+      overlay.classList.toggle('show', open);
+      document.body.classList.toggle('inv-locked', open);
+      btn?.setAttribute('aria-expanded', String(open));
+      side?.setAttribute('aria-hidden', String(!open));
+      overlay?.setAttribute('aria-hidden', String(!open));
+    }
+
+    function init(){
+      // Toggle button
+      btn?.addEventListener('click', ()=> toggle());
+      overlay?.addEventListener('click', ()=> toggle(false));
+      document.addEventListener('keydown', (e)=>{ if (e.key === 'Escape') toggle(false) });
+
+      // Active link detection
+      const path = window.location.pathname;
+      document.querySelectorAll('#invMenu .inv-link[href]').forEach(a=>{
+        const href = a.getAttribute('href');
+        if (!href) return;
+        if (href === path || (href !== '/' && path.startsWith(href))){
+          a.classList.add('active');
+          if (a.closest('.inv-sub')) {
+            const parentToggle = a.closest('.inv-sub').previousElementSibling;
+            parentToggle?.classList.add('open');
+            a.closest('.inv-sub').classList.add('open');
+          }
+        }
+      });
+
+      // Submenu toggles + persist
+      document.querySelectorAll('.inv-toggle-row').forEach(row=>{
+        const id = row.getAttribute('data-sub');
+        const sub = document.getElementById(id);
+        const key = 'inv-sub-' + id;
+
+        // restore
+        if (localStorage.getItem(key) === 'open'){
+          row.classList.add('open'); sub?.classList.add('open');
+        }
+
+        row.addEventListener('click', ()=>{
+          const isOpen = row.classList.toggle('open');
+          sub?.classList.toggle('open', isOpen);
+          if (isOpen) localStorage.setItem(key, 'open');
+          else localStorage.removeItem(key);
+        });
+      });
+    }
+    return { init, toggle };
+  })();
+
+  document.addEventListener('DOMContentLoaded', INV.init);
+
+  async function refreshInvUndeliveredBadge(){
+    try{
+      const res = await fetch("{{ url_for('undelivered_items.undelivered_items_count_due') }}", { credentials: "same-origin" });
+      if(!res.ok) throw new Error("HTTP "+res.status);
+      const d = await res.json();
+      if(!d.ok) return;
+      const n = Number(d.due_soon || 0) + Number(d.overdue || 0);
+      const badge = document.getElementById("invUndeliveredBadge");
+      if(badge){
+        badge.textContent = n;
+        badge.classList.toggle("d-none", n <= 0);
+      }
+    }catch(e){ /* silent */ }
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    refreshInvUndeliveredBadge();
+    refreshInvOrdersInboxBadge();
+    refreshInvLowStockBadge();
+    setInterval(refreshInvUndeliveredBadge, 30000);
+    setInterval(refreshInvOrdersInboxBadge, 30000);
+    setInterval(refreshInvLowStockBadge, 30000);
+  });
+
+  async function refreshInvOrdersInboxBadge(){
+    try{
+      const res = await fetch("/inventory/orders/counts", { credentials: "same-origin" });
+      if(!res.ok) throw new Error("HTTP "+res.status);
+      const d = await res.json();
+      if(!d.ok) return;
+      const n = Number(d.undelivered || 0);
+      const badge = document.getElementById("invOrdersInboxBadge");
+      if(badge){
+        badge.textContent = n;
+        badge.classList.toggle("d-none", n <= 0);
+      }
+    }catch(e){ /* silent */ }
+  }
+
+  async function refreshInvLowStockBadge(){
+    try{
+      const res = await fetch("/inventory/low-stocks/count", { credentials: "same-origin" });
+      if(!res.ok) throw new Error("HTTP "+res.status);
+      const d = await res.json();
+      if(!d.ok) return;
+      const n = Number(d.low_stock_count || 0);
+      const badge = document.getElementById("invLowStockBadge");
+      const dot = document.getElementById("invLowStockDot");
+      if(badge){
+        badge.textContent = n;
+        badge.classList.toggle("d-none", n <= 0);
+      }
+      if(dot){
+        dot.classList.toggle("d-none", n <= 0);
+      }
+    }catch(e){ /* silent */ }
+  }
+
+  window.refreshInvLowStockBadge = refreshInvLowStockBadge;
+</script>

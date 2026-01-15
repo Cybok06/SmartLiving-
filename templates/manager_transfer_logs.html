@@ -1,0 +1,310 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Customer Transfer Logs</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <!-- Bootstrap & Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+<link rel="icon"
+          href="https://imagedelivery.net/h9fmMoa1o2c2P55TcWJGOg/10283f28-b9a0-4100-b254-19a854386800/public"
+          type="image/png">
+  <style>
+    :root {
+      --bg-color: #f5f7fb;
+      --card-bg: #ffffff;
+      --text-color: #111827;
+      --muted-color: #6b7280;
+      --border-color: rgba(15, 23, 42, 0.08);
+    }
+
+    body.dark-mode {
+      --bg-color: #020617;
+      --card-bg: #0b1120;
+      --text-color: #f9fafb;
+      --muted-color: #9ca3af;
+      --border-color: rgba(148, 163, 184, 0.3);
+    }
+
+    body {
+      background: radial-gradient(circle at top left, #e0ecff 0, #f5f7fb 45%, #edf2ff 100%);
+      color: var(--text-color);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    body.dark-mode {
+      background: radial-gradient(circle at top left, #020617 0, #020617 40%, #020617 100%);
+    }
+
+    .card {
+      border-radius: .9rem;
+      border: 1px solid var(--border-color);
+      background-color: var(--card-bg);
+      color: var(--text-color);
+      box-shadow: 0 6px 18px rgba(15, 23, 42, 0.06);
+    }
+
+    .card-header {
+      border-bottom: 0;
+      background: transparent;
+      padding-bottom: .35rem;
+      color: var(--text-color);
+    }
+
+    .text-muted {
+      color: var(--muted-color) !important;
+    }
+
+    .badge-soft {
+      padding: .25rem .6rem;
+      border-radius: 999px;
+      font-size: .7rem;
+      font-weight: 600;
+      background: rgba(59,130,246,.08);
+      color: #1d4ed8;
+    }
+
+    body.dark-mode .badge-soft {
+      background: rgba(59,130,246,.22);
+      color: #bfdbfe;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: .25rem;
+      padding: .18rem .6rem;
+      border-radius: 999px;
+      font-size: .72rem;
+      border: 1px solid rgba(148, 163, 184, 0.4);
+      color: var(--muted-color);
+    }
+
+    .chip i {
+      font-size: .8rem;
+    }
+
+    .customer-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: .35rem;
+      padding: .08rem .55rem;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.38);
+      font-size: .75rem;
+      margin: 0 .25rem .25rem 0;
+      white-space: nowrap;
+    }
+
+    .customer-pill i {
+      font-size: .8rem;
+    }
+
+    .accordion-button {
+      background-color: transparent;
+      color: var(--text-color);
+    }
+
+    .accordion-item {
+      border-color: var(--border-color);
+      background-color: var(--card-bg);
+    }
+
+    .accordion-body {
+      background-color: rgba(148, 163, 184, 0.04);
+    }
+
+    .tag-role {
+      font-size: .7rem;
+      padding: .1rem .45rem;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.5);
+    }
+  </style>
+</head>
+
+<body>
+    {% include 'manager_sidebar.html' %}
+
+<div class="container-fluid py-4">
+
+  <!-- Header -->
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+      <h3 class="mb-0 fw-semibold">Customer Transfer Logs</h3>
+      <small class="text-muted">
+        Review a history of customer movements between agents.
+        {% if role == "manager" %}
+          You are seeing transfers involving agents under your supervision.
+        {% else %}
+          You are seeing the latest transfers across the organisation.
+        {% endif %}
+      </small>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+      <a href="{{ url_for('transfer_customer.transfer_page') }}" class="btn btn-sm btn-outline-secondary">
+        <i class="bi bi-arrow-left me-1"></i> Back to transfers
+      </a>
+      <button type="button" class="btn btn-sm btn-outline-secondary" onclick="toggleTheme()">
+        <i id="themeIcon" class="bi bi-moon-stars"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- Logs card -->
+  <div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <div class="d-flex align-items-center gap-2">
+        <span class="badge-soft">
+          <i class="bi bi-clipboard2-data me-1"></i> Transfer logs
+        </span>
+        <span class="small text-muted">
+          Showing up to last 100 entries.
+        </span>
+      </div>
+      <div class="d-flex align-items-center gap-2 small text-muted">
+        <span class="chip">
+          <i class="bi bi-people"></i>
+          {{ logs|length }} transfer(s)
+        </span>
+      </div>
+    </div>
+
+    <div class="card-body">
+      {% if logs %}
+        <div class="accordion" id="logsAccordion">
+          {% for log in logs %}
+            <div class="accordion-item mb-1">
+              <h2 class="accordion-header" id="heading-{{ loop.index }}">
+                <button class="accordion-button collapsed" type="button"
+                        data-bs-toggle="collapse"
+                        data-bs-target="#collapse-{{ loop.index }}"
+                        aria-expanded="false"
+                        aria-controls="collapse-{{ loop.index }}">
+                  <div class="w-100 d-flex flex-column flex-md-row justify-content-between align-items-md-center">
+                    <div class="mb-2 mb-md-0">
+                      <div class="fw-semibold">
+                        {{ log.from_agent_name or log.from_agent_id }} 
+                        <i class="bi bi-arrow-right ms-1 me-1"></i>
+                        {{ log.to_agent_name or log.to_agent_id }}
+                      </div>
+                      <div class="small text-muted">
+                        {{ log.performed_at_str }} -  {{ log.updated_customers }} of {{ log.total_customers }} customer(s)
+                      </div>
+                    </div>
+                    <div class="d-flex flex-wrap gap-2 justify-content-md-end">
+                      <span class="chip">
+                        <i class="bi bi-hdd-network"></i>
+                        Selection: {{ log.selection_count }}
+                      </span>
+                      <span class="chip">
+                        <i class="bi bi-person-gear"></i>
+                        By: <span class="text-uppercase">{{ log.performed_by_role or "N/A" }}</span>
+                      </span>
+                    </div>
+                  </div>
+                </button>
+              </h2>
+              <div id="collapse-{{ loop.index }}" class="accordion-collapse collapse"
+                   aria-labelledby="heading-{{ loop.index }}"
+                   data-bs-parent="#logsAccordion">
+                <div class="accordion-body">
+                  {% if log.customers %}
+                    <div class="mb-2 small text-muted">
+                      {{ log.customers|length }} customer(s) affected in this transfer.
+                    </div>
+                    <div class="mb-2">
+                      {% for c in log.customers %}
+                        <span class="customer-pill">
+                          <i class="bi bi-person-circle"></i>
+                          {{ c.name or "Unnamed" }}
+                          {% if c.phone_number %}
+                            <span class="text-muted">-  {{ c.phone_number }}</span>
+                          {% endif %}
+                        </span>
+                      {% endfor %}
+                    </div>
+
+                    <div class="table-responsive mt-2">
+                      <table class="table table-sm align-middle mb-0">
+                        <thead class="table-light">
+                          <tr>
+                            <th>Name</th>
+                            <th>Phone</th>
+                            <th>Location</th>
+                            <th>Occupation</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {% for c in log.customers %}
+                            <tr>
+                              <td>{{ c.name or "-" }}</td>
+                              <td>{{ c.phone_number or "-" }}</td>
+                              <td>{{ c.location or "-" }}</td>
+                              <td>{{ c.occupation or "-" }}</td>
+                            </tr>
+                          {% endfor %}
+                        </tbody>
+                      </table>
+                    </div>
+                  {% else %}
+                    <div class="text-muted small">
+                      No customer details stored for this log.
+                    </div>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="text-center text-muted py-5">
+          <i class="bi bi-inboxes fs-1 mb-3"></i>
+          <h5 class="mb-1">No transfer logs yet</h5>
+          <p class="mb-0">Once transfers are performed, they will appear here for review.</p>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+  function toggleTheme(){
+    const body = document.body;
+    const isDark = body.classList.toggle("dark-mode");
+    const icon = document.getElementById("themeIcon");
+    if(icon){
+      if(isDark){
+        icon.classList.remove("bi-moon-stars");
+        icon.classList.add("bi-sun");
+      }else{
+        icon.classList.remove("bi-sun");
+        icon.classList.add("bi-moon-stars");
+      }
+    }
+    try{
+      localStorage.setItem("meetingTheme", isDark ? "dark" : "light");
+    }catch(e){}
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    try{
+      const saved = localStorage.getItem("meetingTheme");
+      if(saved === "dark"){
+        document.body.classList.add("dark-mode");
+        const icon = document.getElementById("themeIcon");
+        if(icon){
+          icon.classList.remove("bi-moon-stars");
+          icon.classList.add("bi-sun");
+        }
+      }
+    }catch(e){}
+  });
+</script>
+{% include 'app_footer.html' %}
+
+</body>
+</html>

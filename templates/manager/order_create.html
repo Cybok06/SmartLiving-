@@ -1,0 +1,698 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Create Order</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <style>
+    :root{
+      --bg1:#0b1220;
+      --bg2:#0f172a;
+      --card:#ffffff;
+      --edge:#e5e7eb;
+      --muted:#6b7280;
+      --ink:#0f172a;
+      --brand:#2563eb;
+      --brand2:#7c3aed;
+      --shadow: 0 18px 40px rgba(2,6,23,.12);
+    }
+    body{
+      background:
+        radial-gradient(1200px 500px at 10% -10%, rgba(37,99,235,.12), transparent 55%),
+        radial-gradient(900px 450px at 90% 0%, rgba(124,58,237,.12), transparent 55%),
+        linear-gradient(180deg, #f8fafc 0%, #eef2ff 100%);
+      min-height:100vh;
+      color:var(--ink);
+    }
+
+    .page{
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 18px 12px 28px;
+    }
+    @media (min-width: 992px){
+      .page{ padding: 22px 18px 40px; }
+    }
+
+    .topbar{
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      padding: 10px 0 14px;
+      backdrop-filter: blur(10px);
+    }
+    .topbar-inner{
+      background: rgba(255,255,255,.88);
+      border: 1px solid rgba(229,231,235,.9);
+      border-radius: 18px;
+      box-shadow: 0 10px 26px rgba(2,6,23,.08);
+      padding: 12px 14px;
+    }
+
+    .title{
+      font-weight: 800;
+      letter-spacing: -.02em;
+      margin: 0;
+    }
+    .subtitle{
+      color: var(--muted);
+      font-size: .92rem;
+      margin-top: 4px;
+    }
+
+    .glass-card{
+      background: rgba(255,255,255,.92);
+      border: 1px solid rgba(229,231,235,.95);
+      border-radius: 18px;
+      box-shadow: var(--shadow);
+    }
+
+    .pill{
+      display:inline-flex;
+      align-items:center;
+      gap:.35rem;
+      border-radius: 999px;
+      padding: .15rem .6rem;
+      font-size: .78rem;
+      background: #f1f5f9;
+      color: #0f172a;
+      border: 1px solid rgba(226,232,240,.9);
+      white-space: nowrap;
+    }
+    .pill.qty{
+      background: rgba(37,99,235,.08);
+      border-color: rgba(37,99,235,.18);
+    }
+
+    #alertWrap{ display:none; }
+
+    .grid{
+      display:grid;
+      gap: 12px;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    @media (min-width: 768px){
+      .grid{ grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    }
+    @media (min-width: 1200px){
+      .grid{ grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    }
+    @media (min-width: 1400px){
+      .grid{ grid-template-columns: repeat(5, minmax(0, 1fr)); }
+    }
+
+    .product-card{
+      border: 1px solid rgba(229,231,235,.95);
+      border-radius: 16px;
+      background: #fff;
+      padding: 10px;
+      box-shadow: 0 12px 26px rgba(2,6,23,.06);
+      display:flex;
+      flex-direction: column;
+      gap: 8px;
+      transition: transform .15s ease, box-shadow .15s ease;
+      min-height: 100%;
+    }
+    .product-card:hover{
+      transform: translateY(-2px);
+      box-shadow: 0 16px 30px rgba(2,6,23,.10);
+    }
+    .product-img{
+      width: 100%;
+      height: 140px;
+      border-radius: 12px;
+      object-fit: cover;
+      background: #f1f5f9;
+      border: 1px solid rgba(226,232,240,.9);
+    }
+    .product-title{
+      font-weight: 700;
+      line-height: 1.2;
+      min-height: 2.4em;
+    }
+    .product-meta{ color: var(--muted); font-size: .85rem; }
+
+    .stepper{
+      display:flex;
+      align-items:center;
+      gap:6px;
+    }
+    .stepper .btn{
+      width: 34px;
+      height: 34px;
+      padding: 0;
+    }
+
+    .skeleton{
+      background: linear-gradient(90deg, #eef2f7 25%, #f8fafc 37%, #eef2f7 63%);
+      background-size: 400% 100%;
+      animation: shimmer 1.2s ease infinite;
+      border-radius: 12px;
+      border: 1px solid rgba(226,232,240,.9);
+    }
+    @keyframes shimmer{
+      0%{ background-position: 100% 0; }
+      100%{ background-position: 0 0; }
+    }
+
+    .cart-badge{
+      position:absolute;
+      top:-6px;
+      right:-6px;
+      background:#ef4444;
+      color:#fff;
+      border-radius:999px;
+      font-size:.7rem;
+      padding:2px 6px;
+      border:2px solid #fff;
+      min-width: 20px;
+      text-align:center;
+    }
+
+    .offcanvas{ border-radius: 16px 0 0 16px; }
+    .cart-item{
+      border: 1px solid rgba(229,231,235,.9);
+      border-radius: 14px;
+      padding: 10px;
+      background: #fff;
+      display:flex;
+      gap: 10px;
+      align-items:center;
+    }
+    .cart-thumb{
+      width: 54px;
+      height: 54px;
+      border-radius: 12px;
+      object-fit: cover;
+      background: #f1f5f9;
+      border: 1px solid rgba(226,232,240,.9);
+      flex: 0 0 auto;
+    }
+
+    .notes{
+      resize: vertical;
+      min-height: 84px;
+    }
+
+    .btn{ border-radius: 12px; }
+    .form-control{ border-radius: 12px; border-color: rgba(203,213,225,.9); }
+
+    .search-wrap{
+      flex: 1 1 360px;
+      min-width: 220px;
+    }
+    .search-input{
+      height: 42px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="page">
+    <div class="topbar">
+      <div class="topbar-inner d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-2">
+        <div class="flex-grow-1">
+          <h1 class="title h4 mb-0">Create Order</h1>
+          <div class="subtitle">Browse products and add to cart. Use search for fast add.</div>
+          <div class="search-wrap mt-3 mt-lg-2">
+            <input id="productSearch" class="form-control search-input" placeholder="Search products...">
+          </div>
+        </div>
+        <div class="d-flex gap-2 align-items-center">
+          <a class="btn btn-outline-secondary" href="/manager/orders">Back</a>
+          <button class="btn btn-primary position-relative" data-bs-toggle="offcanvas" data-bs-target="#cartDrawer" id="openCart">
+            <i class="bi bi-cart3"></i>
+            <span class="cart-badge" id="cartBadge">0</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div id="alertWrap" class="mb-3">
+      <div id="alertBox" class="alert"></div>
+    </div>
+
+    <div class="glass-card p-3 p-lg-4">
+      <div class="d-flex align-items-center justify-content-between mb-3">
+        <div>
+          <div class="fw-bold">Products</div>
+          <div class="text-muted small">Add items to build your order.</div>
+        </div>
+        <span class="pill qty" id="productCount">0 items</span>
+      </div>
+
+      <div id="grid" class="grid"></div>
+      <div class="d-flex justify-content-center mt-3">
+        <button class="btn btn-outline-secondary btn-sm d-none" id="loadMore">Load more</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="offcanvas offcanvas-end" tabindex="-1" id="cartDrawer">
+    <div class="offcanvas-header">
+      <h5 class="offcanvas-title">Your Cart</h5>
+      <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
+    </div>
+    <div class="offcanvas-body d-flex flex-column gap-3">
+      <div id="cartList" class="d-flex flex-column gap-2"></div>
+      <div class="border rounded-3 p-2">
+        <div class="fw-semibold mb-2">Manual Item</div>
+        <div class="mb-2">
+          <input id="manualName" class="form-control form-control-sm" placeholder="Product name">
+        </div>
+        <div class="d-flex gap-2 mb-2">
+          <input id="manualQty" type="number" min="1" class="form-control form-control-sm" value="1" style="max-width:120px;">
+          <input id="manualNotes" class="form-control form-control-sm" placeholder="Notes (optional)">
+          <button class="btn btn-outline-primary btn-sm" id="addManualBtn">Add</button>
+        </div>
+        <div class="small text-muted">Use this if a product is missing from inventory.</div>
+      </div>
+      <div>
+        <label class="form-label fw-semibold">Order Notes</label>
+        <textarea id="cartNotes" class="form-control notes" rows="3" placeholder="Any extra notes for Inventory..."></textarea>
+      </div>
+      <button class="btn btn-primary" id="submitOrder">
+        <span class="spinner-border spinner-border-sm me-1 d-none" id="submitSpinner"></span>
+        Submit Order
+      </button>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    const grid = document.getElementById('grid');
+    const productCount = document.getElementById('productCount');
+    const cartBadge = document.getElementById('cartBadge');
+    const cartList = document.getElementById('cartList');
+    const cartNotes = document.getElementById('cartNotes');
+    const submitOrderBtn = document.getElementById('submitOrder');
+    const submitSpinner = document.getElementById('submitSpinner');
+    const searchInput = document.getElementById('productSearch');
+    const loadMoreBtn = document.getElementById('loadMore');
+    const manualName = document.getElementById('manualName');
+    const manualQty = document.getElementById('manualQty');
+    const manualNotes = document.getElementById('manualNotes');
+    const addManualBtn = document.getElementById('addManualBtn');
+
+    const cart = new Map();
+    const manualItems = new Map();
+    let productsCache = [];
+    let totalAvailable = null;
+    let isLoading = false;
+    let currentQuery = '';
+    const PAGE_LIMIT = 200;
+
+    function showAlert(msg, type='danger'){
+      const wrap = document.getElementById('alertWrap');
+      const box = document.getElementById('alertBox');
+      box.className = `alert alert-${type}`;
+      box.textContent = msg;
+      wrap.style.display = '';
+      setTimeout(()=> wrap.style.display='none', 4500);
+    }
+
+    function esc(s){
+      return String(s||'').replace(/[&<>"']/g, m => ({
+        '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+      }[m]));
+    }
+
+    function renderSkeletons(count=8){
+      grid.innerHTML = '';
+      for(let i=0;i<count;i++){
+        const div = document.createElement('div');
+        div.className = 'product-card';
+        div.innerHTML = `
+          <div class="skeleton" style="height:140px;"></div>
+          <div class="skeleton" style="height:16px;width:80%;"></div>
+          <div class="skeleton" style="height:14px;width:60%;"></div>
+          <div class="skeleton" style="height:32px;width:100%;"></div>
+        `;
+        grid.appendChild(div);
+      }
+    }
+
+    function updateBadge(){
+      let total = 0;
+      cart.forEach(v => { total += v.qty; });
+      manualItems.forEach(v => { total += v.qty; });
+      cartBadge.textContent = String(total);
+    }
+
+    function normalize(value){
+      return String(value || '').toLowerCase();
+    }
+
+    function matchesQuery(p, q){
+      if (!q) return true;
+      const hay = `${p.name || ''} ${p.sku || ''} ${p.tag || ''}`.toLowerCase();
+      return hay.includes(q);
+    }
+
+    function updateLoadMoreVisibility(){
+      if (currentQuery){
+        loadMoreBtn.classList.add('d-none');
+        return;
+      }
+      if (totalAvailable === null){
+        loadMoreBtn.classList.add('d-none');
+        return;
+      }
+      const hasMore = productsCache.length < totalAvailable;
+      loadMoreBtn.classList.toggle('d-none', !hasMore);
+      loadMoreBtn.disabled = isLoading;
+    }
+
+    function setQty(product, qty){
+      const max = Number(product.qty_available || 0);
+      if (qty > max){
+        showAlert('Quantity exceeds available stock.', 'warning');
+        return;
+      }
+      if (qty <= 0){
+        cart.delete(product.product_id);
+      }else{
+        cart.set(product.product_id, { ...product, qty });
+      }
+      refreshGrid();
+      renderCart();
+      updateBadge();
+    }
+
+    function addToCart(product){
+      const current = cart.get(product.product_id);
+      if (!current){
+        setQty(product, 1);
+      }else{
+        setQty(product, current.qty + 1);
+      }
+    }
+
+    function buildCard(p){
+      const card = document.createElement('div');
+      card.className = 'product-card';
+      const inCart = cart.get(p._id);
+      const img = p.image_url ? `<img class="product-img" src="${esc(p.image_url)}" alt="">` : `<div class="product-img"></div>`;
+      const skuPill = p.sku ? `<span class="pill">${esc(p.sku)}</span>` : '';
+      const tagPill = p.tag ? `<span class="pill">${esc(p.tag)}</span>` : '';
+
+      card.innerHTML = `
+        ${img}
+        <div class="product-title">${esc(p.name || '-')}</div>
+        <div class="product-meta"><span class="pill qty">Qty: ${Number(p.qty_available||0)}</span> ${skuPill} ${tagPill}</div>
+        <div class="mt-auto">
+          ${inCart ? `
+            <div class="stepper">
+              <button class="btn btn-outline-secondary btn-sm" data-action="dec">-</button>
+              <div class="form-control text-center" style="width:60px;">${inCart.qty}</div>
+              <button class="btn btn-outline-secondary btn-sm" data-action="inc">+</button>
+            </div>
+          ` : `
+            <button class="btn btn-primary btn-sm" data-action="add">Add to Cart</button>
+          `}
+        </div>
+      `;
+
+      const product = {
+        product_id: p._id,
+        name: p.name,
+        image_url: p.image_url,
+        qty_available: Number(p.qty_available || 0),
+        qty: inCart ? inCart.qty : 0
+      };
+
+      card.querySelectorAll('[data-action]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const action = btn.getAttribute('data-action');
+          if (action === 'add') addToCart(product);
+          if (action === 'inc') setQty(product, (cart.get(product.product_id)?.qty || 0) + 1);
+          if (action === 'dec') setQty(product, (cart.get(product.product_id)?.qty || 0) - 1);
+        });
+      });
+      return card;
+    }
+
+    function renderEmptyState(){
+      grid.innerHTML = `
+        <div class="text-muted text-center w-100 py-4">No products found.</div>
+      `;
+    }
+
+    function renderGrid(list){
+      grid.innerHTML = '';
+      let countLabel = `${productsCache.length} items`;
+      if (typeof totalAvailable === 'number' && !currentQuery){
+        countLabel = `${productsCache.length} of ${totalAvailable} items`;
+      }
+      if (currentQuery){
+        countLabel = `${list.length} results`;
+      }
+      productCount.textContent = countLabel;
+
+      if (!list.length){
+        renderEmptyState();
+        return;
+      }
+
+      list.forEach(p => grid.appendChild(buildCard(p)));
+    }
+
+    function appendGrid(list){
+      list.forEach(p => grid.appendChild(buildCard(p)));
+      let countLabel = `${productsCache.length} items`;
+      if (typeof totalAvailable === 'number'){
+        countLabel = `${productsCache.length} of ${totalAvailable} items`;
+      }
+      productCount.textContent = countLabel;
+    }
+
+    function refreshGrid(){
+      if (currentQuery){
+        const filtered = productsCache.filter(p => matchesQuery(p, currentQuery));
+        renderGrid(filtered);
+      }else{
+        renderGrid(productsCache);
+      }
+      updateLoadMoreVisibility();
+    }
+
+    function renderCart(){
+      cartList.innerHTML = '';
+      const hasItems = cart.size > 0 || manualItems.size > 0;
+      if (!hasItems){
+        cartList.innerHTML = '<div class="text-muted">Cart is empty.</div>';
+        return;
+      }
+      cart.forEach(item => {
+        const row = document.createElement('div');
+        row.className = 'cart-item';
+        row.innerHTML = `
+          ${item.image_url ? `<img class="cart-thumb" src="${esc(item.image_url)}" alt="">` : `<div class="cart-thumb"></div>`}
+          <div class="flex-grow-1">
+            <div class="fw-semibold">${esc(item.name)}</div>
+            <div class="stepper mt-2">
+              <button class="btn btn-outline-secondary btn-sm" data-action="dec">-</button>
+              <div class="form-control text-center" style="width:60px;">${item.qty}</div>
+              <button class="btn btn-outline-secondary btn-sm" data-action="inc">+</button>
+              <button class="btn btn-outline-danger btn-sm ms-2" data-action="remove">Remove</button>
+            </div>
+          </div>
+        `;
+        row.querySelector('[data-action="inc"]').addEventListener('click', () => setQty(item, item.qty + 1));
+        row.querySelector('[data-action="dec"]').addEventListener('click', () => setQty(item, item.qty - 1));
+        row.querySelector('[data-action="remove"]').addEventListener('click', () => setQty(item, 0));
+        cartList.appendChild(row);
+      });
+
+      if (manualItems.size > 0){
+        const divider = document.createElement('div');
+        divider.className = 'text-muted small mt-2';
+        divider.textContent = 'Manual items';
+        cartList.appendChild(divider);
+      }
+
+      manualItems.forEach(item => {
+        const row = document.createElement('div');
+        row.className = 'cart-item';
+        row.innerHTML = `
+          <div class="flex-grow-1">
+            <div class="d-flex align-items-center gap-2">
+              <span class="badge bg-secondary">Manual</span>
+              <input class="form-control form-control-sm" data-role="name" value="${esc(item.name)}">
+            </div>
+            <input class="form-control form-control-sm mt-2" data-role="notes" placeholder="Notes (optional)" value="${esc(item.notes || '')}">
+            <div class="stepper mt-2">
+              <button class="btn btn-outline-secondary btn-sm" data-action="dec">-</button>
+              <div class="form-control text-center" style="width:60px;">${item.qty}</div>
+              <button class="btn btn-outline-secondary btn-sm" data-action="inc">+</button>
+              <button class="btn btn-outline-danger btn-sm ms-2" data-action="remove">Remove</button>
+            </div>
+          </div>
+        `;
+        row.querySelector('[data-role="name"]').addEventListener('input', (e) => {
+          manualItems.set(item.id, { ...item, name: e.target.value });
+        });
+        row.querySelector('[data-role="notes"]').addEventListener('input', (e) => {
+          manualItems.set(item.id, { ...item, notes: e.target.value });
+        });
+        row.querySelector('[data-action="inc"]').addEventListener('click', () => {
+          manualItems.set(item.id, { ...item, qty: item.qty + 1 });
+          renderCart();
+          updateBadge();
+        });
+        row.querySelector('[data-action="dec"]').addEventListener('click', () => {
+          const next = item.qty - 1;
+          if (next <= 0){
+            manualItems.delete(item.id);
+          }else{
+            manualItems.set(item.id, { ...item, qty: next });
+          }
+          renderCart();
+          updateBadge();
+        });
+        row.querySelector('[data-action="remove"]').addEventListener('click', () => {
+          manualItems.delete(item.id);
+          renderCart();
+          updateBadge();
+        });
+        cartList.appendChild(row);
+      });
+    }
+
+    async function fetchProductsBatch(skip=0){
+      const r = await fetch(`/manager/orders/products_prefetch?limit=${PAGE_LIMIT}&skip=${skip}`);
+      const j = await r.json();
+      if (!j.ok) throw new Error(j.message || 'Failed to load products');
+      return j;
+    }
+
+    async function loadInitialProducts(){
+      renderSkeletons(10);
+      productsCache = [];
+      totalAvailable = null;
+      isLoading = true;
+      try{
+        const j = await fetchProductsBatch(0);
+        productsCache = j.results || [];
+        totalAvailable = typeof j.total === 'number' ? j.total : null;
+        renderGrid(productsCache);
+      }catch(err){
+        showAlert(err.message || 'Failed to load products.');
+      }finally{
+        isLoading = false;
+        updateLoadMoreVisibility();
+      }
+    }
+
+    async function loadMoreProducts(){
+      if (isLoading) return;
+      isLoading = true;
+      updateLoadMoreVisibility();
+      try{
+        const j = await fetchProductsBatch(productsCache.length);
+        const next = j.results || [];
+        totalAvailable = typeof j.total === 'number' ? j.total : totalAvailable;
+        if (next.length){
+          productsCache = productsCache.concat(next);
+          if (currentQuery){
+            refreshGrid();
+          }else{
+            appendGrid(next);
+          }
+        }
+      }catch(err){
+        showAlert(err.message || 'Failed to load more products.');
+      }finally{
+        isLoading = false;
+        updateLoadMoreVisibility();
+      }
+    }
+
+    let filterTimer = null;
+    searchInput.addEventListener('input', () => {
+      clearTimeout(filterTimer);
+      filterTimer = setTimeout(() => {
+        currentQuery = normalize(searchInput.value.trim());
+        refreshGrid();
+      }, 200);
+    });
+
+    loadMoreBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      loadMoreProducts();
+    });
+
+    addManualBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      const name = manualName.value.trim();
+      const qty = parseInt(manualQty.value || '0', 10);
+      const notes = manualNotes.value.trim();
+      if (!name){
+        showAlert('Manual item name is required.', 'warning');
+        return;
+      }
+      if (!qty || qty <= 0){
+        showAlert('Manual item quantity must be at least 1.', 'warning');
+        return;
+      }
+      const id = `manual_${Date.now().toString(16)}${Math.random().toString(16).slice(2)}`;
+      manualItems.set(id, { id, name, qty, notes });
+      manualName.value = '';
+      manualQty.value = '1';
+      manualNotes.value = '';
+      renderCart();
+      updateBadge();
+    });
+
+    submitOrderBtn.addEventListener('click', async () => {
+      if (cart.size === 0){
+        if (manualItems.size === 0){
+          showAlert('Please add at least one item.', 'danger');
+          return;
+        }
+      }
+      if (cart.size === 0 && manualItems.size === 0){
+        return;
+      }
+      const items = [];
+      cart.forEach(v => {
+        items.push({ product_id: v.product_id, qty: v.qty, expected_date: null, notes: '' });
+      });
+      const manual_items = [];
+      manualItems.forEach(v => {
+        manual_items.push({ name: v.name, qty: v.qty, notes: v.notes || '' });
+      });
+
+      submitOrderBtn.disabled = true;
+      submitSpinner.classList.remove('d-none');
+      try{
+        const r = await fetch('/manager/orders/create', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ notes: cartNotes.value.trim(), items, manual_items })
+        });
+        const j = await r.json();
+        if (!j.ok) throw new Error(j.message || 'Failed to create order');
+        cart.clear();
+        manualItems.clear();
+        cartNotes.value = '';
+        updateBadge();
+        refreshGrid();
+        renderCart();
+        showAlert('Order submitted successfully.', 'success');
+        setTimeout(()=>{ window.location.href = '/manager/orders'; }, 700);
+      }catch(err){
+        showAlert(err.message || 'Failed to submit order.', 'danger');
+      }finally{
+        submitOrderBtn.disabled = false;
+        submitSpinner.classList.add('d-none');
+      }
+    });
+
+    loadInitialProducts();
+  </script>
+  {% include 'app_footer.html' %}
+</body>
+</html>

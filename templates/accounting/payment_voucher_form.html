@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Payment Voucher - Create</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <link rel="icon" href="https://res.cloudinary.com/dljpgzbto/image/upload/v1743993646/company-logo_dksb23.jpg" type="image/png">
+
+  <style>
+    body {
+      background: #f3f4f6;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    .pv-shell {
+      max-width: 1200px;
+      margin: 1.5rem auto;
+    }
+    .pv-card {
+      background: #fff;
+      border-radius: 1rem;
+      box-shadow: 0 0.75rem 1.5rem rgba(15, 23, 42, .08);
+      padding: 1.75rem 1.5rem;
+    }
+    .pv-header-logo img {
+      max-height: 52px;
+      object-fit: contain;
+    }
+    .pv-title {
+      font-weight: 700;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      color: #111827;
+    }
+    .pv-subtitle {
+      color: #f97316;
+      font-weight: 600;
+      letter-spacing: .18em;
+      text-transform: uppercase;
+      font-size: .75rem;
+    }
+    .table-voucher-lines th,
+    .table-voucher-lines td {
+      vertical-align: middle;
+    }
+    .table-voucher-lines input[type="number"] {
+      text-align: right;
+    }
+    .btn-soft {
+      border-radius: 999px;
+    }
+    .badge-pill {
+      border-radius: 999px;
+    }
+
+    /* Drawer (Saved vouchers) */
+    .pv-drawer {
+      position: fixed;
+      inset: 0;
+      z-index: 1050;
+      display: flex;
+      justify-content: flex-end;
+      pointer-events: none;
+    }
+    .pv-drawer-backdrop {
+      flex: 1;
+      background: rgba(15, 23, 42, .35);
+      opacity: 0;
+      transition: opacity .2s ease;
+    }
+    .pv-drawer-panel {
+      width: min(430px, 100%);
+      max-width: 100%;
+      background: #ffffff;
+      box-shadow: -12px 0 35px rgba(15, 23, 42, .2);
+      transform: translateX(100%);
+      transition: transform .25s ease;
+      display: flex;
+      flex-direction: column;
+    }
+    .pv-drawer.is-open {
+      pointer-events: auto;
+    }
+    .pv-drawer.is-open .pv-drawer-backdrop {
+      opacity: 1;
+    }
+    .pv-drawer.is-open .pv-drawer-panel {
+      transform: translateX(0);
+    }
+    .pv-drawer-header {
+      padding: 0.9rem 1.1rem 0.6rem;
+      border-bottom: 1px solid #e5e7eb;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .pv-drawer-title {
+      font-size: .9rem;
+      font-weight: 600;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: #4b5563;
+    }
+    .pv-drawer-body {
+      padding: 0.75rem 1.1rem 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      height: 100%;
+    }
+    .pv-drawer-table-wrap {
+      border-radius: 0.75rem;
+      border: 1px solid #e5e7eb;
+      overflow: hidden;
+      background: #f9fafb;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+    .pv-drawer-table-wrap table {
+      margin-bottom: 0;
+    }
+    .pv-drawer-table-body {
+      max-height: 360px;
+      overflow-y: auto;
+      background: #ffffff;
+    }
+    .pv-status-pill {
+      font-size: .7rem;
+      padding: .15rem .55rem;
+      border-radius: 999px;
+      background: #e5f2ff;
+      color: #0369a1;
+    }
+
+    .pv-filter-label {
+      font-size: .72rem;
+      text-transform: uppercase;
+      letter-spacing: .12em;
+      color: #6b7280;
+      margin-bottom: 2px;
+    }
+
+    @media (max-width: 767.98px) {
+      .pv-card {
+        padding-inline: 1.05rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  {% include 'accounting/sidebar.html' %}
+
+<div class="pv-shell">
+  <div class="row g-4">
+    <!-- FORM: Create voucher -->
+    <div class="col-12">
+      <div class="pv-card">
+        <div class="d-flex justify-content-between align-items-start mb-3 flex-wrap gap-3">
+          <div class="d-flex align-items-center gap-3">
+            <div class="pv-header-logo">
+              <img src="https://res.cloudinary.com/dljpgzbto/image/upload/v1743993646/company-logo_dksb23.jpg"
+                   alt="TrueType Group Holdings">
+            </div>
+            <div>
+              <div class="pv-title">PAYMENT VOUCHER</div>
+              <div class="pv-subtitle">GHS -  TTS</div>
+              <div class="small text-muted mt-1">
+                Capture a new voucher and then print with full layout.
+              </div>
+            </div>
+          </div>
+
+          <div class="text-end d-flex flex-column align-items-end gap-2">
+            <div>
+              <div class="small text-muted">PV No.</div>
+              <div class="fw-semibold fs-6">{{ pv_number }}</div>
+            </div>
+            <div class="d-flex gap-2">
+              <button type="button"
+                      class="btn btn-outline-secondary btn-soft btn-sm"
+                      id="btnSavedVouchers">
+                <i class="bi bi-journal-text me-1"></i> Saved Vouchers
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <form method="POST" action="{{ url_for('payment_voucher.create_voucher') }}" id="pv-form">
+          <input type="hidden" name="pv_number" value="{{ pv_number }}">
+
+          <div class="row g-3 mb-3">
+            <div class="col-md-4">
+              <label class="form-label fw-semibold">Date</label>
+              <input type="date" name="date" class="form-control" value="{{ today }}">
+            </div>
+            <div class="col-md-8">
+              <label class="form-label fw-semibold">To (Payee)</label>
+              <input type="text" name="to_name" class="form-control" placeholder="Name of payee" required>
+            </div>
+          </div>
+
+          <div class="row g-3 mb-3">
+            <div class="col-md-6">
+              <label class="form-label fw-semibold d-block">Payment Method</label>
+              <div class="form-check form-check-inline">
+                <input class="form-check-input" type="radio" name="pay_method" id="pmCash" value="cash">
+                <label class="form-check-label" for="pmCash">Cash</label>
+              </div>
+              <div class="form-check form-check-inline">
+                <input class="form-check-input" type="radio" name="pay_method" id="pmTfr" value="tfr" checked>
+                <label class="form-check-label" for="pmTfr">Transfer / Cheque</label>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <label class="form-label fw-semibold">TFR / Cheque No.</label>
+              <input type="text" name="tfr_no" class="form-control" placeholder="(optional)">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label fw-semibold">Bank</label>
+              <input type="text" name="bank_name" class="form-control" placeholder="e.g. Stanbic Bank">
+            </div>
+          </div>
+
+          <!-- Line items -->
+          <div class="mb-3">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <h6 class="mb-0 fw-semibold text-uppercase small text-muted">Description &amp; Amount</h6>
+              <button type="button" class="btn btn-outline-primary btn-sm btn-soft" id="btnAddRow">
+                <i class="bi bi-plus-circle me-1"></i>Add line
+              </button>
+            </div>
+
+            <div class="table-responsive">
+              <table class="table table-sm table-bordered align-middle table-voucher-lines">
+                <thead class="table-light">
+                  <tr>
+                    <th style="width: 60%">Description</th>
+                    <th style="width: 20%">Amount (GHS)</th>
+                    <th style="width: 5%"></th>
+                  </tr>
+                </thead>
+                <tbody id="linesBody">
+                  <tr>
+                    <td>
+                      <input type="text" name="line_description[]" class="form-control" placeholder="Description">
+                    </td>
+                    <td>
+                      <input type="number" step="0.01" min="0" name="line_amount[]" class="form-control text-end amount-input" placeholder="0.00">
+                    </td>
+                    <td class="text-center">
+                      <button type="button" class="btn btn-link text-danger p-0 btn-remove-row" title="Remove line">
+                        <i class="bi bi-x-circle"></i>
+                      </button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Summary -->
+          <div class="row g-3 mb-3">
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Amount in words</label>
+              <textarea name="amount_in_words" rows="3" class="form-control"
+                        placeholder="e.g. Two thousand five hundred Ghana cedis only"></textarea>
+            </div>
+
+            <div class="col-md-6">
+              <div class="card border-0 shadow-sm">
+                <div class="card-body p-3">
+                  <div class="d-flex justify-content-between mb-1">
+                    <span class="small text-muted">Sub-Total</span>
+                    <span class="fw-semibold" id="lblSubtotal">0.00</span>
+                  </div>
+
+                  <div class="d-flex justify-content-between align-items-center mb-1">
+                    <div>
+                      <span class="small text-muted">VAT &amp; NHIL</span>
+                      <input type="number" step="0.01" min="0" class="form-control form-control-sm d-inline-block ms-2"
+                             style="width:80px" name="vat_pct" id="vatPct" value="0">
+                      <span class="small text-muted">%</span>
+                    </div>
+                    <span class="fw-semibold" id="lblVat">0.00</span>
+                  </div>
+
+                  <div class="d-flex justify-content-between align-items-center mb-1">
+                    <div>
+                      <span class="small text-muted">Withholding Tax</span>
+                      <input type="number" step="0.01" min="0" class="form-control form-control-sm d-inline-block ms-2"
+                             style="width:80px" name="wht_pct" id="whtPct" value="0">
+                      <span class="small text-muted">%</span>
+                    </div>
+                    <span class="fw-semibold" id="lblWht">0.00</span>
+                  </div>
+
+                  <hr class="my-2">
+                  <div class="d-flex justify-content-between align-items-center">
+                    <span class="small fw-bold">Total Amount Payable</span>
+                    <span class="fw-bold fs-6" id="lblTotal">0.00</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Signatories -->
+          <div class="row g-3 mb-3">
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Prepared By</label>
+              <input type="text" name="prepared_by" class="form-control">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Authorised By</label>
+              <input type="text" name="authorised_by" class="form-control">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Approved By</label>
+              <input type="text" name="approved_by" class="form-control">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Received By</label>
+              <input type="text" name="received_by" class="form-control">
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Recipient Payment Details / Tel.</label>
+            <textarea name="recipient_details" rows="2" class="form-control"></textarea>
+          </div>
+
+          <div class="d-flex justify-content-between align-items-center pt-1">
+            <div class="text-muted small">
+              After saving, you can open <strong>Saved Vouchers</strong> and print the voucher in full layout.
+            </div>
+            <button type="submit" class="btn btn-primary btn-soft px-4">
+              <i class="bi bi-save2 me-1"></i> Save Voucher
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Drawer: Saved Vouchers -->
+<div class="pv-drawer" id="pvDrawer" aria-hidden="true">
+  <div class="pv-drawer-backdrop" id="pvDrawerBackdrop"></div>
+  <div class="pv-drawer-panel">
+    <div class="pv-drawer-header">
+      <div>
+        <div class="pv-drawer-title">Saved Payment Vouchers</div>
+        <div class="small text-muted">
+          Last {{ vouchers|length }} records
+        </div>
+      </div>
+      <button type="button" class="btn btn-sm btn-light border-0" id="pvDrawerClose">
+        <i class="bi bi-x-lg"></i>
+      </button>
+    </div>
+
+    <div class="pv-drawer-body">
+      <!-- Filter mode -->
+      <div>
+        <div class="pv-filter-label">Filter mode</div>
+        <div class="btn-group btn-group-sm" role="group" aria-label="Filter mode">
+          <input type="radio" class="btn-check" name="pvFilterMode" id="pvFilterDate" value="date" checked>
+          <label class="btn btn-outline-primary" for="pvFilterDate">
+            <i class="bi bi-calendar-range me-1"></i> By Date
+          </label>
+
+          <input type="radio" class="btn-check" name="pvFilterMode" id="pvFilterPayee" value="payee">
+          <label class="btn btn-outline-primary" for="pvFilterPayee">
+            <i class="bi bi-person-lines-fill me-1"></i> By Payee
+          </label>
+        </div>
+      </div>
+
+      <!-- Filter by Date -->
+      <div id="pvFilterByDate" class="mt-2">
+        <div class="row g-2">
+          <div class="col-6">
+            <label class="form-label small mb-1">From</label>
+            <input type="date" class="form-control form-control-sm" id="pvFilterFrom">
+          </div>
+          <div class="col-6">
+            <label class="form-label small mb-1">To</label>
+            <input type="date" class="form-control form-control-sm" id="pvFilterTo">
+          </div>
+        </div>
+      </div>
+
+      <!-- Filter by Payee -->
+      <div id="pvFilterByPayee" class="mt-2 d-none">
+        <label class="form-label small mb-1">Payee name</label>
+        <input type="text" class="form-control form-control-sm" id="pvFilterPayeeText"
+               placeholder="Type part of the name…">
+      </div>
+
+      <div class="d-flex justify-content-between align-items-center mt-1 mb-1">
+        <span class="small text-muted" id="pvFilterSummary">
+          Showing {{ vouchers|length }} vouchers
+        </span>
+        <button type="button" class="btn btn-link btn-sm text-decoration-none" id="pvFilterReset">
+          Reset
+        </button>
+      </div>
+
+      <!-- Vouchers table -->
+      <div class="pv-drawer-table-wrap">
+        <table class="table table-sm align-middle mb-0">
+          <thead class="table-light">
+          <tr>
+            <th>PV No.</th>
+            <th>Date</th>
+            <th>To</th>
+            <th class="text-end">Amount</th>
+          </tr>
+          </thead>
+        </table>
+        <div class="pv-drawer-table-body">
+          <table class="table table-sm align-middle mb-0">
+            <tbody id="pvDrawerTableBody">
+            {% if vouchers %}
+              {% for v in vouchers %}
+                <tr class="pv-row"
+                    data-date="{{ v.date.strftime('%Y-%m-%d') if v.date else '' }}"
+                    data-payee="{{ (v.to_name or '')|lower }}">
+                  <td>
+                    <a href="{{ url_for('payment_voucher.view_voucher', voucher_id=v._id) }}"
+                       target="_blank">
+                      {{ v.pv_number }}
+                    </a>
+                  </td>
+                  <td class="small">
+                    {% if v.date %}{{ v.date.strftime('%d-%b-%y') }}{% endif %}
+                  </td>
+                  <td class="small text-truncate" style="max-width: 150px;">
+                    {{ v.to_name or '--' }}
+                  </td>
+                  <td class="text-end small">
+                    {{ '%.2f'|format(v.total_payable or 0) }}
+                  </td>
+                </tr>
+              {% endfor %}
+            {% else %}
+              <tr class="text-muted small">
+                <td colspan="4" class="text-center py-3">No vouchers created yet.</td>
+              </tr>
+            {% endif %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+  /* === Totals calculation === */
+  function recalcTotals() {
+    let subtotal = 0;
+    document.querySelectorAll('.amount-input').forEach(inp => {
+      const v = parseFloat(inp.value || '0');
+      if (!isNaN(v)) subtotal += v;
+    });
+
+    const vatPct = parseFloat(document.getElementById('vatPct').value || '0');
+    const whtPct = parseFloat(document.getElementById('whtPct').value || '0');
+
+    const vat = subtotal * (vatPct / 100.0);
+    const wht = subtotal * (whtPct / 100.0);
+    const total = subtotal + vat - wht;
+
+    const fmt = n => n.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+
+    document.getElementById('lblSubtotal').textContent = fmt(subtotal || 0);
+    document.getElementById('lblVat').textContent = fmt(vat || 0);
+    document.getElementById('lblWht').textContent = fmt(wht || 0);
+    document.getElementById('lblTotal').textContent = fmt(total || 0);
+  }
+
+  document.addEventListener('input', function (e) {
+    if (e.target.classList.contains('amount-input') ||
+        e.target.id === 'vatPct' || e.target.id === 'whtPct') {
+      recalcTotals();
+    }
+  });
+
+  document.getElementById('btnAddRow').addEventListener('click', function () {
+    const tbody = document.getElementById('linesBody');
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><input type="text" name="line_description[]" class="form-control" placeholder="Description"></td>
+      <td><input type="number" step="0.01" min="0" name="line_amount[]" class="form-control text-end amount-input" placeholder="0.00"></td>
+      <td class="text-center">
+        <button type="button" class="btn btn-link text-danger p-0 btn-remove-row" title="Remove line">
+          <i class="bi bi-x-circle"></i>
+        </button>
+      </td>`;
+    tbody.appendChild(tr);
+  });
+
+  document.getElementById('linesBody').addEventListener('click', function (e) {
+    if (e.target.closest('.btn-remove-row')) {
+      const row = e.target.closest('tr');
+      if (document.querySelectorAll('#linesBody tr').length > 1) {
+        row.remove();
+        recalcTotals();
+      } else {
+        row.querySelectorAll('input').forEach(i => i.value = '');
+        recalcTotals();
+      }
+    }
+  });
+
+  recalcTotals();
+
+  /* === Drawer open/close === */
+  const drawer = document.getElementById('pvDrawer');
+  const drawerBackdrop = document.getElementById('pvDrawerBackdrop');
+  const drawerClose = document.getElementById('pvDrawerClose');
+  const btnSaved = document.getElementById('btnSavedVouchers');
+
+  function openDrawer() {
+    drawer.classList.add('is-open');
+    drawer.setAttribute('aria-hidden', 'false');
+  }
+  function closeDrawer() {
+    drawer.classList.remove('is-open');
+    drawer.setAttribute('aria-hidden', 'true');
+  }
+
+  btnSaved?.addEventListener('click', openDrawer);
+  drawerClose?.addEventListener('click', closeDrawer);
+  drawerBackdrop?.addEventListener('click', closeDrawer);
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeDrawer();
+  });
+
+  /* === Drawer filters === */
+  const modeDate = document.getElementById('pvFilterDate');
+  const modePayee = document.getElementById('pvFilterPayee');
+  const paneDate = document.getElementById('pvFilterByDate');
+  const panePayee = document.getElementById('pvFilterByPayee');
+  const inputFrom = document.getElementById('pvFilterFrom');
+  const inputTo   = document.getElementById('pvFilterTo');
+  const inputPayee = document.getElementById('pvFilterPayeeText');
+  const filterSummary = document.getElementById('pvFilterSummary');
+  const filterReset = document.getElementById('pvFilterReset');
+  const rows = Array.from(document.querySelectorAll('#pvDrawerTableBody tr.pv-row'));
+
+  function applyVoucherFilters() {
+    const mode = document.querySelector('input[name="pvFilterMode"]:checked')?.value || 'date';
+    let visible = 0;
+
+    const fromVal = inputFrom.value || null;
+    const toVal   = inputTo.value || null;
+    const payeeText = (inputPayee.value || '').trim().toLowerCase();
+
+    rows.forEach(row => {
+      let show = true;
+      const rowDate = row.dataset.date || '';
+      const rowPayee = row.dataset.payee || '';
+
+      if (mode === 'date') {
+        if (fromVal && (!rowDate || rowDate < fromVal)) show = false;
+        if (toVal && (!rowDate || rowDate > toVal)) show = false;
+      } else if (mode === 'payee') {
+        if (payeeText && !rowPayee.includes(payeeText)) show = false;
+      }
+
+      if (show) {
+        row.classList.remove('d-none');
+        visible++;
+      } else {
+        row.classList.add('d-none');
+      }
+    });
+
+    const total = rows.length;
+    if (mode === 'date') {
+      filterSummary.textContent = `Showing ${visible} of ${total} vouchers (by date)`;
+    } else {
+      filterSummary.textContent = `Showing ${visible} of ${total} vouchers (by payee)`;
+    }
+  }
+
+  // Toggle filter mode display
+  function updateFilterModeUI() {
+    const mode = document.querySelector('input[name="pvFilterMode"]:checked')?.value || 'date';
+    if (mode === 'date') {
+      paneDate.classList.remove('d-none');
+      panePayee.classList.add('d-none');
+    } else {
+      paneDate.classList.add('d-none');
+      panePayee.classList.remove('d-none');
+    }
+    applyVoucherFilters();
+  }
+
+  modeDate?.addEventListener('change', updateFilterModeUI);
+  modePayee?.addEventListener('change', updateFilterModeUI);
+
+  inputFrom?.addEventListener('change', applyVoucherFilters);
+  inputTo?.addEventListener('change', applyVoucherFilters);
+  inputPayee?.addEventListener('input', applyVoucherFilters);
+
+  filterReset?.addEventListener('click', () => {
+    inputFrom.value = '';
+    inputTo.value = '';
+    inputPayee.value = '';
+    modeDate.checked = true;
+    updateFilterModeUI();
+  });
+
+  // Initial mode
+  updateFilterModeUI();
+</script>
+</body>
+</html>

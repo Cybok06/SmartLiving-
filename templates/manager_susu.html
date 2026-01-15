@@ -1,0 +1,1161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>SUSU Accounts - Smart Living</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <!-- Bootstrap + Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <link rel="icon" type="image/png"
+        href="https://res.cloudinary.com/dljpgzbto/image/upload/v1743993646/company-logo_dksb23.jpg">
+
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: radial-gradient(circle at top left, #e0f2fe 0, #f4f5fb 40%, #eef2ff 100%);
+      color: #111827;
+    }
+    .page-header {
+      padding: 1.5rem 0 0.75rem;
+    }
+    .page-header h1 {
+      font-size: 1.6rem;
+      font-weight: 700;
+      margin-bottom: 0.15rem;
+    }
+    .page-header p {
+      margin: 0;
+      color: #6b7280;
+      font-size: 0.9rem;
+    }
+    .page-header .badge-pill {
+      border-radius: 999px;
+      font-size: 0.7rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .metric-card {
+      border-radius: 14px;
+      border: 1px solid rgba(148,163,184,0.35);
+      background: #ffffff;
+      box-shadow: 0 12px 25px rgba(15,23,42,0.04);
+      padding: 0.9rem 1rem;
+      height: 100%;
+      position: relative;
+      overflow: hidden;
+    }
+    .metric-card::after {
+      content: "";
+      position: absolute;
+      right: -24px;
+      bottom: -24px;
+      width: 70px;
+      height: 70px;
+      background: radial-gradient(circle, rgba(59,130,246,0.15), transparent 60%);
+      opacity: 0.7;
+    }
+    .metric-label {
+      text-transform: uppercase;
+      font-size: 0.7rem;
+      letter-spacing: 0.08em;
+      color: #6b7280;
+      margin-bottom: 0.1rem;
+    }
+    .metric-title {
+      font-size: 0.95rem;
+      font-weight: 600;
+      margin-bottom: 0.25rem;
+    }
+    .metric-main {
+      font-size: 1.15rem;
+      font-weight: 700;
+    }
+    .metric-sub {
+      font-size: 0.8rem;
+      color: #6b7280;
+      margin-top: 0.15rem;
+    }
+    .metric-badges {
+      margin-top: 0.25rem;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.25rem;
+    }
+    .metric-chip {
+      border-radius: 999px;
+      padding: 0.1rem 0.55rem;
+      font-size: 0.7rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      background: #eff6ff;
+      color: #1d4ed8;
+      border: 1px solid rgba(59,130,246,0.3);
+      white-space: nowrap;
+    }
+    .metric-chip-soft {
+      background: #ecfdf5;
+      color: #047857;
+      border-color: rgba(16,185,129,0.3);
+    }
+    .metric-chip-warn {
+      background: #fffbeb;
+      color: #92400e;
+      border-color: rgba(245,158,11,0.4);
+    }
+
+    .search-card {
+      border-radius: 14px;
+      border: 1px solid rgba(148,163,184,0.3);
+      background: #ffffff;
+      box-shadow: 0 10px 22px rgba(15,23,42,0.03);
+    }
+
+    .susu-card {
+      border-radius: 16px;
+      border: 1px solid rgba(148,163,184,0.4);
+      background: #ffffff;
+      box-shadow: 0 14px 28px rgba(15,23,42,0.04);
+      padding: 1rem 1rem 0.75rem;
+      margin-bottom: 0.8rem;
+    }
+    .susu-header {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 0.6rem;
+    }
+    .avatar {
+      width: 42px;
+      height: 42px;
+      border-radius: 999px;
+      background: linear-gradient(135deg,#0ea5e9,#22c55e);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: #f9fafb;
+      font-weight: 700;
+      font-size: 1.1rem;
+      overflow: hidden;
+    }
+    .avatar img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .customer-name {
+      font-weight: 600;
+      font-size: 1rem;
+    }
+    .customer-meta {
+      font-size: 0.78rem;
+      color: #6b7280;
+    }
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      padding: 0.2rem 0.6rem;
+      border-radius: 999px;
+      font-size: 0.72rem;
+      background: #eff6ff;
+      color: #1d4ed8;
+      border: 1px solid rgba(59,130,246,0.2);
+    }
+
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(4,minmax(0,1fr));
+      gap: 0.55rem;
+      margin-bottom: 0.5rem;
+    }
+    .stat-pill {
+      border-radius: 12px;
+      border: 1px solid rgba(209,213,219,0.9);
+      background: #f9fafb;
+      padding: 0.35rem 0.55rem;
+    }
+    .stat-label {
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #9ca3af;
+      margin-bottom: 0.1rem;
+    }
+    .stat-value {
+      font-size: 0.9rem;
+      font-weight: 600;
+    }
+    /* 💰 Make available balance very bold & prominent */
+    .stat-pill.balance-pill {
+      background: #ecfdf5;
+      border-color: #22c55e;
+      box-shadow: 0 0 0 1px rgba(16,185,129,0.12);
+    }
+    .stat-pill.balance-pill .stat-label {
+      color: #047857;
+    }
+    .stat-value.balance {
+      color: #16a34a;
+      font-size: 1.1rem;
+      font-weight: 800;
+    }
+
+    .card-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+      margin-bottom: 0.3rem;
+    }
+    .btn-soft {
+      border-radius: 999px;
+      font-size: 0.8rem;
+      padding: 0.25rem 0.75rem;
+    }
+    .btn-soft-primary {
+      background: #eff6ff;
+      color: #1d4ed8;
+      border: 1px solid rgba(59,130,246,0.4);
+    }
+    .btn-soft-primary:hover {
+      background: #dbeafe;
+      color: #1e3a8a;
+    }
+    .btn-soft-amber {
+      background: #fffbeb;
+      color: #92400e;
+      border: 1px solid rgba(245,158,11,0.5);
+    }
+    .btn-soft-amber:hover {
+      background: #fef3c7;
+    }
+
+    .withdraw-table {
+      font-size: 0.8rem;
+    }
+
+    .empty-state {
+      padding: 3rem 1rem;
+      text-align: center;
+      color: #6b7280;
+    }
+
+    .pagination .page-link {
+      font-size: 0.85rem;
+    }
+
+    /* Offcanvas (right slide history) */
+    .offcanvas-end {
+      width: 420px;
+      max-width: 100%;
+    }
+    .history-badge {
+      font-size: 0.75rem;
+      background: #eff6ff;
+      color: #1d4ed8;
+      border-radius: 999px;
+      padding: 0.1rem 0.5rem;
+    }
+
+    /* Live preview panel in modal */
+    .preview-panel {
+      border-radius: 10px;
+      border: 1px solid #e5e7eb;
+      background: #f9fafb;
+      padding: 0.5rem 0.75rem;
+      margin-top: 0.25rem;
+    }
+    .preview-panel h6 {
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #6b7280;
+      margin-bottom: 0.35rem;
+    }
+    .preview-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.8rem;
+      margin-bottom: 0.2rem;
+    }
+    .preview-label {
+      color: #6b7280;
+    }
+    .preview-value {
+      font-weight: 600;
+    }
+    .preview-value.text-profit {
+      color: #b45309;
+    }
+    .preview-value.text-balance {
+      color: #16a34a;
+    }
+
+    @media (max-width: 992px) {
+      .stats-row {
+        grid-template-columns: repeat(2,minmax(0,1fr));
+      }
+    }
+    @media (max-width: 576px) {
+      .stats-row {
+        grid-template-columns: repeat(2,minmax(0,1fr));
+      }
+    }
+  </style>
+</head>
+<body>
+  {% include 'manager_sidebar.html' %}
+
+<main class="container py-3">
+
+  <!-- Page Header + History Button -->
+  <div class="d-flex flex-wrap justify-content-between align-items-center page-header">
+    <div>
+      <h1>SUSU Accounts</h1>
+      <p>
+        Track SUSU <strong>collections</strong>, <strong>withdrawals</strong>, available balances, and
+        <strong>active vs dormant</strong> customers for your branch.
+      </p>
+    </div>
+    <div class="mt-2 mt-md-0 d-flex flex-column align-items-end gap-1">
+      <span class="badge bg-primary-subtle text-primary-emphasis border border-primary-subtle badge-pill">
+        TODAY: SUSU inflow GH₵{{ "%.2f"|format(summary.today_susu_collections) }}
+      </span>
+      <button class="btn btn-outline-primary btn-sm d-inline-flex align-items-center"
+              id="btn-history"
+              type="button"
+              data-bs-toggle="offcanvas"
+              data-bs-target="#withdrawHistoryOffcanvas"
+              aria-controls="withdrawHistoryOffcanvas">
+        <i class="bi bi-clock-history me-1"></i>
+        Withdrawal History
+      </button>
+    </div>
+  </div>
+
+  <!-- Top Metrics - Row 1 (Today + Key Health) -->
+  <div class="row g-3 mb-3">
+    <!-- Today SUSU Collections -->
+    <div class="col-12 col-md-3">
+      <div class="metric-card">
+        <div class="metric-label">Today -  Inflow</div>
+        <div class="metric-title">SUSU Collected Today</div>
+        <div class="metric-main text-primary">
+          GH₵{{ "%.2f"|format(summary.today_susu_collections) }}
+        </div>
+        <div class="metric-sub">
+          Total SUSU payments received today.
+        </div>
+        <div class="metric-badges">
+          {% if summary.expected_daily_susu > 0 %}
+            <span class="metric-chip metric-chip-soft">
+              <i class="bi bi-bullseye"></i>
+              Target: GH₵{{ "%.2f"|format(summary.expected_daily_susu) }}
+            </span>
+            <span class="metric-chip {% if summary.today_collection_percent < 70 %}metric-chip-warn{% else %}metric-chip-soft{% endif %}">
+              <i class="bi bi-graph-up-arrow"></i>
+              {{ "%.1f"|format(summary.today_collection_percent) }}% of target
+            </span>
+          {% else %}
+            <span class="metric-chip metric-chip-warn">
+              <i class="bi bi-info-circle"></i>
+              No daily target set yet
+            </span>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Today Withdrawals -->
+    <div class="col-12 col-md-3">
+      <div class="metric-card">
+        <div class="metric-label">Today -  Outflow</div>
+        <div class="metric-title">Withdrawals to Customers</div>
+        <div class="metric-main text-danger">
+          GH₵{{ "%.2f"|format(metrics.today.withdraw_total) }}
+        </div>
+        <div class="metric-sub">
+          Cash paid out from SUSU today.
+        </div>
+        <div class="metric-badges">
+          <span class="metric-chip">
+            <i class="bi bi-receipt"></i>
+            {{ summary.today_withdrawals_count }} withdrawals
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Today Net Movement -->
+    <div class="col-12 col-md-3">
+      <div class="metric-card">
+        <div class="metric-label">Today -  Net</div>
+        <div class="metric-title">Net Movement (In-Out-Profit)</div>
+        <div class="metric-main {% if summary.today_net_movement >= 0 %}text-success{% else %}text-danger{% endif %}">
+          GH₵{{ "%.2f"|format(summary.today_net_movement) }}
+        </div>
+        <div class="metric-sub">
+          Positive means money stayed in the SUSU pool today.
+        </div>
+      </div>
+    </div>
+
+    <!-- Total Money Available Overall -->
+    <div class="col-12 col-md-3">
+      <div class="metric-card">
+        <div class="metric-label">All SUSU Customers</div>
+        <div class="metric-title">Total Money Available</div>
+        <div class="metric-main text-success">
+          GH₵{{ "%.2f"|format(overall_available) }}
+        </div>
+        <div class="metric-sub">
+          Money currently available in all SUSU customer accounts.
+        </div>
+        <div class="metric-badges">
+          <span class="metric-chip metric-chip-soft">
+            <i class="bi bi-people"></i>
+            {{ summary.total_customers }} SUSU customers
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Top Metrics - Row 2 (Week / Month / Overall / Customer Health) -->
+  <div class="row g-3 mb-3">
+    <!-- This Week Collections vs Withdrawals -->
+    <div class="col-12 col-md-3">
+      <div class="metric-card">
+        <div class="metric-label">This Week</div>
+        <div class="metric-title">Collections vs Withdrawals</div>
+        <div class="metric-main">
+          GH₵{{ "%.2f"|format(summary.week_susu_collections) }}
+          <span class="text-muted">/</span>
+          <span class="text-danger">GH₵{{ "%.2f"|format(metrics.week.withdraw_total) }}</span>
+        </div>
+        <div class="metric-sub">
+          Inflow / Outflow from Monday to today.
+        </div>
+      </div>
+    </div>
+
+    <!-- This Month Collections & Profit -->
+    <div class="col-12 col-md-3">
+      <div class="metric-card">
+        <div class="metric-label">This Month</div>
+        <div class="metric-title">Collections & SUSU Profit</div>
+        <div class="metric-main">
+          GH₵{{ "%.2f"|format(summary.month_susu_collections) }}
+        </div>
+        <div class="metric-sub">
+          SUSU collections this month.
+        </div>
+        <div class="metric-badges">
+          <span class="metric-chip metric-chip-soft">
+            <i class="bi bi-coin"></i>
+            Profit: GH₵{{ "%.2f"|format(summary.month_susu_profit) }}
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Total Withdrawals Overall (ALL SUSU customers) -->
+    <div class="col-12 col-md-3">
+      <div class="metric-card">
+        <div class="metric-label">Overall</div>
+        <div class="metric-title">Total Withdrawals (All Time)</div>
+        <div class="metric-main text-danger">
+          GH₵{{ "%.2f"|format(overall_withdrawals) }}
+        </div>
+        <div class="metric-sub">
+          Sum of all SUSU withdrawals to customers.
+        </div>
+      </div>
+    </div>
+
+    <!-- Active vs Dormant Customers -->
+    <div class="col-12 col-md-3">
+      <div class="metric-card">
+        <div class="metric-label">Customer Health</div>
+        <div class="metric-title">Active vs Dormant</div>
+        <div class="metric-main">
+          <span class="text-success fw-bold">
+            {{ summary.active_customers }} active
+          </span>
+          <span class="text-muted"> / </span>
+          <span class="text-warning fw-bold">
+            {{ summary.dormant_customers }} dormant
+          </span>
+        </div>
+        <div class="metric-sub">
+          Dormant = no SUSU contribution for 2+ weeks.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Search & Summary -->
+  <div class="card search-card mb-3">
+    <div class="card-body">
+      <form method="get" class="row g-2 align-items-end">
+        <div class="col-md-4">
+          <label class="form-label mb-1">Search customer</label>
+          <input type="text"
+                 name="search"
+                 class="form-control form-control-sm"
+                 placeholder="Type name or phone number..."
+                 value="{{ search_term }}">
+        </div>
+        <div class="col-md-3 col-lg-2">
+          <button type="submit" class="btn btn-primary btn-sm w-100">
+            <i class="bi bi-search me-1"></i> Search
+          </button>
+        </div>
+        {% if search_term %}
+          <div class="col-md-3 col-lg-2">
+            <a href="{{ url_for('manager_susu.susu_dashboard') }}"
+               class="btn btn-outline-secondary btn-sm w-100">
+              Clear
+            </a>
+          </div>
+        {% endif %}
+        <div class="col-12 col-md text-md-end mt-2 mt-md-0">
+          <small class="text-muted">
+            Showing {{ start_index }}-{{ end_index }} of {{ total_customers }} SUSU customers
+          </small>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- SUSU Customers List -->
+  {% if susu_customers and susu_customers|length > 0 %}
+    {% for c in susu_customers %}
+      <div class="susu-card">
+        <div class="susu-header">
+          <div class="avatar">
+            {% if c.image_url %}
+              <img src="{{ c.image_url }}" alt="{{ c.name }}">
+            {% else %}
+              {{ c.name[:1] | upper }}
+            {% endif %}
+          </div>
+          <div class="flex-grow-1">
+            <div class="customer-name">{{ c.name }}</div>
+            <div class="customer-meta">
+              {{ c.phone }}{% if c.location %} -  {{ c.location }}{% endif %}
+            </div>
+            <div class="mt-1">
+              <span class="chip">
+                <i class="bi bi-person-badge"></i> {{ c.agent_name }}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div class="stats-row">
+          <div class="stat-pill">
+            <div class="stat-label">Contributed</div>
+            <div class="stat-value"
+                 data-role="total-susu"
+                 data-customer-id="{{ c.id }}">
+              GH₵{{ "%.2f"|format(c.total_susu) }}
+            </div>
+          </div>
+          <div class="stat-pill">
+            <div class="stat-label">Paid Out</div>
+            <div class="stat-value"
+                 data-role="withdraw-to-customer"
+                 data-customer-id="{{ c.id }}">
+              GH₵{{ "%.2f"|format(c.withdraw_to_customer) }}
+            </div>
+          </div>
+          <div class="stat-pill">
+            <div class="stat-label">Company Profit</div>
+            <div class="stat-value"
+                 data-role="susu-profit"
+                 data-customer-id="{{ c.id }}">
+              GH₵{{ "%.2f"|format(c.susu_profit) }}
+            </div>
+          </div>
+          <div class="stat-pill balance-pill">
+            <div class="stat-label">Available</div>
+            <div class="stat-value balance"
+                 data-role="available-balance"
+                 data-customer-id="{{ c.id }}">
+              GH₵{{ "%.2f"|format(c.available_balance) }}
+            </div>
+          </div>
+        </div>
+
+        <div class="card-actions">
+          <button class="btn btn-soft btn-soft-primary"
+                  data-bs-toggle="modal"
+                  data-bs-target="#withdrawModal-{{ c.id }}"
+                  {% if c.available_balance <= 0 %}disabled{% endif %}>
+            💸 Withdraw SUSU
+          </button>
+
+          <button class="btn btn-soft btn-soft-amber"
+                  data-bs-toggle="collapse"
+                  data-bs-target="#withdrawals-{{ c.id }}">
+            👀 View Withdrawals
+          </button>
+        </div>
+
+        <!-- Withdrawals collapse -->
+        <div id="withdrawals-{{ c.id }}" class="collapse mt-1">
+          {% if c.withdrawals and c.withdrawals|length > 0 %}
+            <div class="table-responsive withdraw-table">
+              <table class="table table-sm table-striped mb-1">
+                <thead class="table-light">
+                  <tr>
+                    <th>Date</th>
+                    <th>Amount (₵)</th>
+                    <th>Type</th>
+                    <th>Note</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for w in c.withdrawals %}
+                    <tr>
+                      <td>
+                        {% if w.timestamp is defined and w.timestamp %}
+                          {{ w.timestamp.strftime('%Y-%m-%d') }}
+                        {% else %}
+                          {{ (w.date or '')[:10] }}
+                        {% endif %}
+                      </td>
+                      <td>{{ "%.2f"|format(w.amount) }}</td>
+                      <td>{{ w.method or "Withdrawal" }}</td>
+                      <td>{{ w.note or "" }}</td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          {% else %}
+            <p class="text-muted small mb-1">No withdrawals recorded yet.</p>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Withdraw Modal -->
+      <div class="modal fade"
+           id="withdrawModal-{{ c.id }}"
+           tabindex="-1"
+           aria-hidden="true"
+           data-available-balance="{{ '%.2f'|format(c.available_balance) }}"
+           data-default-rate="{{ c.default_rate or c.rate_hint or 0 }}">
+        <div class="modal-dialog modal-dialog-centered">
+          <form class="modal-content susu-withdraw-form"
+                data-customer-id="{{ c.id }}"
+                method="POST"
+                action="{{ url_for('manager_susu.susu_withdraw', customer_id=c.id) }}">
+            <div class="modal-header">
+              <h5 class="modal-title">Withdraw SUSU - {{ c.name }}</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+              <div class="mb-2">
+                <small class="text-muted">
+                  Available SUSU balance:
+                  <strong>GH₵{{ "%.2f"|format(c.available_balance) }}</strong>
+                </small>
+              </div>
+
+              <!-- Confirm called + Phone + Call button -->
+              <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+                <div class="form-check mb-0">
+                  <input class="form-check-input" type="checkbox"
+                         name="confirm_called"
+                         id="confirm_called_{{ c.id }}" required>
+                  <label class="form-check-label small" for="confirm_called_{{ c.id }}">
+                    I have called the customer
+                  </label>
+                </div>
+
+                {% if c.phone %}
+                  <span class="small text-muted">
+                    {{ c.phone }}
+                  </span>
+                  <a href="tel:{{ c.phone }}"
+                     class="btn btn-outline-primary btn-sm d-inline-flex align-items-center">
+                    <i class="bi bi-telephone-fill me-1"></i> Call
+                  </a>
+                {% endif %}
+              </div>
+
+              <div class="alert alert-info small py-1 px-2 mb-3">
+                Rate &amp; SUSU profit are <strong>auto-calculated</strong> from this customer's SUSU history.
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label">Customer daily rate (optional)</label>
+                <div class="input-group input-group-sm">
+                  <span class="input-group-text">GHƒ,æ</span>
+                  <input type="number" step="0.01" min="0.01"
+                         class="form-control"
+                         name="manual_rate"
+                         value="{{ c.default_rate or c.rate_hint or '' }}"
+                         data-default-rate="{{ c.default_rate or c.rate_hint or '' }}"
+                         placeholder="Leave blank to auto-calculate">
+                </div>
+                <small class="text-muted">
+                  Enter a rate to override auto-calculation. This will be saved for future withdrawals.
+                </small>
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label">Amount to pay customer</label>
+                <div class="input-group input-group-sm">
+                  <span class="input-group-text">GH₵</span>
+                  <input type="number" step="0.01" min="0"
+                         max="{{ c.available_balance }}"
+                         class="form-control"
+                         name="withdraw_amount"
+                         required>
+                </div>
+              </div>
+
+              <div class="mb-2">
+                <label class="form-label">Note (optional)</label>
+                <textarea name="note"
+                          class="form-control form-control-sm"
+                          rows="2"
+                          placeholder="E.g. SUSU withdrawal via cash..."></textarea>
+              </div>
+
+              <!-- Live Preview Panel -->
+              <div class="preview-panel" data-preview-panel>
+                <h6>Live Summary</h6>
+                <div class="preview-row">
+                  <span class="preview-label">Customer will receive</span>
+                  <span class="preview-value" data-preview-withdraw>GH₵0.00</span>
+                </div>
+                <div class="preview-row">
+                  <span class="preview-label">Company SUSU profit</span>
+                  <span class="preview-value text-profit" data-preview-profit>GH₵0.00</span>
+                </div>
+                <div class="preview-row">
+                  <span class="preview-label">Total amount to withdraw</span>
+                  <span class="preview-value" data-preview-total>GH₵0.00</span>
+                </div>
+                <div class="preview-row">
+                  <span class="preview-label">Customer daily rate</span>
+                  <span class="preview-value" data-preview-rate>GH₵0.00</span>
+                </div>
+                <div class="preview-row">
+                  <span class="preview-label">Balance after withdrawal</span>
+                  <span class="preview-value text-balance" data-preview-balance>
+                    GH₵{{ "%.2f"|format(c.available_balance) }}
+                  </span>
+                </div>
+                <div class="mt-1">
+                  <small class="text-muted" data-preview-note>
+                    Start typing the withdrawal amount to see the full breakdown.
+                  </small>
+                </div>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">
+                Cancel
+              </button>
+              <button type="submit" class="btn btn-sm btn-success susu-submit-btn">
+                <span class="spinner-border spinner-border-sm me-1 d-none" role="status"
+                      aria-hidden="true"></span>
+                <span class="btn-text">Record Withdrawal</span>
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    {% endfor %}
+  {% else %}
+    <div class="empty-state">
+      <h5>No SUSU customers found</h5>
+      <p class="mb-0">
+        Once customers start contributing with payment type <strong>SUSU</strong>,
+        they will appear here with their balances and withdrawals.
+      </p>
+    </div>
+  {% endif %}
+
+  <!-- Pagination -->
+  {% if total_pages > 1 %}
+    <nav aria-label="SUSU pagination" class="mt-2">
+      <ul class="pagination pagination-sm justify-content-center">
+        <li class="page-item {% if page <= 1 %}disabled{% endif %}">
+          <a class="page-link"
+             href="{% if page > 1 %}{{ url_for('manager_susu.susu_dashboard', page=page-1, search=search_term) }}{% else %}#{% endif %}">
+            Previous
+          </a>
+        </li>
+
+        {% for p in range(1, total_pages+1) %}
+          <li class="page-item {% if p == page %}active{% endif %}">
+            <a class="page-link"
+               href="{{ url_for('manager_susu.susu_dashboard', page=p, search=search_term) }}">
+              {{ p }}
+            </a>
+          </li>
+        {% endfor %}
+
+        <li class="page-item {% if page >= total_pages %}disabled{% endif %}">
+          <a class="page-link"
+             href="{% if page < total_pages %}{{ url_for('manager_susu.susu_dashboard', page=page+1, search=search_term) }}{% else %}#{% endif %}">
+            Next
+          </a>
+        </li>
+      </ul>
+    </nav>
+  {% endif %}
+</main>
+
+<!-- Offcanvas: Withdrawal History (right slide) -->
+<div class="offcanvas offcanvas-end" tabindex="-1" id="withdrawHistoryOffcanvas"
+     aria-labelledby="withdrawHistoryLabel">
+  <div class="offcanvas-header">
+    <div>
+      <h5 class="offcanvas-title" id="withdrawHistoryLabel">
+        Withdrawal History
+      </h5>
+      <span class="history-badge">
+        Recent SUSU withdrawals
+      </span>
+    </div>
+    <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas"
+            aria-label="Close"></button>
+  </div>
+  <div class="offcanvas-body">
+    <div id="history-loading" class="d-flex align-items-center mb-2 d-none">
+      <div class="spinner-border spinner-border-sm me-2" role="status"
+           aria-hidden="true"></div>
+      <span class="small text-muted">Loading withdrawal history...</span>
+    </div>
+
+    <div id="history-error" class="alert alert-danger py-2 px-3 d-none">
+      Unable to load withdrawal history. Please try again.
+    </div>
+
+    <div class="table-responsive" id="history-table-wrapper">
+      <table class="table table-sm table-striped align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>Date</th>
+            <th>Customer</th>
+            <th>Amount (₵)</th>
+            <th>Type</th>
+            <th>Note</th>
+          </tr>
+        </thead>
+        <tbody id="history-tbody">
+          <!-- Filled dynamically -->
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    // ===== Helper: format money =====
+    function fmt(amount) {
+      const n = isNaN(amount) ? 0 : Number(amount);
+      return 'GH₵' + n.toFixed(2);
+    }
+
+    // ===== AJAX SUSU withdrawal forms (SAVE) =====
+    const forms = document.querySelectorAll('.susu-withdraw-form');
+
+    forms.forEach(form => {
+      form.addEventListener('submit', function (e) {
+        e.preventDefault();
+
+        const customerId = form.dataset.customerId;
+        const url = form.action;
+        const formData = new FormData(form);  // normal submit (no preview flag)
+
+        const submitBtn = form.querySelector('.susu-submit-btn');
+        const spinner   = submitBtn ? submitBtn.querySelector('.spinner-border') : null;
+        const btnText   = submitBtn ? submitBtn.querySelector('.btn-text') : null;
+
+        // Show loading spinner
+        if (submitBtn) submitBtn.disabled = true;
+        if (spinner)   spinner.classList.remove('d-none');
+        if (btnText)   btnText.textContent = 'Processing...';
+
+        fetch(url, {
+          method: 'POST',
+          body: formData,
+          headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+          }
+        })
+        .then(res => res.json())
+        .then(data => {
+          if (!data.ok) {
+            alert(data.message || 'Unable to record SUSU withdrawal.');
+            return;
+          }
+
+          const stats = data.stats || {};
+          const cid = data.customer_id || customerId;
+
+          function updateStat(role, value) {
+            const el = document.querySelector(
+              '.stat-value[data-role="' + role + '"][data-customer-id="' + cid + '"]'
+            );
+            if (el && typeof value === 'number') {
+              el.textContent = fmt(value);
+            }
+          }
+
+          updateStat('total-susu', stats.total_susu);
+          updateStat('withdraw-to-customer', stats.withdraw_to_customer);
+          updateStat('available-balance', stats.available_balance);
+          updateStat('susu-profit', stats.susu_profit);
+
+          // Close modal
+          const modalEl = form.closest('.modal');
+          if (modalEl) {
+            const modalInstance = bootstrap.Modal.getInstance(modalEl) ||
+                                  new bootstrap.Modal(modalEl);
+            modalInstance.hide();
+          }
+
+          // Reset only the withdraw amount + note & checkbox
+          const withdrawInput = form.querySelector('input[name="withdraw_amount"]');
+          const noteInput     = form.querySelector('textarea[name="note"]');
+          const confirmInput  = form.querySelector('input[name="confirm_called"]');
+          if (withdrawInput) withdrawInput.value = '';
+          if (noteInput)     noteInput.value = '';
+          if (confirmInput)  confirmInput.checked = false;
+
+          console.log(data.message || 'SUSU withdrawal recorded.');
+        })
+        .catch(err => {
+          console.error(err);
+          alert('Network error while recording SUSU withdrawal.');
+        })
+        .finally(() => {
+          if (submitBtn) submitBtn.disabled = false;
+          if (spinner)   spinner.classList.add('d-none');
+          if (btnText)   btnText.textContent = 'Record Withdrawal';
+        });
+      });
+    });
+
+    // ===== Live Preview: call preview endpoint on input =====
+    forms.forEach(form => {
+      const modalEl = form.closest('.modal');
+      const amountInput = form.querySelector('input[name="withdraw_amount"]');
+      const rateInput = form.querySelector('input[name="manual_rate"]');
+      const previewPanel = form.querySelector('[data-preview-panel]');
+      if (!modalEl || !amountInput || !previewPanel) return;
+
+      const avail = parseFloat(modalEl.getAttribute('data-available-balance') || '0') || 0;
+      const defaultRate = parseFloat(modalEl.getAttribute('data-default-rate') || '0') || 0;
+
+      const valWithdraw = previewPanel.querySelector('[data-preview-withdraw]');
+      const valProfit   = previewPanel.querySelector('[data-preview-profit]');
+      const valTotal    = previewPanel.querySelector('[data-preview-total]');
+      const valBalance  = previewPanel.querySelector('[data-preview-balance]');
+      const valRate     = previewPanel.querySelector('[data-preview-rate]');
+      const noteEl      = previewPanel.querySelector('[data-preview-note]');
+
+      let previewTimer = null;
+
+      function getManualRate() {
+        if (!rateInput) return 0;
+        const raw = (rateInput.value || '').trim();
+        if (!raw) return 0;
+        const parsed = parseFloat(raw);
+        if (isNaN(parsed) || parsed <= 0) return 0;
+        return parsed;
+      }
+
+      function applyPreviewValues(withdrawAmt, profitAmt, balanceAmt, rate, fromServer) {
+        const w = Number(withdrawAmt) || 0;
+        const p = Number(profitAmt)   || 0;
+        const total = w + p;
+
+        if (valWithdraw) valWithdraw.textContent = fmt(w);
+        if (valProfit)   valProfit.textContent   = fmt(p);
+        if (valTotal)    valTotal.textContent    = fmt(total);
+        if (valBalance)  valBalance.textContent  = fmt(balanceAmt);
+        if (valRate && typeof rate === 'number') valRate.textContent = fmt(rate);
+
+        if (noteEl) {
+          if (fromServer) {
+            noteEl.textContent = 'Preview calculated from SUSU history (including customer rate and total withdrawal amount).';
+          } else {
+            noteEl.textContent = 'Preview based on estimated rate.';
+          }
+        }
+      }
+
+      function fallbackPreview(amount) {
+        const withdrawAmt = amount;
+        const manualRate = getManualRate();
+        const rate = manualRate > 0 ? manualRate : (defaultRate > 0 ? defaultRate : 0);
+        let profitAmt = 0;
+
+        if (rate > 0) {
+          // at least 1 day's rate, but not more than the withdrawal amount
+          profitAmt = Math.min(rate, amount);
+        }
+
+        let balanceAfter = avail - withdrawAmt - profitAmt;
+        if (balanceAfter < 0) balanceAfter = 0;
+
+        applyPreviewValues(withdrawAmt, profitAmt, balanceAfter, rate, false);
+      }
+
+      function runPreview() {
+        const raw = amountInput.value;
+        const amount = parseFloat(raw || '0') || 0;
+
+        if (!raw || amount <= 0) {
+          // Reset to initial view
+          const resetRate = getManualRate() || defaultRate || 0;
+          applyPreviewValues(0, 0, avail, resetRate, false);
+          return;
+        }
+
+        const url = form.action;
+        const fd = new FormData(form);
+        fd.set('withdraw_amount', amount.toString());
+        fd.set('preview', '1');  // 🔹 tell backend this is preview
+
+        fetch(url, {
+          method: 'POST',
+          body: fd,
+          headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+          }
+        })
+        .then(res => res.json())
+        .then(data => {
+          if (!data.ok || !data.preview_summary) {
+            // Use fallback estimate if backend can't preview
+            fallbackPreview(amount);
+            return;
+          }
+
+          const s = data.preview_summary;
+          const withdrawAmt = typeof s.withdraw_amount === 'number' ? s.withdraw_amount : amount;
+          const profitAmt   = typeof s.company_profit === 'number' ? s.company_profit : 0;
+          const balanceAfter = typeof s.balance_after === 'number'
+            ? s.balance_after
+            : (avail - withdrawAmt - profitAmt);
+          const rate = typeof s.customer_rate === 'number'
+            ? s.customer_rate
+            : (defaultRate || 0);
+
+          applyPreviewValues(withdrawAmt, profitAmt, balanceAfter, rate, true);
+        })
+        .catch(err => {
+          console.error('Preview error:', err);
+          fallbackPreview(amount);
+        });
+      }
+
+      amountInput.addEventListener('input', function () {
+        if (previewTimer) clearTimeout(previewTimer);
+        previewTimer = setTimeout(runPreview, 250); // small debounce
+      });
+
+      if (rateInput) {
+        rateInput.addEventListener('input', function () {
+          if (previewTimer) clearTimeout(previewTimer);
+          previewTimer = setTimeout(runPreview, 250);
+        });
+      }
+
+      // Reset preview when modal opens
+      modalEl.addEventListener('show.bs.modal', function () {
+        amountInput.value = '';
+        if (rateInput) {
+          rateInput.value = rateInput.getAttribute('data-default-rate') || '';
+        }
+        const resetRate = getManualRate() || defaultRate || 0;
+        applyPreviewValues(0, 0, avail, resetRate, false);
+      });
+    });
+
+    // ===== Withdrawal History Offcanvas (right slide) =====
+    const historyOffcanvasEl = document.getElementById('withdrawHistoryOffcanvas');
+    const historyTbody = document.getElementById('history-tbody');
+    const historyLoading = document.getElementById('history-loading');
+    const historyError = document.getElementById('history-error');
+
+    if (historyOffcanvasEl && historyTbody) {
+      historyOffcanvasEl.addEventListener('show.bs.offcanvas', function () {
+        // Clear previous data
+        historyTbody.innerHTML = '';
+        historyError.classList.add('d-none');
+        historyLoading.classList.remove('d-none');
+
+        fetch('{{ url_for("manager_susu.susu_withdrawals_history") }}', {
+          headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+          }
+        })
+        .then(res => res.json())
+        .then(data => {
+          historyLoading.classList.add('d-none');
+
+          if (!data.ok) {
+            historyError.classList.remove('d-none');
+            return;
+          }
+
+          const items = data.items || [];
+          if (items.length === 0) {
+            historyTbody.innerHTML = '<tr><td colspan="5" class="text-muted small">No SUSU withdrawals found yet.</td></tr>';
+            return;
+          }
+
+          const rows = items.map(item => {
+            const date = item.date || '';
+            const time = item.time || '';
+            const customer = item.customer || '';
+            const amount = typeof item.amount === 'number' ? item.amount.toFixed(2) : '0.00';
+            const method = item.method || '';
+            const note = item.note || '';
+
+            return (
+              '<tr>' +
+                '<td><span class="d-block">' + date + '</span>' +
+                (time ? '<span class="text-muted small">' + time + '</span>' : '') +
+                '</td>' +
+                '<td>' + customer + '</td>' +
+                '<td>GH₵' + amount + '</td>' +
+                '<td>' + method + '</td>' +
+                '<td>' + note + '</td>' +
+              '</tr>'
+            );
+          }).join('');
+
+          historyTbody.innerHTML = rows;
+        })
+        .catch(err => {
+          console.error(err);
+          historyLoading.classList.add('d-none');
+          historyError.classList.remove('d-none');
+        });
+      });
+    }
+  });
+</script>
+{% include 'app_footer.html' %}
+
+</body>
+</html>

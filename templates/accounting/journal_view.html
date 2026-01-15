@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Journal -  {{ j.ref }}</title>
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <link rel="icon" href="https://res.cloudinary.com/dljpgzbto/image/upload/v1743993646/company-logo_dksb23.jpg" type="image/png">
+
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet"/>
+</head>
+<body class="bg-neutral-50 text-neutral-900">
+  {% include 'accounting/sidebar.html' %}
+
+  <main class="max-w-5xl mx-auto p-6">
+    <header class="flex items-center justify-between mb-6">
+      <h1 class="text-2xl font-extrabold">Journal: {{ j.ref }}</h1>
+      <a href="{{ url_for('journals.journals') }}" class="text-primary hover:underline">Back</a>
+    </header>
+
+    <section class="bg-white rounded-xl border p-5 grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div><div class="text-sm text-slate-500">Date</div><div class="font-semibold">{{ date_display }}</div></div>
+      <div><div class="text-sm text-slate-500">Status</div><div class="font-semibold">{{ (j.status or 'draft')|title }}</div></div>
+      <div><div class="text-sm text-slate-500">Source</div><div class="font-semibold">{{ (j.source or 'manual')|title }}</div></div>
+      <div><div class="text-sm text-slate-500">Currency</div><div class="font-semibold">{{ j.currency }}</div></div>
+      <div class="md:col-span-2"><div class="text-sm text-slate-500">Memo</div><div class="font-semibold">{{ j.memo or '-' }}</div></div>
+    </section>
+
+    <section class="mt-6 bg-white rounded-xl border overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead class="bg-neutral-50">
+            <tr class="text-left text-slate-600">
+              <th class="px-5 py-3">Account</th>
+              <th class="px-5 py-3">Partner</th>
+              <th class="px-5 py-3">Description</th>
+              <th class="px-5 py-3 text-right">Debit</th>
+              <th class="px-5 py-3 text-right">Credit</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y">
+            {% for L in j.lines or [] %}
+            <tr>
+              <td class="px-5 py-2">{{ L.account }}</td>
+              <td class="px-5 py-2">{{ L.partner }}</td>
+              <td class="px-5 py-2">{{ L.desc }}</td>
+              <td class="px-5 py-2 text-right">{{ "%.2f"|format(L.debit or 0) }}</td>
+              <td class="px-5 py-2 text-right">{{ "%.2f"|format(L.credit or 0) }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+          <tfoot class="bg-neutral-50">
+            <tr>
+              <th class="px-5 py-3" colspan="3">Totals</th>
+              <th class="px-5 py-3 text-right">{{ "%.2f"|format(total_dr) }}</th>
+              <th class="px-5 py-3 text-right">{{ "%.2f"|format(total_cr) }}</th>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

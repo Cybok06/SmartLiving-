@@ -1,0 +1,1968 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Inventory Products -  Smart Living</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Smart Living Inventory Center - manage products, pricing, stock, transfers, and history across all branches.">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="icon" href="https://res.cloudinary.com/dljpgzbto/image/upload/v1743993646/company-logo_dksb23.jpg" type="image/png">
+  <style>
+    :root{
+      --ink:#0b3b52; --muted:#64748b; --ring:#e5e7eb; --soft:#f8f9ff;
+      --ok:#16a34a; --bad:#dc2626; --warn:#f59e0b;
+    }
+    *{box-sizing:border-box;}
+
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: radial-gradient(circle at top,#e0f2fe 0,#fdf2ff 35%,#f9fafb 100%);
+      color:#0f172a;
+      min-height:100vh;
+      padding-bottom:70px;
+      transition: background-color 0.3s, color 0.3s;
+    }
+
+    /* Dark Mode */
+    .dark-mode {
+      background: radial-gradient(circle at top,#020617 0,#020617 40%,#020617 100%) !important;
+      color: #e5e7eb;
+    }
+    .dark-mode .navbar,
+    .dark-mode .footer,
+    .dark-mode .card,
+    .dark-mode .modal-content {
+      background-color: #020617 !important;
+      color: #e5e7eb;
+      border-color:#1e293b;
+    }
+    .dark-mode .navbar {
+      box-shadow: 0 8px 24px rgba(15,23,42,.65);
+    }
+    .dark-mode .card-title { color:#e5e7eb; }
+    .dark-mode .branch-pill { background:rgba(15,23,42,1); }
+    .dark-mode .form-control,
+    .dark-mode .form-select {
+      background-color:#020617;
+      color:#e5e7eb;
+      border-color:#1e293b;
+    }
+    .dark-mode .form-control::placeholder { color:#6b7280; }
+    .dark-mode .footer {
+      background:#020617;
+      border-color:#1e293b;
+    }
+    .dark-mode .badge.bg-light.text-dark.border{
+      background:#020617 !important;
+      color:#e5e7eb !important;
+      border-color:#1e293b !important;
+    }
+    .dark-mode .price-chip {
+      background:#020617;
+      border-color:#1e293b;
+      color:#e5e7eb;
+    }
+    .dark-mode .product-chip {
+      background:#020617;
+      border-color:#1e293b;
+      color:#e5e7eb;
+    }
+    .dark-mode .toggle-details {
+      background:#020617;
+      border-color:#1e293b;
+      color:#e5e7eb;
+    }
+    .dark-mode .divider { background:#1f2937; }
+    .dark-mode .small-help { color:#9ca3af; }
+    .dark-mode .section-heading { color:#e5e7eb; }
+    .dark-mode .navbar-brand span { color:#f9fafb !important; }
+    .dark-mode .btn-outline-dark {
+      color:#e5e7eb;
+      border-color:#4b5563;
+    }
+    .dark-mode .btn-outline-dark:hover {
+      background:#e5e7eb;
+      color:#020617;
+    }
+
+    .footer {
+      background-color: #e0c7ff;
+      padding: 10px;
+      text-align: center;
+      position:fixed;
+      left:0;
+      right:0;
+      bottom:0;
+      border-top: 1px solid #e5e7eb;
+      font-size: .8rem;
+      letter-spacing:.16em;
+      text-transform:uppercase;
+      color:#4b5563;
+      z-index:40;
+    }
+
+    .flash {
+      padding: 10px 12px;
+      margin-bottom: 10px;
+      border-radius: 8px;
+      color: white;
+      font-size:.9rem;
+      box-shadow:0 8px 20px rgba(15,23,42,.18);
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:.5rem;
+    }
+    .flash.success { background-color: #16a34a; }
+    .flash.danger  { background-color: #dc2626; }
+    .flash.warning { background-color: #f59e0b; }
+    .flash small {opacity:.85;}
+
+    /* Navbar */
+    .navbar-brand span {
+      font-size:1rem;
+      letter-spacing:.12em;
+      text-transform:uppercase;
+    }
+    .navbar {
+      background:rgba(255,255,255,.85) !important;
+      backdrop-filter: blur(14px);
+      border-bottom:1px solid rgba(148,163,184,.25);
+    }
+
+    /* Pro card */
+    .card {
+      border:1px solid var(--ring);
+      border-radius:18px;
+      overflow:hidden;
+      background: radial-gradient(circle at top left,#f9fafb,#ffffff);
+      transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease, background .12s ease;
+    }
+    .card:hover {
+      transform: translateY(-2px);
+      box-shadow:0 12px 30px rgba(15,23,42,.12);
+      border-color:#c4b5fd;
+      background: radial-gradient(circle at top left,#fdf2ff,#ffffff);
+    }
+    .card.low-stock {
+      border-color: rgba(239,68,68,.65);
+      box-shadow: 0 12px 26px rgba(239,68,68,.16);
+    }
+    .skeleton-card {
+      border-radius:18px;
+      border:1px solid var(--ring);
+      background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 37%, #f1f5f9 63%);
+      background-size: 400% 100%;
+      animation: skeleton 1.4s ease infinite;
+      height: 360px;
+    }
+    .dark-mode .skeleton-card {
+      background: linear-gradient(90deg, #0f172a 25%, #1f2937 37%, #0f172a 63%);
+      background-size: 400% 100%;
+    }
+    @keyframes skeleton {
+      0% { background-position: 100% 0; }
+      100% { background-position: 0 0; }
+    }
+    .low-stock-pill {
+      display:inline-flex;
+      align-items:center;
+      padding:.2rem .55rem;
+      border-radius:999px;
+      font-size:.7rem;
+      font-weight:700;
+      letter-spacing:.08em;
+      color:#991b1b;
+      background: rgba(239,68,68,.12);
+      border:1px solid rgba(239,68,68,.35);
+      text-transform:uppercase;
+    }
+    .low-stock-pulse {
+      animation: lowStockPulse 1.1s ease-out 1;
+    }
+    @keyframes lowStockPulse {
+      0% { box-shadow: 0 0 0 rgba(239,68,68,0); }
+      55% { box-shadow: 0 0 0 10px rgba(239,68,68,.12); }
+      100% { box-shadow: 0 12px 26px rgba(239,68,68,.16); }
+    }
+    .dark-mode .card.low-stock {
+      border-color: rgba(248,113,113,.55);
+      box-shadow: 0 12px 26px rgba(248,113,113,.22);
+    }
+    .dark-mode .low-stock-pill {
+      color:#fecaca;
+      background: rgba(248,113,113,.16);
+      border-color: rgba(248,113,113,.35);
+    }
+    .card-title { color:var(--ink); font-weight:700; }
+    .text-muted-quiet { color:var(--muted); font-size:.85rem; }
+
+    .price-chip {
+      display:inline-flex; align-items:center; gap:.35rem;
+      padding:.2rem .6rem;
+      border:1px solid var(--ring);
+      border-radius:999px;
+      background:#fff;
+      font-size:.8rem;
+      font-weight:500;
+    }
+    .price-chip span{font-size:.78rem; color:#6b7280;}
+
+    .compact-meta {
+      display:flex;
+      align-items:center;
+      gap:.5rem;
+      margin:.35rem 0 .5rem;
+      flex-wrap:wrap;
+    }
+    .product-chip {
+      display:inline-flex;
+      align-items:center;
+      padding:0;
+      border-radius:999px;
+      background:transparent;
+      color:inherit;
+      font-size:.8rem;
+    }
+    .qty-pill {
+      display:inline-flex;
+      align-items:center;
+      gap:.45rem;
+      border-radius:999px;
+      padding:.25rem .75rem;
+      position:relative;
+      border:1px solid transparent;
+      background: linear-gradient(180deg, #ffffff, #edf2ff);
+      color: var(--ink);
+      font-weight:600;
+      letter-spacing:.02em;
+      cursor:pointer;
+      transition: transform .2s ease, box-shadow .3s ease, filter .3s ease;
+      box-shadow:0 12px 26px rgba(15,23,42,.15);
+      overflow:hidden;
+    }
+    .qty-pill::before {
+      content:"";
+      position:absolute;
+      inset:-2px;
+      border-radius:inherit;
+      background:linear-gradient(130deg, rgba(99,102,241,.45), rgba(236,72,153,.45));
+      opacity:.25;
+      z-index:-1;
+      transition:opacity .2s ease;
+      mask:linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+      mask-composite: exclude;
+      -webkit-mask-composite: xor;
+    }
+    .qty-pill:hover {
+      transform:translateY(-1px);
+      box-shadow:0 16px 32px rgba(15,23,42,.2);
+    }
+    .qty-pill:hover::before {
+      opacity:.45;
+    }
+    .qty-pill.is-pressed {
+      transform:scale(.96);
+      box-shadow:0 8px 18px rgba(15,23,42,.25);
+    }
+    .qty-pill.is-loaded {
+      animation:pulse 1s ease;
+    }
+    .qty-pill .qty-icon {
+      width:16px;
+      height:16px;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      font-size:1rem;
+      line-height:1;
+    }
+    .qty-badge {
+      background:rgba(15,23,42,.08);
+      border-radius:999px;
+      padding:2px 8px;
+      font-size:.75rem;
+      color:var(--ink);
+      min-width:32px;
+      text-align:center;
+    }
+    @keyframes pulse {
+      0% { box-shadow:0 12px 26px rgba(15,23,42,.25); }
+      50% { box-shadow:0 18px 32px rgba(15,23,42,.3); }
+      100% { box-shadow:0 12px 26px rgba(15,23,42,.25); }
+    }
+    .dark-mode .qty-pill {
+      background:linear-gradient(180deg,#0f172a,#111827);
+      color:#e2e8f0;
+      box-shadow:0 12px 30px rgba(0,0,0,.45);
+    }
+    .dark-mode .qty-pill::before {
+      background:linear-gradient(130deg, rgba(79,70,229,.6), rgba(236,72,153,.6));
+      opacity:.35;
+    }
+    .dark-mode .qty-badge {
+      background:rgba(255,255,255,.1);
+      color:#e5e7eb;
+    }
+    .price-pill {
+      font-weight:700;
+      color:#5b21b6;
+      font-size:.9rem;
+    }
+    .toggle-details {
+      border:1px solid var(--ring);
+      background:#fff;
+      color:#0f172a;
+      width:30px;
+      height:30px;
+      border-radius:999px;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease;
+    }
+    .toggle-details.is-open { transform: rotate(90deg); }
+    .toggle-details:hover { border-color:#c4b5fd; box-shadow:0 6px 14px rgba(15,23,42,.12); }
+
+    .product-details {
+      display:none;
+    }
+    .product-details.is-open {
+      display:block;
+    }
+    .product-toggle {
+      cursor:pointer;
+    }
+
+    .badge-pos {
+      color:var(--ok);
+      background:rgba(22,163,74,.10);
+      border:1px solid rgba(22,163,74,.25);
+      border-radius:999px;
+      padding:.18rem .6rem;
+      font-size:.75rem;
+    }
+    .badge-neg {
+      color:var(--bad);
+      background:rgba(220,38,38,.10);
+      border:1px solid rgba(220,38,38,.25);
+      border-radius:999px;
+      padding:.18rem .6rem;
+      font-size:.75rem;
+    }
+    .badge-zero{
+      color:#4b5563;
+      background:#f3f4f6;
+      border-radius:999px;
+      padding:.18rem .6rem;
+      font-size:.75rem;
+    }
+    .price-grid {
+      display:grid;
+      grid-template-columns: repeat(2,minmax(0,1fr));
+      gap:.35rem .8rem;
+    }
+    .price-label {
+      font-size:.78rem;
+      color:var(--muted);
+      text-transform:uppercase;
+      letter-spacing:.03em;
+    }
+    .divider { height:1px; background:var(--ring); margin:.75rem 0 1rem; }
+
+    .btn-update { background-color: #22c55e; color: white; }
+    .btn-update:hover{background:#16a34a;color:#f9fafb;}
+    .btn-delete { background-color: #ef4444; color: white; }
+    .btn-delete:hover{background:#dc2626;}
+    .btn-transfer { background-color:#0ea5e9; color:white; }
+    .btn-transfer:hover{background:#0284c7;}
+    .img-cover { object-fit: cover; height: 190px; width:100%; }
+    .small-help { font-size:.78rem; color:var(--muted); }
+
+    .qty-edit-btn {
+      border-radius:999px;
+      box-shadow:0 6px 14px rgba(15,23,42,.12);
+    }
+    .qty-inline-actions .btn {
+      border-radius:999px;
+    }
+    .qty-input {
+      max-width:110px;
+      margin-left:auto;
+    }
+    .qty-update-btn {
+      border-radius:999px;
+      padding:.5rem 1.4rem;
+      font-weight:600;
+      letter-spacing:.02em;
+      box-shadow:0 10px 24px rgba(37,99,235,.25);
+    }
+    .qty-update-btn:disabled {
+      box-shadow:none;
+      opacity:.7;
+    }
+    .qty-helper {
+      font-size:.8rem;
+      color:var(--muted);
+    }
+    .dark-mode .qty-helper {
+      color:#9ca3af;
+    }
+
+    .branch-pill {
+      position:absolute;
+      top:.55rem;
+      left:.7rem;
+      background:rgba(15,23,42,.92);
+      color:#e5e7eb;
+      border-radius:999px;
+      padding:.12rem .65rem;
+      font-size:.72rem;
+      backdrop-filter: blur(4px);
+      border:1px solid rgba(148,163,184,.65);
+    }
+    .manager-pill-multi {
+      background:linear-gradient(to right,#6366f1,#a855f7);
+      color:#f9fafb;
+      border:none;
+    }
+
+    .section-heading {
+      font-weight:700;
+      color:#0f172a;
+      letter-spacing:.08em;
+      text-transform:uppercase;
+      font-size:.8rem;
+    }
+
+    /* History filter buttons */
+    .btn-history-filter {
+      font-size:.8rem;
+      border-radius:999px;
+      padding:.2rem .8rem;
+    }
+    .btn-history-filter.active {
+      background-color:#0f172a;
+      color:#f9fafb;
+      border-color:#0f172a;
+    }
+    .dark-mode .btn-history-filter.active {
+      background-color:#e5e7eb;
+      color:#020617;
+      border-color:#e5e7eb;
+    }
+
+    .filter-panel {
+      max-height:0;
+      opacity:0;
+      overflow:hidden;
+      margin-bottom:0;
+      transition: max-height 0.25s ease, opacity 0.2s ease;
+    }
+    .filter-panel.is-open {
+      max-height:520px;
+      opacity:1;
+      margin-bottom:1rem;
+    }
+
+    @media (max-width: 768px) {
+      .img-cover{height: 170px;}
+    }
+
+    /* Loading overlay for history */
+    #historyList.loading::before{
+      content:"";
+      position:absolute;
+      inset:0;
+      background:rgba(255,255,255,.65);
+      backdrop-filter:blur(2px);
+    }
+  </style>
+</head>
+<body>
+  {% include 'inventory_sidebar.html' %}
+
+  <!-- Navbar -->
+  <nav class="navbar navbar-expand-lg navbar-light px-3 shadow-sm sticky-top">
+    <a class="navbar-brand d-flex align-items-center" href="#">
+      <img src="https://res.cloudinary.com/dljpgzbto/image/upload/v1743993646/company-logo_dksb23.jpg" alt="Logo" height="40" class="me-2 rounded-circle border border-light">
+      <span class="fw-bold text-primary">Inventory Center</span>
+    </a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+
+    <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
+      <ul class="navbar-nav align-items-center gap-lg-2">
+        <li class="nav-item"><a class="nav-link" href="/inventory/dashboard">🏠 Dashboard</a></li>
+        <li class="nav-item"><a class="nav-link" href="{{ url_for('add_inventory.add_inventory') }}">➕ Add Product</a></li>
+        <li class="nav-item"><a class="nav-link" href="{{ url_for('inventory_analysis.inventory_analysis') }}">📊 Analysis</a></li>
+        <li class="nav-item">
+          <button class="btn btn-outline-dark ms-lg-3 me-2" onclick="toggleDarkMode()" id="darkModeToggle" aria-label="Toggle dark mode">🌙</button>
+        </li>
+        <li class="nav-item">
+          <a href="/logout" class="btn btn-danger btn-sm px-3">Logout</a>
+        </li>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- Content -->
+  <div class="container-fluid mt-3 mt-md-4">
+    <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+      <div>
+        <h4 class="mb-0">Inventory Products</h4>
+        <div class="text-muted small">Manage products, pricing, stock, transfers, and history.</div>
+      </div>
+      {% if can_close_stock %}
+      <button class="btn btn-outline-dark btn-sm" data-bs-toggle="modal" data-bs-target="#inventorySettingsModal">⚙️ Settings</button>
+      {% endif %}
+    </div>
+    {% set has_filters = request.args.get('manager') or request.args.get('branch') or request.args.get('product') or request.args.get('low_stock') %}
+
+    <!--  The filter Section should include Settings for closing and Opeing of stock -->
+      <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
+        <span class="section-heading">Filters</span>
+        <div class="d-flex align-items-center gap-2">
+          <button class="btn btn-outline-primary btn-sm" type="button" id="filterToggleBtn" aria-expanded="{{ 'true' if has_filters else 'false' }}" aria-controls="filterPanel">Filter</button>
+          <button type="button" class="btn btn-link p-0 small text-decoration-none" id="resetFiltersBtn">Reset</button>
+        </div>
+      </div>
+      <div class="card shadow-sm filter-panel {% if has_filters %}is-open{% endif %}" id="filterPanel" style="border-radius:14px;">
+        <div class="card-body">
+          <form method="GET" class="row g-3 filter-form" id="filterForm">
+          <div class="col-md-4">
+            <label class="form-label small text-muted">Manager</label>
+            <select name="manager" class="form-select">
+              <option value="">All Managers</option>
+              {% for name in managers %}
+                <option value="{{ name }}" {% if request.args.get('manager') == name %}selected{% endif %}>{{ name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label small text-muted">Branch</label>
+            <select name="branch" class="form-select">
+              <option value="">All Branches</option>
+              {% for branch in branches %}
+                <option value="{{ branch }}" {% if request.args.get('branch') == branch %}selected{% endif %}>{{ branch }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label small text-muted">Product</label>
+            <input type="text" name="product" class="form-control" placeholder="Search Product"
+                   id="filterProductInput"
+                   value="{{ request.args.get('product', '') }}">
+          </div>
+          <div class="col-md-4 d-flex align-items-end">
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" name="low_stock" id="lowStockOnly" value="1"
+                     {% if request.args.get('low_stock') %}checked{% endif %}>
+              <label class="form-check-label small text-muted" for="lowStockOnly">Low stock only</label>
+            </div>
+          </div>
+          <div class="col-md-12">
+            <button type="submit" class="btn btn-primary w-100">Apply Filters</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Flash messages -->
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          <div class="mb-2">
+            {% for category, message in messages %}
+              <div class="flash {{ category }}">
+                <span>{{ message }}</span>
+                <small>Tap to dismiss</small>
+              </div>
+            {% endfor %}
+          </div>
+        {% endif %}
+      {% endwith %}
+      <div class="toast-container position-fixed top-0 end-0 p-3" id="toastContainer"></div>
+
+      <!-- Product Cards -->
+    <div class="table-responsive">
+      <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4"
+           id="inventoryGrid"
+           data-default-limit="{{ limit }}"
+           data-default-offset="{{ offset }}"
+           data-total-count="{{ total_count }}"
+           data-reorder-level="{{ reorder_level }}"
+           data-branches='{{ branches|tojson }}'
+           data-list-endpoint="{{ url_for('inventory_products.inventory_products_api_list') }}"
+           data-update-endpoint="{{ url_for('inventory_products.inventory_products_api_update') }}"
+           data-delete-endpoint="{{ url_for('inventory_products.inventory_products_api_delete') }}"
+           data-transfer-endpoint="{{ url_for('inventory_products.inventory_products_api_transfer') }}"
+           data-change-image-base="/inventory_products/api/change-image">
+        {% for item in inventory %}
+        {# ---- NULL-SAFE computed pricing ---- #}
+        {% set s_price = (item.selling_price|default(item.price)) %}
+        {% set c_price = (item.cost_price|default(item.initial_price)|default(None)) %}
+        {% set item_qty = item.qty|default(0, true) %}
+        {% set is_low_stock = (item_qty <= reorder_level) %}
+        {% set calc_margin = (s_price - c_price) if (s_price is not none and c_price is not none) else None %}
+        {% set pct_margin = ( (calc_margin / c_price * 100) if (calc_margin is not none and c_price and c_price != 0) else None ) %}
+
+          <div class="col">
+            <div class="card shadow-sm h-100 {{ 'low-stock low-stock-pulse' if is_low_stock else '' }}"
+                 id="inventoryCard{{ item._id }}"
+                 data-item-id="{{ item._id }}"
+                 data-product-name="{{ item.name|e }}"
+                 data-branch-name="{{ item.manager.branch|e }}"
+                 data-manager-name="{{ item.manager.name|e }}"
+                 data-qty="{{ item_qty }}"
+                 data-price="{{ item.price|default('') }}"
+                 data-selling-price="{{ item.selling_price|default('') }}"
+                 data-cost-price="{{ item.cost_price|default('') }}"
+                 data-image-url="{{ item.image_url|default('') }}"
+                 data-description="{{ item.description|e }}"
+                 data-grouped="{{ '1' if item.manager.name == 'Multiple' else '0' }}">
+            <div class="position-relative">
+              {% if item.manager.name == 'Multiple' %}
+                <span class="branch-pill manager-pill-multi">All branches (grouped)</span>
+              {% else %}
+                <span class="branch-pill">{{ item.manager.branch }}</span>
+              {% endif %}
+              <img src="{{ item.image_url }}" class="card-img-top img-cover product-toggle" alt="{{ item.name }}">
+              <button class="btn btn-sm btn-warning position-absolute top-0 end-0 m-2"
+                      data-bs-toggle="modal"
+                      data-bs-target="#changeImageModal{{ item._id }}"
+                      title="Change image for this product">
+                🖼️
+              </button>
+            </div>
+            <div class="card-body d-flex flex-column">
+              <div class="d-flex justify-content-between align-items-start mb-1">
+                <h5 class="card-title mb-1 product-toggle">{{ item.name }}</h5>
+                <button class="toggle-details"
+                        type="button"
+                        data-target="details{{ item._id }}"
+                        aria-expanded="false"
+                        aria-controls="details{{ item._id }}"
+                        title="Show more">
+                  &gt;
+                </button>
+              </div>
+                <div class="compact-meta">
+                <button type="button"
+                        class="product-chip qty-pill"
+                        data-product-name="{{ item.name|e }}"
+                        data-product-id="{{ item._id }}"
+                        data-manager-name="{{ item.manager.name|e }}"
+                        data-branch-name="{{ item.manager.branch|e }}"
+                        data-price="{{ item.price|default('') }}"
+                        data-selling-price="{{ item.selling_price|default('') }}"
+                        data-cost-price="{{ item.cost_price|default('') }}"
+                        data-description="{{ item.description|e }}"
+                        aria-label="View quantity distribution for {{ item.name }}">
+                  <span class="qty-icon">📦</span>
+                  <span class="qty-text">QTYs</span>
+                  <span class="qty-badge">{{ item.qty }}</span>
+                </button>
+                <span class="price-pill">GHS {{ '%.2f'|format(item.price|default(0.0)) }}</span>
+                {% if is_low_stock %}
+                  <span class="low-stock-pill">LOW STOCK</span>
+                {% endif %}
+              </div>
+
+              <div class="product-details" id="details{{ item._id }}">
+                <p class="card-text text-muted-quiet mb-2">{{ item.description }}</p>
+
+                <div class="badge bg-light text-dark border mb-2">
+                  Stock: <strong>{{ item.qty }}</strong>
+                </div>
+
+                <!-- Pricing block -->
+                <div class="price-grid">
+                  <div>
+                    <div class="price-label">Legacy Price</div>
+                    <div class="price-chip"><span>GHS</span><strong>{{ '%.2f'|format(item.price|default(0.0)) }}</strong></div>
+                  </div>
+                  <div>
+                    <div class="price-label">Qty</div>
+                    <div class="price-chip"><strong>{{ item_qty }}</strong></div>
+                  </div>
+                  <div>
+                    <div class="price-label">Selling (S-Price)</div>
+                    <div class="price-chip">
+                      <span>GHS</span>
+                      <strong>{{ s_price is not none and ('%.2f'|format(s_price)) or '-' }}</strong>
+                    </div>
+                  </div>
+                  <div>
+                    <div class="price-label">Cost (C-Price)</div>
+                    <div class="price-chip">
+                      <span>GHS</span>
+                      <strong>{{ c_price is not none and ('%.2f'|format(c_price)) or '-' }}</strong>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="mt-2">
+                  {% if calc_margin is not none %}
+                    {% if calc_margin > 0 %}
+                      <span class="badge-pos">
+                        Margin: GHS {{ '%.2f'|format(calc_margin) }}
+                        {% if pct_margin is not none %} ({{ '%.1f'|format(pct_margin) }}%){% endif %}
+                      </span>
+                    {% elif calc_margin < 0 %}
+                      <span class="badge-neg">
+                        Margin: GHS {{ '%.2f'|format(calc_margin) }}
+                        {% if pct_margin is not none %} ({{ '%.1f'|format(pct_margin) }}%){% endif %}
+                      </span>
+                    {% else %}
+                      <span class="badge-zero">Margin: GHS 0.00</span>
+                    {% endif %}
+                  {% else %}
+                    <span class="small-help">Margin pending (set S-Price &amp; C-Price)</span>
+                  {% endif %}
+                </div>
+
+                <div class="divider"></div>
+
+                <p class="card-text mb-2">
+                  <strong>Manager:</strong>
+                  {% if item.manager.name == 'Multiple' %}
+                    <span class="text-info">Multiple managers</span>
+                  {% else %}
+                    {{ item.manager.name }} ({{ item.manager.branch }})
+                  {% endif %}
+                </p>
+
+                <div class="mt-auto d-flex flex-wrap gap-2">
+                  <button class="btn btn-sm btn-success"
+                          data-bs-toggle="modal"
+                          data-bs-target="#editModal{{ item._id }}">
+                    Edit
+                  </button>
+
+                  {% if item.manager.name != 'Multiple' %}
+                  <!-- Transfer button only for concrete branch items -->
+                  <button class="btn btn-sm btn-transfer"
+                          data-bs-toggle="modal"
+                          data-bs-target="#transferModal{{ item._id }}">
+                    Transfer
+                  </button>
+                  {% endif %}
+
+                    <form method="POST" class="d-inline flex-grow-1 delete-item-form" data-item="{{ item._id }}">
+                      <input type="hidden" name="item_id" value="{{ item._id }}">
+                    <div class="d-flex flex-wrap mb-2 mt-1">
+                      <div class="form-check me-2">
+                        <input class="form-check-input branch-master" type="checkbox" id="deleteAllBranches{{ item._id }}">
+                        <label class="form-check-label small" for="deleteAllBranches{{ item._id }}">All</label>
+                      </div>
+                      {% for branch in branches %}
+                      <div class="form-check me-2">
+                        <input class="form-check-input branch-option" type="checkbox" name="branches" value="{{ branch }}" id="deleteBranch{{ item._id }}{{ loop.index }}">
+                        <label class="form-check-label small" for="deleteBranch{{ item._id }}{{ loop.index }}">{{ branch }}</label>
+                      </div>
+                      {% endfor %}
+                    </div>
+                    <button class="btn btn-sm btn-delete" name="action" value="delete">Delete</button>
+                  </form>
+
+                    <button class="btn btn-sm btn-secondary" type="button"
+                            data-action="history"
+                            data-item-id="{{ item._id }}"
+                            data-product-name="{{ item.name|e }}">
+                      History
+                    </button>
+                </div>
+              </div>
+            </div>
+          </div>
+          </div>
+        {% endfor %}
+      </div> <!-- End row -->
+    </div> <!-- End .table-responsive -->
+
+    <div id="inventoryModals">
+      {% for item in inventory %}
+        {% set s_price = (item.selling_price|default(item.price)) %}
+        {% set c_price = (item.cost_price|default(item.initial_price)|default(None)) %}
+        {% set item_qty = item.qty|default(0, true) %}
+        {% set calc_margin = (s_price - c_price) if (s_price is not none and c_price is not none) else None %}
+        <!-- Change Image Modal -->
+        <div class="modal fade" id="changeImageModal{{ item._id }}" tabindex="-1" aria-labelledby="changeImageModalLabel{{ item._id }}" aria-hidden="true">
+          <div class="modal-dialog">
+            <div class="modal-content">
+              <form method="POST"
+                    enctype="multipart/form-data"
+                    class="change-image-form"
+                    data-name="{{ item.name }}"
+                    data-price="{{ item.price }}">
+                <div class="modal-header">
+                  <h5 class="modal-title">Change Image for "{{ item.name }}"</h5>
+                  <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                  <div class="alert alert-danger d-none small modal-error" role="alert"></div>
+                  <input type="hidden" name="name" value="{{ item.name }}">
+                  <input type="hidden" name="price" value="{{ item.price }}">
+                  <input type="file" name="image" class="form-control mb-2" accept="image/*" required>
+                  <p class="text-muted small mb-1">
+                    New image will apply to all items with this name and price / selling price.
+                  </p>
+                  <div class="preview-container mt-2 text-center small text-muted">No image selected yet.</div>
+                </div>
+                <div class="modal-footer">
+                  <button type="submit" class="btn btn-primary">Update Image</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+
+        <!-- Transfer Modal -->
+        {% if item.manager.name != 'Multiple' %}
+        <div class="modal fade" id="transferModal{{ item._id }}" tabindex="-1" aria-labelledby="transferModalLabel{{ item._id }}" aria-hidden="true">
+          <div class="modal-dialog">
+            <div class="modal-content">
+              <form method="POST" class="transfer-item-form" data-item="{{ item._id }}">
+                <div class="modal-header">
+                  <h5 class="modal-title" id="transferModalLabel{{ item._id }}">Transfer {{ item.name }}</h5>
+                  <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                  <div class="alert alert-danger d-none small modal-error" role="alert"></div>
+                  <input type="hidden" name="item_id" value="{{ item._id }}">
+                  <input type="hidden" name="action" value="transfer">
+
+                  <div class="mb-2">
+                    <label class="form-label small text-muted">From Branch</label>
+                    <input type="text" class="form-control" value="{{ item.manager.branch }}" readonly>
+                  </div>
+
+                  <div class="mb-2">
+                    <label class="form-label small text-muted">Destination Branch</label>
+                    <select name="to_branch" class="form-select" required>
+                      <option value="">Select branch</option>
+                      {% for branch in branches %}
+                        {% if branch != item.manager.branch %}
+                          <option value="{{ branch }}">{{ branch }}</option>
+                        {% endif %}
+                      {% endfor %}
+                    </select>
+                  </div>
+
+                  <div class="mb-2">
+                    <label class="form-label small text-muted">Quantity to Transfer</label>
+                    <input type="number"
+                           name="transfer_qty"
+                           class="form-control"
+                           min="1"
+                           max="{{ item.qty }}"
+                           required>
+                    <small class="small-help">Available in {{ item.manager.branch }}: {{ item.qty }}</small>
+                  </div>
+
+                  <div class="alert alert-info py-2 mt-2 small mb-0">
+                    This will subtract from <strong>{{ item.manager.branch }}</strong> and add to the selected branch for
+                    <strong>{{ item.name }}</strong>.
+                  </div>
+                </div>
+                <div class="modal-footer">
+                  <button type="submit" class="btn btn-transfer">Confirm Transfer</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+        {% endif %}
+
+        <!-- Edit Modal -->
+        <div class="modal fade" id="editModal{{ item._id }}" tabindex="-1" aria-labelledby="editModalLabel{{ item._id }}" aria-hidden="true">
+          <div class="modal-dialog">
+            <div class="modal-content">
+              <form method="POST" class="edit-item-form" data-item="{{ item._id }}">
+                <div class="modal-header">
+                  <h5 class="modal-title" id="editModalLabel{{ item._id }}">Edit {{ item.name }}</h5>
+                  <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                  <div class="alert alert-danger d-none small modal-error" role="alert"></div>
+                  <input type="hidden" name="item_id" value="{{ item._id }}">
+
+                  <div class="mb-3">
+                    <label for="name{{ item._id }}" class="form-label">Product Name</label>
+                    <input type="text" name="name" class="form-control" id="name{{ item._id }}" value="{{ item.name }}" required>
+                  </div>
+
+                  <!-- Legacy Price (still editable) -->
+                  <div class="mb-3">
+                    <label for="price{{ item._id }}" class="form-label">Legacy Price (GHS)</label>
+                    <input type="number" name="price" class="form-control" id="price{{ item._id }}" value="{{ '%.2f'|format(item.price|default(0.0)) }}" step="0.01" required>
+                    <div class="form-text">Used by older flows; Selling Price may differ.</div>
+                  </div>
+
+                  <!-- New Pricing -->
+                  <div class="row g-2">
+                    <div class="col-12"><small class="small-help">Modern Pricing</small></div>
+                    <div class="col-md-4">
+                      <label class="form-label" for="cost{{ item._id }}">Cost Price</label>
+                      <input type="number" step="0.01" min="0" name="cost_price" id="cost{{ item._id }}" class="form-control"
+                             value="{{ c_price is not none and ('%.2f'|format(c_price)) or '' }}">
+                    </div>
+                    <div class="col-md-4">
+                      <label class="form-label" for="sell{{ item._id }}">Selling Price</label>
+                      <input type="number" step="0.01" min="0" name="selling_price" id="sell{{ item._id }}" class="form-control"
+                             value="{{ s_price is not none and ('%.2f'|format(s_price)) or '' }}">
+                    </div>
+                    <div class="col-md-4">
+                      <label class="form-label" for="margin{{ item._id }}">Margin</label>
+                      <input type="number" step="0.01" name="margin" id="margin{{ item._id }}" class="form-control"
+                             value="{{ item.margin is not none and ('%.2f'|format(item.margin)) or (calc_margin is not none and ('%.2f'|format(calc_margin)) or '') }}"
+                             readonly>
+                      <div class="form-text">Auto: Selling − Cost</div>
+                    </div>
+                  </div>
+
+                  <div class="mb-3 mt-2">
+                    <label for="qty{{ item._id }}" class="form-label">Quantity</label>
+                    <input type="number" name="qty" class="form-control" id="qty{{ item._id }}" value="{{ item.qty }}" required>
+                  </div>
+
+                  <div class="mb-3">
+                    <label class="form-label">Apply to Branches</label>
+                    <div class="d-flex flex-wrap">
+                      <div class="form-check me-2">
+                        <input class="form-check-input branch-master" type="checkbox" id="editAllBranches{{ item._id }}">
+                        <label class="form-check-label small" for="editAllBranches{{ item._id }}">All</label>
+                      </div>
+                      {% for branch in branches %}
+                      <div class="form-check me-2">
+                        <input class="form-check-input branch-option" type="checkbox" name="branches" value="{{ branch }}" id="editBranch{{ item._id }}{{ loop.index }}">
+                        <label class="form-check-label small" for="editBranch{{ item._id }}{{ loop.index }}">{{ branch }}</label>
+                      </div>
+                      {% endfor %}
+                    </div>
+                    <small class="text-muted">Tick all the branches you want the update to apply to.</small>
+                  </div>
+                </div>
+          <div class="modal-footer">
+            <button type="submit" name="action" value="update" class="btn btn-primary">Save changes</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="text-center mt-4 mb-4 {{ '' if total_count > current_page * limit else 'd-none' }}" id="loadMoreWrap">
+      <button class="btn btn-outline-primary" type="button" id="loadMoreBtn">Load More</button>
+      <div class="small text-muted mt-1" id="loadMoreMeta"></div>
+    </div>
+  </div>
+
+  <!-- History Modal -->
+  <div class="modal fade" id="historyModal" tabindex="-1" aria-labelledby="historyModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="historyModalLabel">History</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body position-relative">
+          <div class="d-flex flex-wrap gap-2 mb-3" id="historyFilters">
+            <button type="button" class="btn btn-sm btn-outline-secondary btn-history-filter active" data-view="">All</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary btn-history-filter" data-view="transfer">Transfers</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary btn-history-filter" data-view="updates">Updates</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary btn-history-filter" data-view="deletes">Deletes</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary btn-history-filter" data-view="images">Images</button>
+          </div>
+
+          <ul id="historyList" class="list-group">
+            <li class="list-group-item">Loading...</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {% if can_close_stock %}
+  <!-- Inventory Settings Modal -->
+  <div class="modal fade" id="inventorySettingsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Inventory Settings</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="border rounded p-3 mb-3">
+            <div class="fw-semibold mb-2">Reorder Level (Low stock threshold)</div>
+            <div class="input-group">
+              <span class="input-group-text">Level</span>
+              <input type="number" class="form-control" id="globalReorderLevel" min="0" value="{{ reorder_level }}">
+              <button class="btn btn-outline-primary" type="button" id="saveReorderLevel">Save</button>
+            </div>
+            <div class="small text-muted mt-2">Items at or below this level are flagged as low stock.</div>
+            <div class="alert alert-success py-2 mt-2 d-none" id="reorderLevelAlert"></div>
+          </div>
+          <div class="border rounded p-3 mb-3">
+            <div class="fw-semibold mb-2 text-danger">Reset Quantity (Danger Zone)</div>
+            <div class="small text-muted mb-2">This will set qty=0 for all items in selected branches. Cannot be undone.</div>
+            <div class="mb-2">
+              <label class="form-label small text-muted">Select branches</label>
+              <div class="d-flex flex-wrap">
+                {% for branch in branches %}
+                <div class="form-check me-3 mb-1">
+                  <input class="form-check-input reset-branch" type="checkbox" value="{{ branch }}" id="resetBranch{{ loop.index }}">
+                  <label class="form-check-label small" for="resetBranch{{ loop.index }}">{{ branch }}</label>
+                </div>
+                {% endfor %}
+              </div>
+            </div>
+            <div class="mb-2">
+              <label class="form-label small text-muted">Type RESET to confirm</label>
+              <input type="text" class="form-control" id="resetConfirmText" placeholder="RESET">
+            </div>
+            <div class="mb-2">
+              <label class="form-label small text-muted">Passcode</label>
+              <input type="password" class="form-control" id="resetPasscode" placeholder="4-digit passcode" maxlength="4">
+            </div>
+            <button class="btn btn-danger" type="button" id="resetQtyBtn">Reset Qty to 0</button>
+            <div class="alert alert-success py-2 mt-2 d-none" id="resetQtyAlert"></div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label small text-muted">Passcode</label>
+            <input type="password" class="form-control" id="stockPasscode" placeholder="4-digit passcode" maxlength="4">
+          </div>
+          <div class="border rounded p-3">
+            <div class="fw-semibold mb-2">Close Stock (Year End)</div>
+            <div class="input-group">
+              <span class="input-group-text">Year</span>
+              <input type="number" class="form-control" id="closeStockYear" placeholder="YYYY">
+              <button class="btn btn-warning" type="button" id="startCloseStock">Close Stock</button>
+            </div>
+          </div>
+          <div class="text-danger small mt-3" id="stockActionError" style="display:none;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Stock Progress Modal -->
+  <div class="modal fade" id="stockProgressModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="stockProgressTitle">Processing Stock</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" id="stockProgressClose"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <div class="progress" style="height: 12px;">
+              <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width:0%" id="stockProgressBar"></div>
+            </div>
+          </div>
+          <div class="d-flex flex-wrap gap-2 mb-3">
+            <span class="badge bg-secondary">Managers: <span id="spManagers">0</span></span>
+            <span class="badge bg-info text-dark">Items: <span id="spItems">0</span></span>
+            <span class="badge bg-success">Processed: <span id="spManagersDone">0</span></span>
+            <span class="badge bg-primary">Branches: <span id="spBranches">0</span></span>
+            <span class="badge bg-primary">Branches Done: <span id="spBranchesDone">0</span></span>
+          </div>
+          <div class="mb-3">
+            <div class="progress" style="height: 8px;">
+              <div class="progress-bar bg-info progress-bar-striped progress-bar-animated" role="progressbar" style="width:0%" id="branchProgressBar"></div>
+            </div>
+          </div>
+          <div class="d-flex flex-column flex-sm-row flex-wrap gap-3 mb-3 small text-muted">
+            <div>Current: <span id="spCurrent">-</span></div>
+            <div>Current Manager: <span id="spCurrentManager">-</span></div>
+            <div>Current Branch: <span id="spCurrentBranch">-</span></div>
+          </div>
+          <div class="row g-2 mb-3">
+            <div class="col-md-6">
+              <ul class="list-group" id="stockSteps">
+                <li class="list-group-item" data-step="validating">Validating</li>
+                <li class="list-group-item" data-step="fetching">Fetching inventory</li>
+                <li class="list-group-item" data-step="processing">Processing managers</li>
+                <li class="list-group-item" data-step="saving">Saving snapshot</li>
+                <li class="list-group-item" data-step="finalizing">Finalizing</li>
+              </ul>
+            </div>
+            <div class="col-md-6">
+              <div class="border rounded p-2" style="max-height: 220px; overflow:auto;" id="spLogs"></div>
+            </div>
+          </div>
+          <div class="border rounded p-3 shadow-sm">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+              <div class="fw-semibold small mb-0">Branch Totals</div>
+              <span class="small text-muted">Auto-updating</span>
+            </div>
+            <div class="table-responsive" style="max-height:220px; overflow:auto;">
+              <table class="table table-sm table-striped mb-0">
+                <thead>
+                  <tr>
+                    <th>Branch</th>
+                    <th>Items</th>
+                    <th>Qty</th>
+                    <th>Cost Value</th>
+                    <th>Selling Value</th>
+                  </tr>
+                </thead>
+                <tbody id="branchTotalsBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal" id="stockProgressCancel">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Loading Modal -->
+  <div class="modal fade" id="loadingModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content text-center p-4">
+        <div class="spinner-border text-primary mb-3" role="status" style="width: 3rem; height: 3rem;"></div>
+        <h5 class="mb-0">Applying updates to branches...</h5>
+        <small class="text-muted-quiet">Please wait while we sync all records.</small>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quantity Distribution Modal -->
+  <div class="modal fade" id="qtyDistributionModal" tabindex="-1" aria-labelledby="qtyDistributionModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="qtyDistributionModalLabel">Quantity distribution</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <p class="small text-muted mb-2" id="qtyDistributionSubtitle"></p>
+          <div class="qty-helper mb-2">Edits here update branch quantities and will be logged in history.</div>
+          <div class="alert d-none" id="qtyDistributionAlert" role="alert"></div>
+          <div class="table-responsive">
+            <table class="table table-sm table-hover mb-0">
+              <thead>
+                <tr>
+                  <th>Branch</th>
+                  <th>Manager</th>
+                  <th class="text-end">Qty</th>
+                  <th class="text-end">Action</th>
+                </tr>
+              </thead>
+              <tbody id="qtyDistributionTable">
+                <tr><td colspan="4" class="text-center text-muted py-4">Select a product to view distribution.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-primary qty-update-btn d-inline-flex align-items-center gap-2" id="qtyDistributionUpdateBtn" disabled>
+            <span class="spinner-border spinner-border-sm d-none" id="qtyDistributionUpdateSpinner" role="status" aria-hidden="true"></span>
+            <span id="qtyDistributionUpdateText">Update Quantity</span>
+          </button>
+          <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="footer">CYTECH -  ADMIN PANEL</footer>
+
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    // Dark mode toggle with basic preference
+    function toggleDarkMode() {
+      const body = document.body;
+      const newMode = !body.classList.contains('dark-mode');
+      if(newMode){
+        body.classList.add('dark-mode');
+        localStorage.setItem('inventory_theme','dark');
+      }else{
+        body.classList.remove('dark-mode');
+        localStorage.setItem('inventory_theme','light');
+      }
+      const btn = document.getElementById('darkModeToggle');
+      btn.textContent = body.classList.contains('dark-mode') ? '🌞' : '🌙';
+    }
+
+    (function initTheme(){
+      const pref = localStorage.getItem('inventory_theme');
+      if(pref === 'dark'){
+        document.body.classList.add('dark-mode');
+      }
+      const btn = document.getElementById('darkModeToggle');
+      if(btn){
+        btn.textContent = document.body.classList.contains('dark-mode') ? '🌞' : '🌙';
+      }
+    })();
+
+    function escapeSelector(value) {
+      const str = String(value ?? '');
+      if (window.CSS && CSS.escape) {
+        return CSS.escape(str);
+      }
+      return str.replace(/"/g, '\\"');
+    }
+
+    // Dismiss flash on click
+    document.addEventListener('click', function(e){
+      if(e.target.classList.contains('flash') || e.target.closest('.flash')){
+        const el = e.target.closest('.flash');
+        el?.remove();
+      }
+    });
+
+    // Toggle product details per card
+    document.querySelectorAll('.toggle-details').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        const targetId = btn.getAttribute('data-target');
+        if (!targetId) return;
+        const panel = document.getElementById(targetId);
+        if (!panel) return;
+        const isOpen = panel.classList.toggle('is-open');
+        btn.classList.toggle('is-open', isOpen);
+        btn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+        btn.setAttribute('title', isOpen ? 'Hide details' : 'Show more');
+      });
+    });
+
+    document.querySelectorAll('.product-toggle').forEach(el => {
+      el.addEventListener('click', () => {
+        const card = el.closest('.card');
+        if (!card) return;
+        const btn = card.querySelector('.toggle-details');
+        if (btn) btn.click();
+      });
+    });
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const filterBtn = document.getElementById('filterToggleBtn');
+      const filterPanel = document.getElementById('filterPanel');
+      if (!filterBtn || !filterPanel) return;
+      const syncState = (isOpen) => {
+        filterBtn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+      };
+      syncState(filterPanel.classList.contains('is-open'));
+      filterBtn.addEventListener('click', () => {
+        const isOpen = filterPanel.classList.toggle('is-open');
+        syncState(isOpen);
+      });
+    });
+
+    let currentHistoryItemId = null;
+    let currentHistoryProductName = null;
+
+    function setHistoryFilterActive(view) {
+      const buttons = document.querySelectorAll('#historyFilters .btn-history-filter');
+      buttons.forEach(btn => {
+        const v = btn.getAttribute('data-view') || '';
+        if ((view || '') === v) {
+          btn.classList.add('active');
+        } else {
+          btn.classList.remove('active');
+        }
+      });
+    }
+
+    function openHistoryModal(itemId, productName, view) {
+      currentHistoryItemId = itemId;
+      currentHistoryProductName = productName || currentHistoryProductName;
+      const modalEl = document.getElementById('historyModal');
+      const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+      document.getElementById('historyModalLabel').innerText = `History · ${currentHistoryProductName}`;
+      const list = document.getElementById('historyList');
+      list.innerHTML = '<li class="list-group-item">Loading...</li>';
+
+      const q = view && view !== '' ? `?view=${encodeURIComponent(view)}` : '';
+      setHistoryFilterActive(view || '');
+
+      fetch(`/inventory_history/${itemId}${q}`)
+        .then(res => res.json())
+        .then(data => {
+          if (!Array.isArray(data) || data.length === 0) {
+            list.innerHTML = '<li class="list-group-item text-danger">No logs found.</li>';
+            return;
+          }
+          list.innerHTML = '';
+          data.forEach(log => {
+            const li = document.createElement('li');
+            li.classList.add('list-group-item', 'small');
+
+            const type = (log.log_type || log.action || '').toString().toUpperCase();
+            let typeBadgeClass = 'bg-secondary';
+            if (type.includes('TRANSFER')) typeBadgeClass = 'bg-info';
+            else if (type.includes('UPDATE')) typeBadgeClass = 'bg-success';
+            else if (type.includes('DELETE')) typeBadgeClass = 'bg-danger';
+            else if (type.includes('IMAGE')) typeBadgeClass = 'bg-warning';
+
+            li.innerHTML = `
+              <div class="d-flex justify-content-between align-items-start mb-1">
+                <div>
+                  <span class="badge ${typeBadgeClass} me-1">${type || 'LOG'}</span>
+                  <strong>${log.product_name || ''}</strong>
+                </div>
+                <small class="text-muted">
+                  ${log.updated_at ? new Date(log.updated_at).toLocaleString() : ''}
+                </small>
+              </div>
+              ${log.updated_by || log.deleted_by ? `<div>By: <strong>${log.updated_by || log.deleted_by}</strong></div>` : ''}
+              ${log.old_price !== undefined ? `Old Price: GHS ${log.old_price} → New Price: GHS ${log.new_price}<br>` : ''}
+              ${log.old_qty !== undefined ? `Old Qty: ${log.old_qty} → New Qty: ${log.new_qty}<br>` : ''}
+              ${log.old_cost_price !== undefined ? `Old Cost: GHS ${log.old_cost_price} → New Cost: GHS ${log.new_cost_price}<br>` : ''}
+              ${log.old_selling_price !== undefined ? `Old Selling: GHS ${log.old_selling_price} → New Selling: GHS ${log.new_selling_price}<br>` : ''}
+              ${log.old_margin !== undefined ? `Old Margin: GHS ${log.old_margin} → New Margin: GHS ${log.new_margin}<br>` : ''}
+              ${log.from_branch || log.to_branch || log.qty_moved !== undefined ? `
+                <div class="mt-1">
+                  ${log.from_branch ? `<span class="badge bg-light text-dark border me-1 small">From: ${log.from_branch}</span>` : ''}
+                  ${log.to_branch ? `<span class="badge bg-light text-dark border me-1 small">To: ${log.to_branch}</span>` : ''}
+                  ${log.qty_moved !== undefined ? `<span class="badge bg-light text-dark border small">Qty Moved: ${log.qty_moved}</span>` : ''}
+                </div>
+              ` : ''}
+            `;
+            list.appendChild(li);
+          });
+        })
+        .catch(()=>{
+          list.innerHTML = '<li class="list-group-item text-danger">Failed to load history.</li>';
+        });
+
+      modal.show();
+    }
+
+    // History filter buttons
+    document.addEventListener('DOMContentLoaded', () => {
+      document.querySelectorAll('#historyFilters .btn-history-filter').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const view = btn.getAttribute('data-view') || '';
+          if (!currentHistoryItemId) return;
+          openHistoryModal(currentHistoryItemId, currentHistoryProductName, view);
+        });
+      });
+    });
+
+    // Checkbox logic for select all (update/delete forms)
+    document.querySelectorAll('.branch-master').forEach(masterCheckbox => {
+      masterCheckbox.addEventListener('change', function () {
+        const container = this.closest('.modal-body') || this.closest('form');
+        if (!container) return;
+        const checkboxes = container.querySelectorAll('.branch-option');
+        checkboxes.forEach(cb => cb.checked = this.checked);
+      });
+    });
+
+    // Show loader when form with branch checkboxes is submitted and "All" is ticked
+    document.querySelectorAll("form").forEach(form => {
+      form.addEventListener("submit", function () {
+        const hasAllCheckbox = form.querySelector(".branch-master");
+        const actionInput = form.querySelector('[name="action"]');
+        const isUpdateOrDelete = actionInput && (actionInput.value === 'update' || actionInput.value === 'delete');
+        if (hasAllCheckbox && hasAllCheckbox.checked && isUpdateOrDelete) {
+          const loading = new bootstrap.Modal(document.getElementById("loadingModal"));
+          loading.show();
+        }
+      });
+    });
+
+    // Change image preview + submit
+    document.querySelectorAll('.change-image-form').forEach(form => {
+      const previewContainer = form.querySelector('.preview-container');
+      const fileInput = form.querySelector('input[type="file"]');
+
+      fileInput.addEventListener('change', () => {
+        const file = fileInput.files[0];
+        if (!file) { previewContainer.textContent = 'No image selected yet.'; return; }
+        const imgPreview = document.createElement('img');
+        imgPreview.src = URL.createObjectURL(file);
+        imgPreview.style.maxHeight = "150px";
+        imgPreview.classList.add("img-fluid", "mt-2", "rounded", "border");
+        previewContainer.innerHTML = '';
+        previewContainer.appendChild(imgPreview);
+      });
+
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const submitBtn = form.querySelector('button[type="submit"]');
+        submitBtn.disabled = true;
+        submitBtn.innerText = "Updating...";
+        const itemId = form.closest('.modal').id.replace('changeImageModal', '');
+        const formData = new FormData(form);
+
+        try {
+          const response = await fetch(`/inventory_products/change_image/${itemId}`, { method: 'POST', body: formData });
+          if (response.redirected) {
+            window.location.href = response.url;
+          } else {
+            location.reload();
+          }
+        } catch (err) {
+          alert("Upload failed: " + (err.message || "Unknown error"));
+          submitBtn.disabled = false;
+          submitBtn.innerText = "Update Image";
+        }
+      });
+    });
+
+    // === Live margin calc in Edit modals ===
+    function hookMarginCalcFor(itemId){
+      const cost = document.getElementById('cost'+itemId);
+      const sell = document.getElementById('sell'+itemId);
+      const mar  = document.getElementById('margin'+itemId);
+      if(!cost || !sell || !mar) return;
+      const update = ()=>{
+        const c = parseFloat(cost.value);
+        const s = parseFloat(sell.value);
+        if(isNaN(c) || isNaN(s)){ mar.value = ''; return; }
+        mar.value = (s - c).toFixed(2);
+      };
+      cost.addEventListener('input', update);
+      sell.addEventListener('input', update);
+      update();
+    }
+    document.querySelectorAll('.edit-item-form').forEach(f=>{
+      const id = f.getAttribute('data-item');
+      hookMarginCalcFor(id);
+    });
+
+    // Reorder level (global)
+    (function(){
+      const saveBtn = document.getElementById('saveReorderLevel');
+      const input = document.getElementById('globalReorderLevel');
+      const alertBox = document.getElementById('reorderLevelAlert');
+      if (!saveBtn || !input) return;
+
+      const showAlert = (msg, ok) => {
+        if (!alertBox) return;
+        alertBox.textContent = msg;
+        alertBox.classList.remove('d-none', 'alert-danger', 'alert-success');
+        alertBox.classList.add(ok ? 'alert-success' : 'alert-danger');
+      };
+
+      saveBtn.addEventListener('click', async () => {
+        const level = parseInt(input.value, 10);
+        if (isNaN(level) || level < 0) {
+          showAlert('Reorder level must be 0 or greater.', false);
+          return;
+        }
+        saveBtn.disabled = true;
+        try {
+          const res = await fetch('/inventory/settings/reorder-level', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ reorder_level: level })
+          });
+          const data = await res.json();
+          if (!res.ok || !data.ok) {
+            showAlert(data.message || 'Failed to save reorder level.', false);
+            return;
+          }
+          showAlert('Reorder level saved.', true);
+          if (typeof window.refreshInvLowStockBadge === 'function') {
+            window.refreshInvLowStockBadge();
+          }
+        } catch (err) {
+          showAlert('Failed to save reorder level.', false);
+        } finally {
+          saveBtn.disabled = false;
+        }
+      });
+    })();
+
+    (function(){
+      const resetBtn = document.getElementById('resetQtyBtn');
+      const confirmInput = document.getElementById('resetConfirmText');
+      const passInput = document.getElementById('resetPasscode');
+      const alertBox = document.getElementById('resetQtyAlert');
+      if (!resetBtn) return;
+
+      const showAlert = (msg, ok) => {
+        if (!alertBox) return;
+        alertBox.textContent = msg;
+        alertBox.classList.remove('d-none', 'alert-danger', 'alert-success');
+        alertBox.classList.add(ok ? 'alert-success' : 'alert-danger');
+      };
+
+      resetBtn.addEventListener('click', async () => {
+        const branches = Array.from(document.querySelectorAll('.reset-branch:checked')).map(cb => cb.value);
+        const confirmText = (confirmInput?.value || '').trim();
+        const passcode = (passInput?.value || '').trim();
+        if (!branches.length) {
+          showAlert('Select at least one branch.', false);
+          return;
+        }
+        if (confirmText.toUpperCase() !== 'RESET') {
+          showAlert('Confirmation text must be RESET.', false);
+          return;
+        }
+        if (!passcode) {
+          showAlert('Passcode is required.', false);
+          return;
+        }
+        if (!confirm('Are you sure? This cannot be undone.')) {
+          return;
+        }
+
+        resetBtn.disabled = true;
+        resetBtn.textContent = 'Resetting...';
+        try {
+          const res = await fetch('/inventory/settings/reset-qty', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              branches,
+              confirm_text: confirmText,
+              passcode
+            })
+          });
+          const data = await res.json();
+          if (!res.ok || !data.ok) {
+            showAlert(data.message || 'Reset failed.', false);
+            return;
+          }
+          showAlert(`Reset done: ${data.modified_count || 0} items updated.`, true);
+          setTimeout(() => window.location.reload(), 800);
+        } catch (err) {
+          showAlert('Reset failed.', false);
+        } finally {
+          resetBtn.disabled = false;
+          resetBtn.textContent = 'Reset Qty to 0';
+        }
+      });
+    })();
+
+    // Stock closing (inventory module only)
+    (function(){
+      const settingsModal = document.getElementById('inventorySettingsModal');
+      const progressModal = document.getElementById('stockProgressModal');
+      if(!settingsModal || !progressModal) return;
+
+      const passcodeInput = document.getElementById('stockPasscode');
+      const closeYearInput = document.getElementById('closeStockYear');
+      const startCloseBtn = document.getElementById('startCloseStock');
+      const errorBox = document.getElementById('stockActionError');
+
+      const progressBar = document.getElementById('stockProgressBar');
+      const spManagers = document.getElementById('spManagers');
+      const spItems = document.getElementById('spItems');
+      const spManagersDone = document.getElementById('spManagersDone');
+      const spBranches = document.getElementById('spBranches');
+      const spBranchesDone = document.getElementById('spBranchesDone');
+      const spCurrent = document.getElementById('spCurrent');
+      const spCurrentManager = document.getElementById('spCurrentManager');
+      const spCurrentBranch = document.getElementById('spCurrentBranch');
+      const spLogs = document.getElementById('spLogs');
+      const progressTitle = document.getElementById('stockProgressTitle');
+      const progressClose = document.getElementById('stockProgressClose');
+      const progressCancel = document.getElementById('stockProgressCancel');
+      const branchProgressBar = document.getElementById('branchProgressBar');
+      const branchTableBody = document.getElementById('branchTotalsBody');
+
+      let pollTimer = null;
+
+      const nowYear = new Date().getFullYear();
+      if (!closeYearInput.value) closeYearInput.value = String(nowYear);
+
+      const resetProgress = () => {
+        progressBar.style.width = '0%';
+        branchProgressBar.style.width = '0%';
+        spManagers.textContent = '0';
+        spItems.textContent = '0';
+        spManagersDone.textContent = '0';
+        spBranches.textContent = '0';
+        spBranchesDone.textContent = '0';
+        spCurrent.textContent = '-';
+        spCurrentManager.textContent = '-';
+        spCurrentBranch.textContent = '-';
+        spLogs.innerHTML = '';
+        branchTableBody.innerHTML = '';
+        document.querySelectorAll('#stockSteps .list-group-item').forEach(li => {
+          li.classList.remove('active', 'list-group-item-success');
+        });
+      };
+
+      const setRunning = (running) => {
+        startCloseBtn.disabled = running;
+        progressClose.disabled = running;
+        progressCancel.disabled = running;
+        progressBar.classList.toggle('progress-bar-animated', running);
+        branchProgressBar.classList.toggle('progress-bar-animated', running);
+      };
+
+      const setStep = (step) => {
+        const steps = ['validating','fetching','processing','saving','finalizing'];
+        const idx = steps.indexOf(step);
+        document.querySelectorAll('#stockSteps .list-group-item').forEach(li => {
+          const liStep = li.getAttribute('data-step');
+          const liIdx = steps.indexOf(liStep);
+          li.classList.toggle('active', liStep === step);
+          li.classList.toggle('list-group-item-success', liIdx > -1 && liIdx < idx);
+        });
+      };
+
+      const renderLogs = (logs) => {
+        spLogs.innerHTML = (logs || []).map(l => {
+          const level = (l.level || 'info').toLowerCase();
+          let badge = 'bg-secondary';
+          if (level === 'ok') badge = 'bg-success';
+          if (level === 'error') badge = 'bg-danger';
+          if (level === 'skip') badge = 'bg-warning text-dark';
+          return `<div class="small text-muted d-flex gap-2"><span class="badge ${badge}">${level}</span><span>${l.ts} ? ${l.message}</span></div>`;
+        }).join('');
+        spLogs.scrollTop = spLogs.scrollHeight;
+      };
+
+      const renderBranches = (branches) => {
+        branchTableBody.innerHTML = (branches || []).map(b => `
+          <tr>
+            <td>${b.branch_name || 'Unknown'}</td>
+            <td>${b.items_count || 0}</td>
+            <td>${Number(b.total_qty || 0).toFixed(0)}</td>
+            <td>GHS ${Number(b.closing_cost_value || 0).toFixed(2)}</td>
+            <td>GHS ${Number(b.closing_selling_value || 0).toFixed(2)}</td>
+          </tr>
+        `).join('');
+      };
+
+      async function pollStatus(url){
+        const res = await fetch(url);
+        const data = await res.json();
+        if(!data.ok) return;
+        progressBar.style.width = `${data.percent || 0}%`;
+        spManagers.textContent = data.managers_total || 0;
+        spManagersDone.textContent = data.managers_done || 0;
+        spItems.textContent = data.items_total || 0;
+        spBranches.textContent = data.branches_total || 0;
+        spBranchesDone.textContent = data.branches_done || 0;
+        spCurrent.textContent = data.current || '-';
+        spCurrentManager.textContent = data.current_manager || '-';
+        spCurrentBranch.textContent = data.current_branch || '-';
+        setStep(data.step || 'processing');
+        const branchPercent = data.branches_total ? Math.round((data.branches_done / data.branches_total) * 100) : 0;
+        branchProgressBar.style.width = `${branchPercent}%`;
+        renderBranches(data.branch_totals_live || []);
+        renderLogs(data.logs || []);
+        if(data.status === 'completed' || data.status === 'failed'){
+          clearInterval(pollTimer);
+          pollTimer = null;
+          setRunning(false);
+        }
+      }
+
+      function showError(msg){
+        errorBox.textContent = msg;
+        errorBox.style.display = 'block';
+      }
+
+      function clearError(){
+        errorBox.textContent = '';
+        errorBox.style.display = 'none';
+      }
+
+      const startJob = async () => {
+        clearError();
+        const passcode = (passcodeInput.value || '').trim();
+        if(passcode !== '3625'){
+          showError('Invalid passcode.');
+          return;
+        }
+        const year = Number(closeYearInput.value);
+        if(!year){
+          showError('Enter a valid year.');
+          return;
+        }
+
+        resetProgress();
+        setRunning(true);
+        progressTitle.textContent = 'Closing Stock';
+
+        const res = await fetch('/inventory/stock/close', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ year, passcode })
+        });
+        const data = await res.json();
+        if(!data.ok){
+          setRunning(false);
+          showError(data.message || 'Failed to start.');
+          return;
+        }
+        const statusUrl = `/inventory/stock/close/status/${data.closing_id}`;
+        const modal = bootstrap.Modal.getOrCreateInstance(progressModal);
+        modal.show();
+        pollTimer = setInterval(() => pollStatus(statusUrl), 700);
+      };
+
+      startCloseBtn.addEventListener('click', startJob);
+
+      progressModal.addEventListener('hidden.bs.modal', () => {
+        if(pollTimer){
+          clearInterval(pollTimer);
+          pollTimer = null;
+        }
+        resetProgress();
+        setRunning(false);
+      });
+    })();
+    </script>
+    <script>
+      (function(){
+        const modalBody = document.getElementById('qtyDistributionModal');
+        if (!modalBody) return;
+        const tableBody = document.getElementById('qtyDistributionTable');
+        const subtitle = document.getElementById('qtyDistributionSubtitle');
+        const alertBox = document.getElementById('qtyDistributionAlert');
+        const updateBtn = document.getElementById('qtyDistributionUpdateBtn');
+        const updateSpinner = document.getElementById('qtyDistributionUpdateSpinner');
+        const updateText = document.getElementById('qtyDistributionUpdateText');
+        const modalInstance = new bootstrap.Modal(modalBody);
+        const endpoint = "{{ url_for('inventory_products.inventory_products_distribution') }}";
+        const updateEndpoint = "{{ url_for('inventory_products.inventory_products_distribution_update_qty') }}";
+        const dirtyUpdates = new Map();
+        let currentProduct = null;
+        let lastQtyButton = null;
+        let isUpdating = false;
+
+        const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({
+          '&': '&amp;',
+          '<': '&lt;',
+          '>': '&gt;',
+          '"': '&quot;',
+          "'": '&#39;'
+        })[char]);
+
+        const showAlert = (type, message) => {
+          if (!alertBox) return;
+          alertBox.className = `alert alert-${type}`;
+          alertBox.textContent = message;
+        };
+
+        const clearAlert = () => {
+          if (!alertBox) return;
+          alertBox.className = 'alert d-none';
+          alertBox.textContent = '';
+        };
+
+        const setUpdateEnabled = () => {
+          if (!updateBtn) return;
+          updateBtn.disabled = isUpdating || dirtyUpdates.size === 0;
+        };
+
+        const setUpdating = (state) => {
+          isUpdating = state;
+          if (updateSpinner) updateSpinner.classList.toggle('d-none', !state);
+          if (updateText) updateText.textContent = state ? 'Updating...' : 'Update Quantity';
+          setUpdateEnabled();
+        };
+
+        const resetState = (keepProduct = false) => {
+          dirtyUpdates.clear();
+          clearAlert();
+          setUpdating(false);
+          if (!keepProduct) {
+            currentProduct = null;
+          }
+        };
+
+        const renderRows = (list) => {
+          if (!list.length) {
+            tableBody.innerHTML = '<tr><td colspan="4" class="text-center text-muted py-4">No branch breakdown available.</td></tr>';
+            return;
+          }
+          tableBody.innerHTML = list.map(row => {
+            const branch = escapeHtml(row.branch_name || 'Unknown');
+            const managers = escapeHtml((row.manager_names || []).join(', ') || 'Unknown');
+            const qty = Number(row.qty || 0);
+            return `
+              <tr data-branch-name="${branch}" data-qty="${qty}" data-original-qty="${qty}">
+                <td>${branch}</td>
+                <td>${managers}</td>
+                <td class="text-end qty-cell">${qty.toFixed(0)}</td>
+                <td class="text-end qty-action">
+                  <button type="button" class="btn btn-sm btn-outline-primary qty-edit-btn">Edit</button>
+                </td>
+              </tr>
+            `;
+          }).join('');
+        };
+
+        const syncQtyBadge = () => {
+          if (!lastQtyButton) return;
+          const rows = Array.from(tableBody.querySelectorAll('tr[data-branch-name]'));
+          if (!rows.length) return;
+          const total = rows.reduce((sum, row) => sum + (parseInt(row.dataset.qty, 10) || 0), 0);
+          const badge = lastQtyButton.querySelector('.qty-badge');
+          if (badge) badge.textContent = total.toFixed(0);
+        };
+
+        document.addEventListener('click', async (event) => {
+          const btn = event.target.closest('.qty-pill');
+          if (!btn) return;
+          const productName = btn.dataset.productName;
+          if (!productName) return;
+          lastQtyButton = btn;
+          currentProduct = {
+            name: productName,
+            price: btn.dataset.price || '',
+            selling_price: btn.dataset.sellingPrice || '',
+            cost_price: btn.dataset.costPrice || '',
+            description: btn.dataset.description || ''
+          };
+          btn.classList.add('is-pressed');
+          setTimeout(() => btn.classList.remove('is-pressed'), 180);
+
+          subtitle.textContent = `Distribution for ${productName}`;
+          tableBody.innerHTML = '<tr><td colspan="4" class="text-center text-muted py-4">Loading distribution...</td></tr>';
+          resetState(true);
+          modalInstance.show();
+
+          try {
+            const query = new URLSearchParams({
+              name: productName,
+              price: btn.dataset.price || '',
+            selling_price: btn.dataset.sellingPrice || '',
+            cost_price: btn.dataset.costPrice || '',
+            description: btn.dataset.description || '',
+            });
+            const resp = await fetch(`${endpoint}?${query.toString()}`);
+            if (!resp.ok) throw new Error('Failed to load distribution');
+            const data = await resp.json();
+            if (!data.ok) throw new Error(data.message || 'No data');
+            const list = (data.distribution || []);
+            renderRows(list);
+            btn.classList.add('is-loaded');
+            setTimeout(() => btn.classList.remove('is-loaded'), 600);
+          } catch (err) {
+            tableBody.innerHTML = `<tr><td colspan="4" class="text-center text-danger py-4">${(err.message || 'Failed to load distribution')}</td></tr>`;
+          }
+        });
+
+        modalBody.addEventListener('click', (event) => {
+          const editBtn = event.target.closest('.qty-edit-btn');
+          const saveBtn = event.target.closest('.qty-save-btn');
+          const cancelBtn = event.target.closest('.qty-cancel-btn');
+          if (!editBtn && !saveBtn && !cancelBtn) return;
+
+          const row = event.target.closest('tr');
+          if (!row) return;
+          const branchName = row.dataset.branchName || '';
+          const qtyCell = row.querySelector('.qty-cell');
+          const actionCell = row.querySelector('.qty-action');
+          if (!qtyCell || !actionCell) return;
+
+          if (editBtn) {
+            const currentQty = parseInt(row.dataset.qty, 10) || 0;
+            qtyCell.innerHTML = `<input type="number" min="0" class="form-control form-control-sm text-end qty-input" value="${currentQty}">`;
+            actionCell.innerHTML = `
+              <div class="btn-group btn-group-sm qty-inline-actions" role="group">
+                <button type="button" class="btn btn-success qty-save-btn">Save</button>
+                <button type="button" class="btn btn-outline-secondary qty-cancel-btn">Cancel</button>
+              </div>
+            `;
+            return;
+          }
+
+          if (cancelBtn) {
+            const displayQty = parseInt(row.dataset.qty, 10) || 0;
+            qtyCell.textContent = displayQty.toFixed(0);
+            actionCell.innerHTML = `<button type="button" class="btn btn-sm btn-outline-primary qty-edit-btn">Edit</button>`;
+            return;
+          }
+
+          if (saveBtn) {
+            const input = row.querySelector('.qty-input');
+            if (!input) return;
+            const parsedQty = parseInt(input.value, 10);
+            if (!Number.isInteger(parsedQty) || parsedQty < 0) {
+              input.classList.add('is-invalid');
+              showAlert('danger', 'Quantity must be an integer greater than or equal to 0.');
+              return;
+            }
+            input.classList.remove('is-invalid');
+            const originalQty = parseInt(row.dataset.originalQty, 10) || 0;
+            row.dataset.qty = String(parsedQty);
+            qtyCell.textContent = parsedQty.toFixed(0);
+            actionCell.innerHTML = `<button type="button" class="btn btn-sm btn-outline-primary qty-edit-btn">Edit</button>`;
+            if (parsedQty === originalQty) {
+              dirtyUpdates.delete(branchName);
+            } else {
+              dirtyUpdates.set(branchName, { branch_name: branchName, new_qty: parsedQty, old_qty: originalQty });
+            }
+            setUpdateEnabled();
+          }
+        });
+
+        if (updateBtn) {
+          updateBtn.addEventListener('click', async () => {
+            if (isUpdating || dirtyUpdates.size === 0) return;
+            if (!currentProduct) {
+              showAlert('danger', 'Select a product before updating quantities.');
+              return;
+            }
+            clearAlert();
+            setUpdating(true);
+            const updates = Array.from(dirtyUpdates.values()).map(row => ({
+              branch_name: row.branch_name,
+              new_qty: row.new_qty
+            }));
+            try {
+              const resp = await fetch(updateEndpoint, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ product: currentProduct, updates })
+              });
+              const data = await resp.json();
+              if (!resp.ok || !data.ok) {
+                if (data && data.errors && data.errors.length) {
+                  const details = data.errors.map(err => `${err.branch_name || 'Unknown'}: ${err.message || 'Error'}`).join(' ');
+                  throw new Error(details);
+                }
+                throw new Error(data.message || 'Failed to update quantities.');
+              }
+              const updatedRows = data.updated || [];
+              updatedRows.forEach(row => {
+                const branch = row.branch_name || '';
+                const target = tableBody.querySelector(`tr[data-branch-name="${escapeSelector(branch)}"]`);
+                if (!target) return;
+                const qtyCell = target.querySelector('.qty-cell');
+                const actionCell = target.querySelector('.qty-action');
+                target.dataset.qty = String(row.new_qty);
+                target.dataset.originalQty = String(row.new_qty);
+                if (qtyCell) qtyCell.textContent = Number(row.new_qty || 0).toFixed(0);
+                if (actionCell) actionCell.innerHTML = `<button type="button" class="btn btn-sm btn-outline-primary qty-edit-btn">Edit</button>`;
+                dirtyUpdates.delete(branch);
+              });
+              syncQtyBadge();
+              if (data.errors && data.errors.length) {
+                const skipped = data.errors.map(err => err.branch_name).filter(Boolean).join(', ');
+                showAlert('warning', skipped ? `Some branches were skipped: ${skipped}.` : 'Some branches were skipped.');
+              } else {
+                showAlert('success', `Updated quantities for ${updatedRows.length} branch(es).`);
+              }
+              setUpdateEnabled();
+            } catch (err) {
+              showAlert('danger', err.message || 'Failed to update quantities.');
+            } finally {
+              setUpdating(false);
+            }
+          });
+        }
+
+        modalBody.addEventListener('hidden.bs.modal', () => {
+          resetState();
+        });
+      })();
+      </script>
+      <script src="{{ url_for('static', filename='inventory_products_ajax.js') }}"></script>
+      {% include 'app_footer.html' %}
+
+  </body>
+  </html>

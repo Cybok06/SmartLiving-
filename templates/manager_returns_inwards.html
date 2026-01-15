@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Record Returns Inwards</title>.
+  <link rel="icon"
+          href="https://imagedelivery.net/h9fmMoa1o2c2P55TcWJGOg/10283f28-b9a0-4100-b254-19a854386800/public"
+          type="image/png">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+  {% include 'manager_sidebar.html' %}
+
+  <main class="container py-4" style="max-width: 1100px;">
+    <div class="card border-0 shadow-sm mb-3">
+      <div class="card-body d-flex flex-wrap align-items-center justify-content-between gap-2">
+        <div>
+          <div class="text-uppercase small text-muted">Returns Inwards</div>
+          <h3 class="mb-1">Record Return</h3>
+          <div class="text-muted">Capture returned components with accurate values.</div>
+        </div>
+        <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('returns_inwards.manager_returns_inwards_history') }}">History</a>
+      </div>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="alert alert-{{ category }} mb-2">{{ message }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <div class="card border-0 shadow-sm">
+      <div class="card-body p-4">
+        <div class="d-flex align-items-center justify-content-between border-bottom pb-3 mb-3">
+          <div>
+            <div class="fw-semibold">Return Details</div>
+            <div class="small text-muted">Search, select purchase, then choose components.</div>
+          </div>
+        </div>
+        <form method="post" action="{{ url_for('returns_inwards.manager_returns_inwards_create') }}" id="returnForm">
+          <input type="hidden" name="customer_id" id="customerId">
+          <input type="hidden" name="components_payload" id="componentsPayload">
+
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label">Search Customer</label>
+              <div class="position-relative">
+                <input type="text" id="customerSearch" class="form-control" placeholder="Type name or phone" autocomplete="off">
+                <div id="customerResults" class="position-absolute w-100 mt-1 d-none">
+                  <div class="list-group shadow-sm"></div>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Purchased Product</label>
+              <select name="purchase_index" id="purchaseSelect" class="form-select" required disabled>
+                <option value="">Select a purchase</option>
+              </select>
+              <div class="form-text" id="purchaseHint"></div>
+            </div>
+
+            <div class="col-md-4">
+              <label class="form-label">Return Date</label>
+              <input type="date" name="return_date" class="form-control" value="{{ today }}" required>
+            </div>
+            <div class="col-md-8">
+              <label class="form-label">Reason</label>
+              <input type="text" name="reason" class="form-control" placeholder="Damaged, wrong item, customer rejected" required>
+            </div>
+
+            <div class="col-md-12">
+              <label class="form-label">Notes (optional)</label>
+              <textarea name="notes" class="form-control" rows="2"></textarea>
+            </div>
+          </div>
+
+          <div class="mt-4">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+              <h6 class="mb-0">Returned Components</h6>
+              <span class="small text-muted">Select at least one component</span>
+            </div>
+            <div class="table-responsive rounded-3 border">
+              <table class="table table-sm align-middle mb-0 table-hover">
+                <thead>
+                  <tr class="table-light">
+                    <th>Select</th>
+                    <th>Component</th>
+                    <th>Bundle Qty</th>
+                    <th>Returned Qty</th>
+                    <th>Unit Price</th>
+                    <th class="text-end">Line Value</th>
+                  </tr>
+                </thead>
+                <tbody id="componentsTable">
+                  <tr>
+                    <td colspan="6" class="text-muted text-center">Select a purchase to load components.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="border-top mt-3 pt-3 d-flex flex-wrap align-items-center justify-content-between gap-3 bg-light px-3 py-2 rounded">
+              <div class="d-flex gap-4 align-items-center">
+                <div class="small text-muted">Items Selected: <span id="itemsSelected" class="fw-semibold text-dark">0</span></div>
+                <div class="small text-muted">Total Returned Value: <span class="fw-semibold text-dark">GHS <span id="totalValue">0.00</span></span></div>
+              </div>
+              <button class="btn btn-primary" id="submitBtn" disabled>Record Return Inward</button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </main>
+
+  <style>
+    body {
+      background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+    }
+    .card {
+      border-radius: 14px;
+    }
+    .table thead th {
+      font-weight: 600;
+      color: #495057;
+    }
+    .ri-thumb {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      overflow: hidden;
+      flex: 0 0 32px;
+      border: 1px solid #e9ecef;
+      background: #f8f9fa;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .ri-thumb img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    .ri-thumb-fallback {
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 0.8rem;
+      color: #495057;
+    }
+  </style>
+
+  <script>
+    const customerSearch = document.getElementById('customerSearch');
+    const customerResultsWrap = document.getElementById('customerResults');
+    const customerResults = customerResultsWrap.querySelector('.list-group');
+    const customerIdInput = document.getElementById('customerId');
+    const purchaseSelect = document.getElementById('purchaseSelect');
+    const purchaseHint = document.getElementById('purchaseHint');
+    const componentsTable = document.getElementById('componentsTable');
+    const componentsPayload = document.getElementById('componentsPayload');
+    const totalValue = document.getElementById('totalValue');
+    const submitBtn = document.getElementById('submitBtn');
+    const itemsSelectedEl = document.getElementById('itemsSelected');
+
+    let componentsState = [];
+    let searchTimer = null;
+    let isLoading = false;
+
+    function renderCustomerResults(customers) {
+      customerResults.innerHTML = '';
+      customers.forEach(c => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'list-group-item list-group-item-action';
+        btn.textContent = `${c.name} ${c.phone ? '- ' + c.phone : ''}`;
+        btn.addEventListener('click', () => {
+          customerIdInput.value = c.id;
+          customerSearch.value = btn.textContent;
+          customerResults.innerHTML = '';
+          customerResultsWrap.classList.add('d-none');
+          loadPurchases(c.id);
+        });
+        customerResults.appendChild(btn);
+      });
+      customerResultsWrap.classList.toggle('d-none', customers.length === 0);
+    }
+
+    async function loadPurchases(customerId) {
+      isLoading = true;
+      purchaseSelect.disabled = true;
+      purchaseSelect.innerHTML = '<option value="">Loading...</option>';
+      purchaseHint.textContent = '';
+      componentsTable.innerHTML = '<tr><td colspan="6" class="text-muted text-center">Select a purchase to load components.</td></tr>';
+      totalValue.textContent = '0.00';
+      itemsSelectedEl.textContent = '0';
+      submitBtn.disabled = true;
+      try {
+        const res = await fetch(`/manager/returns-inwards/customer/${customerId}/purchases`, { credentials: 'same-origin' });
+        const data = await res.json();
+        if (!data.ok) {
+          purchaseHint.textContent = data.message || 'Failed to load purchases.';
+          isLoading = false;
+          return;
+        }
+        purchaseSelect.innerHTML = '<option value="">Select a purchase</option>';
+        (data.purchases || []).forEach(p => {
+          const opt = document.createElement('option');
+          const total = Number(p.total || 0).toFixed(2);
+          opt.value = p.index;
+          opt.textContent = `${p.product_name} - ${p.purchase_date} - GHS ${total}`;
+          purchaseSelect.appendChild(opt);
+        });
+        purchaseSelect.disabled = false;
+        isLoading = false;
+      } catch (e) {
+        purchaseHint.textContent = 'Failed to load purchases.';
+        isLoading = false;
+      }
+    }
+
+    function recalcTotals() {
+      let sum = 0;
+      let selectedCount = 0;
+      const payload = [];
+      componentsState.forEach(row => {
+        const qty = Number(row.returnedQty || 0);
+        if (qty > 0) {
+          const line = qty * row.unitPrice;
+          sum += line;
+          payload.push({ component_id: row.componentId, returned_qty: qty });
+          selectedCount += 1;
+        }
+      });
+      totalValue.textContent = sum.toFixed(2);
+      itemsSelectedEl.textContent = String(selectedCount);
+      componentsPayload.value = JSON.stringify(payload);
+      submitBtn.disabled = isLoading || payload.length === 0;
+    }
+
+    function renderComponents(rows) {
+      componentsState = rows.map(r => ({
+        componentId: r.component_id,
+        componentName: r.component_name,
+        componentImageUrl: r.component_image_url || '',
+        componentStockQty: Number(r.component_stock_qty || 0),
+        bundleQty: Number(r.bundle_qty || 0),
+        unitPrice: Number(r.unit_price || 0),
+        missing: Boolean(r.missing),
+        returnedQty: 0
+      }));
+      componentsTable.innerHTML = '';
+      componentsState.forEach((row, idx) => {
+        const initial = (row.componentName || 'U').trim().charAt(0).toUpperCase();
+        const imageHtml = row.componentImageUrl
+          ? `<div class="ri-thumb"><img src="${row.componentImageUrl}" alt="${row.componentName}"></div>`
+          : `<div class="ri-thumb ri-thumb-fallback">${initial}</div>`;
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td><input type="checkbox" class="form-check-input" data-idx="${idx}"></td>
+          <td>
+            <div class="d-flex align-items-center gap-3">
+              ${imageHtml}
+              <div class="flex-grow-1">
+                <div class="fw-semibold text-truncate">${row.componentName}</div>
+                <div class="small text-muted">Stock: ${row.componentStockQty}</div>
+                ${row.missing ? '<div class="small text-danger">Missing from inventory</div>' : ''}
+              </div>
+            </div>
+          </td>
+          <td>${row.bundleQty}</td>
+          <td><input type="number" step="1" min="0" max="${row.bundleQty}" class="form-control form-control-sm" data-idx="${idx}" value="0" disabled></td>
+          <td>GHS ${row.unitPrice.toFixed(2)}</td>
+          <td class="text-end" id="line-${idx}">0.00</td>
+        `;
+        componentsTable.appendChild(tr);
+      });
+
+      componentsTable.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+        cb.addEventListener('change', (e) => {
+          const idx = Number(e.target.dataset.idx);
+          const input = componentsTable.querySelector(`input[type="number"][data-idx="${idx}"]`);
+          if (input) {
+            input.disabled = !e.target.checked;
+            if (!e.target.checked) {
+              input.value = 0;
+              componentsState[idx].returnedQty = 0;
+              document.getElementById(`line-${idx}`).textContent = '0.00';
+            }
+            recalcTotals();
+          }
+        });
+      });
+
+      componentsTable.querySelectorAll('input[type="number"]').forEach(input => {
+        input.addEventListener('input', (e) => {
+          const idx = Number(e.target.dataset.idx);
+          const max = Number(e.target.max || 0);
+          let val = Number(e.target.value || 0);
+          if (val > max) val = max;
+          if (val < 0) val = 0;
+          e.target.value = val;
+          componentsState[idx].returnedQty = val;
+          const line = val * componentsState[idx].unitPrice;
+          document.getElementById(`line-${idx}`).textContent = line.toFixed(2);
+          recalcTotals();
+        });
+      });
+      recalcTotals();
+    }
+
+    purchaseSelect.addEventListener('change', async () => {
+      const customerId = customerIdInput.value;
+      const purchaseIndex = purchaseSelect.value;
+      if (!customerId || purchaseIndex === '') return;
+      isLoading = true;
+      submitBtn.disabled = true;
+      componentsTable.innerHTML = '<tr><td colspan="6" class="text-center"><div class="spinner-border spinner-border-sm text-secondary"></div> Loading components...</td></tr>';
+      totalValue.textContent = '0.00';
+      itemsSelectedEl.textContent = '0';
+      try {
+        const res = await fetch(`/manager/returns-inwards/purchase/${customerId}/${purchaseIndex}/components`, { credentials: 'same-origin' });
+        const data = await res.json();
+        if (!data.ok) {
+          componentsTable.innerHTML = `<tr><td colspan="6" class="text-muted text-center">${data.message || 'Failed to load components.'}</td></tr>`;
+          isLoading = false;
+          return;
+        }
+        renderComponents(data.components || []);
+        isLoading = false;
+      } catch (e) {
+        componentsTable.innerHTML = '<tr><td colspan="6" class="text-muted text-center">Failed to load components.</td></tr>';
+        isLoading = false;
+      }
+    });
+
+    customerSearch.addEventListener('input', () => {
+      const q = customerSearch.value.trim();
+      if (searchTimer) clearTimeout(searchTimer);
+      if (q.length < 2) {
+        customerResults.innerHTML = '';
+        customerResultsWrap.classList.add('d-none');
+        return;
+      }
+      searchTimer = setTimeout(async () => {
+        const res = await fetch(`/manager/returns-inwards/search-customers?q=${encodeURIComponent(q)}`, { credentials: 'same-origin' });
+        const data = await res.json();
+        if (data.ok) {
+          renderCustomerResults(data.customers || []);
+        }
+      }, 250);
+    });
+
+    document.addEventListener('click', (e) => {
+      if (!customerResultsWrap.contains(e.target) && e.target !== customerSearch) {
+        customerResultsWrap.classList.add('d-none');
+      }
+    });
+
+    document.getElementById('returnForm').addEventListener('submit', () => {
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Saving...';
+    });
+  </script>
+  {% include 'app_footer.html' %}
+
+</body>
+</html>

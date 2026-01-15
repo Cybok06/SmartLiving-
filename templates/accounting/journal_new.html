@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>New Journal Entry -  TRUEtype Services</title>
+
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link rel="icon" href="https://res.cloudinary.com/dljpgzbto/image/upload/v1743993646/company-logo_dksb23.jpg" type="image/png">
+
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+  <style>.material-symbols-outlined{font-variation-settings:'FILL'0,'wght'400,'GRAD'0,'opsz'24}</style>
+</head>
+<body class="min-h-full bg-neutral-0 dark:bg-neutral-9 text-neutral-9 dark:text-white font-display">
+  {% include 'accounting/sidebar.html' %}
+
+<main class="max-w-4xl mx-auto px-4 lg:px-8 py-6 lg:py-8">
+  <header class="flex items-center justify-between mb-6">
+    <h1 class="text-3xl font-black">New Journal Entry</h1>
+    <a href="{{ url_for('journals.journals') }}" class="text-primary hover:underline">Back to list</a>
+  </header>
+
+  <form id="journalForm" method="post" action="{{ url_for('journals.journal_create') }}" class="space-y-6">
+    <section class="bg-white dark:bg-neutral-900 rounded-xl border p-6">
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+        <label class="block">
+          <span class="text-sm font-medium">Date</span>
+          <input type="date" name="date" value="{{ today }}" required class="mt-1 w-full h-11 rounded-xl border p-2.5"/>
+        </label>
+        <label class="block">
+          <span class="text-sm font-medium">Ref No</span>
+          <input type="text" name="ref" value="{{ ref }}" required class="mt-1 w-full h-11 rounded-xl border p-2.5"/>
+        </label>
+        <label class="block">
+          <span class="text-sm font-medium">Source</span>
+          <select name="source" class="mt-1 w-full h-11 rounded-xl border p-2.5">
+            <option>Manual</option><option>AR</option><option>AP</option><option>Bank</option><option>Payroll</option>
+          </select>
+        </label>
+        <label class="block">
+          <span class="text-sm font-medium">Currency</span>
+          <input type="text" name="currency" value="{{ base_currency or 'GHS' }}" class="mt-1 w-full h-11 rounded-xl border p-2.5"/>
+        </label>
+        <label class="block">
+          <span class="text-sm font-medium">FX Rate</span>
+          <input type="text" name="fx_rate" value="1.0000" class="mt-1 w-full h-11 rounded-xl border p-2.5"/>
+        </label>
+        <label class="block md:col-span-2 lg:col-span-3 xl:col-span-5">
+          <span class="text-sm font-medium">Memo</span>
+          <textarea name="memo" placeholder="Enter a memo..." class="mt-1 w-full min-h-20 rounded-xl border p-2.5"></textarea>
+        </label>
+      </div>
+    </section>
+
+    <section class="rounded-xl border overflow-hidden">
+      <div class="overflow-x-auto bg-white dark:bg-neutral-900">
+        <table class="w-full text-sm">
+          <thead class="text-xs uppercase bg-neutral-50 dark:bg-neutral-800">
+            <tr class="text-slate-600 dark:text-slate-300">
+              <th class="px-5 py-3 text-left min-w-[180px]">Account</th>
+              <th class="px-5 py-3 text-left min-w-[160px]">Partner</th>
+              <th class="px-5 py-3 text-left min-w-[240px]">Description</th>
+              <th class="px-5 py-3 text-right min-w-[140px]">Debit</th>
+              <th class="px-5 py-3 text-right min-w-[140px]">Credit</th>
+              <th class="w-12"></th>
+            </tr>
+          </thead>
+          <tbody id="linesBody" class="divide-y"></tbody>
+        </table>
+      </div>
+      <div class="p-3 bg-neutral-50 dark:bg-neutral-800 border-t">
+        <button type="button" id="btnAdd" class="h-10 px-3 rounded-full font-semibold text-primary hover:bg-primary/10 flex items-center gap-1">
+          <span class="material-symbols-outlined">add</span> Add Row
+        </button>
+      </div>
+    </section>
+
+    <div class="flex items-center justify-between gap-3">
+      <div class="flex items-baseline gap-4">
+        <span class="text-sm text-slate-600 dark:text-slate-300">Totals</span>
+        <span class="text-lg font-bold">Debit: <span id="sumDr">0.00</span></span>
+        <span class="text-lg font-bold">Credit: <span id="sumCr">0.00</span></span>
+      </div>
+      <div class="flex gap-2">
+        <button name="action" value="draft" class="h-11 px-6 rounded-full border font-bold">Save Draft</button>
+        <button id="postBtn" name="action" value="post" class="h-11 px-6 rounded-full bg-primary text-white font-bold hover:bg-primary/90">Post</button>
+      </div>
+    </div>
+  </form>
+</main>
+
+<script>
+  function rowTemplate({account="", partner="", desc="", debit="", credit=""}={}) {
+    return `
+      <tr class="bg-white dark:bg-neutral-900">
+        <td class="px-5 py-3"><input name="account[]" value="${account}" placeholder="e.g., 1010 - Cash" class="w-full border-0 focus:ring-0 p-0 bg-transparent"/></td>
+        <td class="px-5 py-3"><input name="partner[]" value="${partner}" placeholder="Optional partner" class="w-full border-0 focus:ring-0 p-0 bg-transparent"/></td>
+        <td class="px-5 py-3"><input name="desc[]" value="${desc}" placeholder="Line item description" class="w-full border-0 focus:ring-0 p-0 bg-transparent"/></td>
+        <td class="px-5 py-3 text-right"><input name="debit[]" value="${debit}" inputmode="decimal" placeholder="0.00" class="w-full text-right border-0 focus:ring-0 p-0 bg-transparent amount"/></td>
+        <td class="px-5 py-3 text-right"><input name="credit[]" value="${credit}" inputmode="decimal" placeholder="0.00" class="w-full text-right border-0 focus:ring-0 p-0 bg-transparent amount"/></td>
+        <td class="px-3 py-3 text-center"><button type="button" class="text-slate-400 hover:text-red-600 delBtn"><span class="material-symbols-outlined">delete</span></button></td>
+      </tr>`;
+  }
+  const bodyEl = document.getElementById('linesBody');
+  const addBtn = document.getElementById('btnAdd');
+  const sumDr = document.getElementById('sumDr');
+  const sumCr = document.getElementById('sumCr');
+  const postBtn = document.getElementById('postBtn');
+
+  function addRow(prefill={}){ bodyEl.insertAdjacentHTML('beforeend', rowTemplate(prefill)); }
+  addRow({account:"1010 - Cash and Bank", desc:"Initial capital deposit", debit:"5000.00"});
+  addRow({account:"3010 - Common Stock", desc:"Owner's investment", credit:"5000.00"});
+  addRow();
+
+  function toNum(v){ v=(v||"").toString().replace(/,/g,'').trim(); return v?parseFloat(v):0; }
+  function recalc(){
+    let dr=0, cr=0;
+    bodyEl.querySelectorAll('tr').forEach(tr=>{
+      const d = toNum(tr.querySelector('input[name="debit[]"]').value);
+      const c = toNum(tr.querySelector('input[name="credit[]"]').value);
+      dr += d; cr += c;
+    });
+    sumDr.textContent = dr.toFixed(2);
+    sumCr.textContent = cr.toFixed(2);
+    const ok = Math.abs(dr - cr) < 0.005 && dr > 0;
+    postBtn.disabled = !ok;
+    postBtn.classList.toggle('opacity-60', !ok);
+    postBtn.classList.toggle('cursor-not-allowed', !ok);
+  }
+  bodyEl.addEventListener('input', (e)=>{
+    if(e.target.classList.contains('amount')){
+      e.target.addEventListener('blur', (ev)=>{
+        const n = toNum(ev.target.value);
+        ev.target.value = n? n.toFixed(2) : "";
+        recalc();
+      }, {once:true});
+    }
+    recalc();
+  });
+  bodyEl.addEventListener('click', (e)=>{
+    if(e.target.closest('.delBtn')){
+      e.target.closest('tr').remove();
+      recalc();
+    }
+  });
+  addBtn.addEventListener('click', ()=>addRow());
+  recalc();
+</script>
+</body>
+</html>

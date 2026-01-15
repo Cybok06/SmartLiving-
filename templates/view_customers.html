@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Customers -  SMARTLIVING EMPORIUM PLUS (Flux360)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0d6efd">
+  <link rel="icon" type="image/png" href="https://imagedelivery.net/h9fmMoa1o2c2P55TcWJGOg/10283f28-b9a0-4100-b254-19a854386800/public">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --ink:#0f172a;
+      --muted:#64748b;
+      --panel:#ffffff;
+      --edge:#e2e8f0;
+      --accent:#2563eb;
+      --soft:#f1f5f9;
+    }
+    *{box-sizing:border-box;}
+    body{
+      font-family:"Manrope", sans-serif;
+      background: radial-gradient(circle at top, #eef2ff 0%, #f8fafc 45%, #f5f6fb 100%);
+      color:var(--ink);
+      min-height:100vh;
+    }
+    .page-shell{
+      padding:1.5rem 1.25rem 3rem;
+    }
+    .top-bar{
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      background: rgba(255,255,255,.92);
+      backdrop-filter: blur(12px);
+      border:1px solid var(--edge);
+      border-radius:16px;
+      padding:1rem 1.2rem;
+      box-shadow:0 10px 24px rgba(15,23,42,.08);
+      margin-bottom:1.25rem;
+    }
+    .search-input{
+      border-radius:12px;
+      border:1px solid #d9e1ec;
+      padding:.6rem .75rem;
+      width:100%;
+    }
+    .search-input-wrapper{
+      position: relative;
+    }
+    .search-clear-btn{
+      position: absolute;
+      right:10px;
+      top:50%;
+      transform:translateY(-50%);
+      border:none;
+      background:transparent;
+      color:#64748b;
+      font-size:1.2rem;
+      padding:0;
+      cursor:pointer;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+    }
+    .search-clear-btn:focus{
+      outline:none;
+    }
+    .chip{
+      border-radius:999px;
+      border:1px solid #dbe4f0;
+      padding:.35rem .85rem;
+      font-weight:600;
+      font-size:.85rem;
+      background:#fff;
+      color:#1f2937;
+      display:inline-flex;
+      gap:.35rem;
+      align-items:center;
+      cursor:pointer;
+      transition:all .2s ease;
+      text-decoration:none;
+    }
+    .chip.active{
+      background:var(--accent);
+      color:#fff;
+      border-color:var(--accent);
+      box-shadow:0 6px 16px rgba(37,99,235,.25);
+    }
+    .chip .count{
+      background:#e2e8f0;
+      color:#0f172a;
+      border-radius:999px;
+      padding:0 .4rem;
+      font-size:.75rem;
+    }
+    .chip.active .count{
+      background:rgba(255,255,255,.2);
+      color:#fff;
+    }
+    .card-grid{
+      display:grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap:1rem;
+    }
+    .customer-card{
+      background:var(--panel);
+      border:1px solid var(--edge);
+      border-radius:16px;
+      padding:1rem;
+      box-shadow:0 10px 24px rgba(15,23,42,.06);
+      transition:transform .15s ease, box-shadow .15s ease;
+      position:relative;
+      cursor:pointer;
+    }
+    .customer-card:hover{
+      transform:translateY(-2px);
+      box-shadow:0 14px 28px rgba(15,23,42,.12);
+    }
+    .avatar{
+      width:52px;
+      height:52px;
+      border-radius:50%;
+      object-fit:cover;
+      border:2px solid #e2e8f0;
+    }
+    .status-pill{
+      padding:.15rem .6rem;
+      border-radius:999px;
+      font-size:.75rem;
+      font-weight:600;
+    }
+    .status-active{background:#dcfce7;color:#166534;}
+    .status-not-active{background:#fee2e2;color:#b91c1c;}
+    .status-no-payment{background:#e5e7eb;color:#374151;}
+    .chip.is-static{
+      cursor: default;
+      background:#f8fafc;
+    }
+    .fav-btn{
+      position:absolute;
+      top:12px;
+      right:12px;
+      width:38px;
+      height:38px;
+      border-radius:999px;
+      border:1px solid #e2e8f0;
+      background:#ffffff;
+      box-shadow:0 6px 16px rgba(15,23,42,.08);
+      display:grid;
+      place-items:center;
+      transition:transform .2s ease, box-shadow .2s ease;
+    }
+    .fav-btn:hover{
+      box-shadow:0 10px 20px rgba(15,23,42,.12);
+    }
+    .fav-btn.is-anim{
+      transform:scale(1.18) rotate(8deg);
+    }
+    .fav-btn svg{
+      width:18px;
+      height:18px;
+    }
+    .fav-btn svg path{
+      fill:none;
+      stroke:#f59e0b;
+      stroke-width:1.6;
+    }
+    .fav-btn.is-fav svg path{
+      fill:#f59e0b;
+      stroke:#f59e0b;
+    }
+    .toast-wrap{
+      position:fixed;
+      right:18px;
+      bottom:18px;
+      z-index:1050;
+      display:flex;
+      flex-direction:column;
+      gap:.5rem;
+    }
+    .toast-item{
+      background:#0f172a;
+      color:#fff;
+      padding:.6rem .9rem;
+      border-radius:10px;
+      font-size:.85rem;
+      box-shadow:0 10px 24px rgba(15,23,42,.2);
+      opacity:.96;
+    }
+    .toast-item.is-error{
+      background:#dc2626;
+    }
+    #customerSearchState{
+      display:none;
+      margin-bottom:1rem;
+      gap:.6rem;
+      align-items:center;
+      font-size:.9rem;
+      color:#475569;
+    }
+    #customerLoadingSkeleton{
+      display:none;
+      margin-bottom:1rem;
+      gap:1rem;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    }
+    .loading-skeleton-card{
+      background:#fff;
+      border:1px solid #e2e8f0;
+      border-radius:16px;
+      padding:1rem;
+      min-height:160px;
+      box-shadow:0 6px 18px rgba(15,23,42,.08);
+      animation: pulse 1.2s ease-in-out infinite;
+    }
+    .loading-skeleton-line{
+      height:12px;
+      background:#f1f5f9;
+      margin-bottom:.6rem;
+      border-radius:8px;
+    }
+    @keyframes pulse{
+      0%{opacity:1;}
+      50%{opacity:.6;}
+      100%{opacity:1;}
+    }
+    .stats-toggle{
+      border:1px solid #dbe4f0;
+      background:#fff;
+      border-radius:999px;
+      padding:.35rem .9rem;
+      font-weight:600;
+      font-size:.85rem;
+      color:#1f2937;
+    }
+    .stats-toggle:active{transform:scale(.98);}
+    .stats-panel{
+      display:none;
+      width:100%;
+      margin-top:.6rem;
+    }
+    .stats-panel.is-open{
+      display:flex;
+      flex-wrap:wrap;
+      gap:.5rem;
+    }
+    .stat-line{
+      font-size:.85rem;
+      color:var(--muted);
+    }
+    .stat-line strong{
+      color:#0f172a;
+    }
+    .add-customer-btn{
+      position: fixed;
+      bottom: 25px;
+      left: 25px;
+      background-color: #6f42c1;
+      color: white;
+      font-size: 28px;
+      font-weight: bold;
+      border-radius: 50%;
+      width: 60px;
+      height: 60px;
+      text-align: center;
+      line-height: 60px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+      z-index: 999;
+      transition: transform 0.3s ease-in-out;
+      text-decoration: none;
+    }
+    .add-customer-btn:hover{ transform: scale(1.1); }
+
+    .brand-lockup{ display:flex; align-items:center; gap:10px; }
+    .brand-logo{ height:32px; width:auto; object-fit:contain; }
+    .platform-logo{ height:18px; width:auto; object-fit:contain; }
+    .brand-footer{
+      margin-top: 24px;
+      padding: 18px 0 10px;
+      border-top: 1px solid var(--edge);
+      display:flex;
+      flex-wrap:wrap;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      font-size:.85rem;
+      color:var(--muted);
+    }
+    .brand-footer .brand-name-text{
+      font-weight:700;
+      letter-spacing:.04em;
+      text-transform:uppercase;
+      color:var(--ink);
+      font-size:.8rem;
+    }
+  </style>
+</head>
+<body>
+
+{% include 'side_bar.html' %}
+
+<div class="page-shell">
+  <div class="top-bar">
+    <form id="customerSearchForm" method="get" action="{{ url_for('view.view_customers') }}" class="row g-2 align-items-center">
+      <div class="col-12 col-lg-5">
+        <div class="search-input-wrapper">
+          <input id="customerSearchInput" class="search-input" type="text" name="search" autocomplete="off" placeholder="Search by name or phone" value="{{ search_query }}">
+          <button type="button" id="searchClearBtn" class="search-clear-btn" aria-label="Clear search">&times;</button>
+        </div>
+      </div>
+      <div class="col-12 col-lg-7 d-flex flex-wrap gap-2 align-items-center">
+        <span class="chip is-static">
+          Attends Today <span id="attendsTodayCount" class="count">{{ attends_today_count }}</span>
+        </span>
+        <span class="chip is-static">
+          Collected Today <span id="totalCollectedToday" class="count">GHS {{ "{:,.2f}".format(total_collected_today or 0) }}</span>
+        </span>
+        <button type="button" class="chip {% if status_filter == 'favorites' %}active{% endif %}" data-status="favorites">
+          Favorites <span id="favoritesCount" class="count">{{ favorites_count }}</span>
+        </button>
+        <button class="stats-toggle" type="button" id="statsToggleBtn" aria-expanded="false" aria-controls="statsPanel">
+          View more
+        </button>
+        <div class="stats-panel" id="statsPanel">
+          <button type="button" class="chip {% if status_filter == 'all' %}active{% endif %}" data-status="all">
+            Total <span id="totalCustomersCount" class="count">{{ total_customers }}</span>
+          </button>
+          <button type="button" class="chip {% if status_filter == 'active' %}active{% endif %}" data-status="active">
+            Active <span id="activeCount" class="count">{{ active_count }}</span>
+          </button>
+          <button type="button" class="chip {% if status_filter == 'not_active' %}active{% endif %}" data-status="not_active">
+            Not Active <span id="notActiveCount" class="count">{{ not_active_count }}</span>
+          </button>
+        </div>
+      </div>
+    </form>
+  </div>
+  <div id="customerSearchState">
+    <div class="spinner-border spinner-border-sm text-muted" role="status" aria-hidden="true"></div>
+    <span>Searching customers...</span>
+  </div>
+  <div id="customerLoadingSkeleton" class="card-grid">
+    <div class="loading-skeleton-card">
+      <div class="loading-skeleton-line" style="width:70%;"></div>
+      <div class="loading-skeleton-line" style="width:50%;"></div>
+      <div class="loading-skeleton-line" style="width:90%;"></div>
+    </div>
+    <div class="loading-skeleton-card">
+      <div class="loading-skeleton-line" style="width:60%;"></div>
+      <div class="loading-skeleton-line" style="width:40%;"></div>
+      <div class="loading-skeleton-line" style="width:80%;"></div>
+    </div>
+    <div class="loading-skeleton-card">
+      <div class="loading-skeleton-line" style="width:65%;"></div>
+      <div class="loading-skeleton-line" style="width:55%;"></div>
+      <div class="loading-skeleton-line" style="width:75%;"></div>
+    </div>
+  </div>
+
+  <div class="card-grid" id="customerGrid">
+    {% for customer in customers %}
+    <div class="customer-card" data-href="{{ url_for('view.view_customer_profile', customer_id=customer._id) }}">
+      <button class="fav-btn {% if customer.is_favorite %}is-fav{% endif %}" data-customer-id="{{ customer._id }}" type="button" aria-label="Toggle favorite" title="Toggle favorite">
+        <span class="star-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" role="img" focusable="false" aria-hidden="true">
+            <path d="M12 3.5l2.7 5.45 6.03.88-4.36 4.25 1.03 6.01L12 17.9l-5.4 2.83 1.03-6.01-4.36-4.25 6.03-.88L12 3.5z"></path>
+          </svg>
+        </span>
+      </button>
+      <div class="d-flex align-items-center gap-3 mb-3">
+        {% if customer.image_url %}
+          <img src="{{ customer.image_url }}" alt="{{ customer.name }}" class="avatar" loading="lazy"
+               onerror="this.onerror=null;this.src=window.CUSTOMER_FALLBACK_IMG;">
+        {% else %}
+          <img src="https://imagedelivery.net/h9fmMoa1o2c2P55TcWJGOg/f1b8f81c-1aac-4580-6b1c-869ffafcb400/public"
+               alt="{{ customer.name }}" class="avatar" loading="lazy">
+        {% endif %}
+        <div>
+          <div class="fw-semibold">{{ customer.name }}</div>
+          <div class="text-muted small">{{ customer.phone_number }}</div>
+        </div>
+      </div>
+      <div class="d-flex align-items-center gap-2 mb-2">
+        {% if customer.status == 'Active' %}
+          <span class="status-pill status-active">Active</span>
+        {% elif customer.status == 'Not Active' %}
+          <span class="status-pill status-not-active">Not Active</span>
+        {% else %}
+          <span class="status-pill status-no-payment">No Payment</span>
+        {% endif %}
+      </div>
+      <div class="stat-line">Last payment: <strong>{{ customer.last_payment_date }}</strong></div>
+      <div class="stat-line">Total paid: <strong>GHS {{ "{:,.2f}".format(customer.total_paid or 0) }}</strong></div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <p id="customerEmptyMessage" class="text-center text-muted mt-4" {% if customers %}style="display:none"{% endif %}>No customers match your filter.</p>
+</div>
+
+<div id="paginationControls" class="d-flex justify-content-center mt-4"></div>
+
+<a href="/customer/register" class="add-customer-btn" title="Register Customer">+</a>
+
+<footer class="brand-footer">
+  <div class="brand-lockup">
+    <img src="https://imagedelivery.net/h9fmMoa1o2c2P55TcWJGOg/10283f28-b9a0-4100-b254-19a854386800/public"
+         alt="SmartLiving Emporium Plus"
+         class="brand-logo">
+    <span class="brand-name-text">SMARTLIVING EMPORIUM PLUS</span>
+  </div>
+  <div class="brand-lockup">
+    <span>Powered by Flux360</span>
+    <img src="https://imagedelivery.net/h9fmMoa1o2c2P55TcWJGOg/237a407f-0df9-4a4b-b777-7ecbaacc0300/public"
+         alt="Flux360"
+         class="platform-logo">
+  </div>
+</footer>
+
+<div id="toastWrap" class="toast-wrap" aria-live="polite" aria-atomic="true"></div>
+
+<script id="customerInitialData" type="application/json">
+{{ {
+  'page': page,
+  'has_prev': has_prev,
+  'has_next': has_next,
+  'status_filter': status_filter,
+  'search_query': search_query,
+  'stats': {
+    'total_customers': total_customers,
+    'active_count': active_count,
+    'not_active_count': not_active_count,
+    'favorites_count': favorites_count,
+    'attends_today_count': attends_today_count,
+    'total_collected_today': total_collected_today
+  }
+} | tojson }}
+</script>
+
+<script>
+  window.CUSTOMER_FALLBACK_IMG = "https://imagedelivery.net/h9fmMoa1o2c2P55TcWJGOg/f1b8f81c-1aac-4580-6b1c-869ffafcb400/public";
+  const CUSTOMER_CONTEXT = JSON.parse(document.getElementById('customerInitialData').textContent);
+
+  const favToggleTemplate = `{{ url_for('view.toggle_customer_favorite_toggle', customer_id='__ID__') }}`;
+  const customerGrid = document.getElementById('customerGrid');
+  const paginationControls = document.getElementById('paginationControls');
+  const searchInput = document.getElementById('customerSearchInput');
+  const searchForm = document.getElementById('customerSearchForm');
+  const searchClearBtn = document.getElementById('searchClearBtn');
+  const statusChips = document.querySelectorAll('.chip[data-status]');
+  const toastWrap = document.getElementById('toastWrap');
+  const profileUrlTemplate = `{{ url_for('view.view_customer_profile', customer_id='__ID__') }}`;
+  const searchState = document.getElementById('customerSearchState');
+  const loadingSkeleton = document.getElementById('customerLoadingSkeleton');
+  const emptyMessage = document.getElementById('customerEmptyMessage');
+  const customersAjaxUrl = "{{ url_for('view.view_customers_ajax') }}";
+
+  let fetchController;
+  let searchDebounce;
+
+  function showToast(message, isError) {
+    if (!toastWrap) return;
+    const toast = document.createElement('div');
+    toast.className = `toast-item${isError ? ' is-error' : ''}`;
+    toast.textContent = message;
+    toastWrap.appendChild(toast);
+    setTimeout(() => toast.remove(), 2200);
+  }
+
+  document.addEventListener('click', async (e) => {
+    const btn = e.target.closest('.fav-btn');
+    if (!btn) return;
+    e.preventDefault();
+    e.stopPropagation();
+
+    const cid = btn.dataset.customerId;
+    if (!cid) return;
+
+    const wasFav = btn.classList.contains('is-fav');
+    btn.classList.toggle('is-fav', !wasFav);
+    btn.classList.add('is-anim');
+    setTimeout(() => btn.classList.remove('is-anim'), 250);
+
+    try {
+      const res = await fetch(favToggleTemplate.replace('__ID__', cid), {
+        method: 'POST',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+      });
+      const ct = res.headers.get('content-type') || '';
+      if (!ct.includes('application/json')) {
+        throw new Error('Non-JSON response');
+      }
+      const data = await res.json();
+      if (!data.ok) {
+        throw new Error(data.message || 'Failed');
+      }
+      btn.classList.toggle('is-fav', !!data.is_favorite);
+      showToast(data.message || (data.is_favorite ? 'Added to favorites' : 'Removed from favorites'));
+    } catch (err) {
+      btn.classList.toggle('is-fav', wasFav);
+      showToast('Could not update favorite', true);
+    }
+  });
+
+  const statsToggleBtn = document.getElementById('statsToggleBtn');
+  const statsPanel = document.getElementById('statsPanel');
+  if (statsToggleBtn && statsPanel) {
+    statsToggleBtn.addEventListener('click', () => {
+      const isOpen = statsPanel.classList.toggle('is-open');
+      statsToggleBtn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+      statsToggleBtn.textContent = isOpen ? 'View less' : 'View more';
+    });
+  }
+
+  const escapeHtml = (value) => {
+    if (value === null || value === undefined) return '';
+    return String(value)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  };
+
+  const formatCurrency = (value) => `GHS ${Number(value || 0).toFixed(2)}`;
+
+  const customerFilters = {
+    search: CUSTOMER_CONTEXT.search_query || '',
+    status: CUSTOMER_CONTEXT.status_filter || 'all',
+    page: CUSTOMER_CONTEXT.page || 1,
+  };
+
+  const statsElements = {
+    attendsToday: document.getElementById('attendsTodayCount'),
+    totalCollected: document.getElementById('totalCollectedToday'),
+    favorites: document.getElementById('favoritesCount'),
+    totalCustomers: document.getElementById('totalCustomersCount'),
+    active: document.getElementById('activeCount'),
+    notActive: document.getElementById('notActiveCount'),
+  };
+
+  function setLoading(isLoading) {
+    if (searchState) {
+      searchState.style.display = isLoading ? 'flex' : 'none';
+    }
+    if (loadingSkeleton) {
+      loadingSkeleton.style.display = isLoading ? 'grid' : 'none';
+    }
+  }
+
+  function updateClearVisibility() {
+    if (!searchClearBtn || !searchInput) return;
+    const hasValue = Boolean(searchInput.value && searchInput.value.trim());
+    searchClearBtn.style.display = hasValue ? 'flex' : 'none';
+  }
+
+  function updateURL(search, status, page) {
+    const params = new URLSearchParams();
+    if (search) params.set('search', search);
+    if (status) params.set('status', status);
+    params.set('page', page || 1);
+    const url = `${window.location.pathname}?${params.toString()}`;
+    window.history.replaceState(null, '', url);
+  }
+
+  function buildCustomerCard(customer) {
+    const statusValue = (customer.status || '').trim();
+    const statusClass = statusValue === 'Active'
+      ? 'status-active'
+      : statusValue === 'Not Active'
+        ? 'status-not-active'
+        : 'status-no-payment';
+    const statusLabel = statusValue === 'Active'
+      ? 'Active'
+      : statusValue === 'Not Active'
+        ? 'Not Active'
+        : 'No Payment';
+    const name = escapeHtml(customer.name);
+    const phone = escapeHtml(customer.phone_number);
+    const lastPayment = escapeHtml(customer.last_payment_date);
+    const totalPaid = formatCurrency(customer.total_paid);
+    const image = customer.image_url
+      ? `<img src="${customer.image_url}" alt="${name}" class="avatar" loading="lazy" onerror="this.onerror=null;this.src=window.CUSTOMER_FALLBACK_IMG;">`
+      : `<img src="${window.CUSTOMER_FALLBACK_IMG}" alt="${name}" class="avatar" loading="lazy">`;
+    return `
+      <div class="customer-card" data-href="${profileUrlTemplate.replace('__ID__', customer._id)}">
+        <button class="fav-btn ${customer.is_favorite ? 'is-fav' : ''}" data-customer-id="${customer._id}" type="button" aria-label="Toggle favorite" title="Toggle favorite">
+          <span class="star-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" role="img" focusable="false" aria-hidden="true">
+              <path d="M12 3.5l2.7 5.45 6.03.88-4.36 4.25 1.03 6.01L12 17.9l-5.4 2.83 1.03-6.01-4.36-4.25 6.03-.88L12 3.5z"></path>
+            </svg>
+          </span>
+        </button>
+        <div class="d-flex align-items-center gap-3 mb-3">
+          ${image}
+          <div>
+            <div class="fw-semibold">${name}</div>
+            <div class="text-muted small">${phone}</div>
+          </div>
+        </div>
+        <div class="d-flex align-items-center gap-2 mb-2">
+          <span class="status-pill ${statusClass}">${statusLabel}</span>
+        </div>
+        <div class="stat-line">Last payment: <strong>${lastPayment}</strong></div>
+        <div class="stat-line">Total paid: <strong>${totalPaid}</strong></div>
+      </div>
+    `;
+  }
+
+  function renderCustomers(customers) {
+    if (!customerGrid) return;
+    if (!customers.length) {
+      customerGrid.innerHTML = '';
+      if (emptyMessage) emptyMessage.style.display = '';
+      return;
+    }
+    if (emptyMessage) emptyMessage.style.display = 'none';
+    customerGrid.innerHTML = customers.map(buildCustomerCard).join('');
+  }
+
+  function updateStats(stats) {
+    if (!stats) return;
+    if (statsElements.attendsToday) statsElements.attendsToday.textContent = stats.attends_today_count;
+    if (statsElements.totalCollected) statsElements.totalCollected.textContent = `GHS ${Number(stats.total_collected_today || 0).toFixed(2)}`;
+    if (statsElements.favorites) statsElements.favorites.textContent = stats.favorites_count;
+    if (statsElements.totalCustomers) statsElements.totalCustomers.textContent = stats.total_customers;
+    if (statsElements.active) statsElements.active.textContent = stats.active_count;
+    if (statsElements.notActive) statsElements.notActive.textContent = stats.not_active_count;
+  }
+
+  function highlightStatusChip(status) {
+    statusChips.forEach(chip => chip.classList.toggle('active', chip.dataset.status === status));
+  }
+
+  function renderPagination(page, hasPrev, hasNext) {
+    if (!paginationControls) return;
+    paginationControls.innerHTML = `
+      <button class="btn btn-outline-secondary me-2" data-page="${page - 1}" ${hasPrev ? '' : 'disabled'}>Previous</button>
+      <span class="btn btn-outline-secondary disabled">Page ${page}</span>
+      <button class="btn btn-outline-primary ms-2" data-page="${page + 1}" ${hasNext ? '' : 'disabled'}>Next</button>
+    `;
+  }
+
+  async function fetchCustomers(params = {}, options = { updateUrl: true }) {
+    const normalizedSearch = typeof params.search === 'string' ? params.search.trim() : customerFilters.search;
+    const normalizedStatus = params.status || customerFilters.status || 'all';
+    const normalizedPage = Math.max(1, parseInt(params.page !== undefined ? params.page : customerFilters.page, 10) || 1);
+
+    const query = new URLSearchParams({
+      search: normalizedSearch,
+      status: normalizedStatus,
+      page: normalizedPage
+    }).toString();
+
+    if (fetchController) {
+      fetchController.abort();
+    }
+    fetchController = new AbortController();
+
+    setLoading(true);
+    try {
+    const res = await fetch(`${customersAjaxUrl}?${query}`, { signal: fetchController.signal });
+      if (!res.ok) {
+        throw new Error(`Failed to load customers (${res.status})`);
+      }
+      const data = await res.json();
+      if (!data.ok) {
+        throw new Error(data.message || 'Failed to load customers');
+      }
+
+      renderCustomers(data.customers || []);
+      renderPagination(data.page || normalizedPage, data.has_prev, data.has_next);
+      updateStats(data.stats);
+      highlightStatusChip(data.status_filter || normalizedStatus);
+
+      customerFilters.search = data.search_query || normalizedSearch;
+      customerFilters.status = data.status_filter || normalizedStatus;
+      customerFilters.page = data.page || normalizedPage;
+
+      if (options.updateUrl) {
+        updateURL(customerFilters.search, customerFilters.status, customerFilters.page);
+      }
+    } catch (err) {
+      if (err.name !== 'AbortError') {
+        console.error(err);
+        showToast(err.message || 'Unable to load customers', true);
+      }
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function handleSearchInput() {
+    clearTimeout(searchDebounce);
+    searchDebounce = setTimeout(() => {
+      fetchCustomers({ search: searchInput ? searchInput.value.trim() : '', page: 1 });
+    }, 300);
+  }
+
+  if (searchForm) {
+    searchForm.addEventListener('submit', (event) => event.preventDefault());
+  }
+
+  if (searchInput) {
+    searchInput.addEventListener('input', () => {
+      updateClearVisibility();
+      handleSearchInput();
+    });
+  }
+
+  if (searchClearBtn && searchInput) {
+    searchClearBtn.addEventListener('click', () => {
+      searchInput.value = '';
+      updateClearVisibility();
+      fetchCustomers({ search: '', page: 1 });
+      searchInput.focus();
+    });
+  }
+
+  statusChips.forEach(chip => {
+    chip.addEventListener('click', (event) => {
+      event.preventDefault();
+      const status = chip.dataset.status || 'all';
+      fetchCustomers({ status, page: 1 });
+    });
+  });
+
+  paginationControls?.addEventListener('click', (event) => {
+    const btn = event.target.closest('[data-page]');
+    if (!btn) return;
+    event.preventDefault();
+    const page = parseInt(btn.dataset.page, 10);
+    if (!isNaN(page)) {
+      fetchCustomers({ page });
+    }
+  });
+
+  customerGrid?.addEventListener('click', (event) => {
+    if (event.target.closest('.fav-btn')) {
+      return;
+    }
+    const card = event.target.closest('.customer-card');
+    if (!card) return;
+    const href = card.getAttribute('data-href');
+    if (href) window.location.href = href;
+  });
+
+  updateClearVisibility();
+  renderPagination(CUSTOMER_CONTEXT.page, CUSTOMER_CONTEXT.has_prev, CUSTOMER_CONTEXT.has_next);
+  highlightStatusChip(CUSTOMER_CONTEXT.status_filter);
+  updateStats(CUSTOMER_CONTEXT.stats);
+</script>
+</body>
+</html>

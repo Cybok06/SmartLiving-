@@ -1,0 +1,1037 @@
+<!DOCTYPE html>
+<html class="light" lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Accounting Overview - TRUEtype Services</title>
+  <link rel="icon" href="https://static.wixstatic.com/media/13bf20_85bc952de62849e895a80e274750784b~mv2.png/v1/fill/w_392,h_146,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/13bf20_85bc952de62849e895a80e274750784b~mv2.png" type="image/png">
+
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+  <script>
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "primary": "#16a34a",
+            "background-light": "#f9fafb",
+            "background-dark": "#020617",
+            "navy": "#0f172a",
+            "emerald": "#16a34a",
+            "medium-gray": "#e5e7eb",
+            "dark-gray": "#111827",
+          },
+          fontFamily: {
+            "display": ["Inter", "sans-serif"]
+          },
+          borderRadius: {
+            "DEFAULT": "0.75rem",
+            "lg": "1.25rem",
+            "xl": "1.5rem",
+            "full": "9999px"
+          },
+          boxShadow: {
+            'soft': '0 6px 20px rgba(15,23,42,0.08)',
+          }
+        },
+      },
+    }
+  </script>
+
+  <style>
+    .material-symbols-outlined {
+      font-variation-settings:
+        'FILL' 0,
+        'wght' 400,
+        'GRAD' 0,
+        'opsz' 24;
+    }
+
+    @media print {
+      #accSidebar,
+      #accSidebarToggle,
+      #accSidebarBackdrop,
+      #dashboardToolbar,
+      #quickActions {
+        display: none !important;
+      }
+      body {
+        background: #ffffff !important;
+      }
+      main {
+        padding: 0 !important;
+        margin: 0 !important;
+      }
+    }
+
+    .kpi-card:hover {
+      transform: translateY(-1px);
+    }
+
+    .page-loader {
+      position: fixed;
+      inset: 0;
+      background: #f9fafb;
+      z-index: 2000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.7s ease, opacity 0.7s ease;
+    }
+    .page-loader__swipe {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(120deg, rgba(22,163,74,0.18), rgba(2,132,199,0.18));
+      transform: translateX(0);
+      transition: transform 0.7s ease;
+    }
+    .page-loader__content {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      color: #0f172a;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      font-size: 0.7rem;
+    }
+    .page-loader--hide {
+      opacity: 0;
+      transform: translateX(100%);
+      pointer-events: none;
+    }
+    .page-loader--hide .page-loader__swipe {
+      transform: translateX(100%);
+    }
+    .page-ready { visibility: visible; }
+    @media (prefers-color-scheme: dark) {
+      .page-loader { background: #020617; }
+      .page-loader__content { color: #e2e8f0; }
+    }
+    @media print {
+      .page-loader { display: none !important; }
+    }
+  </style>
+</head>
+
+<body class="bg-background-light dark:bg-background-dark font-display text-dark-gray dark:text-gray-100">
+  <div id="pageLoader" class="page-loader">
+    <div class="page-loader__swipe"></div>
+    <div class="page-loader__content">
+      <div class="spinner-border text-emerald" role="status" aria-hidden="true"></div>
+      <div>Loading</div>
+    </div>
+  </div>
+  {% include 'accounting/sidebar.html' %}
+
+  <main class="min-h-screen p-4 sm:p-6 lg:p-10 acc-with-sidebar">
+    <div class="mx-auto max-w-7xl space-y-6">
+
+      <!-- Header & Filters -->
+      <header class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <div>
+          <h1 class="text-navy dark:text-white text-3xl sm:text-4xl font-extrabold tracking-tight flex items-center gap-2">
+            <span class="material-symbols-outlined text-emerald text-3xl">space_dashboard</span>
+            <span>Accounting Overview</span>
+          </h1>
+          <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
+            High-level overview of cash, receivables, payables, expenses and key accounting activity.
+          </p>
+        </div>
+
+        <div id="dashboardToolbar" class="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-end">
+          <!-- Date range selector -->
+          <div class="inline-flex items-center gap-2 rounded-full border border-medium-gray/80 dark:border-gray-700 bg-white dark:bg-slate-900 px-3 py-1.5 shadow-soft"
+               title="Change reporting period for charts and KPIs">
+            <span class="material-symbols-outlined text-base text-navy dark:text-gray-100">calendar_month</span>
+            <select
+              id="rangeSelector"
+              class="border-0 bg-transparent text-sm text-navy dark:text-gray-100 focus:ring-0 focus:outline-none"
+            >
+              <option value="this_month" {% if dashboard_data.range_key == 'this_month' %}selected{% endif %}>This month</option>
+              <option value="last_30" {% if dashboard_data.range_key == 'last_30' %}selected{% endif %}>Last 30 days</option>
+              <option value="last_90" {% if dashboard_data.range_key == 'last_90' %}selected{% endif %}>Last 90 days</option>
+              <option value="this_year" {% if dashboard_data.range_key == 'this_year' %}selected{% endif %}>Year to date</option>
+            </select>
+          </div>
+
+          <!-- Range label + info -->
+          <div class="inline-flex items-center gap-2 rounded-full border border-transparent bg-emerald/5 dark:bg-emerald/10 px-3 py-1.5">
+            <span class="material-symbols-outlined text-sm text-emerald">insights</span>
+            <span class="text-xs font-medium text-emerald">
+              {{ dashboard_data.range_label }}
+            </span>
+          </div>
+
+          <a href="{{ url_for('login.logout') }}"
+             class="inline-flex items-center gap-2 rounded-full border border-medium-gray/80 dark:border-gray-700 bg-white dark:bg-slate-900 px-4 py-2 text-xs font-semibold text-navy dark:text-gray-100 shadow-soft hover:bg-gray-50 dark:hover:bg-slate-800">
+            <span class="material-symbols-outlined text-sm">logout</span>
+            <span>Logout</span>
+          </a>
+        </div>
+      </header>
+
+      <!-- KPI Cards -->
+      <section class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        <!-- Cash & Bank -->
+        <a href="{{ url_for('acc_bank_accounts.list_accounts') }}"
+           class="kpi-card rounded-xl bg-white dark:bg-slate-900 shadow-soft border border-medium-gray/60 dark:border-gray-800 p-4 transition-transform"
+           title="View bank, mobile money and cash accounts details">
+          <div class="flex items-center justify-between">
+            <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Cash, Bank &amp; MoMo</p>
+            <span class="material-symbols-outlined text-emerald text-lg">account_balance</span>
+          </div>
+          <p class="mt-2 text-2xl font-extrabold text-navy dark:text-white tracking-tight">
+            GH₵ {{ (dashboard_data.kpis.cash_balance or 0.0)|format_money }}
+          </p>
+          <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+            Bank: GH₵ {{ ((dashboard_data.bank_cash.breakdown.bank or 0.0) if dashboard_data.bank_cash is defined else 0.0)|format_money }}
+            -  MoMo: GH₵ {{ ((dashboard_data.bank_cash.breakdown.mobile_money or 0.0) if dashboard_data.bank_cash is defined else 0.0)|format_money }}
+          </p>
+        </a>
+
+        <!-- Receivables -->
+        <a href="{{ url_for('ar_aging.aging_report') }}"
+           class="kpi-card rounded-xl bg-white dark:bg-slate-900 shadow-soft border border-medium-gray/60 dark:border-gray-800 p-4 transition-transform"
+           title="View detailed accounts receivable and aging report">
+          <div class="flex items-center justify-between">
+            <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Receivables</p>
+            <span class="material-symbols-outlined text-sky-600 text-lg">request_quote</span>
+          </div>
+          <p class="mt-2 text-2xl font-extrabold text-navy dark:text-white tracking-tight">
+            GH₵ {{ (dashboard_data.kpis.ar_total or 0.0)|format_money }}
+          </p>
+          <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+            {{ dashboard_data.kpis.ar_overdue_pct or 0 }}% overdue
+          </p>
+        </a>
+
+        <!-- Payables -->
+        <a href="{{ url_for('ap_bills.bills') }}"
+           class="kpi-card rounded-xl bg-white dark:bg-slate-900 shadow-soft border border-medium-gray/60 dark:border-gray-800 p-4 transition-transform"
+           title="View outstanding supplier bills and due dates">
+          <div class="flex items-center justify-between">
+            <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Payables</p>
+            <span class="material-symbols-outlined text-amber-500 text-lg">receipt_long</span>
+          </div>
+          <p class="mt-2 text-2xl font-extrabold text-navy dark:text-white tracking-tight">
+            GH₵ {{ (dashboard_data.kpis.ap_total or 0.0)|format_money }}
+          </p>
+          <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Outstanding to suppliers</p>
+        </a>
+
+        <!-- Net Profit -->
+        <div class="kpi-card rounded-xl bg-white dark:bg-slate-900 shadow-soft border border-medium-gray/60 dark:border-gray-800 p-4 transition-transform"
+             title="Approximate profit using invoices as revenue and expenses from the tracker">
+          <div class="flex items-center justify-between">
+            <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Net Profit (Period)</p>
+            <span class="material-symbols-outlined text-emerald text-lg">trending_up</span>
+          </div>
+            <p class="mt-2 text-2xl font-extrabold tracking-tight
+                     {% if (dashboard_data.kpis.net_profit or 0) < 0 %}text-red-600{% else %}text-navy dark:text-white{% endif %}">
+            GH₵ {{ (dashboard_data.kpis.net_profit or 0.0)|format_money }}
+          </p>
+          <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Revenue minus expenses</p>
+        </div>
+
+        <!-- Total Expenses -->
+        <a href="{{ url_for('acc_expenses.expenses_page') }}"
+           class="kpi-card rounded-xl bg-white dark:bg-slate-900 shadow-soft border border-medium-gray/60 dark:border-gray-800 p-4 transition-transform"
+           title="Open the detailed expense tracker for this period">
+          <div class="flex items-center justify-between">
+            <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Expenses (Period)</p>
+            <span class="material-symbols-outlined text-rose-500 text-lg">money_off</span>
+          </div>
+          <p class="mt-2 text-2xl font-extrabold text-navy dark:text-white tracking-tight">
+            GH₵ {{ (dashboard_data.kpis.expenses_total or 0.0)|format_money }}
+          </p>
+          <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Total operating expenses</p>
+        </a>
+
+        <!-- Fixed Assets -->
+        <a href="{{ url_for('fixed_assets.register') }}"
+           class="kpi-card rounded-xl bg-white dark:bg-slate-900 shadow-soft border border-medium-gray/60 dark:border-gray-800 p-4 transition-transform"
+           title="View fixed asset register and net book value">
+          <div class="flex items-center justify-between">
+            <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Fixed Assets (NBV)</p>
+            <span class="material-symbols-outlined text-indigo-500 text-lg">inventory_2</span>
+          </div>
+          <p class="mt-2 text-2xl font-extrabold text-navy dark:text-white tracking-tight">
+            GH₵ {{ (dashboard_data.kpis.net_book_value or 0.0)|format_money }}
+          </p>
+          <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Net book value</p>
+        </a>
+
+        <!-- Unreconciled -->
+        <a href="{{ url_for('bank_recon.bank_recon_index') }}"
+           class="kpi-card rounded-xl bg-white dark:bg-slate-900 shadow-soft border border-medium-gray/60 dark:border-gray-800 p-4 transition-transform"
+           title="Open bank reconciliation to clear unmatched items">
+          <div class="flex items-center justify-between">
+            <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Unreconciled Items</p>
+            <span class="material-symbols-outlined text-orange-500 text-lg">account_balance_wallet</span>
+          </div>
+          <p class="mt-2 text-2xl font-extrabold text-navy dark:text-white tracking-tight">
+            {{ (dashboard_data.kpis.unreconciled_count or 0)|format_number }}
+          </p>
+          <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Need reconciliation</p>
+        </a>
+
+        <!-- Draft Journals -->
+        <a href="{{ url_for('journals.journals') }}"
+           class="kpi-card rounded-xl bg-white dark:bg-slate-900 shadow-soft border border-medium-gray/60 dark:border-gray-800 p-4 transition-transform"
+           title="Review and post pending journal entries">
+          <div class="flex items-center justify-between">
+            <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Draft Journals</p>
+            <span class="material-symbols-outlined text-amber-600 text-lg">menu_book</span>
+          </div>
+          <p class="mt-2 text-2xl font-extrabold text-navy dark:text-white tracking-tight">
+            {{ (dashboard_data.kpis.draft_journals or 0)|format_number }}
+          </p>
+          <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Awaiting review</p>
+        </a>
+      </section>
+
+      <!-- Bank & Cash (including Mobile Money) -->
+      <section class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+        <!-- Chart -->
+        <div class="xl:col-span-2 rounded-xl bg-white dark:bg-slate-900 shadow-soft border border-medium-gray/60 dark:border-gray-800 p-4">
+          <div class="flex items-center justify-between mb-3">
+            <div>
+              <h2 class="text-sm font-semibold text-navy dark:text-white tracking-wide uppercase flex items-center gap-2">
+                <span class="material-symbols-outlined text-emerald text-base">account_balance_wallet</span>
+                <span>Bank, Mobile Money &amp; Cash</span>
+              </h2>
+              <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                Split of total liquid balances across bank accounts, mobile money wallets and cash-on-hand.
+              </p>
+            </div>
+            <a href="{{ url_for('acc_bank_accounts.list_accounts') }}"
+               class="hidden sm:inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs text-gray-600 dark:text-gray-300 border border-medium-gray/70 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-slate-800">
+              <span class="material-symbols-outlined text-xs">open_in_new</span>
+              <span>Open accounts</span>
+            </a>
+          </div>
+          <div class="h-72 flex items-center justify-center">
+            <canvas id="bankCashChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Account list -->
+        <div class="rounded-xl bg-white dark:bg-slate-900 shadow-soft border border-medium-gray/60 dark:border-gray-800 p-4">
+          <div class="flex items-center justify-between mb-3">
+            <h2 class="text-sm font-semibold text-navy dark:text-white tracking-wide uppercase flex items-center gap-2">
+              <span class="material-symbols-outlined text-base text-sky-600">list_alt</span>
+              <span>Bank &amp; MoMo Accounts</span>
+            </h2>
+          </div>
+
+          <div class="space-y-2 max-h-72 overflow-auto">
+            {% if dashboard_data.bank_cash and dashboard_data.bank_cash.accounts %}
+              {% for acc in dashboard_data.bank_cash.accounts %}
+              <div class="flex items-center justify-between rounded-lg px-3 py-2 bg-gray-50/70 dark:bg-slate-900/60">
+                <div class="flex flex-col">
+                  <span class="text-sm font-medium text-navy dark:text-white">
+                    {{ acc.name }}
+                  </span>
+                  <span class="text-[11px] text-gray-500 dark:text-gray-400">
+                    {{ acc.type_label }}
+                    {% if acc.provider %} -  {{ acc.provider }}{% endif %}
+                    {% if acc.number %} -  {{ acc.number }}{% endif %}
+                  </span>
+                </div>
+                <span class="text-sm font-semibold
+                             {% if acc.type_key == 'mobile_money' %}text-emerald-700 dark:text-emerald-300
+                             {% elif acc.type_key == 'cash' %}text-amber-700 dark:text-amber-300
+                             {% else %}text-navy dark:text-gray-100{% endif %}">
+                  GH₵ {{ (acc.balance or 0.0)|format_money }}
+                </span>
+              </div>
+              {% endfor %}
+            {% else %}
+              <p class="text-xs text-gray-500 dark:text-gray-400">
+                No bank or mobile money accounts configured yet.
+              </p>
+            {% endif %}
+          </div>
+
+          {% if dashboard_data.bank_cash %}
+          <div class="mt-3 border-t border-dashed border-medium-gray/70 dark:border-gray-700 pt-2 text-[11px] text-gray-600 dark:text-gray-400 space-y-1.5">
+            <p>Total liquid balance:
+              <span class="font-semibold text-navy dark:text-white">
+                GH₵ {{ (dashboard_data.kpis.cash_balance or 0.0)|format_money }}
+              </span>
+            </p>
+            <p>Bank:
+              <span class="font-semibold">GH₵ {{ (dashboard_data.bank_cash.breakdown.bank or 0.0)|format_money }}</span>
+              -  MoMo:
+              <span class="font-semibold">GH₵ {{ (dashboard_data.bank_cash.breakdown.mobile_money or 0.0)|format_money }}</span>
+              -  Cash:
+              <span class="font-semibold">GH₵ {{ (dashboard_data.bank_cash.breakdown.cash or 0.0)|format_money }}</span>
+            </p>
+          </div>
+          {% endif %}
+        </div>
+      </section>
+
+      <!-- Charts: Revenue vs Expenses & Cash Flow -->
+      <section class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        <!-- Revenue vs Expenses -->
+        <div class="rounded-xl bg-white dark:bg-slate-900 shadow-soft border border-medium-gray/60 dark:border-gray-800 p-4">
+          <div class="flex items-center justify-between mb-3">
+            <div>
+              <h2 class="text-sm font-semibold text-navy dark:text-white tracking-wide uppercase flex items-center gap-2">
+                <span class="material-symbols-outlined text-emerald text-base">show_chart</span>
+                <span>Revenue vs Expenses</span>
+              </h2>
+              <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                Trend over last 6 months (based on invoices and expense tracker).
+              </p>
+            </div>
+            <button
+              type="button"
+              class="hidden sm:inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs text-gray-600 dark:text-gray-300 border border-medium-gray/70 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-slate-800"
+              title="This chart compares revenue from invoices against total expenses per month"
+            >
+              <span class="material-symbols-outlined text-xs">info</span>
+              <span>Explanation</span>
+            </button>
+          </div>
+          <div class="h-72">
+            <canvas id="revenueExpensesChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Cash In vs Cash Out -->
+        <div class="rounded-xl bg-white dark:bg-slate-900 shadow-soft border border-medium-gray/60 dark:border-gray-800 p-4">
+          <div class="flex items-center justify-between mb-3">
+            <div>
+              <h2 class="text-sm font-semibold text-navy dark:text-white tracking-wide uppercase flex items-center gap-2">
+                <span class="material-symbols-outlined text-sky-600 text-base">compare_arrows</span>
+                <span>Cash In vs Cash Out</span>
+              </h2>
+              <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                Visual cash movement based on payments, bills and expenses.
+              </p>
+            </div>
+          </div>
+          <div class="h-72">
+            <canvas id="cashFlowChart"></canvas>
+          </div>
+        </div>
+      </section>
+
+      <!-- AR Aging + AP Due -->
+      <section class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        <!-- AR Aging -->
+        <div class="rounded-xl bg-white dark:bg-slate-900 shadow-soft border border-medium-gray/60 dark:border-gray-800 p-4">
+          <div class="flex items-center justify-between mb-3">
+            <h2 class="text-sm font-semibold text-navy dark:text-white tracking-wide uppercase flex items-center gap-2">
+              <span class="material-symbols-outlined text-rose-500 text-base">schedule</span>
+              <span>AR Aging</span>
+            </h2>
+            <span class="text-xs text-gray-500 dark:text-gray-400" title="Distribution of receivables by number of days overdue">
+              Aging buckets of outstanding receivables
+            </span>
+          </div>
+          <div class="h-64">
+            <canvas id="arAgingChart"></canvas>
+          </div>
+        </div>
+
+        <!-- AP Due -->
+        <div class="rounded-xl bg-white dark:bg-slate-900 shadow-soft border border-medium-gray/60 dark:border-gray-800 p-4">
+          <div class="flex items-center justify-between mb-3">
+            <h2 class="text-sm font-semibold text-navy dark:text-white tracking-wide uppercase flex items-center gap-2">
+              <span class="material-symbols-outlined text-amber-500 text-base">event_upcoming</span>
+              <span>AP Due</span>
+            </h2>
+            <span class="text-xs text-gray-500 dark:text-gray-400" title="Bills that are due today, in the next 7/30 days, or already overdue">
+              Short-term obligations to suppliers
+            </span>
+          </div>
+          <div class="h-64">
+            <canvas id="apDueChart"></canvas>
+          </div>
+        </div>
+      </section>
+
+      <!-- Top Customers / Suppliers + Quick Actions -->
+      <section class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+        <!-- Top Customers -->
+        <div class="rounded-xl bg-white dark:bg-slate-900 shadow-soft border border-medium-gray/60 dark:border-gray-800 p-4">
+          <div class="flex items-center justify-between mb-3">
+            <h2 class="text-sm font-semibold text-navy dark:text-white tracking-wide uppercase flex items-center gap-2">
+              <span class="material-symbols-outlined text-sky-600 text-base">group</span>
+              <span>Top Customers (by AR)</span>
+            </h2>
+          </div>
+          <div class="space-y-2">
+            {% if dashboard_data.top_customers %}
+              {% for c in dashboard_data.top_customers %}
+              <div class="flex items-center justify-between rounded-lg px-3 py-2 bg-gray-50/70 dark:bg-slate-900/60">
+                <div class="flex flex-col">
+                  <span class="text-sm font-medium text-navy dark:text-white">
+                    {{ c.name }}
+                  </span>
+                  <span class="text-xs text-gray-500 dark:text-gray-400">Outstanding receivable</span>
+                </div>
+                <span class="text-sm font-semibold text-navy dark:text-gray-100">
+                  GH₵ {{ (c.outstanding or 0.0)|format_money }}
+                </span>
+              </div>
+              {% endfor %}
+            {% else %}
+              <p class="text-xs text-gray-500 dark:text-gray-400">
+                No receivable data yet.
+              </p>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- Top Suppliers -->
+        <div class="rounded-xl bg-white dark:bg-slate-900 shadow-soft border border-medium-gray/60 dark:border-gray-800 p-4">
+          <div class="flex items-center justify-between mb-3">
+            <h2 class="text-sm font-semibold text-navy dark:text-white tracking-wide uppercase flex items-center gap-2">
+              <span class="material-symbols-outlined text-amber-600 text-base">storefront</span>
+              <span>Top Suppliers (by AP)</span>
+            </h2>
+          </div>
+          <div class="space-y-2">
+            {% if dashboard_data.top_suppliers %}
+              {% for s in dashboard_data.top_suppliers %}
+              <div class="flex items-center justify-between rounded-lg px-3 py-2 bg-gray-50/70 dark:bg-slate-900/60">
+                <div class="flex flex-col">
+                  <span class="text-sm font-medium text-navy dark:text-white">
+                    {{ s.name }}
+                  </span>
+                  <span class="text-xs text-gray-500 dark:text-gray-400">Outstanding payable</span>
+                </div>
+                <span class="text-sm font-semibold text-navy dark:text-gray-100">
+                  GH₵ {{ (s.outstanding or 0.0)|format_money }}
+                </span>
+              </div>
+              {% endfor %}
+            {% else %}
+              <p class="text-xs text-gray-500 dark:text-gray-400">
+                No payable data yet.
+              </p>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div id="quickActions" class="rounded-xl bg-white dark:bg-slate-900 shadow-soft border border-medium-gray/60 dark:border-gray-800 p-4">
+          <h2 class="text-sm font-semibold text-navy dark:text-white tracking-wide uppercase mb-3 flex items-center gap-2">
+            <span class="material-symbols-outlined text-emerald text-base">flash_on</span>
+            <span>Quick Actions</span>
+          </h2>
+          <div class="grid grid-cols-2 gap-2">
+            <a href="{{ url_for('ar_invoices.invoices') }}"
+               class="inline-flex items-center justify-center gap-1 rounded-lg px-3 py-2 text-xs font-semibold text-navy dark:text-gray-100 bg-emerald/10 hover:bg-emerald/20"
+               title="Create or manage customer invoices">
+              <span class="material-symbols-outlined text-sm">request_quote</span>
+              <span>New Invoice</span>
+            </a>
+            <a href="{{ url_for('ap_bills.bills') }}"
+               class="inline-flex items-center justify-center gap-1 rounded-lg px-3 py-2 text-xs font-semibold text-navy dark:text-gray-100 bg-amber-100/70 hover:bg-amber-200/80 dark:bg-amber-900/30 dark:hover:bg-amber-900/50"
+               title="Create or manage supplier bills">
+              <span class="material-symbols-outlined text-sm">receipt_long</span>
+              <span>New Bill</span>
+            </a>
+            <a href="{{ url_for('acc_expenses.expenses_page') }}"
+               class="inline-flex items-center justify-center gap-1 rounded-lg px-3 py-2 text-xs font-semibold text-navy dark:text-gray-100 bg-rose-100/80 hover:bg-rose-200/80 dark:bg-rose-900/30 dark:hover:bg-rose-900/50"
+               title="Log an operating expense quickly">
+              <span class="material-symbols-outlined text-sm">money_off</span>
+              <span>Quick Expense</span>
+            </a>
+            <a href="{{ url_for('journals.journal_new') }}"
+               class="inline-flex items-center justify-center gap-1 rounded-lg px-3 py-2 text-xs font-semibold text-navy dark:text-gray-100 bg-gray-100 hover:bg-gray-200 dark:bg-slate-800 dark:hover:bg-slate-700"
+               title="Post a manual journal entry">
+              <span class="material-symbols-outlined text-sm">menu_book</span>
+              <span>New Journal</span>
+            </a>
+            <a href="{{ url_for('acc_payroll_calc.payroll_calculator') }}"
+               class="inline-flex items-center justify-center gap-1 rounded-lg px-3 py-2 text-xs font-semibold text-navy dark:text-gray-100 bg-blue-100 hover:bg-blue-200 dark:bg-blue-900/30 dark:hover:bg-blue-900/50 col-span-2"
+               title="Open the payroll calculator for staff salaries and contributions">
+              <span class="material-symbols-outlined text-sm">badge</span>
+              <span>Run Payroll Calculator</span>
+            </a>
+          </div>
+        </div>
+      </section>
+
+      <!-- Recent Activity -->
+      <section class="rounded-xl bg-white dark:bg-slate-900 shadow-soft border border-medium-gray/60 dark:border-gray-800 p-4">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="text-sm font-semibold text-navy dark:text-white tracking-wide uppercase flex items-center gap-2">
+            <span class="material-symbols-outlined text-navy text-base">history</span>
+            <span>Recent Accounting Activity</span>
+          </h2>
+          <span class="text-xs text-gray-500 dark:text-gray-400">
+            Last {{ dashboard_data.recent_activity|length }} events
+          </span>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead class="bg-gray-50 dark:bg-slate-950/60">
+              <tr>
+                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Type</th>
+                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Description</th>
+                <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Amount</th>
+                <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Date</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-medium-gray/70 dark:divide-gray-800">
+              {% if dashboard_data.recent_activity %}
+                {% for ev in dashboard_data.recent_activity %}
+                <tr class="hover:bg-gray-50/80 dark:hover:bg-slate-800/60">
+                  <td class="px-4 py-2">
+                    <span class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium
+                                 {% if ev.type == 'invoice' %}bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-200
+                                 {% elif ev.type == 'payment' %}bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-200
+                                 {% elif ev.type == 'bill' %}bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-200
+                                 {% else %}bg-gray-100 text-gray-700 dark:bg-slate-800 dark:text-gray-200{% endif %}">
+                      <span class="material-symbols-outlined text-xs">
+                        {% if ev.type == 'invoice' %}request_quote{% elif ev.type == 'payment' %}payments{% elif ev.type == 'bill' %}receipt_long{% else %}info{% endif %}
+                      </span>
+                      <span class="capitalize">{{ ev.type }}</span>
+                    </span>
+                  </td>
+                  <td class="px-4 py-2 text-gray-800 dark:text-gray-100">
+                    {{ ev.label }}
+                  </td>
+                  <td class="px-4 py-2 text-right text-gray-800 dark:text-gray-100">
+                    {% if ev.amount %}
+                      GH₵ {{ (ev.amount)|format_money }}
+                    {% else %}
+                      &mdash;
+                    {% endif %}
+                  </td>
+                  <td class="px-4 py-2 text-right text-gray-500 dark:text-gray-400 text-xs">
+                    {{ ev.ts[:10] }} {{ ev.ts[11:16] }}
+                  </td>
+                </tr>
+                {% endfor %}
+              {% else %}
+                <tr>
+                  <td colspan="4" class="px-4 py-4 text-xs text-gray-500 dark:text-gray-400">
+                    No recent events found.
+                  </td>
+                </tr>
+              {% endif %}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+
+    <!-- Hidden payload for JS -->
+    <div id="dashboardDataPayload"
+         data-json='{{ dashboard_data|tojson|safe }}'
+         style="display:none;"></div>
+  </main>
+
+  <script src="{{ url_for('static', filename='js/ui-utils.js') }}"></script>
+  <script>
+    (function(){
+      function hideLoader() {
+        var loader = document.getElementById("pageLoader");
+        if (!loader) return;
+        loader.classList.add("page-loader--hide");
+        document.body.classList.add("page-ready");
+      }
+      window.hidePageLoader = hideLoader;
+      if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", hideLoader);
+      } else {
+        hideLoader();
+      }
+    })();
+
+    (function(){
+      const payloadEl = document.getElementById("dashboardDataPayload");
+      let data = {};
+      try {
+        data = JSON.parse(payloadEl.getAttribute("data-json") || "{}");
+      } catch (e) {
+        console.error("Failed to parse dashboard data", e);
+        data = {};
+      }
+
+      // Date range selector -> reload with query param
+      const rangeSelector = document.getElementById("rangeSelector");
+      if (rangeSelector) {
+        rangeSelector.addEventListener("change", function(){
+          const val = rangeSelector.value || "this_month";
+          const url = new URL(window.location.href);
+          url.searchParams.set("range", val);
+          window.location.href = url.toString();
+        });
+      }
+
+      // Helpers
+      function safeArr(path) {
+        let cur = data;
+        for (let i = 0; i < path.length; i++) {
+          if (!cur || typeof cur !== "object") return [];
+          cur = cur[path[i]];
+        }
+        return Array.isArray(cur) ? cur : [];
+      }
+
+      function safeObj(path) {
+        let cur = data;
+        for (let i = 0; i < path.length; i++) {
+          if (!cur || typeof cur !== "object") return {};
+          cur = cur[path[i]];
+        }
+        return (cur && typeof cur === "object") ? cur : {};
+      }
+
+      if (window.formatAllNumbers) {
+        window.formatAllNumbers();
+      }
+
+      function formatMoneySafe(value){
+        if (window.formatMoney) return window.formatMoney(value);
+        var v = Number(value || 0);
+        return v.toFixed(2);
+      }
+
+      // Colors
+      const navy = "#0f172a";
+      const emerald = "#16a34a";
+      const sky = "#0284c7";
+      const amber = "#f59e0b";
+      const rose = "#e11d48";
+      const slate = "#64748b";
+
+      // ---------- Bank & Cash (Bank vs MoMo vs Cash) ----------
+      const bankCashCtx = document.getElementById("bankCashChart");
+      if (bankCashCtx && window.Chart) {
+        const bc = safeObj(["bank_cash", "breakdown"]);
+        const labels = ["Bank", "Mobile Money", "Cash on Hand"];
+        const vals = [
+          bc.bank || 0,
+          bc.mobile_money || 0,
+          bc.cash || 0,
+        ];
+
+        new Chart(bankCashCtx, {
+          type: "doughnut",
+          data: {
+            labels: labels,
+            datasets: [{
+              data: vals,
+              backgroundColor: [
+                navy,
+                emerald,
+                amber,
+              ],
+              borderWidth: 0,
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                display: true,
+                position: "bottom",
+                labels: {
+                  usePointStyle: true,
+                  boxWidth: 8,
+                }
+              },
+              tooltip: {
+                callbacks: {
+                  label: (ctx) => {
+                    const val = ctx.parsed || 0;
+                    return `${ctx.label}: GH₵ ${formatMoneySafe(val)}`;
+                  }
+                }
+              }
+            },
+            cutout: "65%"
+          }
+        });
+      }
+
+      // ---------- Revenue vs Expenses Chart ----------
+      const revExpCtx = document.getElementById("revenueExpensesChart");
+      if (revExpCtx && window.Chart) {
+        const labels = safeArr(["revenue_expense", "labels"]);
+        const rev = safeArr(["revenue_expense", "revenue"]);
+        const exp = safeArr(["revenue_expense", "expenses"]);
+
+        new Chart(revExpCtx, {
+          type: "line",
+          data: {
+            labels: labels,
+            datasets: [
+              {
+                label: "Revenue",
+                data: rev,
+                tension: 0.35,
+                borderColor: emerald,
+                backgroundColor: emerald + "33",
+                borderWidth: 2,
+                fill: true,
+                pointRadius: 3,
+                pointHoverRadius: 4,
+              },
+              {
+                label: "Expenses",
+                data: exp,
+                tension: 0.35,
+                borderColor: rose,
+                backgroundColor: rose + "26",
+                borderWidth: 2,
+                fill: true,
+                pointRadius: 3,
+                pointHoverRadius: 4,
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+              mode: "index",
+              intersect: false
+            },
+            plugins: {
+              legend: {
+                display: true,
+                labels: {
+                  usePointStyle: true,
+                  boxWidth: 8,
+                }
+              },
+              tooltip: {
+                callbacks: {
+                  label: (ctx) => {
+                    const val = ctx.parsed.y || 0;
+                    return `${ctx.dataset.label}: GH₵ ${formatMoneySafe(val)}`;
+                  }
+                }
+              }
+            },
+            scales: {
+              x: {
+                ticks: { color: slate },
+                grid: { display: false }
+              },
+              y: {
+                ticks: {
+                  color: slate,
+                  callback: (val) => val.toFixed ? val.toFixed(0) : val
+                },
+                grid: { color: "rgba(148,163,184,0.2)" }
+              }
+            }
+          }
+        });
+      }
+
+      // ---------- Cash Flow Chart ----------
+      const cashCtx = document.getElementById("cashFlowChart");
+      if (cashCtx && window.Chart) {
+        const labels = safeArr(["cash_flow", "labels"]);
+        const cashIn = safeArr(["cash_flow", "cash_in"]);
+        const cashOut = safeArr(["cash_flow", "cash_out"]);
+
+        new Chart(cashCtx, {
+          type: "bar",
+          data: {
+            labels: labels,
+            datasets: [
+              {
+                label: "Cash In",
+                data: cashIn,
+                backgroundColor: sky + "CC",
+                borderColor: sky,
+                borderWidth: 1,
+                borderRadius: 6,
+              },
+              {
+                label: "Cash Out",
+                data: cashOut,
+                backgroundColor: amber + "CC",
+                borderColor: amber,
+                borderWidth: 1,
+                borderRadius: 6,
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: "index", intersect: false },
+            plugins: {
+              legend: {
+                display: true,
+                labels: { usePointStyle: true, boxWidth: 8 }
+              },
+              tooltip: {
+                callbacks: {
+                  label: (ctx) => {
+                    const val = ctx.parsed.y || 0;
+                    return `${ctx.dataset.label}: GH₵ ${formatMoneySafe(val)}`;
+                  }
+                }
+              }
+            },
+            scales: {
+              x: {
+                stacked: false,
+                ticks: { color: slate },
+                grid: { display: false }
+              },
+              y: {
+                stacked: false,
+                ticks: {
+                  color: slate,
+                  callback: (val) => val.toFixed ? val.toFixed(0) : val
+                },
+                grid: { color: "rgba(148,163,184,0.2)" }
+              }
+            }
+          }
+        });
+      }
+
+      // ---------- AR Aging ----------
+      const arAgingCtx = document.getElementById("arAgingChart");
+      if (arAgingCtx && window.Chart) {
+        const obj = safeObj(["ar_aging"]);
+        const labels = ["0-30", "31-60", "61-90", "90+ days"];
+        const vals = [
+          obj.b0_30 || 0,
+          obj.b31_60 || 0,
+          obj.b61_90 || 0,
+          obj.b90_plus || 0,
+        ];
+
+        new Chart(arAgingCtx, {
+          type: "bar",
+          data: {
+            labels: labels,
+            datasets: [{
+              label: "Outstanding",
+              data: vals,
+              backgroundColor: [
+                emerald + "CC",
+                sky + "CC",
+                amber + "CC",
+                rose + "CC",
+              ],
+              borderWidth: 0,
+              borderRadius: 8,
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                callbacks: {
+                  label: (ctx) => {
+                    const val = ctx.parsed.y || 0;
+                    return `Outstanding: GH₵ ${formatMoneySafe(val)}`;
+                  }
+                }
+              }
+            },
+            indexAxis: "y",
+            scales: {
+              x: {
+                ticks: { color: slate },
+                grid: { color: "rgba(148,163,184,0.2)" }
+              },
+              y: {
+                ticks: { color: slate },
+                grid: { display: false }
+              }
+            }
+          }
+        });
+      }
+
+      // ---------- AP Due ----------
+      const apCtx = document.getElementById("apDueChart");
+      if (apCtx && window.Chart) {
+        const obj = safeObj(["ap_due"]);
+        const labels = ["Due Today", "Next 7 days", "Next 30 days", "Overdue"];
+        const vals = [
+          obj.due_today || 0,
+          obj.next_7 || 0,
+          obj.next_30 || 0,
+          obj.overdue || 0,
+        ];
+
+        new Chart(apCtx, {
+          type: "bar",
+          data: {
+            labels: labels,
+            datasets: [{
+              label: "Amount",
+              data: vals,
+              backgroundColor: [
+                emerald + "CC",
+                sky + "CC",
+                amber + "CC",
+                rose + "CC",
+              ],
+              borderRadius: 8,
+              borderWidth: 0,
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                callbacks: {
+                  label: (ctx) => {
+                    const val = ctx.parsed.y || 0;
+                    return `Amount: GH₵ ${formatMoneySafe(val)}`;
+                  }
+                }
+              }
+            },
+            scales: {
+              x: {
+                ticks: { color: slate },
+                grid: { color: "rgba(148,163,184,0.2)" }
+              },
+              y: {
+                ticks: {
+                  color: slate,
+                  callback: (val) => val.toFixed ? val.toFixed(0) : val
+                },
+                grid: { display: false }
+              }
+            }
+          }
+        });
+      }
+    })();
+  </script>
+    {% include 'app_footer.html' %}
+
+</body>
+</html>

@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>{{ customer.name }} - Profile</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+     <link rel="icon" href="https://res.cloudinary.com/dljpgzbto/image/upload/v1743993646/company-logo_dksb23.jpg" type="image/png"/>
+
+    <style>
+         :root {
+            --bg-color: #f4f4f4;
+            --text-color: #333;
+            --card-color: #ffffff;
+        }
+
+        body.dark-mode {
+            --bg-color: #121212;
+            --text-color: #f1f1f1;
+            --card-color: #1e1e1e;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            background: var(--bg-color);
+            color: var(--text-color);
+            padding: 20px;
+        }
+        .navbar {
+            background: white;
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #ccc;
+            margin-bottom: 20px;
+        }
+        .navbar a {
+            text-decoration: none;
+            color: #007bff;
+            font-weight: bold;
+        }
+        .navbar button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .profile-container {
+            max-width: 900px;
+            margin: auto;
+            background: var(--card-color);
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 25px;
+        }
+        /* Keep all other CSS unchanged */
+        .scroll-top {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #007bff;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 50%;
+            font-size: 18px;
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+        }
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            background: #f4f4f4;
+            padding: 20px;
+        }
+        .profile-container {
+            max-width: 900px;
+            margin: auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 25px;
+        }
+        .header {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 20px;
+        }
+        .profile-img {
+            width: 140px;
+            height: 140px;
+            object-fit: cover;
+            border-radius: 50%;
+            border: 4px solid #007bff;
+        }
+        .info {
+            flex: 1;
+        }
+        .info h2 {
+            margin: 0;
+            color: #007bff;
+            font-size: 28px;
+        }
+        .info p {
+            margin: 6px 0;
+            color: #555;
+            font-size: 16px;
+        }
+        .section {
+            margin-top: 30px;
+        }
+        .section h3 {
+            color: #007bff;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 5px;
+            margin-bottom: 10px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        th, td {
+            padding: 10px;
+            border: 1px solid #ddd;
+            text-align: left;
+        }
+        th {
+            background: #007bff;
+            color: white;
+        }
+        img.product-img {
+            width: 60px;
+            height: 60px;
+            object-fit: cover;
+            border-radius: 6px;
+        }
+        .edit-form, .delete-form {
+            margin-top: 25px;
+        }
+        .edit-form input,
+        .edit-form textarea {
+            width: 100%;
+            padding: 8px;
+            margin: 6px 0 12px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        .edit-form button,
+        .delete-form button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        .edit-form button {
+            background: #007bff;
+            color: white;
+        }
+        .delete-form button {
+            background: #dc3545;
+            color: white;
+        }
+        .withdraw-btn {
+            background-color: #ffc107;
+            color: #000;
+            padding: 10px 20px;
+            border-radius: 5px;
+            border: none;
+            cursor: pointer;
+        }
+        .flash {
+            padding: 10px;
+            margin-bottom: 15px;
+            border-radius: 5px;
+        }
+        .flash.success { background: #d4edda; color: #155724; }
+        .flash.danger { background: #f8d7da; color: #721c24; }
+        .flash.info { background: #d1ecf1; color: #0c5460; }
+
+        @media (max-width: 600px) {
+            .header {
+                flex-direction: column;
+                align-items: center;
+            }
+            .info {
+                text-align: center;
+            }
+        }
+
+        .financial-summary {
+    margin-top: 20px;
+    background: #f9fbfd;
+    border-left: 5px solid #007bff;
+    padding: 15px 20px;
+    border-radius: 8px;
+    font-size: 16px;
+}
+
+.financial-summary p {
+    margin: 6px 0;
+    color: #333;
+}
+
+.financial-summary strong {
+    color: #007bff;
+}
+.section h3 {
+    color: #007bff;
+    border-bottom: 2px solid #007bff;
+    padding-bottom: 5px;
+    margin-bottom: 10px;
+    font-size: 20px;
+}
+
+.section table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+}
+
+.section th, .section td {
+    padding: 10px;
+    border: 1px solid #ddd;
+    text-align: left;
+    font-size: 15px;
+}
+
+.section th {
+    background-color: #007bff;
+    color: white;
+    font-weight: bold;
+}
+
+.section tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+
+.section tr:hover {
+    background-color: #f1f1f1;
+}
+
+.section p {
+    font-style: italic;
+    color: #666;
+}
+    .status-steps {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+
+    .status-step {
+        padding: 10px;
+        border-radius: 5px;
+        color: white;
+        font-weight: bold;
+        text-align: center;
+        min-width: 120px;
+    }
+
+    .status-step.completed {
+        background-color: #28a745;
+    }
+
+    .status-step.active {
+        background-color: #007bff;
+    }
+
+    .status-step.pending {
+        background-color: #ccc;
+    }
+
+    .small-btn {
+        margin-top: 5px;
+        background: #ffc107;
+        border: none;
+        padding: 4px 8px;
+        font-size: 12px;
+        font-weight: bold;
+        cursor: pointer;
+        color: black;
+        border-radius: 4px;
+    }
+     .progress-step {
+        display: flex;
+        align-items: center;
+        margin-top: 8px;
+        font-size: 14px;
+        color: #007bff;
+    }
+
+    .progress-step span {
+        margin-left: 10px;
+    }
+
+    .spinner {
+        border: 3px solid #f3f3f3;
+        border-top: 3px solid #007bff;
+        border-radius: 50%;
+        width: 14px;
+        height: 14px;
+        animation: spin 1s linear infinite;
+    }
+
+    .checkmark {
+        color: green;
+        font-weight: bold;
+    }
+
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+    .progress-container {
+        background: #e9ecef;
+        height: 10px;
+        border-radius: 4px;
+        overflow: hidden;
+        width: 100%;
+    }
+
+    .progress-fill {
+        height: 100%;
+        background-color: #28a745;
+        transition: width 0.3s ease-in-out;
+    }
+
+    .w-0  { width: 0%; }
+    .w-10 { width: 10%; }
+    .w-20 { width: 20%; }
+    .w-30 { width: 30%; }
+    .w-40 { width: 40%; }
+    .w-50 { width: 50%; }
+    .w-60 { width: 60%; }
+    .w-70 { width: 70%; }
+    .w-80 { width: 80%; }
+    .w-90 { width: 90%; }
+    .w-100 { width: 100%; }
+    </style>
+</head>
+<body>
+    <div class="navbar">
+    <button onclick="toggleDarkMode()">🌓</button>
+</div>
+<div class="profile-container">
+<div class="profile-container">
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        {% for category, message in messages %}
+            <div class="flash {{ category }}">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+    {% endwith %}
+
+    <div class="header">
+        <img src="{{ customer.image_url or 'https://via.placeholder.com/140' }}" alt="Customer Image" class="profile-img">
+
+        <div class="info">
+            <h2>{{ customer.name }}</h2>
+            <p><strong>Phone:</strong> {{ customer.phone_number }}</p>
+            <p><strong>Location:</strong> {{ customer.location }}</p>
+            <p><strong>Occupation:</strong> {{ customer.occupation }}</p>
+            <p><strong>Agent ID:</strong> {{ customer.agent_id }}</p>
+            <p><strong>Comment:</strong> {{ customer.comment }}</p>
+
+            <div style="margin-top: 15px; padding: 10px; background: #f1f9ff; border-left: 4px solid #007bff;">
+                <p><strong>Total Debt:</strong> ₵{{ total_debt }}</p>
+                <p><strong>Total Paid:</strong> ₵{{ total_paid }}</p>
+                <p><strong>Withdrawn Amount:</strong> ₵{{ withdrawn_amount }}</p>
+                <p><strong>Amount Left:</strong> ₵{{ amount_left }}</p>
+                <p><strong>Penalty:</strong> ₵{{ "%.2f"|format(total_penalty) }}</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 🔄 STATUS STEPS -->
+    <div class="section">
+    <h3>Status Progress</h3>
+    <div class="status-steps">
+        {% set steps = ['payment_ongoing', 'completed', 'approved', 'packaging', 'delivering', 'delivered'] %}
+        {% set current_index = steps.index(customer.status or 'payment_ongoing') %}
+
+        {% for step in steps %}
+            {% set status_class = 'pending' %}
+            {% if steps.index(step) < current_index %}
+                {% set status_class = 'completed' %}
+            {% elif step == customer.status %}
+                {% set status_class = 'active' %}
+            {% endif %}
+
+            <div class="status-step {{ status_class }}">
+                {{ step.replace('_', ' ') | capitalize }}
+
+                {# Only show the "Approve" button if current status is 'completed' #}
+               {% if step == 'completed' and customer.status == 'completed' %}
+    <div id="approval-progress">
+        <button onclick="startApprovalProcess('{{ customer._id }}')" class="small-btn">Approve</button>
+        <div id="progress-status" style="margin-top:10px;"></div>
+    </div>
+{% endif %}
+
+            </div>
+        {% endfor %}
+    </div>
+</div>
+<div class="section">
+    <h3>Purchase History</h3>
+    {% if customer.purchases %}
+        <table>
+            <tr>
+                <th>Product</th>
+                <th>Image</th>
+                <th>Quantity</th>
+                <th>Total</th>
+                <th>Type</th>
+                <th>Date</th>
+                <th>End Date</th>
+                <th>Progress</th>
+            </tr>
+            {% for purchase in customer.purchases %}
+                <tr>
+                    <td>{{ purchase.product.name }}</td>
+                    <td>
+                        <img src="{{ purchase.product.image_url or 'https://via.placeholder.com/60' }}" class="product-img" alt="Product Image">
+                    </td>
+                    <td>{{ purchase.product.quantity }}</td>
+                    <td>₵{{ purchase.product.total }}</td>
+                    <td>{{ purchase.purchase_type }}</td>
+                    <td>{{ purchase.purchase_date[:10] }}</td>
+                    <td>{{ purchase.end_date or 'N/A' }}</td>
+                    <td>
+                        <div style="background: #e9ecef; height: 10px; border-radius: 4px; overflow: hidden;">
+{% set raw_progress = purchase.product.progress if purchase.product.progress is defined else 0 %}
+{% set rounded_progress = (raw_progress // 10) * 10 %}
+<div class="progress-container">
+    <div class="progress-fill w-{{ rounded_progress }}"></div>
+</div>
+                        </div>
+                    </td>
+     <button class="small-btn penalty-btn" data-index="{{ loop.index0 }}">
+    Add Penalty
+</button>
+
+                </tr>
+            {% endfor %}
+        </table>
+    {% else %}
+        <p>No purchases found.</p>
+    {% endif %}
+</div>
+
+    <div class="section edit-form">
+        <h3>Edit Customer Info</h3>
+        <form method="POST" action="{{ url_for('customers.edit_customer', customer_id=customer._id) }}">
+            <input type="text" name="name" value="{{ customer.name }}" placeholder="Full Name" required>
+            <input type="text" name="phone_number" value="{{ customer.phone_number }}" placeholder="Phone Number" required>
+            <input type="text" name="location" value="{{ customer.location }}" placeholder="Location">
+            <input type="text" name="occupation" value="{{ customer.occupation }}" placeholder="Occupation">
+            <textarea name="comment" placeholder="Comment">{{ customer.comment }}</textarea>
+            <button type="submit">Save Changes</button>
+        </form>
+    </div>
+
+    <div class="section">
+        <button class="withdraw-btn" onclick="openCombinedModal('{{ customer._id }}')">
+    Withdraw
+</button>
+
+    </div>
+
+
+    <div class="section">
+        <h3>Withdrawal History</h3>
+        {% if withdrawals %}
+            <table>
+                <thead>
+                    <tr>
+                        <th>Amount</th>
+                        <th>Date</th>
+                        <th>Method</th>
+                        <th>Note</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for withdrawal in withdrawals %}
+                        <tr>
+                            <td>₵{{ "%.2f"|format(withdrawal.amount) }}</td>
+                            <td>{{ withdrawal.date }}</td>
+                            <td>{{ withdrawal.method or 'N/A' }}</td>
+                            <td>{{ withdrawal.note or '' }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p>No withdrawals found.</p>
+        {% endif %}
+    </div>
+<div class="section">
+    <h3>Penalty History</h3>
+    {% if penalties %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Amount (₵)</th>
+                    <th>Reason</th>
+                    <th>Date</th>
+                    <th>New End Date</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for penalty in penalties %}
+                <tr>
+                    <td>₵{{ "%.2f"|format(penalty.amount) }}</td>
+                    <td>{{ penalty.reason }}</td>
+                    <td>{{ penalty.date[:10] }}</td>
+                    <td>{{ penalty.new_end_date or 'N/A' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>No penalties recorded.</p>
+    {% endif %}
+</div>
+
+    <div class="section delete-form">
+        <form method="POST" action="{{ url_for('customers.delete_customer', customer_id=customer._id) }}" onsubmit="return confirm('Are you sure you want to delete this customer?');">
+            <button type="submit">Delete Customer</button>
+        </form>
+    </div>
+</div>
+
+<!-- Penalty Modal -->
+<div id="penalty-modal" style="display: none; position: fixed; top: 0; left: 0;
+    width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); z-index: 9999;">
+    <div style="background: white; padding: 20px; max-width: 400px; margin: 80px auto;
+        border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.2); position: relative;">
+        <h3>Add Penalty</h3>
+        <form id="penalty-form" method="POST">
+            <label>Amount (₵):</label>
+            <input type="number" name="amount" step="0.01" required><br><br>
+
+            <label>Reason:</label>
+            <textarea name="reason" rows="3" required></textarea><br><br>
+
+            <label>New End Date (optional):</label>
+            <input type="date" name="new_end_date"><br><br>
+
+            <button type="submit" style="background: #007bff; color: white; padding: 8px 16px;
+                border: none; border-radius: 4px;">Submit</button>
+            <button type="button" onclick="closePenaltyModal()" style="margin-left: 10px;
+                background: #ccc; border: none; padding: 8px 16px; border-radius: 4px;">Cancel</button>
+        </form>
+    </div>
+</div>
+<!-- Combined Withdrawal & Deduction Modal -->
+<div id="combined-modal" style="display: none; position: fixed; top: 0; left: 0;
+    width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); z-index: 9999;">
+  <div style="background: white; padding: 20px; max-width: 450px; margin: 100px auto;
+      border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.2); position: relative;">
+    <h3>Withdraw & Deduct</h3>
+    <form id="combined-form" method="POST">
+      <label>Withdraw Amount (₵):</label>
+      <input type="number" name="withdraw_amount" step="0.01" required><br><br>
+
+      <label>SUSU Deduction Amount (₵):</label>
+      <input type="number" name="deduction_amount" step="0.01" required><br><br>
+
+      <label>Note (optional):</label>
+      <textarea name="note" rows="3"></textarea><br><br>
+
+      <input type="hidden" name="combined_mode" value="true">
+
+      <button type="submit" style="background: #28a745; color: white; padding: 8px 16px;
+          border: none; border-radius: 4px;">Submit</button>
+      <button type="button" onclick="closeCombinedModal()" style="margin-left: 10px;
+          background: #ccc; border: none; padding: 8px 16px; border-radius: 4px;">Cancel</button>
+    </form>
+  </div>
+</div>
+
+
+<button class="scroll-top" onclick="window.scrollTo({top: 0, behavior: 'smooth'})">↑</button>
+
+<script>
+     function toggleDarkMode() {
+        document.body.classList.toggle('dark-mode');
+    }
+    function openWithdrawPrompt(customerId) {
+        const amount = prompt("Enter amount to withdraw:");
+        if (!amount) return;
+
+        const numeric = parseFloat(amount);
+        if (isNaN(numeric) || numeric <= 0) {
+            alert("Please enter a valid positive amount.");
+            return;
+        }
+
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = `/customer/${customerId}/withdraw`;
+
+        const amountInput = document.createElement('input');
+        amountInput.type = 'hidden';
+        amountInput.name = 'amount';
+        amountInput.value = numeric;
+
+        form.appendChild(amountInput);
+        document.body.appendChild(form);
+        form.submit();
+    }
+
+     function startApprovalProcess(customerId) {
+        const steps = [
+            { id: 'payment', label: 'Confirming payment' },
+            { id: 'inventory', label: 'Checking product availability' },
+            { id: 'approve', label: 'Final approval' }
+        ];
+
+        const container = document.getElementById("progress-status");
+        container.innerHTML = '';
+
+        steps.forEach(step => {
+            const div = document.createElement("div");
+            div.className = 'progress-step';
+            div.id = `step-${step.id}`;
+            div.innerHTML = `<div class="spinner"></div><span>${step.label}</span>`;
+            container.appendChild(div);
+        });
+
+        // Simulate step-by-step progress
+        setTimeout(() => {
+            markComplete('payment');
+            setTimeout(() => {
+                markComplete('inventory');
+                setTimeout(() => {
+                    markComplete('approve');
+                    // Auto-submit form
+                    submitApprovalForm(customerId);
+                }, 1000);
+            }, 1000);
+        }, 1000);
+    }
+
+    function markComplete(stepId) {
+        const stepDiv = document.getElementById(`step-${stepId}`);
+        stepDiv.innerHTML = `<span class="checkmark">✔</span><span>${stepDiv.textContent}</span>`;
+    }
+
+    function submitApprovalForm(customerId) {
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = `/customer/${customerId}/approve_status`;
+        document.body.appendChild(form);
+        form.submit();
+    }
+      // Attach event listeners after the DOM loads
+    document.addEventListener("DOMContentLoaded", function () {
+        document.querySelectorAll('.penalty-btn').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                const index = this.getAttribute('data-index');
+                openPenaltyModal(index);
+            });
+        });
+    });
+
+    function openPenaltyModal(purchaseIndex) {
+        const modal = document.getElementById("penalty-modal");
+        const form = document.getElementById("penalty-form");
+        const customerId = "{{ customer._id }}";
+        form.action = `/customer/${customerId}/add_penalty/${purchaseIndex}`;
+        modal.style.display = "block";
+    }
+
+    function closePenaltyModal() {
+        document.getElementById("penalty-modal").style.display = "none";
+    }
+</script>
+<script>
+  function openDeductionModal(customerId) {
+    const form = document.getElementById("deduction-form");
+    form.action = `/customer/${customerId}/withdraw`;
+    document.getElementById("deduction-modal").style.display = "block";
+  }
+
+  function closeDeductionModal() {
+    document.getElementById("deduction-modal").style.display = "none";
+    document.getElementById("deduction-form").reset();
+  }
+</script>
+<script>
+function openCombinedModal(customerId) {
+    const form = document.getElementById("combined-form");
+    form.action = `/customer/${customerId}/withdraw`;
+    document.getElementById("combined-modal").style.display = "block";
+}
+
+function closeCombinedModal() {
+    document.getElementById("combined-modal").style.display = "none";
+    document.getElementById("combined-form").reset();
+}
+</script>
+
+</body>
+  {% include 'app_footer.html' %}
+
+</html>

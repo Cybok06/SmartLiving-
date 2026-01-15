@@ -1,0 +1,328 @@
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet" />
+
+<style>
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 250px;
+    height: 100vh;
+    background: #fff;
+    color: #2c3e50;
+    padding: 1rem;
+    box-shadow: 2px 0 10px rgba(0,0,0,.05);
+    transition: left .3s;
+    z-index: 1050;
+    display: flex;
+    flex-direction: column;
+  }
+  .sidebar.collapsed { left: -260px; }
+
+  .sidebar-header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: .75rem;
+    flex: 0 0 auto;
+  }
+  .sidebar-header img {
+    width: 50px;
+    height: 50px;
+    object-fit: contain;
+    border-radius: 50%;
+  }
+  .sidebar-header strong {
+    margin-top: .5rem;
+    font-size: 1.1rem;
+    color: #007bff;
+    font-weight: 600;
+  }
+
+  .sidebar-body {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-right: .25rem;
+    margin-right: -.25rem;
+    padding-bottom: 1rem;
+  }
+  .sidebar-body::-webkit-scrollbar { width: 8px; }
+  .sidebar-body::-webkit-scrollbar-thumb {
+    background: #e0e6f6;
+    border-radius: 8px;
+  }
+  .sidebar-body:hover::-webkit-scrollbar-thumb {
+    background: #c9d5fa;
+  }
+
+  .nav-section {
+    font-size: .75rem;
+    text-transform: uppercase;
+    color: #888;
+    margin: 1.25rem 0 .5rem;
+    padding-left: .75rem;
+    font-weight: 600;
+  }
+
+  .sidebar a {
+    display: flex;
+    align-items: center;
+    color: #2c3e50;
+    text-decoration: none;
+    padding: .55rem .75rem;
+    font-size: .95rem;
+    font-weight: 500;
+    border-radius: 6px;
+    transition: background-color .2s, color .2s;
+  }
+  .sidebar a:hover {
+    background: #f0f4ff;
+    color: #007bff;
+  }
+  .sidebar a.text-primary {
+    background: #e8f0fe;
+    color: #007bff;
+  }
+  .sidebar a i {
+    width: 25px;
+    text-align: center;
+    margin-right: 10px;
+    color: #007bff;
+    font-size: 1.1rem;
+  }
+
+  .sidebar-toggle {
+    position: fixed;
+    top: 1rem;
+    left: 10px; /* default: sidebar collapsed */
+    background: #007bff;
+    color: #fff;
+    border: none;
+    z-index: 1100;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    font-size: 1.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: left .3s;
+  }
+  .sidebar:not(.collapsed) + .sidebar-toggle {
+    left: 260px;
+  }
+
+  @media (max-width: 768px) {
+    .sidebar { left: -260px; }
+    .sidebar-toggle { left: 10px; }
+
+    body.sidebar-open .sidebar { left: 0; }
+    body.sidebar-open .sidebar-toggle { left: 260px; }
+  }
+
+  /* 🔴 RED badge */
+  .notif-badge {
+    margin-left: auto;
+    background: #dc3545; /* red */
+    color: #fff;
+    border-radius: 999px;
+    padding: .2rem .5rem;
+    font-size: .75rem;
+    font-weight: 700;
+  }
+  .blink-badge {
+    margin-left: auto;
+    background: #dc3545;
+    color: #fff;
+    border-radius: 999px;
+    padding: .2rem .5rem;
+    font-size: .75rem;
+    font-weight: 700;
+    animation: blink 1s steps(2, start) infinite;
+  }
+  @keyframes blink { to { visibility: hidden; } }
+</style>
+
+<!-- NOTE: default = collapsed -->
+<div class="sidebar collapsed" id="adminSidebar">
+  <div class="sidebar-header">
+    <img src="https://imagedelivery.net/h9fmMoa1o2c2P55TcWJGOg/10283f28-b9a0-4100-b254-19a854386800/public" alt="SmartLiving Logo" />
+    <strong>SMARTLIVING -  ADMIN</strong>
+  </div>
+
+  <div class="sidebar-body">
+    <div class="nav-section">Navigation</div>
+    <a href="/admin/dashboard" class="{% if request.path == '/admin/dashboard' %}text-primary fw-bold{% endif %}">
+      <i class="bi bi-speedometer2"></i> Dashboard
+    </a>
+
+    <div class="nav-section">Support</div>
+    <a href="/complaints" class="{% if request.path.startswith('/complaints') %}text-primary fw-bold{% endif %}" id="adminComplaintsLink">
+      <i class="bi bi-life-preserver"></i> Complaints Hub
+      <!-- 🔴 Red live badge -->
+      <span id="adminComplaintsBadge" class="notif-badge d-none">0</span>
+    </a>
+
+    <div class="nav-section">Core</div>
+    <a href="/admin-close" class="{% if request.path.startswith('/admin/sales_close') %}text-primary fw-bold{% endif %}">
+      <i class="bi bi-wallet2"></i> Sales Close (Managers)
+    </a>
+    <a href="/register_manager" class="{% if request.path == '/register_manager' %}text-primary fw-bold{% endif %}">
+      <i class="bi bi-person-plus"></i> Register Manager
+    </a>
+    <a href="/recruitment" class="{% if request.path == '/recruitment' %}text-primary fw-bold{% endif %}">
+      <i class="bi bi-briefcase"></i> Recruitments
+    </a>
+    <a href="/admin/tasks" class="{% if request.path == '/admin/tasks' %}text-primary fw-bold{% endif %}">
+      <i class="bi bi-megaphone"></i> Send Task to Managers
+    </a>
+    <a href="{{ url_for('customers.admin_customers_list') }}"
+       class="{% if request.path.startswith('/admin/customers') %}text-primary fw-bold{% endif %}">
+      <i class="bi bi-people"></i> Customers
+    </a>
+    <a href="{{ url_for('undelivered_items.undelivered_items_page') }}"
+       class="{% if request.path.startswith('/undelivered_items') %}text-primary fw-bold{% endif %}">
+      <i class="bi bi-exclamation-triangle"></i> Undelivered Items
+      <span id="adminUndeliveredBadge" class="blink-badge d-none">0</span>
+    </a>
+
+    <a href="/inventory_products?low_stock=1" class="{% if request.path == '/inventory_products' and request.args.get('low_stock') %}text-primary fw-bold{% endif %}">
+      <i class="bi bi-exclamation-diamond"></i> Low Stock
+    </a>
+
+   
+   
+   
+
+    <!-- 🔹 NEW SECTION: Transfers -->
+    <div class="nav-section">Transfers</div>
+    <a href="{{ url_for('transfer.transfer_view') }}"
+       class="{% if request.path.startswith('/transfer') %}text-primary fw-bold{% endif %}">
+      <i class="bi bi-arrow-left-right"></i> Transfer Agent
+    </a>
+    <a href="{{ url_for('admin_transfer_customer.admin_transfer_page') }}"
+       class="{% if request.path.startswith('/admin-transfer-customers') %}text-primary fw-bold{% endif %}">
+      <i class="bi bi-arrow-left-right"></i> Transfer Customers
+    </a>
+    <a href="{{ url_for('admin_transfer_logs.admin_transfer_logs_page') }}"
+       class="{% if request.path.startswith('/admin-transfer-logs') %}text-primary fw-bold{% endif %}">
+      <i class="bi bi-journal-text"></i> Transfer Logs
+    </a>
+
+    <!-- 🔹 Reports -->
+    <div class="nav-section">Reports</div>
+    <a href="{{ url_for('meeting_report.overview') }}"
+       class="{% if request.path.startswith('/meeting-report') %}text-primary fw-bold{% endif %}">
+      <i class="bi bi-people"></i> Meeting Report
+    </a>
+    <a href="{{ url_for('packages.list_packages_admin') }}"
+       class="{% if request.path.startswith('/packages') %}text-primary fw-bold{% endif %}">
+      <i class="bi bi-file-earmark-check"></i> Packages
+    </a>
+    <a href="{{ url_for('returns_inwards.accounting_returns_inwards_list') }}"
+       class="{% if request.path.startswith('/accounting/returns-inwards') %}text-primary fw-bold{% endif %}">
+      <i class="bi bi-arrow-return-left"></i> Returns Inwards
+    </a>
+
+    <div class="nav-section">Productivity</div>
+    <a href="/todo" class="{% if request.path == '/todo' %}text-primary fw-bold{% endif %}">
+      <i class="bi bi-check2-circle"></i> Todo List
+    </a>
+    <a href="/login_logs" class="{% if request.path == '/login_logs' %}text-primary fw-bold{% endif %}">
+      <i class="bi bi-clipboard2-data"></i> Login Logs
+    </a>
+
+    <div class="nav-section">Account</div>
+    <a href="/admin/profile" class="{% if request.path == '/admin/profile' %}text-primary fw-bold{% endif %}">
+      <i class="bi bi-person-circle"></i> My Profile
+    </a>
+    <a href="{{ url_for('login.logout') }}">
+      <i class="bi bi-box-arrow-right"></i> Logout
+    </a>
+
+    <div style="height:12px;"></div>
+  </div>
+</div>
+
+<button class="sidebar-toggle" onclick="toggleAdminSidebar()" id="adminSidebarToggle" aria-label="Toggle menu">
+  <i class="bi bi-list"></i>
+</button>
+
+<script>
+  function toggleAdminSidebar(){
+    const sidebar = document.getElementById('adminSidebar');
+    const toggle  = document.getElementById('adminSidebarToggle');
+    const isCollapsed = sidebar.classList.toggle('collapsed');
+    document.body.classList.toggle('sidebar-open', !isCollapsed);
+
+    if(toggle){
+      const icon = toggle.querySelector('i');
+      if(icon){
+        if(isCollapsed){
+          icon.classList.remove('bi-x');
+          icon.classList.add('bi-list');
+        }else{
+          icon.classList.remove('bi-list');
+          icon.classList.add('bi-x');
+        }
+      }
+    }
+  }
+
+  // 🔴 Live red badge: unresolved + breaching
+  async function refreshAdminComplaintsBadge(){
+    try{
+      const res = await fetch("/admin-complaints/unresolved_count", { credentials: "same-origin" });
+      if(!res.ok) throw new Error("HTTP "+res.status);
+      const d = await res.json();
+      if(!d.ok) return;
+
+      const open = Number(d.open || 0);
+      const breach = Number(d.breaching || 0);
+      const badge = document.getElementById("adminComplaintsBadge");
+      const link = document.getElementById("adminComplaintsLink");
+
+      if(badge){
+        badge.textContent = open > 0 ? `${open}${breach>0?` (${breach}⚠)`:''}` : "0";
+        badge.classList.toggle("d-none", open <= 0);
+      }
+      if(link){
+        link.title = open > 0
+          ? `${open} unresolved${breach>0?`, ${breach} breaching`:''}`
+          : "No unresolved complaints";
+      }
+    }catch(e){ /* silent */ }
+  }
+
+  document.addEventListener("DOMContentLoaded", ()=>{
+    // Sidebar starts collapsed, icon = list
+    const toggle = document.getElementById('adminSidebarToggle');
+    if(toggle){
+      const icon = toggle.querySelector('i');
+      if(icon){
+        icon.classList.remove('bi-x');
+        icon.classList.add('bi-list');
+      }
+    }
+
+    refreshAdminComplaintsBadge();
+    setInterval(refreshAdminComplaintsBadge, 30000);
+    refreshAdminUndeliveredBadge();
+    setInterval(refreshAdminUndeliveredBadge, 30000);
+  });
+
+  async function refreshAdminUndeliveredBadge(){
+    try{
+      const res = await fetch("{{ url_for('undelivered_items.undelivered_items_count_due') }}", { credentials: "same-origin" });
+      if(!res.ok) throw new Error("HTTP "+res.status);
+      const d = await res.json();
+      if(!d.ok) return;
+      const n = Number(d.due_soon || 0) + Number(d.overdue || 0);
+      const badge = document.getElementById("adminUndeliveredBadge");
+      if(badge){
+        badge.textContent = n;
+        badge.classList.toggle("d-none", n <= 0);
+      }
+    }catch(e){ /* silent */ }
+  }
+</script>

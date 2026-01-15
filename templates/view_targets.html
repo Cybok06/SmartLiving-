@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Manager Target Progress -  SMARTLIVING EMPORIUM PLUS (Flux360)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0d6efd">
+  <link rel="icon" type="image/png" href="https://imagedelivery.net/h9fmMoa1o2c2P55TcWJGOg/10283f28-b9a0-4100-b254-19a854386800/public">
+
+  <!-- Bootstrap -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+  <style>
+    body {
+      background-color: #f5f7fa;
+    }
+    .card {
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+      border-radius: 12px;
+      margin-bottom: 30px;
+    }
+    .progress {
+      height: 20px;
+      border-radius: 10px;
+      background-color: #e9ecef;
+      overflow: hidden;
+    }
+    .progress-bar {
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 500;
+      color: white;
+      width: 0;
+    }
+    .edit-btn {
+      position: absolute;
+      top: 15px;
+      right: 20px;
+    }
+    @media (max-width: 576px) {
+      h5, h6, p { font-size: 0.9rem; }
+    }
+
+    .brand-lockup{ display:flex; align-items:center; gap:10px; }
+    .brand-logo{ height:32px; width:auto; object-fit:contain; }
+    .platform-logo{ height:18px; width:auto; object-fit:contain; }
+    .brand-footer{
+      margin-top: 30px;
+      padding: 18px 0 6px;
+      border-top: 1px solid #e2e8f0;
+      color:#64748b;
+      font-size: .85rem;
+      display:flex;
+      flex-wrap:wrap;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+    }
+    .brand-footer .brand-name-text{
+      font-weight:700;
+      letter-spacing:.04em;
+      text-transform:uppercase;
+      color:#0f172a;
+      font-size:.8rem;
+    }
+
+  </style>
+</head>
+<body>
+    {% include 'executive_sidebar.html' %}
+
+<div class="container py-5">
+  <h3 class="text-center mb-4">📊 Manager Target Progress</h3>
+
+  <!-- Filters -->
+  <form method="GET" class="row g-3 mb-4">
+    <div class="col-md-4">
+      <select name="duration" class="form-select" onchange="this.form.submit()">
+        <option value="">Filter by Duration</option>
+        <option value="daily" {% if request.args.get('duration') == 'daily' %}selected{% endif %}>Daily</option>
+        <option value="weekly" {% if request.args.get('duration') == 'weekly' %}selected{% endif %}>Weekly</option>
+        <option value="monthly" {% if request.args.get('duration') == 'monthly' %}selected{% endif %}>Monthly</option>
+        <option value="yearly" {% if request.args.get('duration') == 'yearly' %}selected{% endif %}>Yearly</option>
+      </select>
+    </div>
+    <div class="col-md-4">
+      <select name="branch" class="form-select" onchange="this.form.submit()">
+        <option value="">{% if request.args.get('branch') %}View All Branches{% else %}Default Branch: {{ branches[0] if branches else 'None' }}{% endif %}</option>
+        {% for b in branches %}
+          <option value="{{ b }}" {% if request.args.get('branch') == b or (not request.args.get('branch') and loop.first) %}selected{% endif %}>{{ b }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-4 d-grid">
+      <a href="/executive/target/set" class="btn btn-primary">➕ Set New Target</a>
+    </div>
+  </form>
+
+  {% for r in results %}
+    <div class="card p-4 position-relative">
+      <button class="btn btn-outline-secondary btn-sm edit-btn" data-bs-toggle="modal" data-bs-target="#editModal_{{ r._id }}">Edit</button>
+      <h5>{{ r.title }} -- <span class="text-muted">{{ r.duration|capitalize }}</span></h5>
+      <p><strong>Manager:</strong> {{ r.manager }} | <strong>Branch:</strong> {{ r.branch }}</p>
+
+      <div class="mb-3">
+        <h6>🎯 Product Target</h6>
+        <p><strong>Target:</strong> {{ r.product_target }} | <strong>Achieved:</strong> {{ r.product_achieved }}</p>
+        <div class="progress">
+          <div class="progress-bar bg-success" data-pct="{{ r.product_pct }}">{{ r.product_pct }}%</div>
+        </div>
+      </div>
+
+      <div class="mb-3">
+        <h6>💰 Cash Collection</h6>
+        <p><strong>Target:</strong> {{ r.cash_target }} | <strong>Achieved:</strong> {{ r.cash_achieved }}</p>
+        <div class="progress">
+          <div class="progress-bar bg-info" data-pct="{{ r.payment_pct }}">{{ r.payment_pct }}%</div>
+        </div>
+      </div>
+
+      <div class="mb-3">
+        <h6>👥 Customer Target</h6>
+        <p><strong>Target:</strong> {{ r.customer_target }} | <strong>Achieved:</strong> {{ r.customer_achieved }}</p>
+        <div class="progress">
+          <div class="progress-bar bg-warning text-dark" data-pct="{{ r.customer_pct }}">{{ r.customer_pct }}%</div>
+        </div>
+      </div>
+
+      <div>
+        <h6>📈 Overall Progress</h6>
+        <div class="progress">
+          <div class="progress-bar bg-primary" data-pct="{{ r.overall }}">{{ r.overall }}%</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Edit Modal -->
+    <div class="modal fade" id="editModal_{{ r._id }}" tabindex="-1" aria-labelledby="editModalLabel_{{ r._id }}" aria-hidden="true">
+      <div class="modal-dialog">
+        <form method="POST" action="/update-target/{{ r._id }}">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title" id="editModalLabel_{{ r._id }}">Edit Target - {{ r.title }}</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <div class="mb-3">
+                <label class="form-label">Title</label>
+                <input type="text" name="title" value="{{ r.title }}" class="form-control" required>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Duration</label>
+                <select name="duration" class="form-select" required>
+                  <option value="daily" {% if r.duration == 'daily' %}selected{% endif %}>Daily</option>
+                  <option value="weekly" {% if r.duration == 'weekly' %}selected{% endif %}>Weekly</option>
+                  <option value="monthly" {% if r.duration == 'monthly' %}selected{% endif %}>Monthly</option>
+                  <option value="yearly" {% if r.duration == 'yearly' %}selected{% endif %}>Yearly</option>
+                </select>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Product Target</label>
+                <input type="number" name="product_target" value="{{ r.product_target }}" class="form-control">
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Cash Target</label>
+                <input type="number" name="cash_target" value="{{ r.cash_target }}" class="form-control">
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Customer Target</label>
+                <input type="number" name="customer_target" value="{{ r.customer_target }}" class="form-control">
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button type="submit" class="btn btn-primary">Save Changes</button>
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  {% else %}
+    <p class="text-center text-muted">No targets found.</p>
+  {% endfor %}
+
+  <footer class="brand-footer">
+    <div class="brand-lockup">
+      <img src="https://imagedelivery.net/h9fmMoa1o2c2P55TcWJGOg/10283f28-b9a0-4100-b254-19a854386800/public"
+           alt="SmartLiving Emporium Plus"
+           class="brand-logo">
+      <span class="brand-name-text">SMARTLIVING EMPORIUM PLUS</span>
+    </div>
+    <div class="brand-lockup">
+      <span>Powered by Flux360</span>
+      <img src="https://imagedelivery.net/h9fmMoa1o2c2P55TcWJGOg/237a407f-0df9-4a4b-b777-7ecbaacc0300/public"
+           alt="Flux360"
+           class="platform-logo">
+    </div>
+  </footer>
+</div>
+
+<!-- JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+  window.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.progress-bar').forEach(bar => {
+      const pct = bar.getAttribute('data-pct');
+      bar.style.width = pct + '%';
+    });
+  });
+</script>
+</body>
+</html>

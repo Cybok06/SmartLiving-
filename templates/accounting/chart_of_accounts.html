@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="https://static.wixstatic.com/media/13bf20_85bc952de62849e895a80e274750784b~mv2.png/v1/fill/w_392,h_146,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/13bf20_85bc952de62849e895a80e274750784b~mv2.png" type="image/png">
+
+  <title>Chart of Accounts -  TRUEtype Services</title>
+
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+
+  <script>
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            primary: "#16a34a",
+            secondary: "#0f172a",
+            "neutral-0": "#f9fafb",
+            "neutral-1": "#e5e7eb",
+            "neutral-9": "#111827",
+            "bg-light": "#f6f8f7",
+            "bg-dark": "#112117",
+          },
+          fontFamily: { display: ["Inter","system-ui","sans-serif"] },
+          borderRadius: { xl: "1.125rem" }
+        }
+      }
+    }
+  </script>
+  <style>
+    .material-symbols-outlined { font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24 }
+    @media (prefers-reduced-motion:no-preference){
+      .trans { transition: all .2s ease }
+    }
+    .modal-hidden { display: none; }
+  </style>
+</head>
+<body class="min-h-full bg-bg-light text-neutral-9 dark:bg-bg-dark dark:text-neutral-0 font-display">
+  {% include 'accounting/sidebar.html' %}
+<header class="lg:hidden sticky top-0 z-40 bg-white/90 dark:bg-neutral-9/80 backdrop-blur border-b border-neutral-1 dark:border-neutral-9">
+  <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+    <button id="btnOpenSidebar" class="p-2 rounded-lg border border-neutral-1 dark:border-neutral-9">
+      <span class="material-symbols-outlined">menu</span>
+    </button>
+    <h1 class="text-base font-semibold">Chart of Accounts</h1>
+    <button id="btnOpenModalMobile" class="px-3 py-1.5 rounded-lg bg-primary text-white text-sm font-semibold">New</button>
+  </div>
+</header>
+
+<div class="relative flex">
+  <!-- Sidebar -->
+  
+      </div>
+
+    
+
+      
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="flex-1 w-full min-w-0 lg:ml-0">
+    <div class="max-w-7xl mx-auto px-4 lg:px-8 py-6 lg:py-8">
+      <!-- FLASH MESSAGES -->
+      {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="mb-4 space-y-2">
+          {% for category, message in messages %}
+            {% set cat = category or 'info' %}
+            {% set clr = 'bg-green-50 text-green-700 border-green-200' if cat=='success'
+                         else ('bg-yellow-50 text-yellow-700 border-yellow-200' if cat=='warning'
+                         else ('bg-red-50 text-red-700 border-red-200' if cat=='danger'
+                         else 'bg-blue-50 text-blue-700 border-blue-200')) %}
+            <div class="px-4 py-2 rounded-lg border {{ clr }}">{{ message }}</div>
+          {% endfor %}
+        </div>
+      {% endif %}
+      {% endwith %}
+
+      <!-- Heading + actions -->
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <h1 class="hidden lg:block text-3xl font-black tracking-tight">Chart of Accounts</h1>
+        <div class="flex gap-2">
+          <form action="{{ url_for('accounting.accounts_import') }}" method="post" enctype="multipart/form-data" class="hidden sm:flex items-center gap-2">
+            <label class="px-3 py-2 text-sm font-semibold border rounded-xl cursor-pointer hover:bg-neutral-0 dark:hover:bg-neutral-9">
+              <span class="material-symbols-outlined text-base align-middle">upload_file</span>
+              <input type="file" name="file" accept=".csv" class="hidden" onchange="this.form.submit()"/>
+              Import CSV
+            </label>
+          </form>
+          <a href="{{ url_for('accounting.accounts_export') }}"
+             class="px-3 py-2 text-sm font-semibold border rounded-xl hover:bg-neutral-0 dark:hover:bg-neutral-9">
+            <span class="material-symbols-outlined text-base align-middle">download</span> Export
+          </a>
+          <button id="btnOpenModal"
+             class="px-3 py-2 rounded-xl bg-primary text-white text-sm font-bold hover:bg-primary/90">
+            <span class="material-symbols-outlined text-base align-middle" style="font-variation-settings:'FILL' 1">add</span> New Account
+          </button>
+        </div>
+      </div>
+
+      <!-- Filters -->
+      <form method="get" class="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <label class="relative">
+          <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">search</span>
+          <input type="text" name="q" value="{{ request.args.get('q','') }}" placeholder="Search by name or code…"
+                 class="w-full pl-10 pr-3 h-11 rounded-xl border bg-white dark:bg-neutral-9"/>
+        </label>
+        <select name="type" class="h-11 rounded-xl border bg-white dark:bg-neutral-9">
+          <option value="">Type: All</option>
+          {% for t in ['asset','liability','equity','income','expense'] %}
+          <option value="{{t}}" {{ 'selected' if request.args.get('type')==t else '' }}>{{ t|title }}</option>
+          {% endfor %}
+        </select>
+        <select name="status" class="h-11 rounded-xl border bg-white dark:bg-neutral-9">
+          <option value="">Status: All</option>
+          <option value="active" {{ 'selected' if request.args.get('status')=='active' else '' }}>Active</option>
+          <option value="inactive" {{ 'selected' if request.args.get('status')=='inactive' else '' }}>Inactive</option>
+        </select>
+        <button class="h-11 rounded-xl border font-semibold hover:bg-neutral-0 dark:hover:bg-neutral-9">Filter</button>
+      </form>
+
+      <!-- Table / Cards -->
+      <section class="mt-6 rounded-xl border bg-white dark:bg-neutral-9 overflow-hidden">
+        <!-- desktop table -->
+        <div class="hidden md:block overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead class="bg-neutral-0 dark:bg-neutral-9/70 text-slate-600 dark:text-slate-300 uppercase text-xs">
+              <tr>
+                <th class="px-5 py-3 text-left">Code</th>
+                <th class="px-5 py-3 text-left">Name</th>
+                <th class="px-5 py-3 text-left">Type</th>
+                <th class="px-5 py-3 text-left">Status</th>
+                <th class="px-5 py-3 text-left">Currency</th>
+                <th class="px-5 py-3 text-left">Allow Posting</th>
+                <th class="px-5 py-3"></th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-neutral-1/70 dark:divide-neutral-9/70">
+            {% for a in accounts %}
+              <tr class="hover:bg-primary/5 dark:hover:bg-primary/10">
+                <td class="px-5 py-3 font-mono text-slate-500">{{ a.code }}</td>
+                <td class="px-5 py-3 font-medium">{{ a.name }}</td>
+                <td class="px-5 py-3">
+                  {% set map = {'asset':'bg-blue-100 text-blue-800','liability':'bg-orange-100 text-orange-800','equity':'bg-purple-100 text-purple-800','income':'bg-emerald-100 text-emerald-800','expense':'bg-red-100 text-red-800'} %}
+                  <span class="px-2.5 py-0.5 rounded-full text-xs font-medium {{ map.get(a.type,'bg-slate-100 text-slate-800') }}">{{ a.type|title }}</span>
+                </td>
+                <td class="px-5 py-3">
+                  {% if a.active %}
+                  <span class="px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Active</span>
+                  {% else %}
+                  <span class="px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">Inactive</span>
+                  {% endif %}
+                </td>
+                <td class="px-5 py-3">{{ a.currency or base_currency }}</td>
+                <td class="px-5 py-3">{{ 'Yes' if a.allow_post else 'No' }}</td>
+                <td class="px-5 py-3 text-right">
+                  <div class="inline-flex gap-2">
+                    <a href="{{ url_for('accounting.accounts_edit', code=a.code) }}" class="p-1.5 rounded hover:bg-neutral-0 dark:hover:bg-neutral-9" title="Edit"><span class="material-symbols-outlined">edit</span></a>
+                    <form method="post" action="{{ url_for('accounting.accounts_toggle', code=a.code) }}">
+                      <button class="p-1.5 rounded hover:bg-neutral-0 dark:hover:bg-neutral-9" title="Toggle Active">
+                        <span class="material-symbols-outlined">{{ 'visibility_off' if a.active else 'visibility' }}</span>
+                      </button>
+                    </form>
+                  </div>
+                </td>
+              </tr>
+            {% else %}
+              <tr><td colspan="7" class="px-5 py-8 text-center text-slate-500">No accounts found.</td></tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        <!-- mobile cards -->
+        <div class="md:hidden divide-y divide-neutral-1/70">
+          {% for a in accounts %}
+          <article class="p-4">
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <div class="text-sm text-slate-500 font-mono">{{ a.code }}</div>
+                <h3 class="font-semibold">{{ a.name }}</h3>
+                <div class="mt-1 flex items-center gap-2 text-xs">
+                  <span class="px-2 py-0.5 rounded-full bg-slate-100">{{ a.type|title }}</span>
+                  {% if a.active %}<span class="px-2 py-0.5 rounded-full bg-green-100 text-green-800">Active</span>
+                  {% else %}<span class="px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-800">Inactive</span>{% endif %}
+                </div>
+                <div class="mt-1 text-xs text-slate-500">Currency: {{ a.currency or base_currency }} -  Allow Post: {{ 'Yes' if a.allow_post else 'No' }}</div>
+              </div>
+              <div class="shrink-0 flex flex-col gap-1">
+                <a class="px-3 py-1.5 rounded-lg border text-sm text-center" href="{{ url_for('accounting.accounts_edit', code=a.code) }}">Edit</a>
+                <form method="post" action="{{ url_for('accounting.accounts_toggle', code=a.code) }}">
+                  <button class="px-3 py-1.5 rounded-lg border text-sm">{{ 'Disable' if a.active else 'Enable' }}</button>
+                </form>
+              </div>
+            </div>
+          </article>
+          {% else %}
+          <div class="p-8 text-center text-slate-500">No accounts found.</div>
+          {% endfor %}
+        </div>
+      </section>
+
+      <!-- Pagination -->
+      {% if pager and pager.pages > 1 %}
+      <nav class="mt-6 flex items-center justify-between">
+        <a class="px-3 py-2 rounded-lg border {{ 'pointer-events-none opacity-50' if not pager.prev_url else '' }}"
+           href="{{ pager.prev_url or '#' }}">Previous</a>
+        <div class="text-sm text-slate-500">Page {{ pager.page }} of {{ pager.pages }}</div>
+        <a class="px-3 py-2 rounded-lg border {{ 'pointer-events-none opacity-50' if not pager.next_url else '' }}"
+           href="{{ pager.next_url or '#' }}">Next</a>
+      </nav>
+      {% endif %}
+    </div>
+  </main>
+</div>
+
+<!-- ADD ACCOUNT MODAL -->
+<div id="accountModal" class="fixed inset-0 z-[60] modal-hidden">
+  <div id="accountModalBackdrop" class="absolute inset-0 bg-black/40"></div>
+  <div class="absolute inset-0 flex items-center justify-center p-4">
+    <div class="w-full max-w-xl rounded-xl border bg-white dark:bg-neutral-9 dark:text-neutral-0 shadow-xl">
+      <div class="px-5 py-4 border-b flex items-center justify-between">
+        <h2 class="text-lg font-bold">Add New Account</h2>
+        <button id="btnCloseModal" class="p-2 rounded-lg hover:bg-neutral-0 dark:hover:bg-neutral-9">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+      <form method="post" action="{{ url_for('accounting.accounts_create') }}" class="p-5 space-y-4">
+        <div class="grid sm:grid-cols-2 gap-4">
+          <label class="block">
+            <span class="text-sm font-medium">Code <span class="text-red-600">*</span></span>
+            <input name="code" required class="mt-1 w-full rounded-lg border p-2.5" placeholder="e.g., 1200"/>
+          </label>
+          <label class="block">
+            <span class="text-sm font-medium">Name <span class="text-red-600">*</span></span>
+            <input name="name" required class="mt-1 w-full rounded-lg border p-2.5" placeholder="Accounts Receivable"/>
+          </label>
+        </div>
+
+        <div class="grid sm:grid-cols-3 gap-4">
+          <label class="block">
+            <span class="text-sm font-medium">Type <span class="text-red-600">*</span></span>
+            <select name="type" required class="mt-1 w-full rounded-lg border p-2.5">
+              {% for t in ['asset','liability','equity','income','expense'] %}
+              <option value="{{t}}">{{ t|title }}</option>
+              {% endfor %}
+            </select>
+          </label>
+          <label class="block">
+            <span class="text-sm font-medium">Currency</span>
+            <input name="currency" value="{{ base_currency or 'GHS' }}" class="mt-1 w-full rounded-lg border p-2.5" placeholder="GHS"/>
+          </label>
+          <label class="flex items-center gap-2 pt-7">
+            <input type="checkbox" name="allow_post" class="h-5 w-5" checked/>
+            <span class="text-sm font-medium">Allow Posting</span>
+          </label>
+        </div>
+
+        <label class="inline-flex items-center gap-2">
+          <input type="checkbox" name="active" class="h-5 w-5" checked/>
+          <span class="text-sm font-medium">Active</span>
+        </label>
+
+        <div class="pt-2 flex items-center gap-3">
+          <button class="px-4 py-2 rounded-lg bg-primary text-white font-semibold hover:opacity-95">Create Account</button>
+          <button type="button" id="btnCancelModal" class="px-4 py-2 rounded-lg border">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Scripts -->
+<script>
+  // Sidebar open/close (mobile)
+  const openBtn = document.getElementById('btnOpenSidebar');
+  const closeBtn = document.getElementById('btnCloseSidebar');
+  const sidebar = document.getElementById('sidebar');
+  openBtn && openBtn.addEventListener('click', ()=> sidebar.style.left='0');
+  closeBtn && closeBtn.addEventListener('click', ()=> sidebar.style.left='-100%');
+
+  // Modal open/close
+  const modal = document.getElementById('accountModal');
+  const modalBackdrop = document.getElementById('accountModalBackdrop');
+  const btnOpenModal = document.getElementById('btnOpenModal');
+  const btnOpenModalMobile = document.getElementById('btnOpenModalMobile');
+  const btnCloseModal = document.getElementById('btnCloseModal');
+  const btnCancelModal = document.getElementById('btnCancelModal');
+
+  const openModal = () => { modal.classList.remove('modal-hidden'); };
+  const closeModal = () => { modal.classList.add('modal-hidden'); };
+
+  btnOpenModal && btnOpenModal.addEventListener('click', openModal);
+  btnOpenModalMobile && btnOpenModalMobile.addEventListener('click', openModal);
+  btnCloseModal && btnCloseModal.addEventListener('click', closeModal);
+  btnCancelModal && btnCancelModal.addEventListener('click', closeModal);
+  modalBackdrop && modalBackdrop.addEventListener('click', (e)=> {
+    if (e.target === modalBackdrop) closeModal();
+  });
+  window.addEventListener('keydown', (e)=> { if (e.key === 'Escape') closeModal(); });
+</script>
+</body>
+</html>

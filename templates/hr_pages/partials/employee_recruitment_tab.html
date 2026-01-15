@@ -1,0 +1,810 @@
+{# templates/hr_pages/partials/employee_recruitment_tab.html #}
+
+<style>
+  /* Connected step pipeline look */
+  .hr-step-track .hr-recruitment-step-btn {
+    position: relative;
+    border-radius: 999px;
+  }
+  .hr-step-track .hr-recruitment-step-btn::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    right: -18px;
+    width: 24px;
+    height: 2px;
+    background: #e5e7eb;
+    transform: translateY(-50%);
+  }
+  .hr-step-track .hr-recruitment-step-btn:last-child::after {
+    display: none;
+  }
+  .hr-step-track .hr-recruitment-step-btn.btn-success-subtle::after {
+    background: rgba(34, 197, 94, 0.55);
+  }
+
+  /* Training evaluation */
+  .hr-training-overall-stars i,
+  .hr-training-value-stars i {
+    cursor: pointer;
+    font-size: 1rem;
+  }
+</style>
+
+<div class="card border-0 shadow-sm mb-4">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <div>
+      <h2 class="h6 mb-1">Recruitment Process</h2>
+      <p class="small text-muted mb-0">
+        Track every step from documentation to full staff. This section is update-ready and also prints neatly.
+      </p>
+    </div>
+
+    <div class="text-end small">
+      <div class="mb-1">
+        <span class="text-muted me-1">Current Stage:</span>
+        <span class="badge bg-primary-subtle text-primary border border-primary-subtle">
+          {{ recruitment_stage }}
+        </span>
+      </div>
+
+      <div class="d-flex align-items-center gap-2 justify-content-end">
+        <div class="progress" style="width:160px;height:6px;">
+          <div
+            class="progress-bar bg-success hr-progress-bar"
+            role="progressbar"
+            data-progress="{{ recruitment_progress_pct }}"
+            aria-valuenow="{{ recruitment_progress_pct }}"
+            aria-valuemin="0"
+            aria-valuemax="100">
+          </div>
+        </div>
+        <span class="text-muted">{{ completed_steps }}/{{ total_steps }} completed</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="card-body">
+    {# Extract training steps so we can show their reviews #}
+    {% set ns = namespace(training1=None, training2=None) %}
+    {% for step in recruitment_steps %}
+      {% if step.key == 'training1' %}
+        {% set ns.training1 = step %}
+      {% elif step.key == 'training2' %}
+        {% set ns.training2 = step %}
+      {% endif %}
+    {% endfor %}
+
+    {% set tr1 = (ns.training1.training_review if ns.training1 and ns.training1.training_review is defined else {}) %}
+    {% set tr2 = (ns.training2.training_review if ns.training2 and ns.training2.training_review is defined else {}) %}
+
+    <!-- STAGE CHIPS (connected pipeline) -->
+    <div class="mb-3">
+      <div class="small text-muted mb-1">Checklist</div>
+      <div class="d-flex flex-wrap gap-2 hr-step-track">
+        {% for step in recruitment_steps %}
+          {% set is_completed = step.status == "Completed" %}
+          <button
+            type="button"
+            class="btn btn-sm rounded-pill px-3 hr-recruitment-step-btn
+                   {% if is_completed %}btn-success-subtle border-success-subtle text-success{% else %}btn-light border text-muted{% endif %}"
+            data-step-key="{{ step.key }}"
+            data-step-status="{{ step.status }}">
+            {% if is_completed %}
+              <i class="bi bi-check2-circle me-1"></i>
+            {% else %}
+              <i class="bi bi-circle me-1"></i>
+            {% endif %}
+            {{ step.label }}
+          </button>
+        {% endfor %}
+      </div>
+      <small class="text-muted d-block mt-1">
+        Click a stage to toggle <strong>Completed / Pending</strong>. Progress and current stage update automatically.
+      </small>
+    </div>
+
+    <!-- DETAILS TABLE -->
+    <div class="table-responsive mb-4">
+      <table class="table table-sm align-middle mb-0">
+        <thead class="table-light">
+          <tr class="small text-muted">
+            <th style="width:30%;">Stage</th>
+            <th style="width:15%;">Status</th>
+            <th style="width:15%;">Completed On</th>
+            <th style="width:20%;">Completed By</th>
+            <th style="width:20%;">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for step in recruitment_steps %}
+            <tr>
+              <td class="small">{{ step.label }}</td>
+              <td>
+                {% if step.status == "Completed" %}
+                  <span class="badge bg-success-subtle text-success-emphasis">Completed</span>
+                {% elif step.status == "In Progress" %}
+                  <span class="badge bg-primary-subtle text-primary-emphasis">In progress</span>
+                {% else %}
+                  <span class="badge bg-light text-muted border">Pending</span>
+                {% endif %}
+              </td>
+              <td class="small">
+                {% if step.completed_on %}
+                  {{ step.completed_on }}
+                {% else %}
+                  --
+                {% endif %}
+              </td>
+              <td class="small">
+                {{ step.completed_by or "--" }}
+              </td>
+              <td>
+                <button
+                  type="button"
+                  class="btn btn-xs btn-outline-success hr-mark-step-complete"
+                  data-step-key="{{ step.key }}">
+                  <i class="bi bi-check2 me-1"></i>Mark Complete
+                </button>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- TRAINING EVALUATION & WORK VALUES -->
+    <div class="border rounded-3 p-3 mb-4">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <div>
+          <div class="small text-muted text-uppercase mb-1">Training Evaluation</div>
+          <div class="fw-semibold small">
+            Rate performance for Training 1 &amp; 2 and score work values like honesty and punctuality.
+          </div>
+        </div>
+      </div>
+
+      <ul class="nav nav-pills nav-justified nav-sm mb-3" role="tablist">
+        <li class="nav-item" role="presentation">
+          <button class="nav-link active"
+                  id="training1-tab"
+                  data-bs-toggle="tab"
+                  data-bs-target="#training1-pane"
+                  type="button"
+                  role="tab">
+            Training 1 - Mission &amp; Vision
+          </button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link"
+                  id="training2-tab"
+                  data-bs-toggle="tab"
+                  data-bs-target="#training2-pane"
+                  type="button"
+                  role="tab">
+            Training 2 - Field Work
+          </button>
+        </li>
+      </ul>
+
+      <div class="tab-content">
+        {# ---------------- Training 1 ---------------- #}
+        <div class="tab-pane fade show active hr-training-panel"
+             id="training1-pane"
+             role="tabpanel"
+             data-training-key="training1">
+          <div class="row g-3">
+            <div class="col-12 col-lg-4">
+              <div class="border rounded-3 p-2 h-100">
+                <div class="small text-muted mb-1">Overall Training Rating</div>
+                <div class="d-flex align-items-center gap-2 mb-1">
+                  <span class="small text-muted">Performance:</span>
+                  <div class="d-flex align-items-center gap-1 hr-training-overall-stars"
+                       data-current-rating="{{ tr1.overall_rating or 0 }}">
+                    {% for i in range(1, 6) %}
+                      <i class="bi {% if tr1.overall_rating and i <= tr1.overall_rating %}bi-star-fill text-warning{% else %}bi-star{% endif %}"
+                         data-value="{{ i }}"></i>
+                    {% endfor %}
+                  </div>
+                </div>
+                <small class="text-muted extra-small">
+                  Rate how well the employee understood and demonstrated the mission &amp; vision.
+                </small>
+              </div>
+            </div>
+
+            <div class="col-12 col-lg-8">
+              <label class="form-label small mb-1">Training Notes</label>
+              <textarea
+                id="hr-training1-notes"
+                rows="3"
+                class="form-control form-control-sm"
+                placeholder="Key observations from the training, strengths, areas to improve...">{{ tr1.notes or '' }}</textarea>
+            </div>
+
+            <div class="col-12">
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <div>
+                  <div class="small text-muted text-uppercase mb-1">Work Values (Training 1)</div>
+                  <small class="text-muted">
+                    Score core values like honesty, punctuality and confidence. Add any custom values you want to track.
+                  </small>
+                </div>
+                <button type="button"
+                        class="btn btn-xs btn-outline-secondary hr-training-add-value">
+                  <i class="bi bi-plus-circle me-1"></i>Add custom value
+                </button>
+              </div>
+
+              <div class="table-responsive">
+                <table class="table table-sm align-middle mb-0">
+                  <thead class="table-light small">
+                    <tr>
+                      <th style="width:50%;">Value</th>
+                      <th style="width:50%;">Rating</th>
+                    </tr>
+                  </thead>
+                  <tbody class="hr-training-values-body">
+                    {% set tr1_values = tr1.get('values', []) %}
+                    {% if tr1_values %}
+                      {% for v in tr1_values %}
+                        <tr class="hr-training-value-row">
+                          <td>
+                            <input type="text"
+                                   class="form-control form-control-sm"
+                                   value="{{ v.label }}"
+                                   placeholder="e.g. Honesty">
+                          </td>
+                          <td>
+                            <div class="d-flex align-items-center gap-1 hr-training-value-stars"
+                                 data-current-rating="{{ v.rating or 0 }}">
+                              {% for i in range(1, 6) %}
+                                <i class="bi {% if v.rating and i <= v.rating %}bi-star-fill text-warning{% else %}bi-star{% endif %}"
+                                   data-value="{{ i }}"></i>
+                              {% endfor %}
+                            </div>
+                          </td>
+                        </tr>
+                      {% endfor %}
+                    {% else %}
+                      {% for default_label in ["Honesty", "Punctuality", "Confidence"] %}
+                        <tr class="hr-training-value-row">
+                          <td>
+                            <input type="text"
+                                   class="form-control form-control-sm"
+                                   value="{{ default_label }}"
+                                   placeholder="e.g. Honesty">
+                          </td>
+                          <td>
+                            <div class="d-flex align-items-center gap-1 hr-training-value-stars"
+                                 data-current-rating="0">
+                              {% for i in range(1, 6) %}
+                                <i class="bi bi-star" data-value="{{ i }}"></i>
+                              {% endfor %}
+                            </div>
+                          </td>
+                        </tr>
+                      {% endfor %}
+                    {% endif %}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="col-12 d-flex justify-content-end mt-2">
+              <button type="button"
+                      class="btn btn-sm btn-primary hr-training-save-btn"
+                      data-training-key="training1">
+                <i class="bi bi-save me-1"></i>Save Training 1 Review
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {# ---------------- Training 2 ---------------- #}
+        <div class="tab-pane fade hr-training-panel"
+             id="training2-pane"
+             role="tabpanel"
+             data-training-key="training2">
+          <div class="row g-3">
+            <div class="col-12 col-lg-4">
+              <div class="border rounded-3 p-2 h-100">
+                <div class="small text-muted mb-1">Overall Training Rating</div>
+                <div class="d-flex align-items-center gap-2 mb-1">
+                  <span class="small text-muted">Performance:</span>
+                  <div class="d-flex align-items-center gap-1 hr-training-overall-stars"
+                       data-current-rating="{{ tr2.overall_rating or 0 }}">
+                    {% for i in range(1, 6) %}
+                      <i class="bi {% if tr2.overall_rating and i <= tr2.overall_rating %}bi-star-fill text-warning{% else %}bi-star{% endif %}"
+                         data-value="{{ i }}"></i>
+                    {% endfor %}
+                  </div>
+                </div>
+                <small class="text-muted extra-small">
+                  Rate how well the employee handled practical field work and real scenarios.
+                </small>
+              </div>
+            </div>
+
+            <div class="col-12 col-lg-8">
+              <label class="form-label small mb-1">Training Notes</label>
+              <textarea
+                id="hr-training2-notes"
+                rows="3"
+                class="form-control form-control-sm"
+                placeholder="Key observations from field work, attitude with customers, resilience...">{{ tr2.notes or '' }}</textarea>
+            </div>
+
+            <div class="col-12">
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <div>
+                  <div class="small text-muted text-uppercase mb-1">Work Values (Training 2)</div>
+                  <small class="text-muted">
+                    Rate values demonstrated during field work and add any extra values you track.
+                  </small>
+                </div>
+                <button type="button"
+                        class="btn btn-xs btn-outline-secondary hr-training-add-value">
+                  <i class="bi bi-plus-circle me-1"></i>Add custom value
+                </button>
+              </div>
+
+              <div class="table-responsive">
+                <table class="table table-sm align-middle mb-0">
+                  <thead class="table-light small">
+                    <tr>
+                      <th style="width:50%;">Value</th>
+                      <th style="width:50%;">Rating</th>
+                    </tr>
+                  </thead>
+                  <tbody class="hr-training-values-body">
+                    {% set tr2_values = tr2.get('values', []) %}
+                    {% if tr2_values %}
+                      {% for v in tr2_values %}
+                        <tr class="hr-training-value-row">
+                          <td>
+                            <input type="text"
+                                   class="form-control form-control-sm"
+                                   value="{{ v.label }}"
+                                   placeholder="e.g. Punctuality">
+                          </td>
+                          <td>
+                            <div class="d-flex align-items-center gap-1 hr-training-value-stars"
+                                 data-current-rating="{{ v.rating or 0 }}">
+                              {% for i in range(1, 6) %}
+                                <i class="bi {% if v.rating and i <= v.rating %}bi-star-fill text-warning{% else %}bi-star{% endif %}"
+                                   data-value="{{ i }}"></i>
+                              {% endfor %}
+                            </div>
+                          </td>
+                        </tr>
+                      {% endfor %}
+                    {% else %}
+                      {% for default_label in ["Honesty", "Punctuality", "Confidence"] %}
+                        <tr class="hr-training-value-row">
+                          <td>
+                            <input type="text"
+                                   class="form-control form-control-sm"
+                                   value="{{ default_label }}"
+                                   placeholder="e.g. Honesty">
+                          </td>
+                          <td>
+                            <div class="d-flex align-items-center gap-1 hr-training-value-stars"
+                                 data-current-rating="0">
+                              {% for i in range(1, 6) %}
+                                <i class="bi bi-star" data-value="{{ i }}"></i>
+                              {% endfor %}
+                            </div>
+                          </td>
+                        </tr>
+                      {% endfor %}
+                    {% endif %}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="col-12 d-flex justify-content-end mt-2">
+              <button type="button"
+                      class="btn btn-sm btn-primary hr-training-save-btn"
+                      data-training-key="training2">
+                <i class="bi bi-save me-1"></i>Save Training 2 Review
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PROBATION CARD + DECISION (unchanged) -->
+    <div class="row g-3">
+      <div class="col-12 col-lg-7">
+        <div class="border rounded-3 p-3 h-100">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <div>
+              <div class="small text-muted text-uppercase mb-1">Probation</div>
+              <div class="fw-semibold">
+                Probation Status:
+                {% if probation.status == "Completed" %}
+                  <span class="badge bg-success-subtle text-success-emphasis ms-1">Completed</span>
+                {% elif probation.status == "On Hold" %}
+                  <span class="badge bg-warning-subtle text-warning-emphasis ms-1">On hold</span>
+                {% elif probation.status == "Rejected" %}
+                  <span class="badge bg-danger-subtle text-danger-emphasis ms-1">Rejected</span>
+                {% else %}
+                  <span class="badge bg-primary-subtle text-primary-emphasis ms-1">
+                    {{ probation.status or "In Progress" }}
+                  </span>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+
+          <div class="row g-2 mb-2">
+            <div class="col-6">
+              <label class="form-label small mb-1">Probation Start</label>
+              <input
+                type="date"
+                class="form-control form-control-sm"
+                id="hr-probation-start"
+                value="{{ probation.start_date }}">
+            </div>
+            <div class="col-6">
+              <label class="form-label small mb-1">Probation End</label>
+              <input
+                type="date"
+                class="form-control form-control-sm"
+                id="hr-probation-end"
+                value="{{ probation.end_date }}">
+            </div>
+          </div>
+
+          <div class="row g-2 mb-2">
+            <div class="col-6">
+              <label class="form-label small mb-1">Manager Comments</label>
+              <textarea
+                class="form-control form-control-sm"
+                id="hr-probation-manager-comments"
+                rows="2"
+              >{{ probation.manager_comments }}</textarea>
+            </div>
+            <div class="col-6">
+              <label class="form-label small mb-1">Executive Comments</label>
+              <textarea
+                class="form-control form-control-sm"
+                id="hr-probation-exec-comments"
+                rows="2"
+              >{{ probation.executive_comments }}</textarea>
+            </div>
+          </div>
+
+          <div class="d-flex justify-content-between align-items-center mt-2">
+            <small class="text-muted">Probation auto-completes after 90 days when marked as "Probation".</small>
+            <button
+              type="button"
+              class="btn btn-sm btn-outline-primary"
+              id="hr-probation-save-btn">
+              <i class="bi bi-save me-1"></i>Save Probation
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- RECRUIT / REJECT ACTIONS -->
+      <div class="col-12 col-lg-5">
+        <div class="border rounded-3 p-3 h-100 d-flex flex-column justify-content-between">
+          <div>
+            <div class="small text-muted text-uppercase mb-2">Decision</div>
+            <p class="small text-muted mb-2">
+              HR or Executives can confirm the applicant as full staff after successfully passing all stages,
+              or reject the candidate at any point <em>before</em> full confirmation.
+            </p>
+
+            <div class="d-flex flex-wrap gap-2 align-items-center">
+              <span class="text-muted small">Current employment status:</span>
+              <span class="badge
+                {% if employee.employment_status == 'Probation' %}
+                  bg-warning-subtle text-warning-emphasis
+                {% elif employee.employment_status == 'Exited' or employee.employment_status == 'Rejected' %}
+                  bg-danger-subtle text-danger-emphasis
+                {% else %}
+                  bg-success-subtle text-success-emphasis
+                {% endif %}
+              ">
+                {{ employee.employment_status or "Active" }}
+              </span>
+            </div>
+          </div>
+
+          <div class="mt-3 d-flex flex-column gap-2">
+            {% if recruitment_stage == "Full Staff (After 3 Months)" or employee.employment_status in ["Active", "Exited", "Rejected"] %}
+              <button class="btn btn-sm btn-outline-secondary" type="button" disabled>
+                <i class="bi bi-check2-circle me-1"></i>
+                Employee fully confirmed - no further recruitment actions.
+              </button>
+            {% else %}
+              <button
+                type="button"
+                class="btn btn-sm btn-outline-danger"
+                id="hr-reject-btn">
+                <i class="bi bi-x-octagon me-1"></i>Reject Applicant
+              </button>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Simple Reject Modal -->
+<div class="modal fade" id="hrRejectModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Reject Applicant</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p class="small text-muted">
+          You are about to mark this applicant as <strong>Rejected</strong>. This will update their status and
+          close the recruitment process.
+        </p>
+        <div class="mb-2">
+          <label class="form-label small mb-1">Reason (optional)</label>
+          <textarea class="form-control form-control-sm" id="hr-reject-reason" rows="3"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-sm btn-danger" id="hr-reject-confirm-btn">
+          <i class="bi bi-x-octagon me-1"></i>Confirm Reject
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  const employeeId = "{{ employee._id }}";
+
+  // ---- Progress bar width from data-progress ----
+  document.querySelectorAll('.hr-progress-bar[data-progress]').forEach(bar => {
+    const v = parseInt(bar.dataset.progress || '0', 10);
+    const pct = isNaN(v) ? 0 : Math.max(0, Math.min(100, v));
+    bar.style.width = pct + '%';
+  });
+
+  // 1. Toggle steps from chips
+  document.querySelectorAll('.hr-recruitment-step-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const key = btn.dataset.stepKey;
+      const currentStatus = btn.dataset.stepStatus || 'Pending';
+      const nextStatus = currentStatus === 'Completed' ? 'Pending' : 'Completed';
+      updateStepStatus(key, nextStatus);
+    });
+  });
+
+  // 2. Mark complete buttons in table
+  document.querySelectorAll('.hr-mark-step-complete').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const key = btn.dataset.stepKey;
+      updateStepStatus(key, 'Completed');
+    });
+  });
+
+  function updateStepStatus(key, status) {
+    fetch("{{ url_for('hr.update_recruitment_step', employee_id=employee._id) }}", {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({key, status})
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (!data.ok) throw new Error(data.message || 'Failed to update step.');
+      window.location.reload();
+    })
+    .catch(err => {
+      console.error(err);
+      window.showToast && window.showToast('danger', err.message || 'Error updating recruitment step.');
+    });
+  }
+
+  // ===== TRAINING REVIEW (stars + values + notes) =====
+  function initStarGroup(container, initial) {
+    if (!container) return;
+    const stars = container.querySelectorAll('i[data-value]');
+    function apply(val) {
+      container.dataset.currentRating = String(val);
+      stars.forEach(icon => {
+        const v = parseInt(icon.dataset.value || '0', 10);
+        if (v <= val) {
+          icon.classList.remove('bi-star');
+          icon.classList.add('bi-star-fill', 'text-warning');
+        } else {
+          icon.classList.remove('bi-star-fill', 'text-warning');
+          icon.classList.add('bi-star');
+        }
+      });
+    }
+    const startVal = parseInt(container.dataset.currentRating || initial || '0', 10);
+    apply(isNaN(startVal) ? 0 : startVal);
+
+    container.addEventListener('click', (e) => {
+      const icon = e.target.closest('i[data-value]');
+      if (!icon) return;
+      const v = parseInt(icon.dataset.value || '0', 10) || 0;
+      apply(v);
+    });
+  }
+
+  function initTrainingPanel(panel) {
+    if (!panel) return;
+
+    // Overall stars
+    const overall = panel.querySelector('.hr-training-overall-stars');
+    initStarGroup(overall, 0);
+
+    // Value rows
+    panel.querySelectorAll('.hr-training-value-stars').forEach(stars => {
+      const init = parseInt(stars.dataset.currentRating || '0', 10) || 0;
+      initStarGroup(stars, init);
+    });
+
+    // Add custom value
+    const addBtn = panel.querySelector('.hr-training-add-value');
+    const tbody = panel.querySelector('.hr-training-values-body');
+
+    if (addBtn && tbody) {
+      addBtn.addEventListener('click', () => {
+        const tr = document.createElement('tr');
+        tr.className = 'hr-training-value-row';
+        const tdLabel = document.createElement('td');
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'form-control form-control-sm';
+        input.placeholder = 'e.g. Teamwork';
+        tdLabel.appendChild(input);
+
+        const tdStars = document.createElement('td');
+        const starsDiv = document.createElement('div');
+        starsDiv.className = 'd-flex align-items-center gap-1 hr-training-value-stars';
+        starsDiv.dataset.currentRating = '0';
+        for (let i = 1; i <= 5; i++) {
+          const icon = document.createElement('i');
+          icon.className = 'bi bi-star';
+          icon.setAttribute('data-value', String(i));
+          starsDiv.appendChild(icon);
+        }
+        tdStars.appendChild(starsDiv);
+
+        tr.appendChild(tdLabel);
+        tr.appendChild(tdStars);
+        tbody.appendChild(tr);
+
+        // Init this new star group
+        initStarGroup(starsDiv, 0);
+      });
+    }
+
+    // Save button
+    const saveBtn = panel.querySelector('.hr-training-save-btn');
+    if (saveBtn) {
+      saveBtn.addEventListener('click', () => {
+        const key = saveBtn.dataset.trainingKey;
+        if (!key) return;
+
+        const notesId = key === 'training1' ? 'hr-training1-notes' : 'hr-training2-notes';
+        const notesEl = document.getElementById(notesId);
+        const notes = notesEl ? notesEl.value || '' : '';
+
+        const overallRating = overall
+          ? parseInt(overall.dataset.currentRating || '0', 10) || 0
+          : 0;
+
+        // Collect values
+        const values = [];
+        panel.querySelectorAll('.hr-training-value-row').forEach(row => {
+          const labelInput = row.querySelector('input[type="text"]');
+          const stars = row.querySelector('.hr-training-value-stars');
+          if (!labelInput || !stars) return;
+          const label = (labelInput.value || '').trim();
+          const rating = parseInt(stars.dataset.currentRating || '0', 10) || 0;
+          if (!label || rating <= 0) return;
+          values.push({label, rating});
+        });
+
+        const payload = {
+          key,
+          overall_rating: overallRating,
+          notes,
+          values
+        };
+
+        fetch("{{ url_for('hr.update_training_review', employee_id=employee._id) }}", {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify(payload)
+        })
+        .then(r => r.json())
+        .then(data => {
+          if (!data.ok) throw new Error(data.message || 'Failed to save training review.');
+          window.showToast && window.showToast('success', 'Training review saved.');
+        })
+        .catch(err => {
+          console.error(err);
+          window.showToast && window.showToast('danger', err.message || 'Error saving training review.');
+        });
+      });
+    }
+  }
+
+  document.querySelectorAll('.hr-training-panel').forEach(panel => {
+    initTrainingPanel(panel);
+  });
+
+  // 3. Save probation info
+  const probationSaveBtn = document.getElementById('hr-probation-save-btn');
+  if (probationSaveBtn) {
+    probationSaveBtn.addEventListener('click', () => {
+      const payload = {
+        start_date: document.getElementById('hr-probation-start').value || '',
+        end_date: document.getElementById('hr-probation-end').value || '',
+        manager_comments: document.getElementById('hr-probation-manager-comments').value || '',
+        executive_comments: document.getElementById('hr-probation-exec-comments').value || ''
+      };
+
+      fetch("{{ url_for('hr.update_probation_info', employee_id=employee._id) }}", {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(payload)
+      })
+      .then(r => r.json())
+      .then(data => {
+        if (!data.ok) throw new Error(data.message || 'Failed to update probation.');
+        window.showToast && window.showToast('success', 'Probation info updated.');
+        window.location.reload();
+      })
+      .catch(err => {
+        console.error(err);
+        window.showToast && window.showToast('danger', err.message || 'Error updating probation.');
+      });
+    });
+  }
+
+  // 4. Reject logic
+  const rejectBtn = document.getElementById('hr-reject-btn');
+  if (rejectBtn) {
+    const modalEl = document.getElementById('hrRejectModal');
+    const modal = modalEl ? new bootstrap.Modal(modalEl) : null;
+
+    rejectBtn.addEventListener('click', () => {
+      if (modal) modal.show();
+    });
+
+    const confirmBtn = document.getElementById('hr-reject-confirm-btn');
+    if (confirmBtn) {
+      confirmBtn.addEventListener('click', () => {
+        const reason = document.getElementById('hr-reject-reason').value || '';
+        fetch("{{ url_for('hr.reject_applicant', employee_id=employee._id) }}", {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({reason})
+        })
+        .then(r => r.json())
+        .then(data => {
+          if (!data.ok) throw new Error(data.message || 'Failed to reject applicant.');
+          window.showToast && window.showToast('success', 'Applicant marked as rejected.');
+          window.location.reload();
+        })
+        .catch(err => {
+          console.error(err);
+          window.showToast && window.showToast('danger', err.message || 'Error rejecting applicant.');
+        });
+      });
+    }
+  }
+
+})();
+</script>

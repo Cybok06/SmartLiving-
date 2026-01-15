@@ -1,0 +1,236 @@
+<div class="card border-0 shadow-sm">
+  <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+    <div>
+      <div class="fw-semibold">Overall Performance Rating</div>
+      <small class="text-muted">Auto-calculated from Sales, Leads, Active Customers, Working Days (current month)</small>
+    </div>
+    <button class="btn btn-sm btn-outline-secondary" id="btnRefreshRating">
+      <i class="bi bi-arrow-repeat me-1"></i> Refresh
+    </button>
+  </div>
+
+  <div class="card-body">
+    <div class="p-3 border rounded-4 mb-3 d-flex flex-wrap justify-content-between align-items-center gap-3"
+         style="background:rgba(59,130,246,.06);">
+      <div>
+        <div class="text-muted small">Overall Stars</div>
+        <div class="fw-bold" style="font-size:2rem;" id="ratingStars">--</div>
+        <div class="small text-muted" id="ratingPeriod">--</div>
+        <div class="small text-muted">Source: <span id="ratingSource">--</span></div>
+      </div>
+
+      <div class="text-end">
+        <div class="text-muted small">Score</div>
+        <div class="fw-bold fs-4" id="ratingScore">--</div>
+        <span class="badge text-bg-light border" id="ratingTeamBadge" style="display:none;"></span>
+      </div>
+    </div>
+
+    <div class="row g-3">
+      <div class="col-md-6">
+        <div class="border rounded-4 p-3 h-100">
+          <div class="fw-semibold mb-2">Raw Metrics</div>
+          <div class="small">
+            <div><span class="text-muted">Sales:</span> <span class="fw-semibold" id="mSales">--</span></div>
+            <div><span class="text-muted">Active Customers:</span> <span class="fw-semibold" id="mActive">--</span></div>
+            <div><span class="text-muted">Leads:</span> <span class="fw-semibold" id="mLeads">--</span></div>
+            <div><span class="text-muted">Working Days:</span> <span class="fw-semibold" id="mWork">--</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-6">
+        <div class="border rounded-4 p-3 h-100">
+          <div class="fw-semibold mb-2">Breakdown (0-100)</div>
+
+          <div class="mb-2">
+            <div class="d-flex justify-content-between small">
+              <span>Active Customers</span><span id="bActive">--</span>
+            </div>
+            <div class="progress" style="height:10px;"><div class="progress-bar" id="barActive" style="width:0%"></div></div>
+          </div>
+
+          <div class="mb-2">
+            <div class="d-flex justify-content-between small">
+              <span>Sales</span><span id="bSales">--</span>
+            </div>
+            <div class="progress" style="height:10px;"><div class="progress-bar" id="barSales" style="width:0%"></div></div>
+          </div>
+
+          <div class="mb-2">
+            <div class="d-flex justify-content-between small">
+              <span>Leads</span><span id="bLeads">--</span>
+            </div>
+            <div class="progress" style="height:10px;"><div class="progress-bar" id="barLeads" style="width:0%"></div></div>
+          </div>
+
+          <div>
+            <div class="d-flex justify-content-between small">
+              <span>Working Days</span><span id="bWork">--</span>
+            </div>
+            <div class="progress" style="height:10px;"><div class="progress-bar" id="barWork" style="width:0%"></div></div>
+          </div>
+
+          <hr class="my-3">
+          <div class="small text-muted" id="weightsLabel">--</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  // ================= SAFE EMPLOYEE ID =================
+  const EMPLOYEE_ID = (
+    "{{ employee_id|default('') }}" ||
+    "{{ employee._id }}"
+  ).trim();
+
+  const $ = (id) => document.getElementById(id);
+
+  const els = {
+    stars: $("ratingStars"),
+    score: $("ratingScore"),
+    period: $("ratingPeriod"),
+    source: $("ratingSource"),
+    team: $("ratingTeamBadge"),
+
+    mSales: $("mSales"),
+    mActive: $("mActive"),
+    mLeads: $("mLeads"),
+    mWork: $("mWork"),
+
+    bActive: $("bActive"),
+    bSales: $("bSales"),
+    bLeads: $("bLeads"),
+    bWork: $("bWork"),
+
+    barActive: $("barActive"),
+    barSales: $("barSales"),
+    barLeads: $("barLeads"),
+    barWork: $("barWork"),
+
+    weights: $("weightsLabel"),
+    refresh: $("btnRefreshRating"),
+  };
+
+  // ================= HELPERS =================
+  const clamp = (n, a, b) => Math.max(a, Math.min(b, Number(n || 0)));
+
+  const money = (n) =>
+    "GHS " + Number(n || 0).toLocaleString(undefined, {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+
+  const starsHtml = (s) => {
+    s = clamp(s, 1, 5);
+    let out = "";
+    for (let i = 1; i <= 5; i++) {
+      out += i <= s
+        ? '<i class="bi bi-star-fill text-warning me-1"></i>'
+        : '<i class="bi bi-star text-muted me-1"></i>';
+    }
+    return out;
+  };
+
+  const setBar = (el, v) => {
+    if (!el) return;
+    v = clamp(v, 0, 100);
+    el.style.width = v + "%";
+  };
+
+  // ================= ERROR STATE =================
+  function showError(msg) {
+    els.stars.innerHTML = `<span class="text-danger">Failed</span>`;
+    els.score.textContent = "--";
+    els.period.textContent = "--";
+    els.source.textContent = "error";
+
+    ["mSales","mActive","mLeads","mWork","bActive","bSales","bLeads","bWork"]
+      .forEach(id => $(id).textContent = "--");
+
+    ["barActive","barSales","barLeads","barWork"]
+      .forEach(id => setBar($(id), 0));
+
+    els.weights.innerHTML = `<span class="text-danger">${msg}</span>`;
+    console.error("[Rating]", msg);
+  }
+
+  // ================= RENDER =================
+  function render(js) {
+    const s = js.summary;
+    const r = js.result;
+
+    els.stars.innerHTML = starsHtml(r.stars);
+    els.score.textContent = r.score.toFixed(1) + " / 100";
+    els.period.textContent = `${js.range.start} → ${js.range.end}`;
+    els.source.textContent = js.source;
+
+    // Manager badge
+    if (s.team_size !== undefined) {
+      els.team.style.display = "";
+      els.team.textContent = `Team: ${s.team_size}`;
+    } else {
+      els.team.style.display = "none";
+    }
+
+    // Raw metrics
+    els.mSales.textContent  = money(s.total_sales);
+    els.mActive.textContent = `${s.active_customers} / ${s.total_customers}`;
+    els.mLeads.textContent  = s.leads_total;
+    els.mWork.textContent   = `${s.present_days} / ${s.working_days}`;
+
+    // Breakdown
+    const bd = r.breakdown;
+    els.bActive.textContent = bd.score_active_customers.toFixed(1);
+    els.bSales.textContent  = bd.score_sales.toFixed(1);
+    els.bLeads.textContent  = bd.score_leads.toFixed(1);
+    els.bWork.textContent   = bd.score_working_days.toFixed(1);
+
+    setBar(els.barActive, bd.score_active_customers);
+    setBar(els.barSales,  bd.score_sales);
+    setBar(els.barLeads,  bd.score_leads);
+    setBar(els.barWork,   bd.score_working_days);
+
+    const w = r.weights;
+    els.weights.textContent =
+      `Weights -- Active ${w.active_customers*100}% · Sales ${w.sales*100}% · Leads ${w.leads*100}% · Working Days ${w.working_days*100}%`;
+  }
+
+  // ================= LOAD =================
+  async function load() {
+    if (!EMPLOYEE_ID) {
+      showError("Employee ID not resolved.");
+      return;
+    }
+
+    const url = `/hr/employee/${encodeURIComponent(EMPLOYEE_ID)}/ratings/summary`;
+    const res = await fetch(url, { credentials: "same-origin" });
+
+    if (!res.ok) {
+      showError(`Request failed (${res.status})`);
+      return;
+    }
+
+    const ct = res.headers.get("content-type") || "";
+    if (!ct.includes("application/json")) {
+      showError("Non-JSON response (login redirect or route missing).");
+      return;
+    }
+
+    const js = await res.json();
+    if (!js.ok) {
+      showError(js.message || "Backend error");
+      return;
+    }
+
+    render(js);
+  }
+
+  els.refresh?.addEventListener("click", load);
+  document.addEventListener("DOMContentLoaded", load);
+})();
+</script>
+

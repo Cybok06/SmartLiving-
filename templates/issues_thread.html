@@ -1,0 +1,388 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Issue Thread</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="icon"
+          href="https://imagedelivery.net/h9fmMoa1o2c2P55TcWJGOg/10283f28-b9a0-4100-b254-19a854386800/public"
+          type="image/png">
+  <style>
+    body { background: #f8fafc; }
+    .page { max-width: 1200px; margin: 0 auto; padding: 24px 16px 40px; }
+    .bubble { border-radius: 12px; padding: 10px 12px; max-width: 75%; }
+    .bubble-left { background: #ffffff; border: 1px solid #e2e8f0; }
+    .bubble-right { background: #e6f0ff; border: 1px solid #cfe1ff; margin-left: auto; }
+    .msg-meta { font-size: .75rem; color: #6b7280; }
+    .thumb { width: 72px; height: 72px; object-fit: cover; border: 1px solid #e5e7eb; border-radius: 8px; }
+    .btn-spinner { display: inline-flex; align-items: center; gap: 6px; }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
+      <div>
+        <h4 class="m-0">{{ issue.title }}</h4>
+        <div class="text-muted small">
+          {{ issue.category }} - {{ issue.priority }} - Status: <span id="issueStatusText">{{ issue.status }}</span>
+        </div>
+        <div class="text-muted small">
+          From {{ issue.creator_name }} to {{ issue.assigned_to_name or issue.assigned_to_role|capitalize }}
+        </div>
+      </div>
+      <div class="d-flex gap-2">
+        <a href="{{ dashboard_url }}" class="btn btn-outline-secondary btn-sm">Back to Dashboard</a>
+        <a href="{{ url_for('issues.inbox') }}" class="btn btn-outline-primary btn-sm">Back to Inbox</a>
+      </div>
+    </div>
+
+    <div class="row g-3">
+      <div class="col-12 col-lg-8">
+        <div class="card border-0 shadow-sm">
+          <div class="card-body" id="threadMessages">
+            {% if issue.messages and issue.messages|length %}
+              {% for m in issue.messages %}
+                <div class="d-flex mb-2">
+                  <div class="bubble {% if m.sender_id == current_user_id %}bubble-right{% else %}bubble-left{% endif %}">
+                    <div class="fw-semibold">{{ m.sender_name }} ({{ m.sender_role|capitalize }})</div>
+                    <div class="msg-meta">{{ m.created_at|format_dt }}</div>
+                    {% if m.text %}
+                      <div class="mt-2">{{ m.text }}</div>
+                    {% endif %}
+                    {% if m.attachments and m.attachments|length %}
+                      <div class="d-flex flex-wrap gap-2 mt-2">
+                        {% for a in m.attachments %}
+                          <a href="{{ a.url }}" target="_blank" rel="noopener noreferrer">
+                            <img class="thumb" src="{{ a.url }}" alt="attachment">
+                          </a>
+                        {% endfor %}
+                      </div>
+                    {% endif %}
+                  </div>
+                </div>
+              {% endfor %}
+            {% else %}
+              <div class="text-muted">No messages yet.</div>
+            {% endif %}
+          </div>
+          <div class="card-footer bg-white">
+            <form id="replyForm" method="POST" action="{{ url_for('issues.issue_reply', issue_id=issue._id) }}">
+              <input type="hidden" name="attachment_urls" id="replyAttachmentUrls">
+              <div class="mb-2">
+                <label class="form-label small text-muted">Reply</label>
+                <textarea class="form-control" name="message" rows="3"></textarea>
+              </div>
+              <div class="mb-2">
+                <label class="form-label small text-muted">Attachments (optional)</label>
+                <input class="form-control" type="file" id="replyFiles" accept="image/*" multiple>
+                <div class="d-flex flex-wrap gap-2 mt-2" id="replyPreviews"></div>
+              </div>
+              <div class="d-flex justify-content-end">
+                <button type="submit" class="btn btn-primary btn-sm" id="btnReply">Send Reply</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-12 col-lg-4">
+        <div class="card border-0 shadow-sm mb-3">
+          <div class="card-body">
+            <div class="fw-semibold mb-2">Ticket Details</div>
+            <div class="small text-muted">Created: {{ issue.created_at|format_dt }}</div>
+            <div class="small text-muted">Last update: {{ issue.updated_at|format_dt }}</div>
+            <div class="small text-muted">Branch: {{ issue.branch_name or '' }}</div>
+          </div>
+        </div>
+
+        {% if can_update %}
+          <div class="card border-0 shadow-sm mb-3">
+            <div class="card-body">
+              <div class="fw-semibold mb-2">Status Actions</div>
+              <div class="d-flex gap-2 flex-wrap">
+                <button type="button" class="btn btn-outline-warning btn-sm status-btn" data-status="IN_PROGRESS">Under Review</button>
+                <button type="button" class="btn btn-outline-success btn-sm status-btn" data-status="RESOLVED">Solved</button>
+              </div>
+            </div>
+          </div>
+        {% endif %}
+
+        {% if can_close %}
+          <div class="card border-0 shadow-sm mb-3">
+            <div class="card-body">
+              <button type="button" class="btn btn-outline-dark btn-sm status-btn" data-status="CLOSED">Close Issue</button>
+            </div>
+          </div>
+        {% endif %}
+
+        {% if can_escalate %}
+          <div class="card border-0 shadow-sm">
+            <div class="card-body">
+              <div class="fw-semibold mb-2">Escalate to Executive</div>
+              <button class="btn btn-outline-danger btn-sm" id="btnEscalateOpen">Escalate</button>
+            </div>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="escalateModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-sm">
+      <div class="modal-content">
+        <div class="modal-header">
+          <div class="fw-semibold">Escalate</div>
+          <button class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <form id="escalateForm" method="POST" action="{{ url_for('issues.issue_escalate', issue_id=issue._id) }}">
+            <div class="mb-2">
+              <label class="form-label small text-muted">Executive</label>
+              <select class="form-select form-select-sm" name="executive_id" required>
+                {% for ex in executives %}
+                  <option value="{{ ex.id }}">{{ ex.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="mb-2">
+              <label class="form-label small text-muted">Reason</label>
+              <input class="form-control form-control-sm" name="reason" required>
+            </div>
+            <div class="d-flex justify-content-end">
+              <button class="btn btn-danger btn-sm" id="btnEscalate">Escalate</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast-container position-fixed top-0 end-0 p-3" style="z-index:2000;">
+    <div class="toast" id="appToast">
+      <div class="d-flex">
+        <div class="toast-body" id="toastMsg"></div>
+        <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast"></button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    const replyForm = document.getElementById('replyForm');
+    const replyFiles = document.getElementById('replyFiles');
+    const replyPreviews = document.getElementById('replyPreviews');
+    const replyAttachmentUrls = document.getElementById('replyAttachmentUrls');
+    const btnReply = document.getElementById('btnReply');
+
+    const statusButtons = document.querySelectorAll('.status-btn');
+    const issueStatusText = document.getElementById('issueStatusText');
+
+    const escalateModalEl = document.getElementById('escalateModal');
+    const escalateModal = escalateModalEl ? new bootstrap.Modal(escalateModalEl) : null;
+    const btnEscalateOpen = document.getElementById('btnEscalateOpen');
+    const btnEscalate = document.getElementById('btnEscalate');
+    const escalateForm = document.getElementById('escalateForm');
+
+    const threadMessages = document.getElementById('threadMessages');
+
+    const toastEl = document.getElementById('appToast');
+    const toastMsg = document.getElementById('toastMsg');
+    const toast = new bootstrap.Toast(toastEl, { delay: 2200 });
+
+    function notify(msg){ toastMsg.innerText = msg; toast.show(); }
+
+    function setBtnLoading(btn, loading, label){
+      if (!btn) return;
+      if (loading) {
+        btn.dataset.original = btn.dataset.original || btn.innerHTML;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status"></span><span>' + (label || 'Please wait') + '</span>';
+        btn.classList.add('btn-spinner');
+        btn.disabled = true;
+      } else {
+        btn.innerHTML = btn.dataset.original || btn.innerHTML;
+        btn.classList.remove('btn-spinner');
+        btn.disabled = false;
+      }
+    }
+
+    function renderPreviews(files, el){
+      el.innerHTML = '';
+      Array.from(files || []).forEach(file => {
+        const img = document.createElement('img');
+        img.className = 'thumb';
+        img.src = URL.createObjectURL(file);
+        el.appendChild(img);
+      });
+    }
+
+    async function uploadOne(file){
+      const fd = new FormData();
+      fd.append('image', file);
+      const res = await fetch('/issues/upload_image', {
+        method: 'POST',
+        body: fd,
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+      });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error || 'Upload failed');
+      return {
+        url: data.image_url,
+        image_id: data.image_id,
+        variant: data.variant,
+        name: data.name || file.name,
+        mimetype: data.mimetype || file.type
+      };
+    }
+
+    function renderMessage(m){
+      const wrap = document.createElement('div');
+      wrap.className = 'd-flex mb-2';
+      const bubble = document.createElement('div');
+      const isSelf = m.sender_id === '{{ current_user_id }}';
+      bubble.className = 'bubble ' + (isSelf ? 'bubble-right' : 'bubble-left');
+      bubble.innerHTML = `
+        <div class="fw-semibold">${m.sender_name} (${m.sender_role})</div>
+        <div class="msg-meta">${m.created_at || ''}</div>
+        ${m.text ? '<div class="mt-2">' + m.text + '</div>' : ''}
+      `;
+
+      if (m.attachments && m.attachments.length) {
+        const at = document.createElement('div');
+        at.className = 'd-flex flex-wrap gap-2 mt-2';
+        m.attachments.forEach(a => {
+          const link = document.createElement('a');
+          link.href = a.url;
+          link.target = '_blank';
+          const img = document.createElement('img');
+          img.className = 'thumb';
+          img.src = a.url;
+          link.appendChild(img);
+          at.appendChild(link);
+        });
+        bubble.appendChild(at);
+      }
+
+      wrap.appendChild(bubble);
+      threadMessages.appendChild(wrap);
+    }
+
+    function updateStatusUI(status){
+      issueStatusText.innerText = status;
+      statusButtons.forEach(btn => {
+        const val = btn.dataset.status;
+        btn.classList.remove('btn-warning', 'btn-success', 'btn-dark');
+        btn.classList.add('btn-outline-secondary');
+        btn.disabled = false;
+        if (val === status) {
+          if (val === 'IN_PROGRESS') btn.classList.add('btn-warning');
+          if (val === 'RESOLVED') btn.classList.add('btn-success');
+          if (val === 'CLOSED') btn.classList.add('btn-dark');
+          btn.classList.remove('btn-outline-secondary');
+          btn.disabled = true;
+        }
+      });
+
+      if (status === 'CLOSED') {
+        statusButtons.forEach(btn => { btn.disabled = true; });
+      }
+    }
+
+    if (replyFiles) {
+      replyFiles.addEventListener('change', () => renderPreviews(replyFiles.files, replyPreviews));
+    }
+
+    if (replyForm) {
+      replyForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        setBtnLoading(btnReply, true, 'Sending');
+        try {
+          const files = Array.from(replyFiles.files || []);
+          const uploaded = [];
+          for (const f of files) {
+            const out = await uploadOne(f);
+            uploaded.push(out);
+          }
+          replyAttachmentUrls.value = JSON.stringify(uploaded);
+
+          const fd = new FormData(replyForm);
+          const res = await fetch(replyForm.action, {
+            method: 'POST',
+            body: fd,
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+          });
+          const data = await res.json();
+          if (!data.ok) { notify(data.message || 'Reply failed'); return; }
+
+          renderMessage(data.message);
+          replyForm.reset();
+          replyPreviews.innerHTML = '';
+          notify('Reply sent.');
+        } catch (err) {
+          console.error(err);
+          notify(err.message || 'Reply failed');
+        } finally {
+          setBtnLoading(btnReply, false);
+        }
+      });
+    }
+
+    statusButtons.forEach(btn => {
+      btn.addEventListener('click', async () => {
+        setBtnLoading(btn, true, 'Updating');
+        try {
+          const fd = new FormData();
+          fd.append('status', btn.dataset.status);
+          const res = await fetch("{{ url_for('issues.issue_status', issue_id=issue._id) }}", {
+            method: 'POST',
+            body: fd,
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+          });
+          const data = await res.json();
+          if (!data.ok) { notify(data.message || 'Update failed'); return; }
+          updateStatusUI(data.status);
+          notify('Status updated.');
+        } catch (err) {
+          console.error(err);
+          notify('Update failed');
+        } finally {
+          setBtnLoading(btn, false);
+        }
+      });
+    });
+
+    if (btnEscalateOpen && escalateModal) {
+      btnEscalateOpen.addEventListener('click', () => escalateModal.show());
+    }
+
+    if (escalateForm) {
+      escalateForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        setBtnLoading(btnEscalate, true, 'Escalating');
+        try {
+          const fd = new FormData(escalateForm);
+          const res = await fetch(escalateForm.action, {
+            method: 'POST',
+            body: fd,
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+          });
+          const data = await res.json();
+          if (!data.ok) { notify(data.message || 'Escalation failed'); return; }
+          updateStatusUI('ESCALATED');
+          notify('Escalated.');
+          escalateModal.hide();
+        } catch (err) {
+          console.error(err);
+          notify('Escalation failed');
+        } finally {
+          setBtnLoading(btnEscalate, false);
+        }
+      });
+    }
+
+    updateStatusUI('{{ issue.status }}');
+  </script>
+    {% include 'app_footer.html' %}
+
+</body>
+</html>

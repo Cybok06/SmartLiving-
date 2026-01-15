@@ -1,0 +1,420 @@
+{# templates/hr_pages/partials/hr_employees_inner.html #}
+
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+    <div>
+        <h1 class="h5 mb-1">Employees</h1>
+        <p class="text-muted small mb-0">
+            Card view of all staff &amp; agents, with quick filters, pagination and Excel export.
+        </p>
+    </div>
+    <div class="d-flex gap-2">
+        <a class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1"
+           href="{{ url_for('hr.employees_export',
+                            search=filters.search,
+                            branch=filters.branch,
+                            department=filters.department,
+                            status=filters.status,
+                            role=filters.role) }}">
+            <i class="bi bi-file-earmark-spreadsheet"></i>
+            <span>Export to Excel</span>
+        </a>
+        <button class="btn btn-sm btn-primary d-flex align-items-center gap-1"
+                type="button"
+                data-bs-toggle="modal"
+                data-bs-target="#hrAddEmployeeModal">
+            <i class="bi bi-person-plus"></i>
+            <span>Add Employee</span>
+        </button>
+    </div>
+</div>
+
+{# METRIC CARDS #}
+<div class="row g-3 mb-3">
+    <div class="col-6 col-md-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body py-2">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="text-muted extra-small text-uppercase">Total Employees</div>
+                        <div class="fs-5 fw-semibold">
+                            {{ stats.total or 0 }}
+                        </div>
+                    </div>
+                    <div class="rounded-circle bg-primary-subtle text-primary d-inline-flex align-items-center justify-content-center"
+                         style="width:32px;height:32px;">
+                        <i class="bi bi-people-fill"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% set by_role = stats.by_role or {} %}
+    <div class="col-6 col-md-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body py-2">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="text-muted extra-small text-uppercase">Agents</div>
+                        <div class="fs-5 fw-semibold">
+                            {{ by_role.agent or 0 }}
+                        </div>
+                    </div>
+                    <div class="rounded-circle bg-success-subtle text-success d-inline-flex align-items-center justify-content-center"
+                         style="width:32px;height:32px;">
+                        <i class="bi bi-person-badge"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-6 col-md-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body py-2">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="text-muted extra-small text-uppercase">Managers</div>
+                        <div class="fs-5 fw-semibold">
+                            {{ by_role.manager or 0 }}
+                        </div>
+                    </div>
+                    <div class="rounded-circle bg-warning-subtle text-warning d-inline-flex align-items-center justify-content-center"
+                         style="width:32px;height:32px;">
+                        <i class="bi bi-briefcase"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-6 col-md-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body py-2">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="text-muted extra-small text-uppercase">Admins &amp; Execs</div>
+                        <div class="fs-6 fw-semibold">
+                            {{ (by_role.admin or 0) + (by_role.executive or 0) }}
+                        </div>
+                    </div>
+                    <div class="rounded-circle bg-info-subtle text-info d-inline-flex align-items-center justify-content-center"
+                         style="width:32px;height:32px;">
+                        <i class="bi bi-shield-lock"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- FILTERS -->
+<form id="hr-employee-filters" class="card border-0 shadow-sm mb-3">
+    <div class="card-body">
+        <div class="row g-2 align-items-end">
+            <div class="col-12 col-md-3">
+                <label class="form-label small mb-1">Search</label>
+                <input type="text" name="search"
+                       value="{{ filters.search }}"
+                       class="form-control form-control-sm"
+                       placeholder="Name, phone, ID, Ghana Card">
+            </div>
+
+            <div class="col-6 col-md-2">
+                <label class="form-label small mb-1">Branch</label>
+                <select name="branch" class="form-select form-select-sm">
+                    <option value="">All</option>
+                    {% for b in branches %}
+                        {% if b != "All Branches" %}
+                            <option value="{{ b }}"
+                              {% if filters.branch == b %}selected{% endif %}>{{ b }}</option>
+                        {% endif %}
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="col-6 col-md-2">
+                <label class="form-label small mb-1">Department</label>
+                <select name="department" class="form-select form-select-sm">
+                    <option value="">All</option>
+                    {% for d in departments %}
+                        {% if d != "All Departments" %}
+                            <option value="{{ d }}"
+                              {% if filters.department == d %}selected{% endif %}>{{ d }}</option>
+                        {% endif %}
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="col-6 col-md-2">
+                <label class="form-label small mb-1">Status</label>
+                <select name="status" class="form-select form-select-sm">
+                    <option value="">All</option>
+                    <option value="Probation" {% if filters.status == "Probation" %}selected{% endif %}>
+                        Probation
+                    </option>
+                    <option value="Active" {% if filters.status == "Active" %}selected{% endif %}>
+                        Active
+                    </option>
+                    <option value="Exited" {% if filters.status == "Exited" %}selected{% endif %}>
+                        Exited
+                    </option>
+                </select>
+            </div>
+
+            <div class="col-6 col-md-2">
+                <label class="form-label small mb-1">Role</label>
+                <select name="role" class="form-select form-select-sm">
+                    <option value="">All</option>
+                    {% for r in roles %}
+                        <option value="{{ r.key }}"
+                          {% if filters.role == r.key %}selected{% endif %}>{{ r.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="col-12 col-md-1 d-flex gap-2 justify-content-end">
+                <button type="submit" class="btn btn-sm btn-outline-primary w-100 w-md-auto">
+                    <i class="bi bi-search"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+</form>
+
+<!-- CARD GRID -->
+<div class="row g-3">
+    {% if employees %}
+        {% for emp in employees %}
+            <div class="col-12 col-md-6 col-xl-4">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-body p-3 d-flex flex-column">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div class="d-flex align-items-center gap-2">
+
+                                {# Profile image or initials #}
+                                {% if emp.image_url %}
+                                    <div class="rounded-circle border bg-light d-inline-flex align-items-center justify-content-center"
+                                         style="width:40px;height:40px;overflow:hidden;">
+                                        <img src="{{ emp.image_url }}"
+                                             alt="{{ emp.name }}"
+                                             style="width:100%;height:100%;object-fit:cover;">
+                                    </div>
+                                {% else %}
+                                    <div class="rounded-circle bg-primary-subtle text-primary fw-semibold d-inline-flex
+                                                align-items-center justify-content-center"
+                                         style="width:40px;height:40px;font-size:0.9rem;">
+                                        {{ (emp.name or 'NA')[:2]|upper }}
+                                    </div>
+                                {% endif %}
+
+                                <div>
+                                    <div class="fw-semibold small">{{ emp.name }}</div>
+                                    <div class="extra-small text-muted">
+                                        {{ emp.role }} -  {{ emp.employee_id }}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="text-end">
+                                {% set status = emp.employment_status %}
+                                {% if status == "Probation" %}
+                                    <span class="badge bg-warning-subtle text-warning-emphasis extra-small">Probation</span>
+                                {% elif status == "Exited" %}
+                                    <span class="badge bg-danger-subtle text-danger-emphasis extra-small">Exited</span>
+                                {% else %}
+                                    <span class="badge bg-success-subtle text-success-emphasis extra-small">Active</span>
+                                {% endif %}
+                                <div class="extra-small text-muted mt-1">
+                                    {{ emp.branch }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="extra-small mb-2 text-muted">
+                            <i class="bi bi-telephone me-1"></i>{{ emp.phone or "--" }}
+                            {% if emp.ghana_card_masked %}
+                                <span class="ms-2">
+                                    <i class="bi bi-credit-card me-1"></i>{{ emp.ghana_card_masked }}
+                                </span>
+                            {% endif %}
+                        </div>
+
+                        <div class="extra-small mb-2">
+                            <div class="text-muted">GPS Address</div>
+                            <div class="fw-semibold">{{ emp.gps_address or "--" }}</div>
+                        </div>
+
+                        <div class="extra-small mb-2">
+                            <div class="text-muted">Guarantor</div>
+                            {% if emp.guarantor_name %}
+                                <div class="fw-semibold">
+                                    {{ emp.guarantor_name }}
+                                    {% if emp.guarantor_phone %} -  {{ emp.guarantor_phone }}{% endif %}
+                                </div>
+                                <div class="text-muted">
+                                    {{ emp.guarantor_address or "" }}
+                                </div>
+                            {% else %}
+                                <div class="fw-semibold">--</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="extra-small mb-2">
+                            <div class="text-muted">Recruitment Stage</div>
+                            <div class="fw-semibold">
+                                {{ emp.recruitment_stage or "Documentation Approved" }}
+                            </div>
+                        </div>
+
+                        <div class="mt-auto d-flex justify-content-between align-items-center pt-2 border-top">
+                            <div class="extra-small text-muted">
+                                Started: {{ emp.date_employed_str or "--" }}
+                            </div>
+
+                            {# Open profile in a new tab #}
+                            <a href="{{ url_for('hr.employee_profile', employee_id=emp._id) }}"
+                               target="_blank"
+                               class="btn btn-xs btn-outline-primary">
+                                View Profile
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    {% else %}
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center text-muted small py-4">
+                    No employees match the current filters.
+                </div>
+            </div>
+        </div>
+    {% endif %}
+</div>
+
+{# PAGINATION BAR #}
+{% if pagination.total_pages > 1 %}
+    <div class="d-flex flex-wrap justify-content-between align-items-center mt-3 gap-2">
+        <div class="small text-muted">
+            Showing {{ pagination.start_index }}-{{ pagination.end_index }}
+            of {{ pagination.total }} employees
+        </div>
+        <nav>
+            <ul class="pagination pagination-sm mb-0">
+                <li class="page-item {% if not pagination.has_prev %}disabled{% endif %}">
+                    <a class="page-link"
+                       href="{{ url_for('hr.employees',
+                                        page=1,
+                                        per_page=pagination.per_page,
+                                        search=filters.search,
+                                        branch=filters.branch,
+                                        department=filters.department,
+                                        status=filters.status,
+                                        role=filters.role) }}"
+                       data-hr-page-link="true">
+                        « First
+                    </a>
+                </li>
+                <li class="page-item {% if not pagination.has_prev %}disabled{% endif %}">
+                    <a class="page-link"
+                       href="{{ url_for('hr.employees',
+                                        page=pagination.page - 1,
+                                        per_page=pagination.per_page,
+                                        search=filters.search,
+                                        branch=filters.branch,
+                                        department=filters.department,
+                                        status=filters.status,
+                                        role=filters.role) }}"
+                       data-hr-page-link="true">
+                        ‹ Prev
+                    </a>
+                </li>
+
+                <li class="page-item disabled">
+                    <span class="page-link">
+                        Page {{ pagination.page }} of {{ pagination.total_pages }}
+                    </span>
+                </li>
+
+                <li class="page-item {% if not pagination.has_next %}disabled{% endif %}">
+                    <a class="page-link"
+                       href="{{ url_for('hr.employees',
+                                        page=pagination.page + 1,
+                                        per_page=pagination.per_page,
+                                        search=filters.search,
+                                        branch=filters.branch,
+                                        department=filters.department,
+                                        status=filters.status,
+                                        role=filters.role) }}"
+                       data-hr-page-link="true">
+                        Next ›
+                    </a>
+                </li>
+                <li class="page-item {% if not pagination.has_next %}disabled{% endif %}">
+                    <a class="page-link"
+                       href="{{ url_for('hr.employees',
+                                        page=pagination.total_pages,
+                                        per_page=pagination.per_page,
+                                        search=filters.search,
+                                        branch=filters.branch,
+                                        department=filters.department,
+                                        status=filters.status,
+                                        role=filters.role) }}"
+                       data-hr-page-link="true">
+                        Last »
+                    </a>
+                </li>
+            </ul>
+        </nav>
+    </div>
+{% endif %}
+
+{# Add Employee modal (with Cloudflare + AJAX submit) #}
+{% include "hr_pages/partials/hr_employee_add_modal.html" %}
+
+<script>
+    // ---------- AJAX filters ----------
+    (function () {
+        const formEl = document.getElementById('hr-employee-filters');
+        if (!formEl) return;
+
+        formEl.addEventListener('submit', function (e) {
+            e.preventDefault();
+
+            const params = new URLSearchParams(new FormData(formEl));
+            params.set('page', '1');  // reset to first page after filter
+
+            const url = "{{ url_for('hr.employees') }}" + "?" + params.toString();
+            if (typeof window.loadHrPage === 'function') {
+                window.loadHrPage(url, true);
+            } else {
+                window.location.href = url;
+            }
+        });
+    })();
+
+    // ---------- AJAX pagination ----------
+    (function () {
+        document.addEventListener('click', function (e) {
+            const link = e.target.closest('[data-hr-page-link="true"]');
+            if (!link) return;
+
+            const li = link.closest('.page-item');
+            if (li && li.classList.contains('disabled')) {
+                e.preventDefault();
+                return;
+            }
+
+            const url = link.getAttribute('href');
+            if (!url) return;
+
+            e.preventDefault();
+            if (typeof window.loadHrPage === 'function') {
+                window.loadHrPage(url, true);
+            } else {
+                window.location.href = url;
+            }
+        });
+    })();
+</script>

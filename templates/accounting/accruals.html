@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en" class="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Accruals (Owings)</title>
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <link rel="icon" href="https://res.cloudinary.com/dljpgzbto/image/upload/v1743993646/company-logo_dksb23.jpg" type="image/png">
+</head>
+<body class="bg-slate-50 text-slate-900">
+  {% include 'accounting/sidebar.html' %}
+
+  <main class="min-h-screen p-5 lg:p-8 acc-with-sidebar">
+    <div class="max-w-6xl mx-auto space-y-6">
+      <header class="flex flex-col gap-2">
+        <h1 class="text-3xl font-extrabold">Accruals / Owings</h1>
+        <p class="text-sm text-slate-600">Track expenses incurred but not yet paid.</p>
+      </header>
+
+      {% if denied %}
+        <div class="rounded-xl border border-rose-200 bg-rose-50 p-4 text-rose-700">
+          You do not have access to this page.
+        </div>
+      {% else %}
+      <section class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div class="rounded-xl bg-white border border-slate-200 p-4">
+          <div class="text-xs uppercase text-slate-500">Outstanding Owings</div>
+          <div class="text-2xl font-bold mt-1">GHS {{ "%.2f"|format(outstanding_total or 0) }}</div>
+        </div>
+        <div class="rounded-xl bg-white border border-slate-200 p-4 flex items-center justify-center">
+          <a href="{{ url_for('accruals.accruals_page', export='1') }}" class="rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+            Export CSV
+          </a>
+        </div>
+      </section>
+
+      <section class="rounded-xl bg-white border border-slate-200 p-4">
+        <h2 class="text-sm font-semibold mb-3">New Accrual</h2>
+        <form id="accrualForm" class="grid grid-cols-1 md:grid-cols-6 gap-3 items-end">
+          <div>
+            <label class="text-xs text-slate-500">Incurred Date</label>
+            <input type="date" name="date" class="w-full rounded-lg border-slate-200">
+          </div>
+          <div>
+            <label class="text-xs text-slate-500">Category</label>
+            <input type="text" name="category" class="w-full rounded-lg border-slate-200" placeholder="Rent">
+          </div>
+          <div>
+            <label class="text-xs text-slate-500">Vendor</label>
+            <input type="text" name="vendor" class="w-full rounded-lg border-slate-200">
+          </div>
+          <div>
+            <label class="text-xs text-slate-500">Amount</label>
+            <input type="number" step="0.01" min="0" name="amount" class="w-full rounded-lg border-slate-200">
+          </div>
+          <div>
+            <label class="text-xs text-slate-500">Due Date</label>
+            <input type="date" name="due_date" class="w-full rounded-lg border-slate-200">
+          </div>
+          <div>
+            <button type="submit" class="w-full rounded-lg bg-slate-900 text-white px-3 py-2 text-sm font-semibold">
+              Save Accrual
+            </button>
+          </div>
+        </form>
+      </section>
+
+      <section class="rounded-xl bg-white border border-slate-200 overflow-hidden">
+        <div class="px-4 py-3 border-b border-slate-200 flex items-center justify-between">
+          <h2 class="text-sm font-semibold">Accrual Register</h2>
+          <span class="text-xs text-slate-500">{{ rows|length }} record(s)</span>
+        </div>
+        <div class="overflow-auto">
+          <table class="w-full text-sm">
+            <thead class="bg-slate-50 text-slate-600">
+              <tr>
+                <th class="text-left px-4 py-2">Date</th>
+                <th class="text-left px-4 py-2">Category</th>
+                <th class="text-left px-4 py-2">Vendor</th>
+                <th class="text-right px-4 py-2">Amount</th>
+                <th class="text-left px-4 py-2">Due</th>
+                <th class="text-left px-4 py-2">Status</th>
+                <th class="text-left px-4 py-2">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for r in rows %}
+                {% set status = (r.status or 'owing') %}
+                <tr class="border-t border-slate-100">
+                  <td class="px-4 py-2">{{ r.date_dt.strftime("%Y-%m-%d") if r.date_dt }}</td>
+                  <td class="px-4 py-2">{{ r.category }}</td>
+                  <td class="px-4 py-2">{{ r.vendor }}</td>
+                  <td class="px-4 py-2 text-right">GHS {{ "%.2f"|format(r.amount or 0) }}</td>
+                  <td class="px-4 py-2">{{ r.due_date.strftime("%Y-%m-%d") if r.due_date }}</td>
+                  <td class="px-4 py-2">{{ status }}</td>
+                  <td class="px-4 py-2">
+                    {% if status == 'owing' %}
+                      <button
+                        class="mark-paid-btn rounded-lg border border-slate-200 px-2 py-1 text-xs"
+                        data-id="{{ r._id }}"
+                      >
+                        Mark Paid
+                      </button>
+                    {% else %}
+                      <span class="text-xs text-slate-400">-</span>
+                    {% endif %}
+                  </td>
+                </tr>
+              {% else %}
+                <tr>
+                  <td colspan="7" class="px-4 py-6 text-center text-slate-500">No accruals recorded.</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </section>
+      {% endif %}
+    </div>
+  </main>
+
+  <script>
+    const accrualForm = document.getElementById("accrualForm");
+    if (accrualForm) {
+      accrualForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const fd = new FormData(accrualForm);
+        const res = await fetch("{{ url_for('accruals.create_accrual') }}", {
+          method: "POST",
+          body: fd,
+          headers: { "X-Requested-With": "XMLHttpRequest" }
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data.ok) {
+          alert(data.message || "Failed to save accrual.");
+          return;
+        }
+        window.location.reload();
+      });
+    }
+
+    document.querySelectorAll(".mark-paid-btn").forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        const id = btn.dataset.id;
+        if (!id) return;
+        const fd = new FormData();
+        const res = await fetch(`{{ url_for('accruals.mark_paid', accrual_id='__ID__') }}`.replace("__ID__", id), {
+          method: "POST",
+          body: fd,
+          headers: { "X-Requested-With": "XMLHttpRequest" }
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data.ok) {
+          alert(data.message || "Failed to mark paid.");
+          return;
+        }
+        window.location.reload();
+      });
+    });
+  </script>
+</body>
+</html>

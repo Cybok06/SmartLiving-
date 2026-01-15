@@ -1,0 +1,1016 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <title>Executive -- Sales Close</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"/>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet"/>
+  <link rel="icon"
+          href="https://imagedelivery.net/h9fmMoa1o2c2P55TcWJGOg/10283f28-b9a0-4100-b254-19a854386800/public"
+          type="image/png">
+
+  <style>
+    :root{
+      --ink:#0f172a; --muted:#64748b; --soft:#f6f8fb; --brand:#0d6efd;
+      --ok:#16a34a; --ok-bg:#e7f8ec; --danger:#b91c1c; --danger-bg:#fdecec;
+    }
+    body{ background:var(--soft); color:var(--ink); font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif; }
+    .page-wrap{ max-width:1200px; margin:40px auto; padding:0 16px; }
+
+    .card-summary .icon{
+      width:46px;height:46px;border-radius:12px;display:flex;align-items:center;justify-content:center;
+      margin-right:12px;flex:0 0 auto;font-size:1.25rem
+    }
+    .stat{ font-weight:800; font-size:1.6rem; line-height:1; letter-spacing:.2px }
+    .substat{ font-size:.8rem; color:var(--muted) }
+    .muted{ color:var(--muted) }
+
+    .stat-close{ color:var(--ok) }
+    .card-close .icon{ background:var(--ok-bg); color:var(--ok) }
+
+    .stat-unclose{ color:var(--danger) }
+    .card-unclose .icon{ background:var(--danger-bg); color:var(--danger) }
+
+    .role-badge{ font-size:.7rem; padding:.2rem .45rem; border-radius:.35rem }
+    .role-admin{ background:#eef2ff; color:#3730a3 }
+    .role-manager{ background:#ecfeff; color:#155e75 }
+    .role-agent{ background:#fefce8; color:#854d0e }
+
+    .user-card .amt{ font-size:1.7rem; font-weight:800; letter-spacing:.3px }
+    .user-card .meta{ font-size:.9rem; color:var(--muted) }
+
+    .search-wrap .form-control{ border-radius:10px }
+
+    .spinner { display:inline-block; width:1rem; height:1rem; border:.2rem solid rgba(255,255,255,.35); border-top-color:#fff; border-radius:50%; animation:spin .8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    @media (max-width: 575.98px){
+      .stat{ font-size:1.35rem }
+      .page-wrap{ margin:20px auto; }
+    }
+
+    /* History table */
+    #historyTable thead th{ position:sticky; top:0; background:#fff; z-index:2 }
+  
+    .loading-state .withdraw-btn, .loading-state .history-btn, .loading-state #userSearch { pointer-events:none; opacity:.6; }
+    .loading-state .js-count{
+      position: relative;
+      color: transparent;
+      background: #e5e7eb;
+      border-radius: 6px;
+    }
+    .loading-state .js-count::after{
+      content:"";
+      position:absolute;
+      inset:0;
+      transform:translateX(-100%);
+      background:linear-gradient(90deg, transparent, rgba(255,255,255,.6), transparent);
+      animation: shimmer 1.2s infinite;
+    }
+    .skeleton{ position:relative; overflow:hidden; background:#e5e7eb; color:transparent; border-radius:6px; }
+    .skeleton::after{ content:""; position:absolute; inset:0; transform:translateX(-100%); background:linear-gradient(90deg, transparent, rgba(255,255,255,.6), transparent); animation: shimmer 1.2s infinite; }
+    .skeleton-text{ display:inline-block; height: .95rem; width: 80%; }
+    .skeleton-lg{ display:inline-block; height: 1.6rem; width: 60%; }
+    .skeleton-btn{ display:inline-block; height: 32px; width: 90px; border-radius:999px; }
+    @keyframes shimmer { 100% { transform: translateX(100%); } }
+    .fade-out{ opacity:0; transition:opacity .3s ease; }
+  </style>
+</head>
+<body class="loading-state">
+
+  {% include 'executive_sidebar.html' %}
+
+<div class="page-wrap">
+  <div class="d-flex align-items-center justify-content-between mb-3">
+    <h3 class="m-0">Executive -- Sales Close</h3>
+    <div class="muted small">
+      Welcome, <span class="fw-semibold" id="execName">{{ executive_name }}</span>
+      · Today: <span class="fw-semibold" id="execToday">{{ today }}</span>
+    </div>
+  </div>
+
+  <!-- Row 1: All Branches Gross (Today / Week / Month / Total) -->
+  <div class="row g-3 mb-3">
+    <!-- Today Gross All Branches -->
+    <div class="col-12 col-md-6 col-xl-3">
+      <div class="card shadow-sm h-100 card-summary">
+        <div class="card-body d-flex align-items-center">
+          <div class="icon bg-light"><i class="bi bi-calendar-day"></i></div>
+          <div>
+            <div class="muted">Today Gross (All Branches)</div>
+            <div class="stat js-count" id="allGrossToday" data-value="0">GHS 0.00</div>
+            <div class="substat">
+              Sales: <span>GHS <span id="allColToday" class="js-count" data-value="0">0.00</span></span> ·
+              Exp: <span>GHS <span id="allExpToday" class="js-count" data-value="0">0.00</span></span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Week Gross All Branches -->
+    <div class="col-12 col-md-6 col-xl-3">
+      <div class="card shadow-sm h-100 card-summary">
+        <div class="card-body d-flex align-items-center">
+          <div class="icon bg-light"><i class="bi bi-calendar-week"></i></div>
+          <div>
+            <div class="muted">This Week Gross (All)</div>
+            <div class="stat js-count" id="allGrossWeek" data-value="0">GHS 0.00</div>
+            <div class="substat">
+              Sales: <span>GHS <span id="allColWeek" class="js-count" data-value="0">0.00</span></span> ·
+              Exp: <span>GHS <span id="allExpWeek" class="js-count" data-value="0">0.00</span></span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Month Gross All Branches -->
+    <div class="col-12 col-md-6 col-xl-3">
+      <div class="card shadow-sm h-100 card-summary">
+        <div class="card-body d-flex align-items-center">
+          <div class="icon bg-light"><i class="bi bi-calendar3"></i></div>
+          <div>
+            <div class="muted">This Month Gross (All)</div>
+            <div class="stat js-count" id="allGrossMonth" data-value="0">GHS 0.00</div>
+            <div class="substat">
+              Sales: <span>GHS <span id="allColMonth" class="js-count" data-value="0">0.00</span></span> ·
+              Exp: <span>GHS <span id="allExpMonth" class="js-count" data-value="0">0.00</span></span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Total Gross All Branches -->
+    <div class="col-12 col-md-6 col-xl-3">
+      <div class="card shadow-sm h-100 card-summary card-close">
+        <div class="card-body d-flex align-items-center">
+          <div class="icon"><i class="bi bi-graph-up-arrow"></i></div>
+          <div>
+            <div class="muted">All Time Gross (All)</div>
+            <div class="stat stat-close js-count" id="allGrossTotal" data-value="0">GHS 0.00</div>
+            <div class="substat">
+              Sales: <span>GHS <span id="allColTotal" class="js-count" data-value="0">0.00</span></span> ·
+              Exp: <span>GHS <span id="allExpTotal" class="js-count" data-value="0">0.00</span></span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Row 2: Executive Close + Unclose -->
+  <div class="row g-3 mb-3">
+    <div class="col-12 col-lg-6">
+      <div class="card shadow-sm h-100 card-summary card-close">
+        <div class="card-body d-flex align-items-center">
+          <div class="icon"><i class="bi bi-bank2"></i></div>
+          <div>
+            <div class="muted">Close Total (Executive Account)</div>
+            <div class="stat stat-close js-count" id="closeTotal" data-value="0">GHS 0.00</div>
+            <div class="substat">Total credited to your account (all time)</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12 col-lg-6">
+      <div class="card shadow-sm h-100 card-summary card-unclose">
+        <div class="card-body d-flex align-items-center">
+          <div class="icon"><i class="bi bi-exclamation-octagon"></i></div>
+          <div>
+            <div class="muted">Unclose Total (Everyone)</div>
+            <div class="stat stat-unclose js-count" id="uncloseTotal" data-value="0">GHS 0.00</div>
+            <div class="substat">Sum of all Admin + Manager + Agent balances (all dates)</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Branch overview (per manager / branch) -->
+  <div class="card shadow-sm mb-4">
+    <div class="card-body">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <div class="fw-semibold">Branch Gross Overview</div>
+        <div class="muted small">Each row represents a manager / branch</div>
+      </div>
+      <div class="mb-2">
+        <button class="btn btn-sm btn-outline-primary" id="viewBranchesBtn">
+          <i class="bi bi-diagram-3"></i> View Branch Table
+        </button>
+        <span class="small text-muted ms-2">Click to load branches.</span>
+      </div>
+      <div class="table-responsive" id="branchesTableWrap" style="display:none;">
+          <table class="table table-sm align-middle mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>Branch / Manager</th>
+                <th class="text-end">Available</th>
+                <th class="text-end">Today Gross</th>
+                <th class="text-end">Week Gross</th>
+                <th class="text-end">Month Gross</th>
+                <th class="text-end">Total Gross</th>
+              </tr>
+            </thead>
+            <tbody id="branchesBody"></tbody>
+          </table>
+        </div>
+    </div>
+  </div>
+
+  <!-- Alerts -->
+  <div id="alertHost"></div>
+
+  <!-- Toolbar for account grids -->
+  <div class="d-flex justify-content-between align-items-center mb-2">
+    <div class="fw-bold">Accounts -- Highest Balances First</div>
+    <div class="search-wrap" style="max-width: 260px;">
+      <input type="search" id="userSearch" class="form-control form-control-sm" placeholder="Search loaded users..." disabled>
+    </div>
+  </div>
+
+  <!-- Admins -->
+  <div class="mb-2 d-flex align-items-center gap-2">
+    <span class="badge role-badge role-admin">Admins</span>
+    <span class="muted small">Withdraw directly from admin accounts</span>
+    <button class="btn btn-sm btn-outline-primary ms-auto" id="viewAdminsBtn">
+      <i class="bi bi-person-badge"></i> View Admin Accounts
+    </button>
+  </div>
+  <div class="row g-3" id="adminsGrid" style="display:none;"></div>
+
+  <!-- Managers -->
+  <div class="mt-4 mb-2 d-flex align-items-center gap-2">
+    <span class="badge role-badge role-manager">Managers</span>
+    <span class="muted small">Withdraw from manager accounts</span>
+    <button class="btn btn-sm btn-outline-primary ms-auto" id="viewManagersBtn">
+      <i class="bi bi-people"></i> View Manager Accounts
+    </button>
+  </div>
+  <div class="row g-3" id="managersGrid" style="display:none;"></div>
+
+  <!-- Agents -->
+  <div class="mt-4 mb-2 d-flex align-items-center gap-2">
+    <span class="badge role-badge role-agent">Agents</span>
+    <span class="muted small">Withdraw from agent accounts</span>
+    <button class="btn btn-sm btn-outline-primary ms-auto" id="loadAgentsBtn">
+      <i class="bi bi-people"></i> View Agents Accounts
+    </button>
+  </div>
+  <div class="row g-3" id="agentsGrid"></div>
+</div>
+
+<!-- Withdraw Modal -->
+<div class="modal fade" id="withdrawModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0">
+      <div class="modal-header">
+        <h5 class="modal-title">Withdraw from <span id="mUserName">User</span> <span class="badge ms-2 role-badge" id="mUserRoleBadge"></span></h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form id="withdrawForm">
+        <div class="modal-body">
+          <input type="hidden" name="target_id" id="mUserId">
+          <div class="row g-3">
+            <div class="col-12">
+              <div class="small text-muted">Phone</div>
+              <div class="fw-semibold" id="mUserPhone">--</div>
+            </div>
+            <div class="col-12">
+              <div class="small text-muted">Total Available (all dates)</div>
+              <div class="fw-bold">GHS <span id="mUserAvail">0.00</span></div>
+            </div>
+            <div class="col-12">
+              <label class="form-label">Amount (GHS)</label>
+              <div class="input-group">
+                <input type="number" name="amount" id="mAmount" class="form-control" step="0.01" min="0.01" required>
+                <button class="btn btn-outline-secondary" type="button" id="mMaxBtn">Max</button>
+              </div>
+              <div class="form-text">This credits your executive account and debits the user's account.</div>
+            </div>
+            <div class="col-12">
+              <label class="form-label">Note (optional)</label>
+              <input type="text" name="note" id="mNote" class="form-control" placeholder="e.g., Collection">
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <div class="me-auto small text-muted">Today: <span class="fw-semibold" id="execTodayModal">{{ today }}</span></div>
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" id="mSubmitBtn" class="btn btn-primary">
+            <span class="label">Withdraw</span>
+            <span class="spinner ms-2" style="display:none;"></span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- History Modal -->
+<div class="modal fade" id="historyModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content border-0">
+      <div class="modal-header">
+        <h5 class="modal-title">Withdrawal History -- <span id="hUserName">User</span></h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div id="historyEmpty" class="text-center text-muted" style="display:none;">No withdrawals yet.</div>
+        <div class="table-responsive" id="historyWrap" style="max-height:420px; overflow:auto; display:none;">
+          <table class="table table-sm align-middle" id="historyTable">
+            <thead>
+              <tr>
+                <th style="min-width:120px">Date</th>
+                <th style="min-width:100px">Time</th>
+                <th style="min-width:140px">Amount (GHS)</th>
+                <th style="min-width:200px">Note</th>
+                <th style="min-width:160px">By</th>
+              </tr>
+            </thead>
+            <tbody id="historyTbody"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <div class="small text-muted" id="historyCount">0 records</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Data for JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+(function(){
+  let admins = [];
+  let managers = [];
+  let agents = [];
+  let userMap = {};
+  let adminsLoaded = false;
+  let managersLoaded = false;
+  let agentsLoaded = false;
+
+  const alertHost   = document.getElementById('alertHost');
+  const searchInput = document.getElementById('userSearch');
+
+  const adminsGrid   = document.getElementById('adminsGrid');
+  const managersGrid = document.getElementById('managersGrid');
+  const agentsGrid   = document.getElementById('agentsGrid');
+
+  const withdrawModalEl = document.getElementById('withdrawModal');
+  const withdrawModal   = new bootstrap.Modal(withdrawModalEl);
+
+  const mUserName  = document.getElementById('mUserName');
+  const mUserPhone = document.getElementById('mUserPhone');
+  const mUserAvail = document.getElementById('mUserAvail');
+  const mUserId    = document.getElementById('mUserId');
+  const mUserRoleBadge = document.getElementById('mUserRoleBadge');
+  const mAmount    = document.getElementById('mAmount');
+  const mMaxBtn    = document.getElementById('mMaxBtn');
+  const mNote      = document.getElementById('mNote');
+  const mSubmitBtn = document.getElementById('mSubmitBtn');
+  const mLabel     = mSubmitBtn.querySelector('.label');
+  const mSpin      = mSubmitBtn.querySelector('.spinner');
+
+  const uncloseTotalEl = document.getElementById('uncloseTotal');
+  const closeTotalEl   = document.getElementById('closeTotal');
+
+  const historyModalEl = document.getElementById('historyModal');
+  const historyModal   = new bootstrap.Modal(historyModalEl);
+  const hUserName      = document.getElementById('hUserName');
+  const historyTbody   = document.getElementById('historyTbody');
+  const historyWrap    = document.getElementById('historyWrap');
+  const historyEmpty   = document.getElementById('historyEmpty');
+  const historyCount   = document.getElementById('historyCount');
+
+  function formatGhs(value) {
+    const num = Number(value || 0);
+    return `GHS ${num.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  }
+
+  function animateCount(el, value, duration = 800) {
+    if (!el) return;
+    const start = performance.now();
+    const from = 0;
+    const to = Number(value || 0);
+    const prefix = el.textContent.trim().startsWith('GHS') ? 'GHS ' : '';
+
+    function tick(now) {
+      const progress = Math.min(1, (now - start) / duration);
+      const current = from + (to - from) * progress;
+      el.textContent = prefix + current.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      if (progress < 1) requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+  }
+
+  function applyStatMoney(id, value) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = formatGhs(value);
+    animateCount(el, value);
+  }
+
+  function applyStatNumber(id, value) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const num = Number(value || 0);
+    el.textContent = num.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    animateCount(el, value);
+  }
+
+  function renderBranches(rows) {
+    const body = document.getElementById('branchesBody');
+    if (!body) return;
+    if (!rows || !rows.length) {
+      body.innerHTML = `<tr><td colspan="6" class="text-center text-muted py-3">No manager branches found.</td></tr>`;
+      return;
+    }
+    body.innerHTML = rows.map(b => `
+      <tr>
+        <td>
+          <div class="fw-semibold">${b.branch || ''}</div>
+          <div class="small text-muted">${b.name || ''}${b.phone ? ' Aú ' + b.phone : ''}</div>
+        </td>
+        <td class="text-end">GHS ${b.available || '0.00'}</td>
+        <td class="text-end">GHS ${b.gross_today || '0.00'}</td>
+        <td class="text-end">GHS ${b.gross_week || '0.00'}</td>
+        <td class="text-end">GHS ${b.gross_month || '0.00'}</td>
+        <td class="text-end fw-semibold">GHS ${b.gross_total || '0.00'}</td>
+      </tr>
+    `).join('');
+  }
+
+  function renderGrid(gridEl, rows, role) {
+    if (!gridEl) return;
+    if (!rows || !rows.length) {
+      gridEl.innerHTML = `<div class="col-12"><div class="alert alert-info">No ${role}s found.</div></div>`;
+      return;
+    }
+    gridEl.innerHTML = rows.map(u => `
+      <div class="col-12 col-md-6 col-lg-4 user-col"
+           data-name="${(u.name || '').toLowerCase()}" data-phone="${(u.phone || '').toLowerCase()}" data-role="${role}" data-available="${u.available_num}">
+        <div class="card user-card shadow-sm h-100" data-user-id="${u._id}" data-role="${role}">
+          <div class="card-body d-flex flex-column">
+            <div class="d-flex justify-content-between align-items-start">
+              <div>
+                <div class="fw-semibold">${u.name || 'User'}</div>
+                <div class="meta">${u.phone || ""}</div>
+              </div>
+              <span class="badge bg-light text-dark">All dates</span>
+            </div>
+
+            <div class="mt-3 muted">Total Available</div>
+            <div class="amt" id="bal-${u._id}">GHS ${u.available || '0.00'}</div>
+
+            <div class="mt-auto d-flex gap-2">
+              <button class="btn btn-outline-primary btn-sm withdraw-btn"
+                      data-user-id="${u._id}"
+                      data-user-name="${(u.name || '').replace(/\"/g, '&quot;')}"
+                      data-user-phone="${(u.phone || '').replace(/\"/g, '&quot;')}"
+                      data-role="${role}"
+                      data-available="${u.available || '0.00'}">
+                <i class="bi bi-cash-coin"></i> Withdraw
+              </button>
+
+              <button class="btn btn-outline-secondary btn-sm history-btn"
+                      data-user-id="${u._id}"
+                      data-user-name="${(u.name || '').replace(/\"/g, '&quot;')}">
+                <i class="bi bi-clock-history"></i> History
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function setSummary(payload) {
+    if (payload.executive_name) {
+      const nameEl = document.getElementById('execName');
+      if (nameEl) nameEl.textContent = payload.executive_name;
+    }
+    if (payload.today) {
+      const todayEl = document.getElementById('execToday');
+      if (todayEl) todayEl.textContent = payload.today;
+    }
+
+    applyStatMoney('allGrossToday', payload.all_gross_today?.value || 0);
+    applyStatMoney('allGrossWeek', payload.all_gross_week?.value || 0);
+    applyStatMoney('allGrossMonth', payload.all_gross_month?.value || 0);
+    applyStatMoney('allGrossTotal', payload.all_gross_total?.value || 0);
+    applyStatMoney('closeTotal', payload.close_total?.value || 0);
+    applyStatMoney('uncloseTotal', payload.unclose_total?.value || 0);
+
+    applyStatNumber('allColToday', payload.all_col_today?.value || 0);
+    applyStatNumber('allExpToday', payload.all_exp_today?.value || 0);
+    applyStatNumber('allColWeek', payload.all_col_week?.value || 0);
+    applyStatNumber('allExpWeek', payload.all_exp_week?.value || 0);
+    applyStatNumber('allColMonth', payload.all_col_month?.value || 0);
+    applyStatNumber('allExpMonth', payload.all_exp_month?.value || 0);
+    applyStatNumber('allColTotal', payload.all_col_total?.value || 0);
+    applyStatNumber('allExpTotal', payload.all_exp_total?.value || 0);
+
+    document.body.classList.remove('loading-state');
+  }
+
+  function showBranchesSkeletons() {
+    const branchesBody = document.getElementById('branchesBody');
+    if (!branchesBody) return;
+    branchesBody.innerHTML = `
+      <tr class="skeleton-row">
+        <td><span class="skeleton skeleton-text" style="width:180px"></span></td>
+        <td class="text-end"><span class="skeleton skeleton-text" style="width:90px"></span></td>
+        <td class="text-end"><span class="skeleton skeleton-text" style="width:90px"></span></td>
+        <td class="text-end"><span class="skeleton skeleton-text" style="width:90px"></span></td>
+        <td class="text-end"><span class="skeleton skeleton-text" style="width:90px"></span></td>
+        <td class="text-end"><span class="skeleton skeleton-text" style="width:90px"></span></td>
+      </tr>
+      <tr class="skeleton-row">
+        <td><span class="skeleton skeleton-text" style="width:160px"></span></td>
+        <td class="text-end"><span class="skeleton skeleton-text" style="width:90px"></span></td>
+        <td class="text-end"><span class="skeleton skeleton-text" style="width:90px"></span></td>
+        <td class="text-end"><span class="skeleton skeleton-text" style="width:90px"></span></td>
+        <td class="text-end"><span class="skeleton skeleton-text" style="width:90px"></span></td>
+        <td class="text-end"><span class="skeleton skeleton-text" style="width:90px"></span></td>
+      </tr>
+    `;
+  }
+
+  function showGridSkeletons(gridEl) {
+    const cardSkeleton = `
+      <div class="col-12 col-md-6 col-lg-4">
+        <div class="card user-card shadow-sm h-100">
+          <div class="card-body">
+            <div class="skeleton skeleton-text" style="width:70%"></div>
+            <div class="skeleton skeleton-text mt-2" style="width:50%"></div>
+            <div class="skeleton skeleton-lg mt-3"></div>
+            <div class="d-flex gap-2 mt-3">
+              <div class="skeleton skeleton-btn"></div>
+              <div class="skeleton skeleton-btn"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+    if (gridEl) gridEl.innerHTML = cardSkeleton;
+  }
+
+  function showAgentsSkeletons() {
+    const cardSkeleton = `
+      <div class="col-12 col-md-6 col-lg-4">
+        <div class="card user-card shadow-sm h-100">
+          <div class="card-body">
+            <div class="skeleton skeleton-text" style="width:70%"></div>
+            <div class="skeleton skeleton-text mt-2" style="width:50%"></div>
+            <div class="skeleton skeleton-lg mt-3"></div>
+            <div class="d-flex gap-2 mt-3">
+              <div class="skeleton skeleton-btn"></div>
+              <div class="skeleton skeleton-btn"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+    if (agentsGrid) agentsGrid.innerHTML = cardSkeleton;
+  }
+
+  function animateGridAmounts(gridEl) {
+    if (!gridEl) return;
+    gridEl.querySelectorAll('.user-col').forEach(col => {
+      const amtEl = col.querySelector('.amt');
+      const value = parseFloat(col.dataset.available || '0');
+      if (amtEl) {
+        amtEl.textContent = formatGhs(value);
+        animateCount(amtEl, value);
+      }
+    });
+  }
+
+  function enableSearchIfNeeded() {
+    const shouldEnable = adminsLoaded || managersLoaded || agentsLoaded;
+    if (searchInput) searchInput.disabled = !shouldEnable;
+  }
+
+  async function loadSummary() {
+    try {
+      const resp = await fetch('/executive-close/api/summary', { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+      const data = await resp.json().catch(() => ({}));
+      if (!resp.ok || !data || !data.ok) {
+        showAlert('danger', (data && data.message) || 'Failed to load summary data.');
+        return;
+      }
+      setSummary(data);
+    } catch (err) {
+      console.error(err);
+      showAlert('danger', 'Failed to load summary data.');
+    }
+  }
+
+  async function loadBranches() {
+    if (loadBranches.loaded) return;
+    loadBranches.loaded = true;
+    const btn = document.getElementById('viewBranchesBtn');
+    const wrap = document.getElementById('branchesTableWrap');
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner me-1"></span> Loading Branches...';
+    }
+    if (wrap) wrap.style.display = '';
+    showBranchesSkeletons();
+    try {
+      const resp = await fetch('/executive-close/api/branches', { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+      const data = await resp.json().catch(() => ({}));
+      if (!resp.ok || !data || !data.ok) {
+        showAlert('danger', (data && data.message) || 'Failed to load branches.');
+        loadBranches.loaded = false;
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = '<i class="bi bi-diagram-3"></i> View Branch Table';
+        }
+        return;
+      }
+      renderBranches(data.branches || []);
+      if (btn) btn.style.display = 'none';
+    } catch (err) {
+      console.error(err);
+      showAlert('danger', 'Failed to load branches.');
+      loadBranches.loaded = false;
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-diagram-3"></i> View Branch Table';
+      }
+    }
+  }
+
+  async function loadAdmins() {
+    if (adminsLoaded) return;
+    adminsLoaded = true;
+    const btn = document.getElementById('viewAdminsBtn');
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner me-1"></span> Loading Admins...';
+    }
+    if (adminsGrid) adminsGrid.style.display = '';
+    showGridSkeletons(adminsGrid);
+    try {
+      const resp = await fetch('/executive-close/api/admins', { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+      const data = await resp.json().catch(() => ({}));
+      if (!resp.ok || !data || !data.ok) {
+        showAlert('danger', (data && data.message) || 'Failed to load admins.');
+        adminsLoaded = false;
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = '<i class="bi bi-person-badge"></i> View Admin Accounts';
+        }
+        return;
+      }
+      admins = data.admins || [];
+      admins.forEach(u => { userMap[String(u._id)] = u; });
+      renderGrid(adminsGrid, admins, 'admin');
+      resortGrid(adminsGrid);
+      animateGridAmounts(adminsGrid);
+      if (btn) btn.style.display = 'none';
+      enableSearchIfNeeded();
+    } catch (err) {
+      console.error(err);
+      showAlert('danger', 'Failed to load admins.');
+      adminsLoaded = false;
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-person-badge"></i> View Admin Accounts';
+      }
+    }
+  }
+
+  async function loadManagers() {
+    if (managersLoaded) return;
+    managersLoaded = true;
+    const btn = document.getElementById('viewManagersBtn');
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner me-1"></span> Loading Managers...';
+    }
+    if (managersGrid) managersGrid.style.display = '';
+    showGridSkeletons(managersGrid);
+    try {
+      const resp = await fetch('/executive-close/api/managers', { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+      const data = await resp.json().catch(() => ({}));
+      if (!resp.ok || !data || !data.ok) {
+        showAlert('danger', (data && data.message) || 'Failed to load managers.');
+        managersLoaded = false;
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = '<i class="bi bi-people"></i> View Manager Accounts';
+        }
+        return;
+      }
+      managers = data.managers || [];
+      managers.forEach(u => { userMap[String(u._id)] = u; });
+      renderGrid(managersGrid, managers, 'manager');
+      resortGrid(managersGrid);
+      animateGridAmounts(managersGrid);
+      if (btn) btn.style.display = 'none';
+      enableSearchIfNeeded();
+    } catch (err) {
+      console.error(err);
+      showAlert('danger', 'Failed to load managers.');
+      managersLoaded = false;
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-people"></i> View Manager Accounts';
+      }
+    }
+  }
+
+  async function loadAgents() {
+    if (agentsLoaded) return;
+    agentsLoaded = true;
+    const btn = document.getElementById('loadAgentsBtn');
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner me-1"></span> Loading Agents...';
+    }
+    showAgentsSkeletons();
+    try {
+      const resp = await fetch('/executive-close/api/agents', { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+      const data = await resp.json().catch(() => ({}));
+      if (!resp.ok || !data || !data.ok) {
+        showAlert('danger', (data && data.message) || 'Failed to load agents.');
+        agentsLoaded = false;
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = '<i class="bi bi-people"></i> View Agents Accounts';
+        }
+        return;
+      }
+      agents = data.agents || [];
+      agents.forEach(u => { userMap[String(u._id)] = u; });
+      renderGrid(agentsGrid, agents, 'agent');
+      resortGrid(agentsGrid);
+      animateGridAmounts(agentsGrid);
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="bi bi-check2-circle"></i> Agents Loaded';
+      }
+      enableSearchIfNeeded();
+    } catch (err) {
+      console.error(err);
+      showAlert('danger', 'Failed to load agents.');
+      agentsLoaded = false;
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-people"></i> View Agents Accounts';
+      }
+    }
+  }
+
+  function showAlert(kind, message){
+    const wrap = document.createElement('div');
+    wrap.className = `alert alert-${kind} alert-dismissible fade show`;
+    wrap.role = 'alert';
+    wrap.innerHTML = `${message}<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>`;
+    alertHost.innerHTML = '';
+    alertHost.appendChild(wrap);
+    setTimeout(()=>{ try{ bootstrap.Alert.getOrCreateInstance(wrap).close(); }catch(e){} }, 5000);
+  }
+
+  function setLoading(on){
+    mSubmitBtn.disabled = !!on;
+    mSpin.style.display = on ? 'inline-block' : 'none';
+    mLabel.textContent  = on ? 'Processing...' : 'Withdraw';
+  }
+
+  // Search/filter across all grids
+  searchInput?.addEventListener('input', ()=>{
+    const q = searchInput.value.trim().toLowerCase();
+    [adminsGrid, managersGrid, agentsGrid].forEach(grid=>{
+      grid.querySelectorAll('.user-col').forEach(col=>{
+        const name  = col.dataset.name || '';
+        const phone = col.dataset.phone || '';
+        col.style.display = (name.includes(q) || phone.includes(q)) ? '' : 'none';
+      });
+    });
+  });
+
+  // Resort a grid by data-available desc
+  function resortGrid(grid){
+    const cols = Array.from(grid.querySelectorAll('.user-col'));
+    cols.sort((a,b)=> (parseFloat(b.dataset.available || '0') - parseFloat(a.dataset.available || '0')));
+    cols.forEach(c => grid.appendChild(c));
+  }
+
+  // Role badge color helper
+  function roleBadgeClass(role){
+    if(role === 'admin') return 'role-badge role-admin';
+    if(role === 'manager') return 'role-badge role-manager';
+    return 'role-badge role-agent';
+  }
+
+  // Delegated click handlers (withdraw / history) for each grid
+  [adminsGrid, managersGrid, agentsGrid].forEach(grid=>{
+    grid.addEventListener('click', (e)=>{
+      const wbtn = e.target.closest('.withdraw-btn');
+      if(wbtn){
+        const id   = wbtn.dataset.userId;
+        const name = wbtn.dataset.userName || 'User';
+        const phone= wbtn.dataset.userPhone || '--';
+        const role = wbtn.dataset.role || '';
+        const avail= wbtn.dataset.available || '0.00';
+
+        mUserId.value = id;
+        mUserName.textContent = name;
+        mUserPhone.textContent = phone;
+        mUserAvail.textContent = avail;
+        mUserRoleBadge.className = roleBadgeClass(role);
+        mUserRoleBadge.textContent = role ? role.toUpperCase() : '';
+
+        mAmount.value = '';
+        mNote.value   = '';
+
+        withdrawModal.show();
+        setTimeout(()=> mAmount.focus(), 200);
+        return;
+      }
+
+      const hbtn = e.target.closest('.history-btn');
+      if(hbtn){
+        const id   = hbtn.dataset.userId;
+        const name = hbtn.dataset.userName || 'User';
+
+        hUserName.textContent = name;
+        historyTbody.innerHTML = '';
+        historyEmpty.style.display = 'none';
+        historyWrap.style.display  = 'none';
+        historyCount.textContent = 'Loading...';
+
+        (async ()=>{
+          try{
+            const resp = await fetch(`/executive-close/user/${id}/withdrawals`, { headers: { 'X-Requested-With': 'XMLHttpRequest' }});
+            const data = await resp.json().catch(()=> ({}));
+            if(resp.ok && data && data.ok){
+              const rows = data.withdrawals || [];
+              if(rows.length === 0){
+                historyEmpty.style.display = 'block';
+                historyWrap.style.display  = 'none';
+                historyCount.textContent = '0 records';
+              }else{
+                const frag = document.createDocumentFragment();
+                rows.forEach(r=>{
+                  const tr = document.createElement('tr');
+                  const amt = (typeof r.amount === 'number' ? r.amount : parseFloat(r.amount || '0')).toFixed(2);
+                  tr.innerHTML = `
+                    <td>${r.date || ''}</td>
+                    <td>${r.time || ''}</td>
+                    <td class="fw-semibold">GHS ${amt}</td>
+                    <td>${(r.note || '').replace(/</g,'&lt;')}</td>
+                    <td>${(r.by_name || '')}${r.by_role ? ' · ' + r.by_role : ''}</td>
+                  `;
+                  frag.appendChild(tr);
+                });
+                historyTbody.appendChild(frag);
+                historyWrap.style.display  = 'block';
+                historyEmpty.style.display = 'none';
+                historyCount.textContent = rows.length + ' record' + (rows.length===1?'':'s');
+              }
+            }else{
+              historyEmpty.style.display = 'block';
+              historyWrap.style.display  = 'none';
+              historyCount.textContent = '0 records';
+            }
+          }catch(err){
+            console.error(err);
+            historyEmpty.style.display = 'block';
+            historyWrap.style.display  = 'none';
+            historyCount.textContent = '0 records';
+          }
+          historyModal.show();
+        })();
+
+        return;
+      }
+    });
+  });
+
+  // Max button -> set amount to available
+  mMaxBtn.addEventListener('click', ()=>{
+    const raw = (mUserAvail.textContent || '0').replaceAll(',', '').trim();
+    const num = parseFloat(raw);
+    if(!isNaN(num) && num > 0){
+      mAmount.value = num.toFixed(2);
+      mAmount.focus();
+    }
+  });
+
+  // Submit modal form
+  document.getElementById('withdrawForm').addEventListener('submit', async (e)=>{
+    e.preventDefault();
+
+    const target_id = mUserId.value;
+    const amount = parseFloat(mAmount.value || '0');
+
+    if(!target_id){ showAlert('warning','No user selected.'); return; }
+    if(!(amount > 0)){ showAlert('warning','Enter a positive amount.'); return; }
+
+    const fd = new FormData();
+    fd.set('target_id', target_id);
+    fd.set('amount', amount);
+    fd.set('note', mNote.value || '');
+
+    setLoading(true);
+    try{
+      const resp = await fetch("{{ url_for('executive_sales_close.executive_withdraw') }}", {
+        method: 'POST',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        body: fd
+      });
+      const data = await resp.json().catch(()=> ({}));
+
+      if(resp.ok && data && data.ok){
+        // Update user card balance
+        const balEl = document.getElementById('bal-' + target_id);
+        if(balEl && data.available){
+          balEl.textContent = 'GHS ' + data.available;
+        }
+
+        // Update the column's data-available for sorting
+        const col = document.querySelector(`.user-col [data-user-id="${target_id}"]`)?.closest('.user-col');
+        if(col && data.available){
+          const num = parseFloat(String(data.available).replaceAll(',', '')) || 0;
+          col.dataset.available = num.toString();
+
+          const role = col.dataset.role || col.querySelector('[data-role]')?.dataset.role;
+          if(role === 'admin'){ resortGrid(adminsGrid); }
+          else if(role === 'manager'){ resortGrid(managersGrid); }
+          else { resortGrid(agentsGrid); }
+        }
+
+        // Update button dataset available for next modal opens
+        const btn = document.querySelector(`.withdraw-btn[data-user-id="${target_id}"]`);
+        if(btn && data.available){ btn.dataset.available = data.available; }
+
+        // Update modal info too
+        if(data.available){ mUserAvail.textContent = data.available; }
+
+        // Update top cards (exec-level)
+        if(data.unclose_total){ uncloseTotalEl.textContent = 'GHS ' + data.unclose_total; }
+        if(data.close_total){   closeTotalEl.textContent   = 'GHS ' + data.close_total;   }
+
+        showAlert('success', (data.message || 'Withdrawal successful.'));
+        bootstrap.Modal.getInstance(withdrawModalEl)?.hide();
+      }else{
+        showAlert('danger', (data && data.message) || 'Withdrawal failed.');
+      }
+    }catch(err){
+      console.error(err);
+      showAlert('danger', 'Network error. Please try again.');
+    }finally{
+      setLoading(false);
+    }
+  });
+
+  document.addEventListener('DOMContentLoaded', () => {
+    loadSummary();
+    const btn = document.getElementById('loadAgentsBtn');
+    if (btn) {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        loadAgents();
+      });
+    }
+
+    const branchesBtn = document.getElementById('viewBranchesBtn');
+    if (branchesBtn) {
+      branchesBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        loadBranches();
+      });
+    }
+
+    const adminsBtn = document.getElementById('viewAdminsBtn');
+    if (adminsBtn) {
+      adminsBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        loadAdmins();
+      });
+    }
+
+    const managersBtn = document.getElementById('viewManagersBtn');
+    if (managersBtn) {
+      managersBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        loadManagers();
+      });
+    }
+  });
+})();
+</script>
+  {% include 'app_footer.html' %}
+
+</body>
+</html>

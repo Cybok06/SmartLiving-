@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Clients -  TRUEtype</title>
+  <link rel="icon" href="https://static.wixstatic.com/media/13bf20_85bc952de62849e895a80e274750784b~mv2.png/v1/fill/w_392,h_146,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/13bf20_85bc952de62849e895a80e274750784b~mv2.png" type="image/png">
+
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&family=Material+Symbols+Outlined" rel="stylesheet"/>
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors:{ primary:"#0f172a", accent:"#16a34a", soft:"#f9fafb" },
+          fontFamily:{ display:["Inter","system-ui","sans-serif"] },
+          borderRadius:{ xl:"1.125rem" }
+        }
+      }
+    }
+  </script>
+  <style>.material-symbols-outlined{font-variation-settings:'FILL' 0,'wght' 500,'GRAD' 0,'opsz' 24}</style>
+</head>
+<body class="min-h-full bg-soft text-primary font-display">
+  {% include 'accounting/sidebar.html' %}
+
+  <main class="max-w-7xl mx-auto px-4 lg:px-8 py-6 lg:py-8 acc-with-sidebar">
+    <!-- Header -->
+    <header class="mb-6 flex flex-wrap items-center justify-between gap-3">
+      <div>
+        <h1 class="text-3xl lg:text-4xl font-black tracking-tight">Clients</h1>
+        <p class="text-sm text-slate-500">Manage client master data for invoicing and payments.</p>
+      </div>
+      <div class="flex gap-2">
+        <a href="{{ export_url }}" class="h-10 px-4 rounded-full border font-semibold hover:bg-white/60 flex items-center gap-2">
+          <span class="material-symbols-outlined">download</span> Export
+        </a>
+        <button id="openCust" type="button" class="h-10 px-4 rounded-full bg-accent text-white font-bold hover:bg-accent/90 flex items-center gap-2">
+          <span class="material-symbols-outlined">add</span> New Client
+        </button>
+      </div>
+    </header>
+
+    {% if stats %}
+    <!-- Top AR summary -->
+    <section class="mb-4 grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <article class="rounded-xl bg-white border border-slate-200 p-4">
+        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Total Outstanding Receivables</p>
+        <p class="mt-2 text-2xl lg:text-3xl font-black text-slate-900">
+          GH₵{{ "{:,.2f}".format(stats.total_outstanding or 0) }}
+        </p>
+        <p class="mt-1 text-xs text-slate-500">
+          Sum of all unpaid invoice balances for the clients shown.
+        </p>
+      </article>
+    </section>
+    {% endif %}
+
+    <!-- Filters -->
+    <section class="bg-white rounded-xl border border-slate-200 p-4 mb-4">
+      <form method="get" class="flex flex-wrap items-center gap-3">
+        <div class="relative flex-1 min-w-[220px]">
+          <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">search</span>
+          <input name="q" value="{{ request.args.get('q','') }}" placeholder="Search name, code, phone…" class="w-full h-10 pl-10 pr-3 rounded-full border bg-slate-50"/>
+        </div>
+        <select name="status" class="h-10 rounded-full border px-3">
+          {% set st = request.args.get('status','') %}
+          <option value="">All status</option>
+          <option value="active"   {{ 'selected' if st=='active'   }}>Active</option>
+          <option value="inactive" {{ 'selected' if st=='inactive' }}>Inactive</option>
+        </select>
+        <button class="h-10 px-4 rounded-full border font-semibold">Apply</button>
+      </form>
+    </section>
+
+    <!-- Cards -->
+    <section class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+      {% for c in rows %}
+      <article class="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
+        <div class="flex items-start justify-between">
+          <div>
+            <p class="text-lg font-bold">{{ c.name }}</p>
+            <p class="text-sm text-slate-500">{{ c.code }}</p>
+          </div>
+          {% set badge = 'bg-green-100 text-green-800' if c.status=='active' else 'bg-slate-100 text-slate-800' %}
+          <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold {{ badge }}">{{ c.status|title }}</span>
+        </div>
+
+        <!-- AR summary per client -->
+        <section class="mt-4 border-t border-slate-200 pt-4 space-y-3">
+          <div class="grid grid-cols-3 gap-3 text-xs">
+            <div>
+              <p class="text-slate-500">Total Invoiced</p>
+              <p class="mt-0.5 text-sm font-semibold text-slate-900">
+                GH₵{{ "%.2f"|format(c.total_invoiced or 0) }}
+              </p>
+            </div>
+            <div>
+              <p class="text-slate-500">Paid</p>
+              <p class="mt-0.5 text-sm font-semibold text-emerald-700">
+                GH₵{{ "%.2f"|format(c.total_paid or 0) }}
+              </p>
+            </div>
+            <div>
+              <p class="text-slate-500">Outstanding</p>
+              <p class="mt-0.5 text-sm font-semibold text-rose-700">
+                GH₵{{ "%.2f"|format(c.balance or 0) }}
+              </p>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between">
+            <p class="text-xs text-slate-500">Aging bucket</p>
+            <span class="inline-flex items-center rounded-md bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700">
+              {{ c.bucket or '--' }}
+            </span>
+          </div>
+        </section>
+
+        <div class="text-sm text-slate-600 space-y-1.5 mt-3">
+          {% if c.phone %}<p><span class="font-medium">Phone:</span> {{ c.phone }}</p>{% endif %}
+          {% if c.email %}<p><span class="font-medium">Email:</span> {{ c.email }}</p>{% endif %}
+          {% if c.last_invoice %}<p><span class="font-medium">Last Invoice:</span> {{ c.last_invoice }}</p>{% endif %}
+          {% if c.last_payment %}<p><span class="font-medium">Last Payment:</span> {{ c.last_payment }}</p>{% endif %}
+        </div>
+
+        <div class="flex gap-2 mt-4">
+          <a href="{{ url_for('ar_invoices.invoices', customer=c.code) }}"
+             class="flex-1 text-center py-2 px-4 border border-primary text-primary rounded-lg text-sm font-semibold hover:bg-primary/5">
+            Create Invoice
+          </a>
+          <a href="{{ url_for('ar_payments.payments', customer=c.code) }}"
+             class="flex-1 text-center py-2 px-4 bg-accent text-white rounded-lg text-sm font-semibold hover:bg-accent/90">
+            Record Payment
+          </a>
+        </div>
+      </article>
+      {% else %}
+      <div class="col-span-full text-center p-12 bg-white border border-dashed border-slate-300 rounded-xl">
+        <div class="mx-auto h-12 w-12 grid place-items-center rounded-full bg-accent/10 text-accent">
+          <span class="material-symbols-outlined text-2xl">groups</span>
+        </div>
+        <h3 class="mt-4 text-lg font-semibold">No clients found</h3>
+        <p class="mt-1 text-sm text-slate-500">Use "New Client" to add one.</p>
+      </div>
+      {% endfor %}
+    </section>
+
+    <!-- Pagination -->
+    {% if pager and pager.pages > 1 %}
+    <nav class="mt-6 flex items-center justify-between">
+      <a class="px-3 py-2 rounded-lg border {{ 'pointer-events-none opacity-50' if not pager.prev_url else '' }}" href="{{ pager.prev_url or '#' }}">Previous</a>
+      <div class="text-sm text-slate-500">Page {{ pager.page }} of {{ pager.pages }}</div>
+      <a class="px-3 py-2 rounded-lg border {{ 'pointer-events-none opacity-50' if not pager.next_url else '' }}" href="{{ pager.next_url or '#' }}">Next</a>
+    </nav>
+    {% endif %}
+  </main>
+
+  <!-- Quick Add Client Modal -->
+  <div id="custBackdrop" class="fixed inset-0 bg-black/40 z-[100] hidden"></div>
+  <div id="custModal" class="fixed inset-0 z-[101] hidden p-4 overflow-y-auto">
+    <div class="mx-auto max-w-xl">
+      <div class="rounded-xl border border-slate-200 bg-white shadow">
+        <div class="flex items-center justify-between px-5 py-3 border-b">
+          <h3 class="text-lg font-bold">New Client</h3>
+          <button id="closeCust" class="h-9 w-9 grid place-items-center rounded-lg border hover:bg-slate-50">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </div>
+        <form id="custForm" class="p-5 space-y-4">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <!-- Auto-generated code -->
+            <label class="block">
+              <span class="text-sm font-medium">Code</span>
+              <input name="code" class="mt-1 w-full h-11 rounded-xl border p-2.5 bg-slate-50"
+                     value="{{ next_client_code }}" readonly>
+            </label>
+            <label class="block">
+              <span class="text-sm font-medium">Name</span>
+              <input name="name" required class="mt-1 w-full h-11 rounded-xl border p-2.5" placeholder="Company / Person">
+            </label>
+            <label class="block">
+              <span class="text-sm font-medium">Phone</span>
+              <input name="phone" class="mt-1 w-full h-11 rounded-xl border p-2.5" placeholder="020...">
+            </label>
+            <label class="block">
+              <span class="text-sm font-medium">Email</span>
+              <input name="email" type="email" class="mt-1 w-full h-11 rounded-xl border p-2.5" placeholder="mail@…">
+            </label>
+            <label class="block sm:col-span-2">
+              <span class="text-sm font-medium">Status</span>
+              <select name="status" class="mt-1 w-full h-11 rounded-xl border p-2.5">
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+              </select>
+            </label>
+          </div>
+          <div class="flex items-center justify-between pt-2">
+            <p id="custMsg" class="text-sm text-slate-500"></p>
+            <div class="flex gap-2">
+              <button type="button" id="cancelCust" class="h-11 px-5 rounded-full border">Cancel</button>
+              <button type="submit" id="saveCust" class="h-11 px-6 rounded-full bg-accent text-white font-bold hover:bg-accent/90">Save</button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const m = document.getElementById('custModal'),
+          b = document.getElementById('custBackdrop');
+    function openM(){ m.classList.remove('hidden'); b.classList.remove('hidden'); }
+    function closeM(){ m.classList.add('hidden'); b.classList.add('hidden'); }
+    document.getElementById('openCust')?.addEventListener('click',openM);
+    document.getElementById('closeCust')?.addEventListener('click',closeM);
+    document.getElementById('cancelCust')?.addEventListener('click',closeM);
+    b?.addEventListener('click',closeM);
+    window.addEventListener('keydown',e=>{ if(e.key==='Escape') closeM(); });
+
+    const form = document.getElementById('custForm');
+    const msg  = document.getElementById('custMsg');
+    const btn  = document.getElementById('saveCust');
+    form?.addEventListener('submit', async (e)=>{
+      e.preventDefault(); msg.textContent=''; btn.disabled=true;
+      try{
+        const fd = new FormData(form);
+        const res = await fetch("{{ url_for('acc_clients.quick_create') }}",{ method:"POST", body:fd });
+        const data = await res.json();
+        if(!res.ok || !data.ok){
+          msg.textContent = data.message || 'Failed';
+          btn.disabled = false;
+          return;
+        }
+        closeM();
+        location.reload();
+      }catch(err){
+        console.error(err);
+        msg.textContent='Network error';
+        btn.disabled=false;
+      }
+    });
+  </script>
+</body>
+</html>

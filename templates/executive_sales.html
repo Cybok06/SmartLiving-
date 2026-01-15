@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Executive Sales by Branch</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <!-- Bootstrap & Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <link rel="icon"
+          href="https://imagedelivery.net/h9fmMoa1o2c2P55TcWJGOg/10283f28-b9a0-4100-b254-19a854386800/public"
+          type="image/png">
+
+  <style>
+    body {
+      background-color: #f8f9fa;
+      transition: background 0.3s, color 0.3s;
+    }
+
+    .dark-mode {
+      background-color: #121212;
+      color: #f1f1f1;
+    }
+
+    .card {
+      border-radius: 12px;
+      box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+    }
+
+    .card h5 {
+      font-size: 1.1rem;
+      color: #555;
+    }
+
+    .dark-mode .card {
+      background-color: #1e1e1e;
+      color: #f1f1f1;
+      border: none;
+    }
+
+    .toggle-dark {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 1000;
+    }
+
+    .section-title {
+      margin-top: 40px;
+      margin-bottom: 20px;
+      font-weight: bold;
+    }
+
+    .filter-bar {
+      margin-bottom: 30px;
+    }
+
+    .filter-btn {
+      margin-right: 10px;
+    }
+
+    .filter-btn.active {
+      font-weight: bold;
+      color: #fff;
+      background-color: #0d6efd;
+    }
+
+    .history-filter {
+      max-width: 220px;
+      float: right;
+      margin-bottom: 10px;
+    }
+
+    .date-range-form {
+      max-width: 100%;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: center;
+      margin-bottom: 30px;
+    }
+
+    .date-range-form input {
+      padding: 5px;
+    }
+
+    .card-container {
+      min-height: 100px;
+    }
+  </style>
+</head>
+<body>
+  {% include 'executive_sidebar.html' %}
+
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="fw-bold">📊 Executive Sales by Branch</h2>
+    <button class="btn btn-outline-dark toggle-dark" onclick="toggleDarkMode()">
+      <i class="bi bi-moon"></i>
+    </button>
+  </div>
+
+  <!-- Quick Range Filter -->
+  <div class="filter-bar text-center">
+    <a href="/executive/sales?range=daily" class="btn filter-btn {% if active_range == 'daily' %}active{% endif %}">Today</a>
+    <a href="/executive/sales?range=weekly" class="btn filter-btn {% if active_range == 'weekly' %}active{% endif %}">This Week</a>
+    <a href="/executive/sales?range=monthly" class="btn filter-btn {% if active_range == 'monthly' %}active{% endif %}">This Month</a>
+  </div>
+
+  <!-- Custom Date Range Filter -->
+  <form class="date-range-form justify-content-center align-items-center" onsubmit="fetchCustomSales(event)">
+    <input type="date" id="start-date" name="start" value="{{ start_date }}">
+    <input type="date" id="end-date" name="end" value="{{ end_date }}">
+    <button type="submit" class="btn btn-primary">
+      <i class="bi bi-search"></i> Filter
+    </button>
+  </form>
+
+  <!-- Sales Cards -->
+  <div class="row g-4 mb-5 card-container" id="sales-cards">
+    {% for branch, amount in sales.items() %}
+    <div class="col-sm-6 col-lg-4">
+      <div class="card p-3 text-center">
+        <h5>{{ branch }}</h5>
+        <h3 class="fw-bold text-primary">GHS {{ "%.2f"|format(amount) }}</h3>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- Sales History Table -->
+  <div class="section-title d-flex justify-content-between align-items-center">
+    <span>📅 Sales History</span>
+    <form method="get" action="/executive/sales" class="history-filter">
+      <select name="history" class="form-select" onchange="this.form.submit()">
+        <option value="weekly" {% if history_type == 'weekly' %}selected{% endif %}>Last Weeks</option>
+        <option value="monthly" {% if history_type == 'monthly' %}selected{% endif %}>Last Months</option>
+        <option value="daily" {% if history_type == 'daily' %}selected{% endif %}>Last Days</option>
+      </select>
+    </form>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table table-bordered table-hover align-middle">
+      <thead class="table-light">
+        <tr>
+          <th>Period</th>
+          <th>Date Range</th>
+          <th>Branch</th>
+          <th>Total Sales (GHS)</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for period in history %}
+          {% for branch, amt in period.sales.items() %}
+          <tr>
+            <td>{{ period.label }}</td>
+            <td>{{ period.range }}</td>
+            <td>{{ branch }}</td>
+            <td>GHS {{ "%.2f"|format(amt) }}</td>
+          </tr>
+          {% endfor %}
+        {% else %}
+        <tr>
+          <td colspan="4" class="text-center text-muted">No history data found.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+  function toggleDarkMode() {
+    document.body.classList.toggle("dark-mode");
+  }
+
+  function fetchCustomSales(event) {
+    event.preventDefault();
+
+    const start = document.getElementById("start-date").value;
+    const end = document.getElementById("end-date").value;
+
+    if (!start || !end) {
+      alert("Please select both start and end dates.");
+      return;
+    }
+
+    axios.get("/executive/sales", {
+      params: { start: start, end: end },
+      headers: { "X-Requested-With": "XMLHttpRequest" }
+    })
+    .then(response => {
+      const data = response.data.sales;
+      const container = document.getElementById("sales-cards");
+      container.innerHTML = "";
+
+      if (Object.keys(data).length === 0) {
+        container.innerHTML = `<div class="col-12 text-center text-muted">No sales found in selected range.</div>`;
+        return;
+      }
+
+      for (const [branch, amount] of Object.entries(data)) {
+        const card = `
+          <div class="col-sm-6 col-lg-4">
+            <div class="card p-3 text-center">
+              <h5>${branch}</h5>
+              <h3 class="fw-bold text-primary">GHS ${parseFloat(amount).toFixed(2)}</h3>
+            </div>
+          </div>`;
+        container.insertAdjacentHTML("beforeend", card);
+      }
+    })
+    .catch(error => {
+      console.error("Failed to load custom sales data", error);
+      alert("An error occurred. Please try again.");
+    });
+  }
+</script>
+  {% include 'app_footer.html' %}
+
+</body>
+</html>

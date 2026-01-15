@@ -1,0 +1,199 @@
+{# templates/hr_pages/partials/employee_wages_tab.html #}
+
+<div class="card border-0 shadow-sm">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <div>
+      <h2 class="h6 mb-0">Wages &amp; Tips</h2>
+      <p class="small text-muted mb-0">
+        Record any extra wages, allowances, and tips given to this employee. All entries are logged below.
+      </p>
+    </div>
+  </div>
+
+  <div class="card-body">
+    <!-- Entry form -->
+    <form id="hr-wage-form" class="row g-3 align-items-end mb-3">
+      <div class="col-12 col-md-3">
+        <label class="form-label small mb-1">Amount</label>
+        <div class="input-group input-group-sm">
+          <span class="input-group-text">GHS</span>
+          <input type="number"
+                 step="0.01"
+                 min="0"
+                 name="amount"
+                 class="form-control"
+                 placeholder="0.00"
+                 required>
+        </div>
+      </div>
+
+      <div class="col-12 col-md-3">
+        <label class="form-label small mb-1">Date</label>
+        <input type="date"
+               name="date"
+               class="form-control form-control-sm">
+        <small class="text-muted extra-small">
+          Leave empty to use today.
+        </small>
+      </div>
+
+      <div class="col-12 col-md-4">
+        <label class="form-label small mb-1">Reason / Description</label>
+        <input type="text"
+               name="reason"
+               class="form-control form-control-sm"
+               placeholder="Eg. Extra sales commission, weekend shift">
+      </div>
+
+      <div class="col-12 col-md-2 d-grid">
+        <button type="submit"
+                class="btn btn-sm btn-primary"
+                id="hr-wage-submit-btn">
+          <span class="spinner-border spinner-border-sm me-1 d-none"
+                id="hr-wage-spinner"
+                role="status"></span>
+          Record wage / tip
+        </button>
+      </div>
+    </form>
+
+    <!-- History table -->
+    <div class="table-responsive">
+      <table class="table table-sm align-middle mb-0">
+        <thead class="table-light small">
+          <tr>
+            <th style="width:15%;">Amount (GHS)</th>
+            <th>Reason</th>
+            <th style="width:18%;">Date</th>
+          </tr>
+        </thead>
+        <tbody id="hr-wage-table-body" class="small">
+          <tr id="hr-wage-loading-row">
+            <td colspan="3" class="text-muted fst-italic">
+              Loading wages &amp; tips...
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  const tbody      = document.getElementById('hr-wage-table-body');
+  const loadingRow = document.getElementById('hr-wage-loading-row');
+  const form       = document.getElementById('hr-wage-form');
+  const submitBtn  = document.getElementById('hr-wage-submit-btn');
+  const spinner    = document.getElementById('hr-wage-spinner');
+
+  if (!tbody || !form) return;
+
+  function renderRows(items) {
+    tbody.innerHTML = '';
+    if (!items || !items.length) {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td colspan="3" class="text-muted fst-italic">
+          No wages or tips recorded yet.
+        </td>
+      `;
+      tbody.appendChild(tr);
+      return;
+    }
+
+    items.forEach(entry => {
+      const tr = document.createElement('tr');
+      const amt = parseFloat(entry.amount || 0);
+      tr.innerHTML = `
+        <td>${isNaN(amt) ? '0.00' : amt.toFixed(2)}</td>
+        <td>${entry.reason || '--'}</td>
+        <td>${entry.date || ''}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
+  function loadHistory() {
+    fetch("{{ url_for('hr.get_wages_tips', employee_id=employee._id) }}", {
+      method: 'GET'
+    })
+      .then(resp => resp.json())
+      .then(data => {
+        if (!data.ok) throw new Error(data.message || 'Unable to load history.');
+        renderRows(data.items || []);
+      })
+      .catch(err => {
+        console.error(err);
+        if (loadingRow) {
+          loadingRow.innerHTML = `
+            <td colspan="3" class="text-danger small">
+              Failed to load wages &amp; tips: ${err.message || 'Unknown error'}
+            </td>
+          `;
+        }
+      });
+  }
+
+  // Initial load
+  loadHistory();
+
+  // Submit new entry
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+
+    const fd = new FormData(form);
+    const payload = {
+      amount: fd.get('amount'),
+      reason: fd.get('reason'),
+      date:   fd.get('date')
+    };
+
+    if (!payload.amount) {
+      window.showToast && window.showToast('warning', 'Please enter an amount.');
+      return;
+    }
+
+    if (submitBtn) submitBtn.disabled = true;
+    if (spinner) spinner.classList.remove('d-none');
+
+    fetch("{{ url_for('hr.add_wage_tip', employee_id=employee._id) }}", {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    })
+      .then(resp => resp.json())
+      .then(data => {
+        if (!data.ok) throw new Error(data.message || 'Unable to save record.');
+
+        // Prepend new entry to table
+        let existing = [];
+        tbody.querySelectorAll('tr').forEach(row => {
+          const cols = row.querySelectorAll('td');
+          if (cols.length === 3 && !row.id) {
+            existing.push({
+              amount: cols[0].textContent.trim(),
+              reason: cols[1].textContent.trim(),
+              date:   cols[2].textContent.trim()
+            });
+          }
+        });
+
+        const newEntry = data.entry;
+        existing.unshift(newEntry);
+        renderRows(existing);
+
+        form.reset();
+        window.showToast && window.showToast('success', 'Wage / tip recorded.');
+      })
+      .catch(err => {
+        console.error(err);
+        window.showToast && window.showToast('danger', err.message || 'Failed to save record.');
+      })
+      .finally(() => {
+        if (submitBtn) submitBtn.disabled = false;
+        if (spinner) spinner.classList.add('d-none');
+      });
+  });
+})();
+</script>

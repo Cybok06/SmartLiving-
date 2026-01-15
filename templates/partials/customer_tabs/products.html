@@ -1,0 +1,180 @@
+{% if purchases and purchases|length > 0 %}
+  <div class="d-flex flex-column gap-3">
+    {% for purchase in purchases %}
+      <div class="product-card">
+        <div class="d-flex align-items-start gap-3 flex-wrap">
+          {% if purchase.product and purchase.product.image_url %}
+            <img class="product-thumb" src="{{ purchase.product.image_url }}" alt="{{ purchase.product.name }}">
+          {% else %}
+            <div class="product-thumb d-flex align-items-center justify-content-center text-muted">No Image</div>
+          {% endif %}
+          <div class="flex-grow-1">
+            {% set pstatus = purchase.product.status or "active" %}
+            <div class="d-flex align-items-center gap-2 flex-wrap">
+              <div class="fw-semibold">{{ purchase.product.name or "Unnamed Product" }}</div>
+              {% if purchase.amount_left == 0 %}
+                <span class="badge bg-success">Paid off</span>
+              {% endif %}
+              {% if purchase.pending_undelivered %}
+                <span class="badge bg-danger">Pending Undelivered</span>
+              {% endif %}
+              {% if pstatus == "active" %}
+                <span class="badge bg-success" data-status-badge="1">Active</span>
+              {% elif pstatus == "completed" %}
+                <span class="badge bg-primary" data-status-badge="1">Completed</span>
+              {% elif pstatus == "submitted_for_packaging" %}
+                <span class="badge bg-info text-dark" data-status-badge="1">Submitted</span>
+              {% elif pstatus == "packaged" %}
+                <span class="badge bg-warning text-dark" data-status-badge="1">Packaged</span>
+              {% elif pstatus == "delivered" %}
+                <span class="badge bg-success" data-status-badge="1">Delivered</span>
+              {% endif %}
+              {% if purchase.product and purchase.product.status == "closed" %}
+                <span class="badge bg-danger">Closed</span>
+              {% endif %}
+              {% if purchase.product and purchase.product.transfer_status == "transferred_out" %}
+                <span class="badge bg-dark">Transferred</span>
+              {% endif %}
+            </div>
+            <div class="product-meta mt-2">
+              <div>
+                <small>Price</small>
+                GHS {{ "{:,.2f}".format(purchase.product.price or 0) }}
+              </div>
+              <div>
+                <small>Quantity</small>
+                {{ purchase.product.quantity or "N/A" }}
+              </div>
+              <div>
+                <small>Total</small>
+                GHS {{ "{:,.2f}".format(purchase.product.total or 0) }}
+              </div>
+              <div>
+                <small>Amount Paid</small>
+                GHS {{ "{:,.2f}".format(purchase.amount_paid or 0) }}
+              </div>
+              <div>
+                <small>Amount Left</small>
+                GHS {{ "{:,.2f}".format(purchase.amount_left or 0) }}
+              </div>
+              <div>
+                <small>Purchase Type</small>
+                {{ purchase.purchase_type or "N/A" }}
+              </div>
+              <div>
+                <small>Purchase Date</small>
+                {{ purchase.purchase_date[:10] if purchase.purchase_date else "N/A" }}
+              </div>
+              <div>
+                <small>End Date</small>
+                {{ purchase.end_date[:10] if purchase.end_date else "N/A" }}
+              </div>
+            </div>
+
+            {% if purchase.progress is not none %}
+            <div class="mt-3">
+              <div class="d-flex justify-content-between small muted mb-1">
+                <span>Progress</span>
+                <span class="progress-label">{{ purchase.progress|int }}%</span>
+              </div>
+              <div class="progress">
+                <div class="progress-bar bg-primary" data-progress="{{ purchase.progress|int }}" style="width:0%"></div>
+              </div>
+            </div>
+            {% endif %}
+          </div>
+          <div class="ms-auto">
+            {% set pstatus = purchase.product.status or "active" %}
+            {% if (session.get('agent_id') or session.get('manager_id')) and purchase.amount_left == 0 and pstatus not in ["packaged", "delivered", "closed", "submitted_for_packaging"] and purchase.product.transfer_status != "transferred_out" %}
+              <form data-packaging-form="1" method="POST" action="{{ url_for('view.submit_for_packaging', customer_id=customer_id, product_index=loop.index0) }}">
+                <button type="submit" class="btn btn-success btn-sm">
+                  <i class="bi bi-box-seam me-1"></i> Submit for packaging
+                </button>
+              </form>
+            {% endif %}
+            {% if session.get('agent_id') and pstatus not in ["delivered", "closed"] and purchase.product.transfer_status != "transferred_out" %}
+              <button class="btn btn-outline-danger btn-sm mt-2" data-bs-toggle="modal" data-bs-target="#undeliveredModal{{ loop.index0 }}">
+                <i class="bi bi-exclamation-triangle me-1"></i> Undelivered
+              </button>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      <!-- Undelivered Modal -->
+      {% if session.get('agent_id') %}
+      <div class="modal fade" id="undeliveredModal{{ loop.index0 }}" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-fullscreen-sm-down modal-dialog-centered">
+          <div class="modal-content">
+            <div class="saving-overlay d-none">
+              <div class="spinner-border text-primary" role="status" aria-label="Saving"></div>
+              <div class="mt-2 small">Saving...</div>
+            </div>
+            <form class="undelivered-form" data-url="{{ url_for('undelivered_items.create_undelivered_record', customer_id=customer_id, product_index=loop.index0) }}">
+              <div class="modal-header">
+                <h5 class="modal-title">Undelivered Items · {{ purchase.product.name }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+              </div>
+              <div class="modal-body">
+                <div class="alert alert-warning py-2 small">
+                  Select missing items and quantities. This does not remove any data.
+                </div>
+
+                <div class="mb-3">
+                  <label class="form-label">Expected Delivery Date</label>
+                  <input type="date" class="form-control expected-date" required>
+                </div>
+
+                <div class="mb-3">
+                  <label class="form-label">Note (optional)</label>
+                  <textarea class="form-control note" rows="2" placeholder="Add any notes..."></textarea>
+                </div>
+
+                <div class="mb-2 fw-semibold">Components</div>
+                {% if purchase.components_catalog and purchase.components_catalog|length > 0 %}
+                  <div class="list-group mb-3">
+                    {% for c in purchase.components_catalog %}
+                      <label class="list-group-item d-flex align-items-center gap-2">
+                        <input class="form-check-input me-1 undelivered-check"
+                               type="checkbox"
+                               data-id="{{ c.inventory_id }}"
+                               data-name="{{ c.name }}"
+                               data-image="{{ c.image_url }}"
+                               data-required="{{ c.required_qty }}">
+                        <span class="flex-grow-1">
+                          {{ c.name }} <small class="text-muted">({{ c.required_qty }})</small>
+                        </span>
+                        <input type="number" class="form-control form-control-sm undelivered-qty"
+                               style="max-width:120px;" min="1" value="{{ c.required_qty }}">
+                      </label>
+                    {% endfor %}
+                  </div>
+                {% else %}
+                  <div class="text-muted small mb-3">No components found. Add manual items below.</div>
+                {% endif %}
+
+                <div class="mb-2 fw-semibold">Manual Items</div>
+                <div class="manual-items"></div>
+                <button type="button" class="btn btn-outline-secondary btn-sm add-manual">
+                  <i class="bi bi-plus-circle me-1"></i> Add manual item
+                </button>
+
+                <div class="alert alert-danger mt-3 d-none form-error"></div>
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" class="btn btn-primary">
+                  <span class="spinner-border spinner-border-sm me-1 d-none"></span>
+                  Save
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+    {% endfor %}
+  </div>
+{% else %}
+  <div class="card p-3 text-muted">No products purchased yet.</div>
+{% endif %}

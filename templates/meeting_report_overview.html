@@ -1,0 +1,1773 @@
+{# templates/meeting_report_overview.html #}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Meeting Report</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <!-- Bootstrap & Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+  <link rel="icon"
+          href="https://imagedelivery.net/h9fmMoa1o2c2P55TcWJGOg/10283f28-b9a0-4100-b254-19a854386800/public"
+          type="image/png">
+  
+  <style>
+    :root {
+      --bg-color: #f5f7fb;
+      --card-bg: #ffffff;
+      --text-color: #111827;
+      --muted-color: #6b7280;
+      --border-color: rgba(15, 23, 42, 0.08);
+    }
+
+    body.dark-mode {
+      --bg-color: #020617;
+      --card-bg: #0b1120;
+      --text-color: #f9fafb;
+      --muted-color: #9ca3af;
+      --border-color: rgba(148, 163, 184, 0.3);
+    }
+
+    body {
+      background: radial-gradient(circle at top left, #e0ecff 0, #f5f7fb 45%, #edf2ff 100%);
+      color: var(--text-color);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    body.dark-mode {
+      background: radial-gradient(circle at top left, #020617 0, #020617 40%, #020617 100%);
+    }
+
+    .card {
+      border-radius: .9rem;
+      border: 1px solid var(--border-color);
+      background-color: var(--card-bg);
+      color: var(--text-color);
+      box-shadow: 0 6px 18px rgba(15, 23, 42, 0.06);
+    }
+
+    .card-header {
+      border-bottom: 0;
+      background: transparent;
+      padding-bottom: .35rem;
+      color: var(--text-color);
+    }
+
+    .form-label,
+    .table,
+    .table th,
+    .table td {
+      color: var(--text-color);
+    }
+
+    .table-light {
+      background-color: rgba(148, 163, 184, 0.15) !important;
+      color: var(--text-color) !important;
+    }
+
+    body.dark-mode .table-light {
+      background-color: rgba(15, 23, 42, 0.9) !important;
+      color: var(--text-color) !important;
+    }
+
+    .text-muted {
+      color: var(--muted-color) !important;
+    }
+
+    .bi {
+      color: inherit;
+    }
+
+    .avatar-circle {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #0d6efd, #4f46e5);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2.3rem;
+      font-weight: 600;
+      overflow: hidden;
+      background-size: cover;
+      background-position: center;
+    }
+
+    .avatar-circle img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .metric-label {
+      font-size: .78rem;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+      color: var(--muted-color);
+      margin-bottom: .2rem;
+      font-weight: 600;
+    }
+
+    .spinner-inline {
+      width: 1rem;
+      height: 1rem;
+      border-width: .15rem;
+    }
+
+    #reportContainer {
+      position: relative;
+      border-radius: 1rem;
+      overflow: hidden;
+    }
+
+    .chart-container {
+      position: relative;
+      height: 260px;
+    }
+
+    .btn-outline-secondary {
+      border-color: var(--border-color);
+      color: var(--text-color);
+    }
+
+    .btn-outline-secondary:hover {
+      background-color: rgba(148, 163, 184, 0.1);
+      color: var(--text-color);
+      border-color: var(--border-color);
+    }
+
+    .badge-soft {
+      padding: .25rem .6rem;
+      border-radius: 999px;
+      font-size: .7rem;
+      font-weight: 600;
+      background: rgba(59,130,246,.08);
+      color: #1d4ed8;
+    }
+
+    body.dark-mode .badge-soft {
+      background: rgba(59,130,246,.22);
+      color: #bfdbfe;
+    }
+
+    .btn-scope label {
+      min-width: 110px;
+    }
+
+    .btn-check:checked + .btn-outline-primary {
+      background-color: #2563eb;
+      border-color: #2563eb;
+      color: #eff6ff;
+    }
+
+    body.dark-mode .btn-outline-primary {
+      border-color: rgba(148,163,184,.6);
+      color: #e5e7eb;
+    }
+
+    body.dark-mode .btn-check:checked + .btn-outline-primary {
+      background-color: #1d4ed8;
+      border-color: #1d4ed8;
+      color: #e5e7eb;
+    }
+
+    /* -------- Focus / Presentation mode on hover -------- */
+
+    #reportContainer.focus-mode {
+      transition: background 0.2s ease;
+    }
+
+    #reportContainer.focus-mode::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at center, rgba(15,23,42,0.0) 0, rgba(15,23,42,0.75) 65%);
+      backdrop-filter: blur(4px);
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    .focusable-panel {
+      position: relative;
+      z-index: 2;
+      transition: transform .22s ease, box-shadow .22s ease, border-color .22s ease, background-color .22s ease;
+    }
+
+    #reportContainer.focus-mode .focusable-panel:not(.focus-active) {
+      filter: blur(2px) brightness(0.7);
+      transform: scale(0.98);
+      opacity: 0.6;
+    }
+
+    .focusable-panel.focus-active {
+      transform: scale(1.04);
+      box-shadow: 0 20px 55px rgba(15, 23, 42, 0.6);
+      border-color: rgba(59, 130, 246, 0.7) !important;
+      background: radial-gradient(circle at top left, rgba(59,130,246,0.12), var(--card-bg) 55%);
+    }
+
+    body.dark-mode .focusable-panel.focus-active {
+      background: radial-gradient(circle at top left, rgba(59,130,246,0.32), var(--card-bg) 60%);
+    }
+
+  </style>
+</head>
+
+<body>
+<div class="container-fluid py-4">
+
+  <!-- Header -->
+  <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-3">
+    <div>
+      <h3 class="mb-0 fw-semibold">Bussiness Health</h3>
+      <small class="text-muted">
+        Filter by branch / manager and time range (month or custom week), then review detailed performance for a single
+        <strong>agent</strong>, a <strong>manager's team</strong>, or an entire <strong>branch</strong>.
+      </small>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+      <a href="{{ url_for('meeting_report.agent_performance_page') }}" class="btn btn-sm btn-primary">
+        <i class="bi bi-grid-3x3-gap me-1"></i> All agent performance
+      </a>
+      <button type="button" class="btn btn-sm btn-outline-secondary" onclick="toggleTheme()">
+        <i id="themeIcon" class="bi bi-moon-stars"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- Filters + agent / manager / branch selection -->
+  <div class="card mb-4 focusable-panel">
+    <div class="card-body">
+      <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+        <div class="d-flex align-items-center gap-2">
+          <span class="badge-soft">
+            <i class="bi bi-funnel me-1"></i> Filters
+          </span>
+          <span class="badge-soft">
+            <i class="bi bi-person-lines-fill me-1"></i>
+            <span id="scopeBadgeText">Agent view</span>
+          </span>
+        </div>
+        <small class="text-muted">
+          Time filters drive both the detailed view and the team leaderboard.
+        </small>
+      </div>
+
+      <form class="row g-3 align-items-end" onsubmit="return false;">
+
+        <!-- Scope selector -->
+        <div class="col-12">
+          <label class="form-label mb-1 small text-muted">View scope</label>
+          <div class="btn-group btn-group-sm btn-scope" role="group" aria-label="View scope">
+            <input type="radio" class="btn-check" name="scopeMode" id="scopeAgent" value="agent" autocomplete="off" checked>
+            <label class="btn btn-outline-primary" for="scopeAgent">
+              <i class="bi bi-person-badge me-1"></i> Agent view
+            </label>
+
+            <input type="radio" class="btn-check" name="scopeMode" id="scopeManager" value="manager" autocomplete="off">
+            <label class="btn btn-outline-primary" for="scopeManager">
+              <i class="bi bi-people me-1"></i> Manager view
+            </label>
+
+            <input type="radio" class="btn-check" name="scopeMode" id="scopeBranch" value="branch" autocomplete="off">
+            <label class="btn btn-outline-primary" for="scopeBranch">
+              <i class="bi bi-building me-1"></i> Branch view
+            </label>
+          </div>
+        </div>
+
+        <!-- Branch -->
+        <div class="col-md-3">
+          <label class="form-label">Branch</label>
+          <select id="branchFilter" class="form-select">
+            <option value="">All branches</option>
+            {% for br in branches %}
+              <option value="{{ br }}">{{ br }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <!-- Manager -->
+        <div class="col-md-3">
+          <label class="form-label">Manager</label>
+          <select id="managerFilter" class="form-select">
+            <option value="">All managers</option>
+            {% for m in managers %}
+              <option value="{{ m.id }}" data-branch="{{ m.branch }}">
+                {{ m.name }}{% if m.branch %} - {{ m.branch }}{% endif %}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <!-- Agent dropdown -->
+        <div class="col-md-3">
+          <div class="d-flex justify-content-between align-items-center">
+            <label class="form-label mb-0">Agent</label>
+            <div id="filterLoading" class="d-none text-muted small">
+              <span class="spinner-border spinner-inline me-1" role="status"></span>
+              <span class="loading-text">Loading…</span>
+            </div>
+          </div>
+          <select id="agentSelect" class="form-select">
+            <option value="">Select an agent</option>
+          </select>
+        </div>
+
+        <!-- Search -->
+        <div class="col-md-3">
+          <label class="form-label">Search agent</label>
+          <input id="agentSearch" type="text" class="form-control" placeholder="Search by name or phone">
+        </div>
+
+        <!-- Range mode -->
+        <div class="col-md-3 mt-3">
+          <label class="form-label">Time range mode</label>
+          <div class="d-flex gap-3">
+            <div class="form-check">
+              <input class="form-check-input" type="radio" name="rangeMode" id="modeMonth" value="month" checked>
+              <label class="form-check-label" for="modeMonth">
+                Month
+              </label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="radio" name="rangeMode" id="modeCustom" value="custom">
+              <label class="form-check-label" for="modeCustom">
+                Custom range
+              </label>
+            </div>
+          </div>
+          <small class="text-muted">Use custom for weekly view (e.g. 20th-27th).</small>
+        </div>
+
+        <!-- Year -->
+        <div class="col-md-3 mt-3">
+          <label class="form-label">Year (for month mode)</label>
+          <select id="filterYear" class="form-select">
+            {% for y in range(current_year - 1, current_year + 2) %}
+              <option value="{{ y }}" {% if y == current_year %}selected{% endif %}>{{ y }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <!-- Month -->
+        <div class="col-md-3 mt-3">
+          <label class="form-label">Month</label>
+          <select id="filterMonth" class="form-select">
+            <option value="">Select month</option>
+            <option value="1"  {% if current_month == 1 %}selected{% endif %}>January</option>
+            <option value="2"  {% if current_month == 2 %}selected{% endif %}>February</option>
+            <option value="3"  {% if current_month == 3 %}selected{% endif %}>March</option>
+            <option value="4"  {% if current_month == 4 %}selected{% endif %}>April</option>
+            <option value="5"  {% if current_month == 5 %}selected{% endif %}>May</option>
+            <option value="6"  {% if current_month == 6 %}selected{% endif %}>June</option>
+            <option value="7"  {% if current_month == 7 %}selected{% endif %}>July</option>
+            <option value="8"  {% if current_month == 8 %}selected{% endif %}>August</option>
+            <option value="9"  {% if current_month == 9 %}selected{% endif %}>September</option>
+            <option value="10" {% if current_month == 10 %}selected{% endif %}>October</option>
+            <option value="11" {% if current_month == 11 %}selected{% endif %}>November</option>
+            <option value="12" {% if current_month == 12 %}selected{% endif %}>December</option>
+          </select>
+        </div>
+
+        <!-- Custom start -->
+        <div class="col-md-3 mt-3">
+          <label class="form-label">Start date (custom)</label>
+          <input type="date" id="customStart" class="form-control" disabled>
+        </div>
+
+        <!-- Custom end -->
+        <div class="col-md-3 mt-3">
+          <label class="form-label">End date (custom)</label>
+          <input type="date" id="customEnd" class="form-control" disabled>
+        </div>
+
+        <!-- Compare with previous month -->
+        <div class="col-md-3 mt-3">
+          <div class="form-check mt-4">
+            <input class="form-check-input" type="checkbox" id="compareToggle">
+            <label class="form-check-label" for="compareToggle">
+              Compare with previous month
+            </label>
+          </div>
+        </div>
+
+        <!-- Load button -->
+        <div class="col-md-3 mt-3">
+          <button type="button" class="btn btn-primary w-100 mt-2" onclick="loadSelectedAgentMetrics()">
+            <i class="bi bi-bar-chart-line me-1"></i> Load report
+          </button>
+        </div>
+
+        <!-- Hidden date range (used for backend + labels) -->
+        <input id="dateStart" type="hidden" value="{{ default_start }}">
+        <input id="dateEnd"   type="hidden" value="{{ default_end }}">
+      </form>
+    </div>
+  </div>
+
+  <!-- Profile + metrics container -->
+  <div id="reportContainer" class="card">
+    <div class="card-body" id="reportBody">
+      <!-- Blank state -->
+      <div id="reportEmpty">
+        <div class="text-center text-muted py-5">
+          <i class="bi bi-activity fs-1 mb-3"></i>
+          <h5 class="mb-1">No report loaded yet</h5>
+          <p class="mb-0">
+            Choose an <strong>agent</strong> (Agent view) or select a <strong>manager / branch</strong> for
+            team overview, then click <strong>Load report</strong>.
+          </p>
+        </div>
+      </div>
+
+      <!-- Dynamic content will be injected here -->
+      <div id="reportContent" class="d-none">
+
+        <!-- Subject header (agent / manager / branch) -->
+        <div class="d-flex flex-column flex-md-row align-items-md-center mb-4 focusable-panel">
+          <div class="me-md-4 mb-3 mb-md-0 text-center">
+            <div id="agentAvatar" class="avatar-circle mx-auto">
+              <span>A</span>
+            </div>
+            <div class="mt-2">
+              <h5 id="agentName" class="mb-0 fw-bold">Name</h5>
+              <small id="agentScopeLabel" class="text-muted"></small>
+            </div>
+          </div>
+          <div class="flex-grow-1">
+            <div class="small text-muted mb-1">
+              <i class="bi bi-geo-alt me-1"></i>
+              <span id="agentBranch">Branch: -</span>
+              &nbsp;- &nbsp;
+              <i class="bi bi-person-badge me-1"></i>
+              <span id="agentManager">Manager: -</span>
+            </div>
+            <div class="small text-muted mb-1">
+              <i class="bi bi-telephone me-1"></i>
+              <span id="agentPhone">Phone: -</span>
+            </div>
+            <div class="small text-muted">
+              <i class="bi bi-calendar-range me-1"></i>
+              Range: <span id="rangeLabel"></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Summary tiles -->
+        <div class="row g-3 mb-4">
+          <div class="col-md-3">
+            <div class="card h-100 focusable-panel">
+              <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                  <div>
+                    <div class="metric-label">Total Sales (GHS)</div>
+                    <h5 id="tileSales" class="mb-0 fw-bold">0.00</h5>
+                  </div>
+                  <i class="bi bi-cash-stack fs-3 text-primary"></i>
+                </div>
+                <div id="tileSalesCompare" class="small mt-1 text-muted"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-md-3">
+            <div class="card h-100 focusable-panel">
+              <div class="card-body">
+                <div class="metric-label">Number of Payments</div>
+                <h5 id="tilePayments" class="mb-1 fw-bold">0</h5>
+                <div id="tilePaymentsCompare" class="small mt-1 text-muted"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-md-3">
+            <div class="card h-100 focusable-panel">
+              <div class="card-body">
+                <div class="metric-label">Customer Attendance</div>
+                <h5 id="tileAttendance" class="mb-0 fw-bold">0 / 0</h5>
+                <div class="small mt-1 text-muted">
+                  Rate: <span id="tileAttendanceRate">0%</span>
+                </div>
+                <div id="tileAttendanceCompare" class="small mt-1 text-muted"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-md-3">
+            <div class="card h-100 focusable-panel">
+              <div class="card-body">
+                <div class="metric-label">Leads &amp; Conversion</div>
+                <h5 id="tileLeads" class="mb-0 fw-bold">0 leads</h5>
+                <div class="small mt-1 text-muted">
+                  Converted: <span id="tileLeadsConverted">0</span>
+                  &nbsp;- &nbsp;
+                  <span id="tileConvRate">0%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Monthly trend chart -->
+        <div class="card mb-4 focusable-panel">
+          <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <div>
+              <span class="fw-semibold">Monthly Performance Trend</span><br>
+              <small class="text-muted">
+                Payments and work days for the selected year
+              </small>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+              <select id="trendYear" class="form-select form-select-sm" style="max-width:110px;"></select>
+              <select id="trendMonth" class="form-select form-select-sm" style="max-width:160px;">
+                <option value="">Select month</option>
+                <option value="1">January</option>
+                <option value="2">February</option>
+                <option value="3">March</option>
+                <option value="4">April</option>
+                <option value="5">May</option>
+                <option value="6">June</option>
+                <option value="7">July</option>
+                <option value="8">August</option>
+                <option value="9">September</option>
+                <option value="10">October</option>
+                <option value="11">November</option>
+                <option value="12">December</option>
+              </select>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="row mb-3 small">
+              <div class="col-md-4">
+                <div class="metric-label mb-0">Selected month work days</div>
+                <div id="monthWorkSummary" class="fw-semibold">-</div>
+              </div>
+              <div class="col-md-4">
+                <div class="metric-label mb-0">Selected month sales (GHS)</div>
+                <div id="monthSalesSummary" class="fw-semibold">0.00</div>
+              </div>
+              <div class="col-md-4">
+                <div class="metric-label mb-0">Selected month payments</div>
+                <div id="monthPaymentsSummary" class="fw-semibold">0</div>
+              </div>
+            </div>
+            <div class="chart-container">
+              <canvas id="monthlyTrendChart"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- Payments & Customers -->
+        <div class="row g-3 mb-4">
+          <div class="col-lg-6">
+            <div class="card h-100 focusable-panel">
+              <div class="card-header d-flex justify-content-between align-items-center">
+                <span class="fw-semibold">Payments Summary (by date)</span>
+              </div>
+              <div class="card-body">
+                <div class="table-responsive" style="max-height:260px;">
+                  <table class="table table-sm mb-0 align-middle">
+                    <thead class="table-light">
+                      <tr>
+                        <th>Date</th>
+                        <th class="text-end">Amount (GHS)</th>
+                        <th class="text-end"># Payments</th>
+                      </tr>
+                    </thead>
+                    <tbody id="paymentsByDateBody">
+                    </tbody>
+                  </table>
+                </div>
+                <div id="paymentsEmpty" class="text-muted small mt-2 d-none">
+                  No payments recorded in this range.
+                </div>
+                <div id="compareSummary" class="small mt-3 text-muted d-none"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-lg-6">
+            <div class="card h-100 focusable-panel">
+              <div class="card-header d-flex justify-content-between align-items-center">
+                <span class="fw-semibold">Customers &amp; Attendance</span>
+                <div class="d-flex align-items-center gap-2 small">
+                  <span class="text-muted">
+                    Not visited: <span id="custInactiveCount">0</span>
+                  </span>
+                  <button type="button" class="btn btn-sm btn-outline-secondary" id="btnInactiveDetails">
+                    View in Customers
+                  </button>
+                </div>
+              </div>
+              <div class="card-body">
+                <div class="row mb-3">
+                  <div class="col-6">
+                    <div class="metric-label">Total customers</div>
+                    <div id="custTotal" class="fw-bold fs-5">0</div>
+                  </div>
+                  <div class="col-6">
+                    <div class="metric-label">Active in range</div>
+                    <div id="custActive" class="fw-bold fs-5">0</div>
+                  </div>
+                </div>
+
+                <!-- Attendance doughnut chart -->
+                <div class="chart-container mb-3" style="height:200px;">
+                  <canvas id="custAttendanceChart"></canvas>
+                </div>
+
+                <div class="row g-3">
+                  <div class="col-md-6">
+                    <div class="small fw-semibold mb-1">Top active customers</div>
+                    <ul id="topActiveList" class="list-group list-group-flush small"></ul>
+                    <div id="topActiveEmpty" class="text-muted small mt-1 d-none">
+                      No active customers in this range.
+                    </div>
+                  </div>
+                  <div class="col-md-6">
+                    <div class="small fw-semibold mb-1">Silent / inactive customers</div>
+                    <ul id="inactiveList" class="list-group list-group-flush small"></ul>
+                    <div id="inactiveEmpty" class="text-muted small mt-1 d-none">
+                      No inactive customers found.
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Leads & Attendance -->
+        <div class="row g-3 mb-3">
+          <div class="col-lg-6">
+            <div class="card h-100 focusable-panel">
+              <div class="card-header">
+                <span class="fw-semibold">Leads (recent)</span>
+              </div>
+              <div class="card-body">
+                <div class="table-responsive" style="max-height:240px;">
+                  <table class="table table-sm align-middle mb-0">
+                    <thead class="table-light">
+                      <tr>
+                        <th>Name</th>
+                        <th>Source</th>
+                        <th>Status</th>
+                      </tr>
+                    </thead>
+                    <tbody id="leadsBody"></tbody>
+                  </table>
+                </div>
+                <div id="leadsEmpty" class="text-muted small mt-2 d-none">
+                  No leads recorded in this range.
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-lg-6">
+            <div class="card h-100 focusable-panel">
+              <div class="card-header">
+                <span class="fw-semibold">Attendance (payment-based)</span>
+              </div>
+              <div class="card-body">
+                <div class="row mb-3">
+                  <div class="col-6">
+                    <div class="metric-label">Present days</div>
+                    <div id="attPresent" class="fw-bold fs-5">0</div>
+                  </div>
+                  <div class="col-6">
+                    <div class="metric-label">Working days in range</div>
+                    <div id="attWorking" class="fw-bold fs-5">0</div>
+                  </div>
+                </div>
+                <div class="small text-muted" id="attExplanation">
+                  Attendance is counted as days where at least <strong>10 payments</strong> are recorded
+                  (for manager/branch views this is aggregated across the team).
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Team leaderboard -->
+        <div class="card mb-3 focusable-panel">
+          <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <div>
+              <span class="fw-semibold">Team Performance (Agents)</span><br>
+              <small class="text-muted">
+                Agents under the selected branch/manager in the selected date range
+              </small>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+              <select id="teamSortMetric" class="form-select form-select-sm" style="max-width:220px;">
+                <option value="total_sales">Sort by: Total Sales</option>
+                <option value="payments_count">Sort by: # Payments</option>
+                <option value="total_customers">Sort by: Total Customers</option>
+                <option value="active_customers">Sort by: Active Customers</option>
+                <option value="work_days">Sort by: Work Days</option>
+                <option value="leads_total">Sort by: Leads</option>
+                <option value="conversion_rate">Sort by: Conversion Rate</option>
+              </select>
+              <button type="button" class="btn btn-sm btn-outline-secondary" onclick="loadTeamMetrics()">
+                Refresh
+              </button>
+              <div id="teamLoading" class="d-none text-muted small">
+                <span class="spinner-border spinner-inline me-1" role="status"></span>
+                Loading team…
+              </div>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="table-responsive" style="max-height:260px;">
+              <table class="table table-sm align-middle mb-0">
+                <thead class="table-light">
+                  <tr>
+                    <th>Agent</th>
+                    <th>Branch</th>
+                    <th class="text-end">Sales (GHS)</th>
+                    <th class="text-end"># Payments</th>
+                    <th class="text-end">Customers (Active / Total)</th>
+                    <th class="text-end">Work days</th>
+                    <th class="text-end">Leads (Conv %)</th>
+                  </tr>
+                </thead>
+                <tbody id="teamBody">
+                </tbody>
+              </table>
+            </div>
+            <div id="teamEmpty" class="text-muted small mt-2 d-none">
+              No agents found for the selected filters.
+            </div>
+          </div>
+        </div>
+
+      </div> <!-- /reportContent -->
+    </div>
+  </div>
+</div>
+
+{# Pass agents data to JS #}
+<script id="agentsDataScript" type="application/json">
+  {{ agents|tojson|safe }}
+</script>
+
+<!-- JS: Bootstrap + Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+<script>
+  let ALL_AGENTS = [];
+  let FILTERED_AGENTS = [];
+  let monthlyChart = null;
+  let custChart = null;
+  let yearlyTrend = null;
+  let TEAM_AGENTS = [];
+  let CURRENT_SCOPE = "agent"; // agent | manager | branch
+
+  function getScope(){
+    return CURRENT_SCOPE;
+  }
+
+  function initAgentsData(){
+    try{
+      const raw = document.getElementById("agentsDataScript").textContent;
+      ALL_AGENTS = JSON.parse(raw) || [];
+      FILTERED_AGENTS = [...ALL_AGENTS];
+      rebuildAgentOptions();
+    }catch(e){
+      console.error("Failed to parse agents data", e);
+    }
+  }
+
+  function showLoading(show, mode){
+    const el = document.getElementById("filterLoading");
+    if(!el) return;
+    const textSpan = el.querySelector(".loading-text");
+    if(textSpan){
+      if(mode === "agents"){
+        textSpan.textContent = "Loading agents…";
+      }else{
+        textSpan.textContent = "Loading data…";
+      }
+    }
+    el.classList.toggle("d-none", !show);
+  }
+
+  function rebuildAgentOptions(){
+    showLoading(true, "agents");
+    const managerSelect = document.getElementById("managerFilter");
+    const branchSelect  = document.getElementById("branchFilter");
+    const agentSelect   = document.getElementById("agentSelect");
+    const searchInput   = document.getElementById("agentSearch");
+
+    const managerId = managerSelect ? managerSelect.value : "";
+    const branch    = branchSelect ? branchSelect.value.trim() : "";
+    const search    = (searchInput && searchInput.value ? searchInput.value : "").toLowerCase();
+
+    FILTERED_AGENTS = ALL_AGENTS.filter(ag => {
+      if (managerId && ag.manager_id !== managerId) return false;
+      if (branch && ag.branch !== branch) return false;
+      return true;
+    });
+
+    const finalAgents = FILTERED_AGENTS.filter(ag => {
+      const txt = (ag.name + " " + (ag.phone || "")).toLowerCase();
+      return !search || txt.includes(search);
+    });
+
+    if(agentSelect){
+      agentSelect.innerHTML = "";
+      const optDefault = document.createElement("option");
+      optDefault.value = "";
+      optDefault.textContent = "Select an agent";
+      agentSelect.appendChild(optDefault);
+
+      finalAgents.forEach(ag => {
+        const opt = document.createElement("option");
+        opt.value = ag.id;
+        opt.textContent = `${ag.name} - ${ag.branch || ""}`;
+        opt.dataset.managerName = ag.manager_name || "";
+        opt.dataset.phone = ag.phone || "";
+        opt.dataset.imageUrl = ag.image_url || "";
+        agentSelect.appendChild(opt);
+      });
+    }
+
+    setTimeout(() => showLoading(false, "agents"), 120);
+  }
+
+  function clearReport(){
+    document.getElementById("reportContent").classList.add("d-none");
+    document.getElementById("reportEmpty").classList.remove("d-none");
+  }
+
+  /* ---- Range helpers ---- */
+
+  function getRangeMode(){
+    const modeInput = document.querySelector('input[name="rangeMode"]:checked');
+    return modeInput ? modeInput.value : "month";
+  }
+
+  // This now respects month-mode OR custom range
+  function setRangeFromYearMonth(){
+    const mode = getRangeMode();
+    const dateStart = document.getElementById("dateStart");
+    const dateEnd   = document.getElementById("dateEnd");
+    if(!dateStart || !dateEnd) return;
+
+    if(mode === "custom"){
+      const cs = document.getElementById("customStart");
+      const ce = document.getElementById("customEnd");
+      const startVal = cs?.value || "";
+      const endVal   = ce?.value || "";
+
+      if(!startVal && !endVal){
+        // no custom dates specified, keep whatever is already there
+        return;
+      }
+
+      let s = startVal || endVal;
+      let e = endVal || startVal;
+
+      // if reversed, swap
+      if(s && e && s > e){
+        const tmp = s;
+        s = e;
+        e = tmp;
+      }
+
+      dateStart.value = s;
+      dateEnd.value   = e;
+      return;
+    }
+
+    // Month mode (original behaviour)
+    const yearSel  = document.getElementById("filterYear");
+    const monthSel = document.getElementById("filterMonth");
+    if(!yearSel || !monthSel) return;
+
+    const y = parseInt(yearSel.value || "0", 10);
+    const m = parseInt(monthSel.value || "0", 10);
+    if(!y || !m) return;
+
+    const start = new Date(y, m - 1, 1);
+    const end   = new Date(y, m, 0);
+
+    const toIso = (d) => d.toISOString().slice(0, 10);
+    dateStart.value = toIso(start);
+    dateEnd.value   = toIso(end);
+  }
+
+  function getMonthRangeStrings(year, month){
+    const start = new Date(year, month - 1, 1);
+    const end   = new Date(year, month, 0);
+    const toIso = d => d.toISOString().slice(0, 10);
+    return { start: toIso(start), end: toIso(end) };
+  }
+
+  function getPrevYearMonth(year, month){
+    if(month === 1){
+      return { year: year - 1, month: 12 };
+    }
+    return { year: year, month: month - 1 };
+  }
+
+  function updateScopeBadge(){
+    const badgeText = document.getElementById("scopeBadgeText");
+    if(!badgeText) return;
+    const scope = getScope();
+    if(scope === "agent"){
+      badgeText.textContent = "Agent view";
+    }else if(scope === "manager"){
+      badgeText.textContent = "Manager view";
+    }else{
+      badgeText.textContent = "Branch view";
+    }
+  }
+
+  function applyScopeUI(){
+    const scope = getScope();
+    const agentSelect   = document.getElementById("agentSelect");
+    const agentSearch   = document.getElementById("agentSearch");
+    const managerFilter = document.getElementById("managerFilter");
+    const branchFilter  = document.getElementById("branchFilter");
+
+    if(scope === "agent"){
+      if(agentSelect) { agentSelect.disabled = false; }
+      if(agentSearch) { agentSearch.disabled = false; }
+      if(managerFilter) { managerFilter.disabled = false; }
+      if(branchFilter) { branchFilter.disabled = false; }
+    }else if(scope === "manager"){
+      if(agentSelect){ agentSelect.value = ""; agentSelect.disabled = true; }
+      if(agentSearch){ agentSearch.value = ""; agentSearch.disabled = true; }
+      if(managerFilter){ managerFilter.disabled = false; }
+      if(branchFilter){ branchFilter.value = ""; branchFilter.disabled = true; }
+    }else if(scope === "branch"){
+      if(agentSelect){ agentSelect.value = ""; agentSelect.disabled = true; }
+      if(agentSearch){ agentSearch.value = ""; agentSearch.disabled = true; }
+      if(managerFilter){ managerFilter.value = ""; managerFilter.disabled = true; }
+      if(branchFilter){ branchFilter.disabled = false; }
+    }
+
+    updateScopeBadge();
+    rebuildAgentOptions();
+    clearReport();
+    loadTeamMetrics();
+  }
+
+  async function loadSelectedAgentMetrics(){
+    const scope = getScope();
+    const agentSelect   = document.getElementById("agentSelect");
+    const managerFilter = document.getElementById("managerFilter");
+    const branchFilter  = document.getElementById("branchFilter");
+    const yearSel    = document.getElementById("filterYear");
+    const monthSel   = document.getElementById("filterMonth");
+    const compareOn  = document.getElementById("compareToggle").checked;
+    const rangeMode  = getRangeMode();
+
+    setRangeFromYearMonth();
+
+    const dateStartVal = document.getElementById("dateStart").value;
+    const dateEndVal   = document.getElementById("dateEnd").value;
+
+    if(rangeMode === "custom"){
+      const cs = document.getElementById("customStart");
+      const ce = document.getElementById("customEnd");
+      if(!cs.value && !ce.value){
+        alert("Please select at least a start date for the custom range.");
+        return;
+      }
+    }
+
+    const params = new URLSearchParams();
+    params.set("scope", scope);
+
+    if(scope === "agent"){
+      const agentId = agentSelect ? agentSelect.value : "";
+      if(!agentId){
+        clearReport();
+        return;
+      }
+      params.set("agent_id", agentId);
+    }else if(scope === "manager"){
+      const managerId = managerFilter ? managerFilter.value : "";
+      if(!managerId){
+        alert("Please select a manager to load Manager view.");
+        clearReport();
+        return;
+      }
+      params.set("manager_id", managerId);
+    }else if(scope === "branch"){
+      const branch = branchFilter ? branchFilter.value.trim() : "";
+      if(!branch){
+        alert("Please select a branch to load Branch view.");
+        clearReport();
+        return;
+      }
+      params.set("branch", branch);
+    }
+
+    const yearVal  = yearSel ? yearSel.value : "";
+    const monthVal = monthSel ? monthSel.value : "";
+
+    // Only send year/month in MONTH mode (backend uses that first)
+    if(rangeMode === "month"){
+      if(yearVal)  params.set("year", yearVal);
+      if(monthVal) params.set("month", monthVal);
+    }
+
+    // always send explicit start/end
+    if(dateStartVal) params.set("start", dateStartVal);
+    if(dateEndVal)   params.set("end", dateEndVal);
+
+    // monthly comparison based on previous month (applies to all scopes)
+    if(rangeMode === "month" && compareOn && yearVal && monthVal){
+      const y = parseInt(yearVal, 10);
+      const m = parseInt(monthVal, 10);
+      if(y && m){
+        const prevYM = getPrevYearMonth(y, m);
+        const prevRange = getMonthRangeStrings(prevYM.year, prevYM.month);
+        params.set("compare_start", prevRange.start);
+        params.set("compare_end", prevRange.end);
+      }
+    }
+
+    showLoading(true, "data");
+    let data = null;
+    let ok = false;
+
+    try{
+      const res = await fetch(`/meeting-report/agent-metrics?${params.toString()}`, {
+        credentials: "same-origin"
+      });
+      if(res.ok){
+        const json = await res.json();
+        if(json && json.ok){
+          data = json;
+          ok = true;
+        }
+      }
+    }catch(e){
+      console.error(e);
+    }finally{
+      showLoading(false, "data");
+    }
+
+    if(!ok || !data){
+      clearReport();
+      return;
+    }
+
+    renderReport(data);
+    loadTeamMetrics();
+  }
+
+  function renderReport(data){
+    const empty = document.getElementById("reportEmpty");
+    const content = document.getElementById("reportContent");
+    empty.classList.add("d-none");
+    content.classList.remove("d-none");
+
+    const ag  = data.agent;
+    const sum = data.summary || {};
+    const cmp = data.compare || null;
+    const scope = ag.scope || "agent";
+
+    const avatar     = document.getElementById("agentAvatar");
+    const nameEl     = document.getElementById("agentName");
+    const scopeLabel = document.getElementById("agentScopeLabel");
+    const branchEl   = document.getElementById("agentBranch");
+    const mgrEl      = document.getElementById("agentManager");
+    const phoneEl    = document.getElementById("agentPhone");
+    const rangeLabel = document.getElementById("rangeLabel");
+
+    avatar.style.backgroundImage = "";
+    avatar.innerHTML = "";
+    if(ag.image_url){
+      avatar.style.backgroundImage = `url('${ag.image_url}')`;
+    }else{
+      const span = document.createElement("span");
+      span.textContent = (ag.name || "A").charAt(0).toUpperCase();
+      avatar.appendChild(span);
+    }
+
+    nameEl.textContent = ag.name || "Unknown";
+
+    if(scope === "agent"){
+      scopeLabel.textContent = "Agent performance view";
+      branchEl.textContent = `Branch: ${ag.branch || "-"}`;
+      mgrEl.textContent    = `Manager: ${ag.manager_name || "-"}`;
+    }else if(scope === "manager"){
+      scopeLabel.textContent = "Manager team overview";
+      branchEl.textContent = `Branch: ${ag.branch || "-"}`;
+      mgrEl.textContent    = "Scope: Manager view (all agents under this manager)";
+    }else{
+      scopeLabel.textContent = "Branch team overview";
+      branchEl.textContent = `Branch view: ${ag.branch || "-"}`;
+      mgrEl.textContent    = "Scope: Branch view (all agents in this branch)";
+    }
+
+    phoneEl.textContent  = `Phone: ${ag.phone || "-"}`;
+    rangeLabel.textContent = `${data.range.start} → ${data.range.end}`;
+
+    document.getElementById("tileSales").textContent =
+      (sum.total_sales ?? 0).toFixed(2);
+    document.getElementById("tilePayments").textContent =
+      sum.payments_count ?? 0;
+    document.getElementById("tileAttendance").textContent =
+      `${sum.active_customers ?? 0} / ${sum.total_customers ?? 0}`;
+    document.getElementById("tileAttendanceRate").textContent =
+      `${(sum.attendance_rate ?? 0).toFixed(1)}%`;
+    document.getElementById("tileLeads").textContent =
+      `${sum.leads_total ?? 0} leads`;
+    document.getElementById("tileLeadsConverted").textContent =
+      sum.leads_converted ?? 0;
+    document.getElementById("tileConvRate").textContent =
+      `${(sum.conversion_rate ?? 0).toFixed(1)}%`;
+
+    const inactiveCount = sum.inactive_customers ??
+      Math.max((sum.total_customers ?? 0) - (sum.active_customers ?? 0), 0);
+    const inactiveLabel = document.getElementById("custInactiveCount");
+    if(inactiveLabel){
+      inactiveLabel.textContent = inactiveCount;
+    }
+
+    const salesCmpEl = document.getElementById("tileSalesCompare");
+    const payCmpEl   = document.getElementById("tilePaymentsCompare");
+    const attCmpEl   = document.getElementById("tileAttendanceCompare");
+    const cmpSummary = document.getElementById("compareSummary");
+
+    salesCmpEl.textContent = "";
+    payCmpEl.textContent   = "";
+    attCmpEl.textContent   = "";
+    cmpSummary.classList.add("d-none");
+    cmpSummary.textContent = "";
+
+    if(cmp){
+      const fmtDelta = (pct) => {
+        if(pct === null || pct === undefined) return "n/a";
+        const sign = pct > 0 ? "+" : "";
+        return `${sign}${pct.toFixed(1)}%`;
+      };
+
+      salesCmpEl.textContent =
+        `Vs. ${cmp.start} → ${cmp.end}: ${fmtDelta(cmp.delta_sales_pct)} change`;
+      payCmpEl.textContent =
+        `Payments change: ${fmtDelta(cmp.delta_payments_pct)}`;
+      attCmpEl.textContent =
+        `Active customers change: ${fmtDelta(cmp.delta_active_customers_pct)}`;
+
+      cmpSummary.classList.remove("d-none");
+      cmpSummary.textContent =
+        `Previous period ${cmp.start} → ${cmp.end}: GHS ${cmp.total_sales.toFixed(2)} `
+        + `(${cmp.payments_count} payments, ${cmp.active_customers} active customers).`;
+    }
+
+    const tbody = document.getElementById("paymentsByDateBody");
+    const emptyPayments = document.getElementById("paymentsEmpty");
+    tbody.innerHTML = "";
+    const rows = data.payments_by_date || [];
+    if(!rows.length){
+      emptyPayments.classList.remove("d-none");
+    }else{
+      emptyPayments.classList.add("d-none");
+      rows.forEach(r => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${r.date}</td>
+          <td class="text-end">${r.amount.toFixed(2)}</td>
+          <td class="text-end">${r.count}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    const totalCust  = sum.total_customers ?? 0;
+    const activeCust = sum.active_customers ?? 0;
+    document.getElementById("custTotal").textContent  = totalCust;
+    document.getElementById("custActive").textContent = activeCust;
+
+    updateCustChart(totalCust, activeCust);
+
+    const topActiveList  = document.getElementById("topActiveList");
+    const topActiveEmpty = document.getElementById("topActiveEmpty");
+    topActiveList.innerHTML = "";
+    const topActive = (data.customers && data.customers.top_active) || [];
+    if(!topActive.length){
+      topActiveEmpty.classList.remove("d-none");
+    }else{
+      topActiveEmpty.classList.add("d-none");
+      topActive.forEach(c => {
+        const li = document.createElement("li");
+        li.className = "list-group-item px-0 py-1";
+        li.innerHTML = `
+          <div class="d-flex justify-content-between">
+            <span>${c.name} <span class="text-muted">(${c.phone})</span></span>
+            <span class="fw-semibold">GHS ${c.amount_paid.toFixed(2)}</span>
+          </div>
+        `;
+        topActiveList.appendChild(li);
+      });
+    }
+
+    const inactiveList  = document.getElementById("inactiveList");
+    const inactiveEmpty = document.getElementById("inactiveEmpty");
+    inactiveList.innerHTML = "";
+    const inactive = (data.customers && data.customers.inactive) || [];
+    if(!inactive.length){
+      inactiveEmpty.classList.remove("d-none");
+    }else{
+      inactiveEmpty.classList.add("d-none");
+      inactive.forEach(c => {
+        const li = document.createElement("li");
+        li.className = "list-group-item px-0 py-1";
+        li.innerHTML = `
+          <div class="d-flex justify-content-between">
+            <span>${c.name} <span class="text-muted">(${c.phone})</span></span>
+            <span class="text-muted small">${c.last_payment_date || "No recent payment"}</span>
+          </div>
+        `;
+        inactiveList.appendChild(li);
+      });
+    }
+
+    const leadsBody  = document.getElementById("leadsBody");
+    const leadsEmpty = document.getElementById("leadsEmpty");
+    leadsBody.innerHTML = "";
+    const leads = (data.leads && data.leads.recent) || [];
+    if(!leads.length){
+      leadsEmpty.classList.remove("d-none");
+    }else{
+      leadsEmpty.classList.add("d-none");
+      leads.forEach(ld => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${ld.name}</td>
+          <td>${ld.source}</td>
+          <td>${ld.status}</td>
+        `;
+        leadsBody.appendChild(tr);
+      });
+    }
+
+    document.getElementById("attPresent").textContent =
+      sum.present_days ?? 0;
+    document.getElementById("attWorking").textContent =
+      sum.working_days ?? 0;
+
+    if(data.yearly_trend){
+      yearlyTrend = data.yearly_trend;
+      updateMonthlyTrendChart(yearlyTrend);
+      initYearMonthControls(yearlyTrend, data.range);
+    }
+  }
+
+  function updateMonthlyTrendChart(trend){
+    const ctx = document.getElementById("monthlyTrendChart");
+    if(!ctx || !trend) return;
+
+    const labels   = (trend.months || []).map(m => m.label);
+    const amounts  = (trend.months || []).map(m => m.total_amount);
+    const workDays = (trend.months || []).map(m => m.worked_days);
+
+    if(monthlyChart){
+      monthlyChart.destroy();
+    }
+
+    monthlyChart = new Chart(ctx, {
+      type: "bar",
+      data: {
+        labels,
+        datasets: [
+          {
+            type: "bar",
+            label: "Sales (GHS)",
+            data: amounts,
+            yAxisID: "y"
+          },
+          {
+            type: "line",
+            label: "Work days",
+            data: workDays,
+            yAxisID: "y1",
+            tension: 0.3
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: true }
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            title: { display: true, text: "Sales (GHS)" }
+          },
+          y1: {
+            beginAtZero: true,
+            position: "right",
+            title: { display: true, text: "Work days" },
+            grid: { drawOnChartArea: false }
+          }
+        }
+      }
+    });
+  }
+
+  function initYearMonthControls(trend, range){
+    const yearSelect  = document.getElementById("trendYear");
+    const monthSelect = document.getElementById("trendMonth");
+    if(!yearSelect || !monthSelect || !trend) return;
+
+    yearSelect.innerHTML = "";
+    const yOpt = document.createElement("option");
+    yOpt.value = trend.year;
+    yOpt.textContent = trend.year;
+    yearSelect.appendChild(yOpt);
+
+    let currentMonth = null;
+    if(range && range.start){
+      const d = new Date(range.start);
+      if(!isNaN(d)){
+        currentMonth = d.getMonth() + 1;
+      }
+    }
+    if(currentMonth){
+      monthSelect.value = String(currentMonth);
+    }
+
+    updateMonthSummariesForSelectedMonth();
+  }
+
+  function updateMonthSummariesForSelectedMonth(){
+    const monthSelect = document.getElementById("trendMonth");
+    if(!yearlyTrend || !monthSelect) return;
+
+    const monthVal = parseInt(monthSelect.value || "0", 10);
+    const workEl   = document.getElementById("monthWorkSummary");
+    const salesEl  = document.getElementById("monthSalesSummary");
+    const payEl    = document.getElementById("monthPaymentsSummary");
+    if(!workEl || !salesEl || !payEl) return;
+
+    if(!monthVal){
+      workEl.textContent = "-";
+      salesEl.textContent = "0.00";
+      payEl.textContent = "0";
+      return;
+    }
+
+    const mInfo = (yearlyTrend.months || []).find(m => m.month === monthVal);
+    if(!mInfo){
+      workEl.textContent = "-";
+      salesEl.textContent = "0.00";
+      payEl.textContent = "0";
+      return;
+    }
+
+    workEl.textContent  = `${mInfo.worked_days} / ${mInfo.total_days} days`;
+    salesEl.textContent = (mInfo.total_amount ?? 0).toFixed(2);
+    payEl.textContent   = mInfo.payments_count ?? 0;
+  }
+
+  function onTrendMonthChange(){
+    if(!yearlyTrend) return;
+    const monthSelect = document.getElementById("trendMonth");
+    if(!monthSelect) return;
+    const monthVal = parseInt(monthSelect.value || "0", 10);
+    if(!monthVal) return;
+
+    const filterYear  = document.getElementById("filterYear");
+    const filterMonth = document.getElementById("filterMonth");
+
+    if(filterYear){
+      filterYear.value = yearlyTrend.year;
+    }
+    if(filterMonth){
+      filterMonth.value = String(monthVal);
+    }
+
+    // When user picks a month from the trend chart, switch to month mode
+    const modeMonth = document.getElementById("modeMonth");
+    if(modeMonth){
+      modeMonth.checked = true;
+    }
+
+    setRangeFromYearMonth();
+    updateMonthSummariesForSelectedMonth();
+    loadSelectedAgentMetrics();
+  }
+
+  function updateCustChart(total, active){
+    const ctx = document.getElementById("custAttendanceChart");
+    if(!ctx) return;
+
+    const inactive = Math.max(total - active, 0);
+
+    const data = {
+      labels: ["Active", "Inactive"],
+      datasets: [{
+        data: [active, inactive]
+      }]
+    };
+
+    if(custChart){
+      custChart.destroy();
+    }
+
+    custChart = new Chart(ctx, {
+      type: "doughnut",
+      data,
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: "bottom" }
+        },
+        cutout: "60%"
+      }
+    });
+  }
+
+  function toggleTheme(){
+    const body = document.body;
+    const isDark = body.classList.toggle("dark-mode");
+    const icon = document.getElementById("themeIcon");
+    if(icon){
+      if(isDark){
+        icon.classList.remove("bi-moon-stars");
+        icon.classList.add("bi-sun");
+      }else{
+        icon.classList.remove("bi-sun");
+        icon.classList.add("bi-moon-stars");
+      }
+    }
+    try{
+      localStorage.setItem("meetingTheme", isDark ? "dark" : "light");
+    }catch(e){}
+  }
+
+  /* ---- Team leaderboard ---- */
+
+  function setTeamLoading(show){
+    const el = document.getElementById("teamLoading");
+    if(!el) return;
+    el.classList.toggle("d-none", !show);
+  }
+
+  function loadTeamMetrics(){
+    const branch    = (document.getElementById("branchFilter")?.value || "").trim();
+    const managerId = document.getElementById("managerFilter")?.value || "";
+    const yearSel   = document.getElementById("filterYear");
+    const monthSel  = document.getElementById("filterMonth");
+    const rangeMode = getRangeMode();
+    const scope     = getScope();
+
+    const params = new URLSearchParams();
+    let hasFilter = false;
+
+    if(scope === "manager"){
+      if(!managerId){
+        TEAM_AGENTS = [];
+        renderTeamTable();
+        return;
+      }
+      params.set("manager_id", managerId);
+      hasFilter = true;
+    }else if(scope === "branch"){
+      if(!branch){
+        TEAM_AGENTS = [];
+        renderTeamTable();
+        return;
+      }
+      params.set("branch", branch);
+      hasFilter = true;
+    }else{
+      // agent scope - prefer manager if selected, else branch
+      if(managerId){
+        params.set("manager_id", managerId);
+        hasFilter = true;
+      }else if(branch){
+        params.set("branch", branch);
+        hasFilter = true;
+      }
+    }
+
+    if(!hasFilter){
+      TEAM_AGENTS = [];
+      renderTeamTable();
+      return;
+    }
+
+    setRangeFromYearMonth();
+    const dateStartVal = document.getElementById("dateStart")?.value || "";
+    const dateEndVal   = document.getElementById("dateEnd")?.value || "";
+
+    const yearVal  = yearSel ? yearSel.value : "";
+    const monthVal = monthSel ? monthSel.value : "";
+
+    // Only send year/month in month mode
+    if(rangeMode === "month"){
+      if(yearVal)  params.set("year", yearVal);
+      if(monthVal) params.set("month", monthVal);
+    }
+
+    if(dateStartVal) params.set("start", dateStartVal);
+    if(dateEndVal)   params.set("end", dateEndVal);
+
+    setTeamLoading(true);
+    fetch(`/meeting-report/team-metrics?${params.toString()}`, {
+      credentials: "same-origin"
+    })
+      .then(res => res.ok ? res.json() : null)
+      .then(json => {
+        if(!json || !json.ok){
+          TEAM_AGENTS = [];
+        }else{
+          TEAM_AGENTS = json.agents || [];
+        }
+        renderTeamTable();
+      })
+      .catch(err => {
+        console.error(err);
+        TEAM_AGENTS = [];
+        renderTeamTable();
+      })
+      .finally(() => setTeamLoading(false));
+  }
+
+  function renderTeamTable(){
+    const tbody = document.getElementById("teamBody");
+    const emptyEl = document.getElementById("teamEmpty");
+    const sortSelect = document.getElementById("teamSortMetric");
+    if(!tbody || !emptyEl) return;
+
+    tbody.innerHTML = "";
+    if(!TEAM_AGENTS.length){
+      emptyEl.classList.remove("d-none");
+      return;
+    }
+    emptyEl.classList.add("d-none");
+
+    const metric = sortSelect ? sortSelect.value : "total_sales";
+    const rows = [...TEAM_AGENTS];
+
+    rows.sort((a, b) => {
+      const va = Number(a[metric] ?? 0);
+      const vb = Number(b[metric] ?? 0);
+      return vb - va;
+    });
+
+    rows.forEach(row => {
+      const tr = document.createElement("tr");
+
+      const totalSales = Number(row.total_sales ?? 0).toFixed(2);
+      const convRate   = Number(row.conversion_rate ?? 0).toFixed(1);
+
+      tr.innerHTML = `
+        <td>
+          <div class="d-flex align-items-center gap-2">
+            <div class="avatar-circle flex-shrink-0" style="width:36px;height:36px;font-size:1rem;">
+              <span>${(row.name || "A").charAt(0).toUpperCase()}</span>
+            </div>
+            <div>
+              <div class="fw-semibold">${row.name}</div>
+              <div class="text-muted small">${row.phone || ""}</div>
+            </div>
+          </div>
+        </td>
+        <td>${row.branch || "-"}</td>
+        <td class="text-end">${totalSales}</td>
+        <td class="text-end">${row.payments_count}</td>
+        <td class="text-end">${row.active_customers} / ${row.total_customers}</td>
+        <td class="text-end">${row.work_days} / ${row.calendar_days}</td>
+        <td class="text-end">${row.leads_total} (${convRate}%)</td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
+  /* ---- Focus / presentation mode init ---- */
+
+  function initFocusMode(){
+    const container = document.getElementById("reportContainer");
+    if(!container) return;
+    const focusables = container.querySelectorAll(".focusable-panel");
+    if(!focusables.length) return;
+
+    focusables.forEach(el => {
+      el.addEventListener("mouseenter", () => {
+        container.classList.add("focus-mode");
+        focusables.forEach(f => f.classList.remove("focus-active"));
+        el.classList.add("focus-active");
+      });
+    });
+
+    container.addEventListener("mouseleave", () => {
+      container.classList.remove("focus-mode");
+      focusables.forEach(f => f.classList.remove("focus-active"));
+    });
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    try{
+      const saved = localStorage.getItem("meetingTheme");
+      if(saved === "dark"){
+        document.body.classList.add("dark-mode");
+        const icon = document.getElementById("themeIcon");
+        if(icon){
+          icon.classList.remove("bi-moon-stars");
+          icon.classList.add("bi-sun");
+        }
+      }
+    }catch(e){}
+
+    initAgentsData();
+    updateScopeBadge();
+
+    const branchFilter  = document.getElementById("branchFilter");
+    const managerFilter = document.getElementById("managerFilter");
+    const agentSearch   = document.getElementById("agentSearch");
+
+    if(branchFilter){
+      branchFilter.addEventListener("change", () => {
+        rebuildAgentOptions();
+        loadTeamMetrics();
+      });
+    }
+    if(managerFilter){
+      managerFilter.addEventListener("change", () => {
+        rebuildAgentOptions();
+        loadTeamMetrics();
+      });
+    }
+    if(agentSearch){
+      agentSearch.addEventListener("input", rebuildAgentOptions);
+    }
+
+    const monthSelect = document.getElementById("trendMonth");
+    if(monthSelect){
+      monthSelect.addEventListener("change", onTrendMonthChange);
+    }
+
+    const teamSortSelect = document.getElementById("teamSortMetric");
+    if(teamSortSelect){
+      teamSortSelect.addEventListener("change", renderTeamTable);
+    }
+
+    const btnInactive = document.getElementById("btnInactiveDetails");
+    if(btnInactive){
+      btnInactive.addEventListener("click", () => {
+        const scope = getScope();
+        if(scope !== "agent"){
+          // only meaningful in pure agent view
+          return;
+        }
+        const agentId = document.getElementById("agentSelect")?.value || "";
+        if(!agentId) return;
+        const url = `/customers?agent_id=${encodeURIComponent(agentId)}&status=Not%20Active`;
+        window.open(url, "_blank");
+      });
+    }
+
+    const filterYear  = document.getElementById("filterYear");
+    const filterMonth = document.getElementById("filterMonth");
+    if(filterYear){
+      filterYear.addEventListener("change", () => {
+        setRangeFromYearMonth();
+        const scope = getScope();
+        const agentId = document.getElementById("agentSelect")?.value || "";
+        if(scope === "agent"){
+          if(agentId){
+            loadSelectedAgentMetrics();
+          }else{
+            loadTeamMetrics();
+          }
+        }else{
+          loadSelectedAgentMetrics();
+        }
+      });
+    }
+    if(filterMonth){
+      filterMonth.addEventListener("change", () => {
+        setRangeFromYearMonth();
+        const scope = getScope();
+        const agentId = document.getElementById("agentSelect")?.value || "";
+        if(scope === "agent"){
+          if(agentId){
+            loadSelectedAgentMetrics();
+          }else{
+            loadTeamMetrics();
+          }
+        }else{
+          loadSelectedAgentMetrics();
+        }
+      });
+    }
+
+    // Range mode behaviour (month vs custom)
+    const modeMonth   = document.getElementById("modeMonth");
+    const modeCustom  = document.getElementById("modeCustom");
+    const customStart = document.getElementById("customStart");
+    const customEnd   = document.getElementById("customEnd");
+    const compareToggle = document.getElementById("compareToggle");
+
+    const handleModeChange = () => {
+      const mode = getRangeMode();
+      if(mode === "custom"){
+        if(customStart) customStart.disabled = false;
+        if(customEnd)   customEnd.disabled = false;
+        if(compareToggle){
+          compareToggle.checked = false;
+          compareToggle.disabled = true;
+        }
+      }else{
+        if(customStart) customStart.disabled = true;
+        if(customEnd)   customEnd.disabled = true;
+        if(compareToggle){
+          compareToggle.disabled = false;
+        }
+      }
+      setRangeFromYearMonth();
+      const scope = getScope();
+      const agentId = document.getElementById("agentSelect")?.value || "";
+      if(scope === "agent"){
+        if(agentId){
+          loadSelectedAgentMetrics();
+        }else{
+          loadTeamMetrics();
+        }
+      }else{
+        loadSelectedAgentMetrics();
+      }
+    };
+
+    if(modeMonth)  modeMonth.addEventListener("change", handleModeChange);
+    if(modeCustom) modeCustom.addEventListener("change", handleModeChange);
+
+    // Scope selector behaviour
+    const scopeRadios = document.querySelectorAll('input[name="scopeMode"]');
+    scopeRadios.forEach(r => {
+      r.addEventListener("change", (e) => {
+        if(e.target.checked){
+          CURRENT_SCOPE = e.target.value;
+          applyScopeUI();
+        }
+      });
+    });
+
+    setRangeFromYearMonth();
+    initFocusMode();
+    clearReport();
+  });
+</script>
+{% include 'app_footer.html' %}
+
+</body>
+</html>

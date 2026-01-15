@@ -1,0 +1,262 @@
+<!-- templates/payments.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Payments List</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="icon" href="https://res.cloudinary.com/dljpgzbto/image/upload/v1743993646/company-logo_dksb23.jpg" type="image/png"/>
+
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"/>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet"/>
+
+  <!-- Select2 -->
+  <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+  <style>
+    body { font-family: Arial, sans-serif; background:#f6f7fb; transition:background .25s,color .25s; }
+    .dark-mode { background:#0f1115 !important; color:#f1f1f1; }
+    .dark-mode .card, .dark-mode .table, .dark-mode .table-responsive { background:#151923; color:#fff; }
+    .dark-mode .table thead th { background:#1f3bff1a; color:#cfe0ff; }
+    .dark-mode .form-control, .dark-mode .form-select { background:#101521; color:#fff; border-color:#2b3245; }
+    .navbar-brand img { height: 38px; margin-right: 10px; }
+    .filter-card{ border:0; border-radius:16px; box-shadow:0 10px 26px rgba(0,0,0,.06); }
+    .table-card{ border:0; border-radius:16px; box-shadow:0 10px 26px rgba(0,0,0,.06); }
+    .pill{ border-radius:999px; }
+    .mono{ font-variant-numeric: tabular-nums; }
+
+    /* Select2 look like Bootstrap */
+    .select2-container .select2-selection--single{
+      height: 38px; border: 1px solid #ced4da; border-radius: .375rem;
+      display:flex; align-items:center;
+    }
+    .select2-container--default .select2-selection--single .select2-selection__rendered{
+      line-height: 38px; padding-left: .75rem;
+    }
+    .select2-container--default .select2-selection--single .select2-selection__arrow{
+      height: 38px;
+    }
+    .dark-mode .select2-container .select2-selection--single{
+      background:#101521; border-color:#2b3245;
+    }
+    .dark-mode .select2-container--default .select2-selection--single .select2-selection__rendered{
+      color:#fff;
+    }
+  </style>
+</head>
+<body>
+
+<nav class="navbar navbar-expand-lg navbar-light bg-light shadow-sm px-3 mb-4">
+  <a class="navbar-brand d-flex align-items-center" href="{{ url_for('manager_dashboard.manager_dashboard_view') }}">
+    <img src="https://res.cloudinary.com/dljpgzbto/image/upload/v1743993646/company-logo_dksb23.jpg" alt="logo"> Dashboard
+  </a>
+
+  <div class="ms-auto d-flex align-items-center gap-2">
+    <button class="btn btn-outline-dark btn-sm pill" onclick="toggleDarkMode()" id="modeToggle" type="button">
+      <i class="bi bi-moon-stars"></i>
+    </button>
+  </div>
+</nav>
+
+<div class="container pb-5">
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <div>
+      <h1 class="mb-0">Payments</h1>
+      <div class="text-muted small">No history loads until you search (fast).</div>
+    </div>
+
+    <div class="d-flex gap-2">
+      {% if filter_customer_id %}
+        <a class="btn btn-danger pill"
+           href="{{ url_for('payments.export_customer_payments_pdf',
+                            customer_id=filter_customer_id,
+                            agent_id=filter_agent_id,
+                            start_date=start_date,
+                            end_date=end_date) }}">
+          <i class="bi bi-filetype-pdf me-1"></i> Export Customer PDF
+        </a>
+      {% else %}
+        <button class="btn btn-danger pill" type="button" disabled title="Select a customer to export">
+          <i class="bi bi-filetype-pdf me-1"></i> Export Customer PDF
+        </button>
+      {% endif %}
+
+      <a class="btn btn-outline-secondary pill" href="{{ url_for('payments.payments_list') }}">
+        <i class="bi bi-arrow-counterclockwise me-1"></i> Reset
+      </a>
+    </div>
+  </div>
+
+  <div class="card filter-card mb-4">
+    <div class="card-body">
+      <form method="get" class="row g-3 align-items-end">
+        <div class="col-lg-3">
+          <label for="q" class="form-label">Search (Name / Phone)</label>
+          <div class="input-group">
+            <span class="input-group-text"><i class="bi bi-search"></i></span>
+            <input type="text" name="q" id="q" class="form-control"
+                   placeholder="Ama / 024xxxxxxx"
+                   value="{{ q or '' }}">
+          </div>
+        </div>
+
+        <div class="col-lg-3">
+          <label for="agent_id" class="form-label">Agent</label>
+          <select name="agent_id" id="agent_id" class="form-select">
+            <option value="">All Agents</option>
+            {% for agent in agents %}
+              <option value="{{ agent._id_str }}" {% if filter_agent_id == agent._id_str %}selected{% endif %}>{{ agent.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="col-lg-4">
+          <label for="customer_id" class="form-label">Customer (Select2 Search)</label>
+          <select name="customer_id" id="customer_id" class="form-select">
+            <option value="">Select customer...</option>
+            {% for customer in customers %}
+              <option value="{{ customer._id_str }}"
+                      data-phone="{{ customer.phone or '' }}"
+                      {% if filter_customer_id == customer._id_str %}selected{% endif %}>
+                {{ customer.name }}{% if customer.phone %} -- {{ customer.phone }}{% endif %}
+              </option>
+            {% endfor %}
+          </select>
+          <div class="form-text">Type in the select box to search by name/phone.</div>
+        </div>
+
+        <div class="col-md-3 col-lg-1">
+          <label for="start_date" class="form-label">From</label>
+          <input type="date" name="start_date" id="start_date" class="form-control" value="{{ start_date }}">
+        </div>
+
+        <div class="col-md-3 col-lg-1">
+          <label for="end_date" class="form-label">To</label>
+          <input type="date" name="end_date" id="end_date" class="form-control" value="{{ end_date }}">
+        </div>
+
+        <div class="col-md-6 col-lg-12 d-flex gap-2">
+          <button type="submit" class="btn btn-primary pill">
+            <i class="bi bi-funnel me-1"></i> Search / Filter
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  {% if did_search %}
+    <div class="row g-3 mb-3">
+      <div class="col-md-4">
+        <div class="card table-card">
+          <div class="card-body">
+            <div class="text-muted small">Total Payments</div>
+            <div class="fs-3 fw-bold mono">{{ total_count }}</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="card table-card">
+          <div class="card-body">
+            <div class="text-muted small">Total Amount</div>
+            <div class="fs-3 fw-bold mono">₵{{ '%.2f'|format(total_amount) }}</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="card table-card">
+          <div class="card-body">
+            <div class="text-muted small">Status</div>
+            <div class="fw-semibold">
+              {% if total_count > 0 %}Showing results{% else %}No results{% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card table-card">
+      <div class="card-body">
+        {% if payments %}
+          <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+              <thead>
+                <tr>
+                  <th style="width:120px;">Date</th>
+                  <th>Agent</th>
+                  <th>Customer</th>
+                  <th style="width:120px;">Method</th>
+                  <th style="width:140px;" class="text-end">Amount</th>
+                  <th>Note</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for payment in payments %}
+                  <tr>
+                    <td class="mono">
+                      {% if payment.date %}
+                        {{ payment.date.strftime('%Y-%m-%d') }}
+                      {% else %}
+                        <span class="text-muted">N/A</span>
+                      {% endif %}
+                    </td>
+                    <td>{{ payment.agent_name }}</td>
+                    <td>
+                      <div class="fw-semibold">{{ payment.customer_name }}</div>
+                      {% if payment.customer_phone %}
+                        <div class="text-muted small mono">{{ payment.customer_phone }}</div>
+                      {% endif %}
+                    </td>
+                    <td>{{ payment.method or '--' }}</td>
+                    <td class="text-end mono">₵{{ '%.2f'|format(payment.amount or 0) }}</td>
+                    <td class="text-muted">{{ payment.note or '' }}</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <div class="text-center py-5">
+            <div class="display-6">No payments found</div>
+            <p class="text-muted mb-0">Try searching with customer name/phone or select the customer.</p>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  {% else %}
+    <div class="text-center py-5">
+      <div class="display-6">Search to load payments</div>
+      <p class="text-muted mb-0">Use the search box or Select2 customer dropdown to fetch results.</p>
+    </div>
+  {% endif %}
+</div>
+
+<script>
+  function toggleDarkMode() {
+    const body = document.body;
+    const btn = document.getElementById('modeToggle');
+    body.classList.toggle('dark-mode');
+    btn.innerHTML = body.classList.contains('dark-mode')
+      ? '<i class="bi bi-sun"></i>'
+      : '<i class="bi bi-moon-stars"></i>';
+  }
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<!-- jQuery + Select2 -->
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+<script>
+  $(function () {
+    // Select2 with BOTH name + phone searchable (built-in)
+    $('#customer_id').select2({
+      width: '100%',
+      placeholder: "Select customer...",
+      allowClear: true
+    });
+  });
+</script>
+</body>
+{% include 'app_footer.html' %}
+
+</html>

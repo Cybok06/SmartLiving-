@@ -1,0 +1,1098 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>My Inventory</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" href="https://res.cloudinary.com/dljpgzbto/image/upload/v1743993646/company-logo_dksb23.jpg" type="image/png">
+
+  <!-- Optional: Bootstrap for base reset & responsiveness -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"/>
+
+  <style>
+    :root {
+      --bg: #f3f4f6;
+      --card-bg: #ffffff;
+      --ink: #111827;
+      --muted: #6b7280;
+      --ring: #e5e7eb;
+      --accent: #7c3aed;       /* purple accent */
+      --accent-dark: #5b21b6;  /* darker purple */
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+    }
+
+    /* Top nav */
+    .sl-nav {
+      background: linear-gradient(90deg, #7c3aed, #a855f7);
+      color: #f9fafb;
+      padding: 10px 16px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      position: sticky;
+      top: 0;
+      z-index: 40;
+    }
+
+    .sl-nav-logo {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      text-decoration: none;
+      color: #f9fafb;
+      font-weight: 600;
+    }
+
+    .sl-nav-logo img {
+      height: 32px;
+      width: 32px;
+      border-radius: 999px;
+      object-fit: cover;
+      box-shadow: 0 0 0 2px rgba(248, 250, 252, 0.6);
+    }
+
+    .sl-nav-title {
+      font-size: 0.9rem;
+      opacity: 0.9;
+    }
+
+    .sl-nav-search-wrap {
+      flex: 1;
+      display: flex;
+      justify-content: center;
+    }
+
+    .sl-nav-search {
+      width: 100%;
+      max-width: 520px;
+      display: flex;
+      align-items: center;
+      background: #f9fafb;
+      border-radius: 999px;
+      padding: 4px 10px;
+      border: 1px solid rgba(148, 163, 184, 0.8);
+      box-shadow: 0 4px 10px rgba(15, 23, 42, 0.2);
+    }
+
+    .sl-nav-search input {
+      border: none;
+      outline: none;
+      flex: 1;
+      font-size: 0.9rem;
+      background: transparent;
+      color: #111827;
+    }
+
+    .sl-nav-search span {
+      font-size: 0.9rem;
+      color: #6b7280;
+      margin-right: 4px;
+    }
+
+    .sl-nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.85rem;
+    }
+
+    .sl-nav-link {
+      text-decoration: none;
+      color: #f9fafb;
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(248, 250, 252, 0.3);
+      background: rgba(15, 23, 42, 0.18);
+    }
+
+    .sl-nav-link:hover {
+      border-color: #f9fafb;
+      background: rgba(15, 23, 42, 0.4);
+    }
+
+    /* Page header */
+    .page-header {
+      max-width: 1200px;
+      margin: 18px auto 8px;
+      padding: 0 16px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .page-header-title {
+      font-size: 1.35rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .page-header-title span {
+      font-size: 0.8rem;
+      font-weight: 400;
+      color: var(--muted);
+    }
+
+    .page-header-sub {
+      font-size: 0.85rem;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    .result-count {
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+
+    /* Grid */
+    .inventory-shell {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 16px 24px;
+    }
+
+    .inventory-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 18px;
+    }
+
+    .product-card {
+      background: var(--card-bg);
+      border-radius: 14px;
+      border: 1px solid var(--ring);
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      cursor: pointer;
+      transition: transform 0.14s ease, box-shadow 0.14s ease, border-color 0.14s ease, background 0.14s ease;
+      min-height: 230px;
+      box-shadow: 0 6px 14px rgba(15, 23, 42, 0.06);
+    }
+
+    .product-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 14px 30px rgba(79, 70, 229, 0.22);
+      border-color: var(--accent);
+      background: radial-gradient(circle at top, #f5f3ff, #ffffff);
+    }
+    .product-card.low-stock {
+      border-color: rgba(239,68,68,.65);
+      box-shadow: 0 12px 26px rgba(239,68,68,.16);
+    }
+    .low-stock-pill {
+      display:inline-flex;
+      align-items:center;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: .08em;
+      color: #991b1b;
+      background: rgba(239,68,68,.12);
+      border: 1px solid rgba(239,68,68,.35);
+      text-transform: uppercase;
+    }
+    .low-stock-pulse {
+      animation: lowStockPulse 1.1s ease-out 1;
+    }
+    @keyframes lowStockPulse {
+      0% { box-shadow: 0 0 0 rgba(239,68,68,0); }
+      55% { box-shadow: 0 0 0 10px rgba(239,68,68,.12); }
+      100% { box-shadow: 0 12px 26px rgba(239,68,68,.16); }
+    }
+
+    .product-image-wrap {
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      border-radius: 12px;
+      overflow: hidden;
+      background: #e5e7eb;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 10px;
+    }
+
+    .product-image {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .product-info {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .product-name {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--ink);
+      line-height: 1.3;
+      max-height: 2.6em;
+      overflow: hidden;
+      text-overflow: ellipsis;
+
+      /* Multi-line clamp */
+      display: -webkit-box;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 2; /* Safari / WebKit */
+      line-clamp: 2;         /* Standard property for compatibility */
+    }
+
+    .product-meta-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 0.8rem;
+      margin-top: 4px;
+    }
+
+    .product-chip {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 8px;
+      border-radius: 999px;
+      border: 1px solid var(--ring);
+      background: #f9fafb;
+      color: var(--muted);
+      max-width: 70%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .price-pill {
+      font-weight: 700;
+      color: var(--accent-dark);
+      font-size: 0.9rem;
+    }
+
+    .transfer-btn {
+      margin-top: 8px;
+      align-self: flex-start;
+    }
+
+    .empty-state {
+      margin-top: 40px;
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    /* Modal */
+    .modal-backdrop-custom {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.65);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 50;
+    }
+
+    .modal-backdrop-custom.open {
+      display: flex;
+    }
+
+    .modal-panel {
+      background: #ffffff;
+      max-width: 900px;
+      width: 100%;
+      margin: 16px;
+      border-radius: 18px;
+      padding: 20px;
+      display: grid;
+      grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.3fr);
+      gap: 18px;
+      position: relative;
+      box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.45);
+    }
+
+    .modal-close-btn {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      border: none;
+      border-radius: 999px;
+      width: 30px;
+      height: 30px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #f3f4f6;
+      cursor: pointer;
+      font-size: 1.1rem;
+      line-height: 1;
+    }
+
+    .modal-close-btn:hover {
+      background: #e5e7eb;
+    }
+
+    .modal-image-shell {
+      border-radius: 14px;
+      overflow: hidden;
+      background: #e5e7eb;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-image-shell img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .modal-body-sec {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      font-size: 0.9rem;
+    }
+
+    .modal-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .modal-description {
+      font-size: 0.85rem;
+      color: var(--muted);
+      max-height: 6.5em;
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+
+    .modal-tag-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 4px;
+    }
+
+    .modal-tag {
+      font-size: 0.75rem;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: #f5f3ff;
+      color: #5b21b6;
+    }
+
+    .modal-data-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .modal-data-item {
+      padding: 6px 8px;
+      border-radius: 10px;
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
+      font-size: 0.8rem;
+    }
+
+    .modal-data-label {
+      color: var(--muted);
+      margin-bottom: 2px;
+    }
+
+    .modal-data-value {
+      font-weight: 600;
+    }
+
+    .transfer-note {
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+
+    .transfer-alerts {
+      max-width: 1200px;
+      margin: 0 auto 12px;
+      padding: 0 16px;
+    }
+
+    .toolbar {
+      max-width: 1200px;
+      margin: 18px auto 8px;
+      padding: 0 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .toolbar-title {
+      font-size: 1.35rem;
+      font-weight: 700;
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+    }
+
+    .toolbar-title span {
+      font-size: 0.8rem;
+      font-weight: 400;
+      color: var(--muted);
+    }
+
+    @media (max-width: 768px) {
+      .modal-panel {
+        grid-template-columns: minmax(0, 1fr);
+      }
+    }
+
+    /* Scroll to top */
+    #scrollBtn {
+      position: fixed;
+      bottom: 24px;
+      right: 20px;
+      background-color: var(--accent);
+      color: #fff;
+      border: none;
+      padding: 10px 13px;
+      border-radius: 999px;
+      font-size: 18px;
+      cursor: pointer;
+      display: none;
+      box-shadow: 0 8px 18px rgba(15, 23, 42, 0.4);
+      z-index: 60;
+    }
+
+    #scrollBtn:hover {
+      background-color: var(--accent-dark);
+    }
+  </style>
+</head>
+<body>
+
+<!-- Top nav -->
+<nav class="sl-nav">
+  <a href="{{ url_for('manager_dashboard.manager_dashboard_view') }}" class="sl-nav-logo">
+    <img src="https://res.cloudinary.com/dljpgzbto/image/upload/v1743993646/company-logo_dksb23.jpg" alt="Logo">
+    <div>
+      <div>Smart Living Manager</div>
+      <div class="sl-nav-title">Back to Dashboard</div>
+    </div>
+  </a>
+
+  <div class="sl-nav-search-wrap">
+    <div class="sl-nav-search">
+      <span>🔍</span>
+      <input type="text" id="searchInput" placeholder="Search your products by name…" onkeyup="filterProducts()">
+    </div>
+  </div>
+
+  <div class="sl-nav-actions">
+    <span class="sl-nav-link">My Inventory</span>
+  </div>
+</nav>
+
+<!-- Toolbar -->
+<header class="toolbar">
+  <div>
+    <div class="toolbar-title">
+      {{ page_title or 'My Inventory' }}
+      <span>{{ 'Low Stock' if low_stock_only else 'Manager View' }}</span>
+    </div>
+    <div class="page-header-sub">
+      {{ page_subtitle or 'Browse all products assigned to your branch. Click any card to see full details.' }}
+    </div>
+    <div class="result-count">
+      {{ inventory_items|length }} product{{ '' if inventory_items|length == 1 else 's' }} found
+      | Reorder level: <strong id="reorderLevelLabel">{{ reorder_level }}</strong>
+      | Low stock: {{ low_stock_count }}
+    </div>
+  </div>
+  <div class="d-flex gap-2">
+    <button class="btn btn-outline-secondary" type="button" id="globalHistoryBtn" data-bs-toggle="modal" data-bs-target="#transferHistoryModal">
+      Transfer History
+    </button>
+    {% if low_stock_only %}
+      <a class="btn btn-outline-secondary" href="{{ url_for('manager_inventory.view_manager_inventory') }}">
+        All Inventory
+      </a>
+    {% else %}
+      <a class="btn btn-outline-danger" href="{{ url_for('manager_inventory.manager_low_stocks') }}">
+        Low Stocks
+      </a>
+    {% endif %}
+    <button class="btn btn-outline-primary" type="button" data-bs-toggle="modal" data-bs-target="#reorderLevelModal">
+      Reorder Level
+    </button>
+  </div>
+</header>
+
+<!-- Flash messages -->
+<section class="transfer-alerts" id="transferAlerts"></section>
+
+<section class="inventory-shell">
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div class="mb-3">
+        {% for category, message in messages %}
+          <div class="alert alert-{{ category }} py-2 mb-2">{{ message }}</div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
+</section>
+
+<!-- Inventory grid -->
+<main class="inventory-shell">
+  {% if inventory_items %}
+    <div class="inventory-grid" id="productGrid">
+      {% for item in inventory_items %}
+        {% set item_qty = item.qty if item.qty is not none else 0 %}
+        {% set is_low_stock = (item_qty|int <= reorder_level) %}
+        {% set category = item.category if item.category is defined and item.category else 'Product' %}
+        <div class="product-card {{ 'low-stock low-stock-pulse' if is_low_stock else '' }}"
+             id="product-{{ item._id }}"
+             onclick="openProductModal(this)"
+             data-item-id="{{ item._id }}"
+             data-name="{{ item.name | lower }}"
+             data-title="{{ item.name }}"
+             data-category="{{ category }}"
+             data-description="{{ item.description | e }}"
+             data-price="{{ '%.2f'|format(item.price) if item.price is not none else '' }}"
+             data-qty="{{ item_qty }}">
+          <div class="product-image-wrap">
+            <img src="{{ item.image_url }}" alt="{{ item.name }}" class="product-image">
+          </div>
+          <div class="product-info">
+            <div class="product-name">{{ item.name }}</div>
+            <div class="product-meta-row">
+              <span class="product-chip qty-chip" data-qty-value="{{ item_qty }}">Qty: {{ item_qty }}</span>
+              {% if item.price is not none %}
+                <span class="price-pill">GHS {{ '%.2f'|format(item.price) }}</span>
+              {% endif %}
+              {% if is_low_stock %}
+                <span class="low-stock-pill">LOW STOCK</span>
+              {% endif %}
+            </div>
+            <button class="btn btn-sm btn-outline-primary transfer-btn"
+                    type="button"
+                    data-bs-toggle="modal"
+                    data-bs-target="#transferModal{{ item._id }}"
+                    {% if item_qty|int <= 0 %}disabled{% endif %}>
+              Transfer
+            </button>
+          </div>
+        </div>
+
+        <!-- Transfer modal -->
+        <div class="modal fade" id="transferModal{{ item._id }}" tabindex="-1" aria-labelledby="transferModalLabel{{ item._id }}" aria-hidden="true">
+          <div class="modal-dialog">
+            <div class="modal-content">
+              <form method="POST" action="{{ url_for('manager_inventory.transfer_manager_inventory') }}" class="transfer-form" data-item-id="{{ item._id }}" data-product-name="{{ item.name }}">
+                <div class="modal-header">
+                  <h5 class="modal-title" id="transferModalLabel{{ item._id }}">Transfer {{ item.name }}</h5>
+                  <button type="button" class="btn-close transfer-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                  <input type="hidden" name="item_id" value="{{ item._id }}">
+                  <div class="alert alert-danger d-none transfer-error"></div>
+                  <div class="mb-3">
+                    <label class="form-label">Destination Manager</label>
+                    <select class="form-select" name="to_manager_id" required>
+                      <option value="">Select manager</option>
+                      {% for mgr in managers %}
+                        <option value="{{ mgr._id }}">{{ mgr.name }}{% if mgr.branch %} ({{ mgr.branch }}){% endif %}</option>
+                      {% endfor %}
+                    </select>
+                  </div>
+                  <div class="mb-2">
+                    <label class="form-label">Quantity to Transfer</label>
+                    <input type="number"
+                           name="transfer_qty"
+                           class="form-control"
+                           min="1"
+                           max="{{ item_qty }}"
+                           required>
+                    <div class="transfer-note transfer-available">Available: {{ item_qty }}</div>
+                  </div>
+                </div>
+                <div class="modal-footer">
+                  <button type="submit" class="btn btn-primary transfer-submit">
+                    <span class="spinner-border spinner-border-sm me-2 d-none" role="status" aria-hidden="true"></span>
+                    <span class="transfer-btn-text">Confirm Transfer</span>
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="empty-state">
+      No inventory items found for this manager yet.
+    </div>
+  {% endif %}
+</main>
+
+<!-- Scroll to top button -->
+<button id="scrollBtn" onclick="window.scrollTo({ top: 0, behavior: 'smooth' })">↑</button>
+
+<!-- Product details modal -->
+<div id="previewModal" class="modal-backdrop-custom">
+  <div class="modal-panel">
+    <button class="modal-close-btn" type="button" onclick="closePreview()">×</button>
+
+    <div class="modal-image-shell">
+      <img id="previewImage" src="" alt="Product image">
+    </div>
+
+    <div class="modal-body-sec">
+      <div>
+        <div class="modal-title" id="previewName"></div>
+        <div class="modal-tag-row">
+          <span class="modal-tag" id="previewCategory"></span>
+        </div>
+      </div>
+
+      <div class="modal-description" id="previewDescription"></div>
+
+      <div class="modal-data-grid">
+        <div class="modal-data-item">
+          <div class="modal-data-label">Selling Price</div>
+          <div class="modal-data-value">GHS <span id="previewPrice"></span></div>
+        </div>
+        <div class="modal-data-item">
+          <div class="modal-data-label">Quantity in Stock</div>
+          <div class="modal-data-value"><span id="previewQty"></span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Transfer history modal -->
+<div class="modal fade" id="transferHistoryModal" tabindex="-1" aria-labelledby="transferHistoryLabel" aria-hidden="true">
+  <div class="modal-dialog modal-xl">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="transferHistoryLabel">Transfer History</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+          <div class="btn-group" role="group" aria-label="History filter">
+            <button type="button" class="btn btn-outline-secondary btn-sm history-filter active" data-filter="all">All</button>
+            <button type="button" class="btn btn-outline-secondary btn-sm history-filter" data-filter="in">Incoming</button>
+            <button type="button" class="btn btn-outline-secondary btn-sm history-filter" data-filter="out">Outgoing</button>
+          </div>
+          <input type="text" class="form-control form-control-sm" id="historySearch" placeholder="Search product or manager" style="max-width: 240px;">
+        </div>
+        <div class="d-flex align-items-center gap-2 mb-3" id="historyLoading">
+          <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+          <span>Loading history...</span>
+        </div>
+        <div id="historyEmpty" class="alert alert-secondary d-none mb-0">No transfers yet.</div>
+        <div class="table-responsive">
+          <table class="table table-sm align-middle mb-0">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Direction</th>
+                <th>Product</th>
+                <th>Qty</th>
+                <th>From → To</th>
+              </tr>
+            </thead>
+            <tbody id="historyTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Reorder level modal -->
+<div class="modal fade" id="reorderLevelModal" tabindex="-1" aria-labelledby="reorderLevelLabelModal" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="reorderLevelLabelModal">Reorder Level</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <label class="form-label">Reorder Level (Low stock threshold)</label>
+        <div class="input-group mb-2">
+          <span class="input-group-text">Qty</span>
+          <input type="number" min="0" class="form-control" id="reorderLevelInput" value="{{ reorder_level }}">
+          <button class="btn btn-primary" type="button" id="saveReorderLevelBtn">Save</button>
+        </div>
+        <div class="small text-muted">Items at or below this level are flagged as low stock.</div>
+        <div class="alert alert-success py-2 mt-2 d-none" id="reorderLevelSaveAlert"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+  const scrollBtn = document.getElementById("scrollBtn");
+
+  // Scroll button
+  window.addEventListener("scroll", () => {
+    scrollBtn.style.display = (document.documentElement.scrollTop > 120) ? "block" : "none";
+  });
+
+  // ✅ Client-side alphabetical sorting by product name
+  document.addEventListener("DOMContentLoaded", () => {
+    const grid = document.getElementById("productGrid");
+    if (!grid) return;
+
+    const cards = Array.from(grid.querySelectorAll(".product-card"));
+
+    cards.sort((a, b) => {
+      const nameA = (a.dataset.title || "").toLowerCase();
+      const nameB = (b.dataset.title || "").toLowerCase();
+      return nameA.localeCompare(nameB, undefined, { sensitivity: "base" });
+    });
+
+    cards.forEach(card => grid.appendChild(card));
+  });
+
+  function filterProducts() {
+    const query = document.getElementById('searchInput').value.toLowerCase();
+    const cards = document.querySelectorAll('#productGrid .product-card');
+    cards.forEach(card => {
+      const name = card.getAttribute('data-name') || '';
+      card.style.display = name.includes(query) ? 'flex' : 'none';
+    });
+  }
+
+  function openProductModal(card) {
+    const title = card.dataset.title || '';
+    const desc = card.dataset.description || '';
+    const imageSrc = card.querySelector('.product-image').src;
+    const category = card.dataset.category || 'Product';
+    const price = card.dataset.price || '';
+    const qty = card.dataset.qty || '';
+
+    document.getElementById("previewName").textContent = title;
+    document.getElementById("previewImage").src = imageSrc;
+    document.getElementById("previewCategory").textContent = category;
+    document.getElementById("previewDescription").textContent = desc || "No description provided.";
+
+    document.getElementById("previewPrice").textContent = price || "--";
+    document.getElementById("previewQty").textContent = qty || "--";
+
+    document.getElementById("previewModal").classList.add("open");
+  }
+
+  function closePreview() {
+    document.getElementById("previewModal").classList.remove("open");
+  }
+
+  function showTransferAlert(type, message) {
+    const container = document.getElementById("transferAlerts");
+    if (!container) return;
+    const alert = document.createElement("div");
+    alert.className = `alert alert-${type} py-2 mb-2`;
+    alert.textContent = message;
+    container.innerHTML = "";
+    container.appendChild(alert);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function updateCardQty(itemId, newQty) {
+    const card = document.getElementById(`product-${itemId}`);
+    if (!card) return;
+    card.dataset.qty = String(newQty);
+    const qtyChip = card.querySelector(".qty-chip");
+    if (qtyChip) {
+      qtyChip.dataset.qtyValue = String(newQty);
+      qtyChip.textContent = `Qty: ${newQty}`;
+    }
+
+    const transferBtn = card.querySelector(".transfer-btn");
+    if (transferBtn) {
+      transferBtn.disabled = newQty <= 0;
+    }
+
+    const transferModal = document.getElementById(`transferModal${itemId}`);
+    if (transferModal) {
+      const qtyInput = transferModal.querySelector('input[name="transfer_qty"]');
+      const available = transferModal.querySelector(".transfer-available");
+      if (qtyInput) qtyInput.max = String(newQty);
+      if (available) available.textContent = `Available: ${newQty}`;
+    }
+  }
+
+  async function safeJsonFetch(url, options = {}) {
+    const res = await fetch(url, options);
+    const ct = res.headers.get("content-type") || "";
+    if (!ct.includes("application/json")) {
+      const text = await res.text();
+      throw new Error("Server did not return JSON. Possible redirect/session timeout.");
+    }
+    const data = await res.json();
+    return { res, data };
+  }
+
+  async function submitTransferAjax(form) {
+    const submitBtn = form.querySelector(".transfer-submit");
+    const spinner = form.querySelector(".spinner-border");
+    const btnText = form.querySelector(".transfer-btn-text");
+    const errorBox = form.querySelector(".transfer-error");
+    const closeBtn = form.querySelector(".transfer-close");
+    const modalEl = form.closest(".modal");
+
+    if (errorBox) {
+      errorBox.classList.add("d-none");
+      errorBox.textContent = "";
+    }
+
+    if (submitBtn) submitBtn.disabled = true;
+    if (spinner) spinner.classList.remove("d-none");
+    if (btnText) btnText.textContent = "Transferring...";
+    if (closeBtn) closeBtn.disabled = true;
+
+    try {
+      const { res, data } = await safeJsonFetch(form.action, {
+        method: "POST",
+        headers: {
+          "X-Requested-With": "XMLHttpRequest",
+          "Accept": "application/json"
+        },
+        body: new FormData(form)
+      });
+      if (res.status === 401) {
+        showTransferAlert("danger", "Session expired. Please login again.");
+        window.location.href = "/login";
+        return;
+      }
+
+      if (!res.ok || !data || !data.success) {
+        const message = data && data.message ? data.message : "Transfer failed.";
+        if (errorBox) {
+          errorBox.textContent = message;
+          errorBox.classList.remove("d-none");
+        }
+        return;
+      }
+
+      const payload = data.payload || {};
+      updateCardQty(payload.item_id, payload.source_after_qty);
+      showTransferAlert("success", data.message || "Transfer successful.");
+
+      if (modalEl) {
+        const modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+        modal.hide();
+      }
+      form.reset();
+    } catch (err) {
+      if (errorBox) {
+        errorBox.textContent = "Transfer failed. Please try again.";
+        errorBox.classList.remove("d-none");
+      }
+    } finally {
+      if (submitBtn) submitBtn.disabled = false;
+      if (spinner) spinner.classList.add("d-none");
+      if (btnText) btnText.textContent = "Confirm Transfer";
+      if (closeBtn) closeBtn.disabled = false;
+    }
+  }
+
+  function renderHistoryRows(items) {
+    const tbody = document.getElementById("historyTableBody");
+    if (!tbody) return;
+    tbody.innerHTML = "";
+    items.forEach(log => {
+      const tr = document.createElement("tr");
+      const direction = (log.direction || "").toUpperCase();
+      const directionBadge = direction === "IN"
+        ? '<span class="badge text-bg-success">IN</span>'
+        : '<span class="badge text-bg-danger">OUT</span>';
+      const date = log.created_at ? new Date(log.created_at).toLocaleString() : "";
+      const fromTo = `${log.from_manager_name || ""}${log.from_branch ? ` (${log.from_branch})` : ""} → ${log.to_manager_name || ""}${log.to_branch ? ` (${log.to_branch})` : ""}`;
+      tr.innerHTML = `
+        <td>${date}</td>
+        <td>${directionBadge}</td>
+        <td>${log.product_name || ""}</td>
+        <td>${log.qty_moved || 0}</td>
+        <td>${fromTo}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
+  function applyHistoryFilters() {
+    const filterBtn = document.querySelector(".history-filter.active");
+    const filter = filterBtn ? filterBtn.dataset.filter : "all";
+    const query = (document.getElementById("historySearch")?.value || "").toLowerCase();
+    const rows = window.__historyLogs || [];
+    const filtered = rows.filter(log => {
+      const dir = (log.direction || "").toLowerCase();
+      if (filter === "in" && dir !== "in") return false;
+      if (filter === "out" && dir !== "out") return false;
+      if (!query) return true;
+      const hay = `${log.product_name || ""} ${log.from_manager_name || ""} ${log.to_manager_name || ""}`.toLowerCase();
+      return hay.includes(query);
+    });
+    renderHistoryRows(filtered);
+    const empty = document.getElementById("historyEmpty");
+    if (empty) empty.classList.toggle("d-none", filtered.length > 0);
+  }
+
+  async function openTransferHistoryModal() {
+    const title = document.getElementById("transferHistoryLabel");
+    const loading = document.getElementById("historyLoading");
+    const empty = document.getElementById("historyEmpty");
+
+    if (title) title.textContent = "Transfer History";
+    if (empty) empty.classList.add("d-none");
+    if (loading) loading.classList.remove("d-none");
+
+    try {
+      const { res, data } = await safeJsonFetch("/manager/inventory/transfer_history", {
+        headers: {
+          "X-Requested-With": "XMLHttpRequest",
+          "Accept": "application/json"
+        }
+      });
+      if (res.status === 401) {
+        showTransferAlert("danger", "Session expired. Please login again.");
+        window.location.href = "/login";
+        return;
+      }
+      if (!res.ok) {
+        throw new Error(data && data.message ? data.message : "Failed to load history.");
+      }
+
+      if (!Array.isArray(data) || data.length === 0) {
+        if (empty) empty.classList.remove("d-none");
+        return;
+      }
+
+      window.__historyLogs = data;
+      applyHistoryFilters();
+    } catch (err) {
+      if (empty) {
+        empty.textContent = err.message || "Failed to load history.";
+        empty.classList.remove("d-none");
+      }
+    } finally {
+      if (loading) loading.classList.add("d-none");
+    }
+  }
+
+  document.querySelectorAll(".transfer-btn").forEach(btn => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+    });
+  });
+
+  document.querySelectorAll(".transfer-form").forEach(form => {
+    form.addEventListener("submit", (e) => {
+      if (!window.fetch) return;
+      e.preventDefault();
+      submitTransferAjax(form);
+    });
+  });
+
+  document.getElementById("globalHistoryBtn")?.addEventListener("click", () => {
+    openTransferHistoryModal();
+  });
+
+  document.querySelectorAll(".history-filter").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".history-filter").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      applyHistoryFilters();
+    });
+  });
+
+  document.getElementById("historySearch")?.addEventListener("input", () => {
+    applyHistoryFilters();
+  });
+
+  // Save reorder level
+  (function(){
+    const saveBtn = document.getElementById("saveReorderLevelBtn");
+    const input = document.getElementById("reorderLevelInput");
+    const alertBox = document.getElementById("reorderLevelSaveAlert");
+    const levelLabel = document.getElementById("reorderLevelLabel");
+    if (!saveBtn || !input) return;
+
+    const showAlert = (msg, ok) => {
+      if (!alertBox) return;
+      alertBox.textContent = msg;
+      alertBox.classList.remove("d-none", "alert-danger", "alert-success");
+      alertBox.classList.add(ok ? "alert-success" : "alert-danger");
+    };
+
+    saveBtn.addEventListener("click", async () => {
+      const level = parseInt(input.value, 10);
+      if (isNaN(level) || level < 0) {
+        showAlert("Reorder level must be 0 or greater.", false);
+        return;
+      }
+      saveBtn.disabled = true;
+      try {
+        const res = await fetch("/manager/inventory/settings/reorder-level", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ reorder_level: level })
+        });
+        const data = await res.json();
+        if (!res.ok || !data.ok) {
+          showAlert(data.message || "Failed to save reorder level.", false);
+          return;
+        }
+        showAlert("Reorder level saved.", true);
+        if (levelLabel) levelLabel.textContent = String(level);
+        if (typeof window.refreshLowStockBadge === "function") {
+          window.refreshLowStockBadge();
+        }
+      } catch (err) {
+        showAlert("Failed to save reorder level.", false);
+      } finally {
+        saveBtn.disabled = false;
+      }
+    });
+  })();
+
+  // Close modal when clicking outside the panel
+  document.getElementById("previewModal").addEventListener("click", function (e) {
+    if (e.target === this) {
+      closePreview();
+    }
+  });
+
+  // Close with ESC
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape") {
+      closePreview();
+    }
+  });
+</script>
+{% include 'app_footer.html' %}
+
+</body>
+</html>

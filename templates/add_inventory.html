@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Add Inventory</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <link rel="icon" href="https://res.cloudinary.com/dljpgzbto/image/upload/v1743993646/company-logo_dksb23.jpg" type="image/png" />
+
+  <style>
+    :root{
+      --ink:#0b3b52; --muted:#64748b; --ring:rgba(15,23,42,.10); --soft:#f8f9ff;
+      --ok:#16a34a; --bad:#dc2626; --warn:#f59e0b;
+    }
+    body{
+      background: radial-gradient(1200px 600px at 20% 0%, rgba(168,85,247,.14), transparent 60%),
+                  radial-gradient(1000px 500px at 100% 10%, rgba(59,130,246,.12), transparent 55%),
+                  #f7f7ff;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      transition: background-color .25s, color .25s;
+    }
+    .dark-mode{ background:#0b1220 !important; color:#e5e7eb; }
+    .dark-mode .navbar, .dark-mode .footer, .dark-mode .card { background:#0f172a !important; color:#e5e7eb; }
+    .dark-mode .form-control, .dark-mode .input-group-text, .dark-mode .form-select{
+      background:#0b1220; color:#e5e7eb; border-color:rgba(148,163,184,.25);
+    }
+    .dark-mode .hint{ color:#a1a1aa; }
+    .dark-mode .pill{ background:#0b1220; color:#e5e7eb; border-color:rgba(148,163,184,.25); }
+    .dark-mode .divider{ border-color:rgba(148,163,184,.18) !important; }
+
+    .footer{
+      background: transparent;
+      padding: 10px;
+      text-align:center;
+      margin-top: 40px;
+      border-top: 1px solid rgba(15,23,42,.08);
+    }
+
+    .card{
+      border:1px solid var(--ring);
+      border-radius: 18px;
+      box-shadow: 0 14px 34px rgba(2,6,23,.08);
+    }
+    .section-title{ font-weight:800; color:var(--ink); letter-spacing:-.02em; }
+    .subtext{ font-size:.92rem; color:var(--muted); }
+    .input-group-text{ background:#fff; border-color: var(--ring); }
+    .form-control, .btn, .form-select{ border-radius: 12px; }
+    .form-control{ border-color: var(--ring); }
+    .hint{ font-size:.82rem; color:var(--muted); }
+    .pill{
+      display:inline-flex; align-items:center; gap:.4rem;
+      border:1px solid var(--ring);
+      border-radius:999px; padding:.2rem .65rem;
+      font-size:.8rem; color:#0f172a; background:#fff;
+    }
+    .divider{ border-top: 1px dashed rgba(15,23,42,.18); margin: 10px 0 2px; }
+
+    .badge-pos{ color:var(--ok); background:rgba(22,163,74,.12); border-radius:999px; padding:2px 10px; display:inline-block; }
+    .badge-neg{ color:var(--bad); background:rgba(220,38,38,.12); border-radius:999px; padding:2px 10px; display:inline-block; }
+    .badge-warn{ color:var(--warn); background:rgba(245,158,11,.14); border-radius:999px; padding:2px 10px; display:inline-block; }
+
+    #upload-status{ min-height:28px; display:flex; align-items:center; gap:10px; font-weight:650; color:#6b7280; }
+    .spinner-border{ width:1.15rem; height:1.15rem; }
+    .thumb-wrap{ display:flex; align-items:center; gap:12px; margin-top:8px; }
+    .thumb{
+      width:120px; height:120px; object-fit:cover;
+      border-radius:14px; display:none;
+      border:1px solid rgba(15,23,42,.10);
+      box-shadow: 0 12px 26px rgba(2,6,23,.12);
+    }
+    .status-ok{ color:var(--ok); }
+    .status-fail{ color:var(--bad); }
+
+    .manager-box{
+      border:1px solid var(--ring);
+      border-radius: 14px;
+      background: rgba(255,255,255,.7);
+      padding: 12px;
+      max-height: 260px;
+      overflow:auto;
+    }
+    .dark-mode .manager-box{ background: rgba(2,6,23,.35); }
+    .manager-item{
+      display:flex; align-items:center; justify-content:space-between;
+      gap: 10px;
+      padding: 10px 10px;
+      border-radius: 12px;
+      border: 1px solid rgba(15,23,42,.06);
+      background: rgba(255,255,255,.9);
+      margin-bottom: 8px;
+    }
+    .dark-mode .manager-item{
+      background: rgba(2,6,23,.35);
+      border-color: rgba(148,163,184,.14);
+    }
+    .manager-name{ font-weight:700; }
+    .manager-meta{ font-size:.82rem; color: var(--muted); }
+    .dark-mode .manager-meta{ color:#a1a1aa; }
+
+    .actionbar{
+      position: sticky;
+      bottom: 12px;
+      z-index: 30;
+      margin-top: 14px;
+      border: 1px solid var(--ring);
+      background: rgba(255,255,255,.86);
+      backdrop-filter: blur(10px);
+      border-radius: 16px;
+      padding: 10px;
+      box-shadow: 0 16px 34px rgba(2,6,23,.10);
+    }
+    .dark-mode .actionbar{ background: rgba(2,6,23,.5); }
+
+    @media (prefers-reduced-motion: reduce){
+      *{ transition:none !important; scroll-behavior:auto !important; }
+    }
+  </style>
+</head>
+
+<body>
+  {% include 'inventory_sidebar.html' %}
+
+  <nav class="navbar navbar-expand-lg navbar-light bg-light px-3"
+       style="border-bottom:1px solid rgba(15,23,42,.08); backdrop-filter: blur(10px);">
+    <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
+      <ul class="navbar-nav align-items-center gap-2">
+        <li class="nav-item">
+          <a class="nav-link" href="{{ url_for('inventory_products.inventory_products') }}">
+            <i class="bi bi-box-seam me-1"></i> Warehouse
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="{{ url_for('inventory_analysis.inventory_analysis') }}">
+            <i class="bi bi-graph-up-arrow me-1"></i> Analysis
+          </a>
+        </li>
+        <li class="nav-item">
+          <button class="btn btn-outline-dark ms-lg-3" type="button" onclick="toggleDarkMode()" id="darkModeToggle" aria-label="Toggle dark mode" data-lock="1">
+            🌙
+          </button>
+        </li>
+        <li class="nav-item">
+          <a href="/logout" class="btn btn-danger"><i class="bi bi-box-arrow-right me-1"></i>Logout</a>
+        </li>
+      </ul>
+    </div>
+  </nav>
+
+  <div class="container mt-4 mb-5">
+    <div class="card p-4">
+      <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-1">
+        <div>
+          <h3 class="section-title mb-1">Add Products to Warehouse</h3>
+          <div class="subtext">
+            Fill in product details, upload an image, choose branches, set pricing, and optionally add expiry date.
+          </div>
+        </div>
+        <span class="pill"><i class="bi bi-stars"></i> New</span>
+      </div>
+
+      <div class="divider"></div>
+
+      <ul class="nav nav-tabs" role="tablist">
+        <li class="nav-item" role="presentation">
+          <button class="nav-link active" id="tab-new-btn" data-bs-toggle="tab" data-bs-target="#tab-new" type="button" role="tab">
+            New Product
+          </button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link" id="tab-missing-btn" data-bs-toggle="tab" data-bs-target="#tab-missing" type="button" role="tab">
+            Missing Products
+          </button>
+        </li>
+      </ul>
+
+      <div class="tab-content mt-3">
+        <div class="tab-pane fade show active" id="tab-new" role="tabpanel" aria-labelledby="tab-new-btn">
+          <form id="invForm" method="POST" enctype="multipart/form-data" onsubmit="return onSubmitGuard();">
+            <input type="hidden" id="request_id" name="request_id">
+            <div class="row g-3">
+
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Product Name</label>
+            <input type="text" name="name" class="form-control" required autocomplete="off" placeholder="e.g., Milk (1L)">
+          </div>
+
+          <div class="col-md-6">
+            <label class="form-label fw-semibold d-flex align-items-center justify-content-between">
+              <span>Quantity</span>
+              <span id="qtyBadge" class="hint"></span>
+            </label>
+            <input type="number" name="qty" id="qty" class="form-control" min="0" step="1" required placeholder="0">
+            <div class="hint mt-1">You can record <b>0</b> (Out of stock) to keep the product visible.</div>
+          </div>
+
+          <!-- ✅ NEW: Expiry Date -->
+          <div class="col-md-6">
+            <label class="form-label fw-semibold d-flex align-items-center justify-content-between">
+              <span>Expiry Date (Optional)</span>
+              <span id="expiryBadge" class="hint"></span>
+            </label>
+            <input type="date" name="expiry_date" id="expiry_date" class="form-control">
+            <div class="hint mt-1">Leave empty if the product does not expire (e.g., appliances).</div>
+          </div>
+
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Reminder Window (days)</label>
+            <input type="number" id="expiry_window" class="form-control" min="1" step="1" value="30">
+            <div class="hint mt-1">Badge shows "Expiring soon" within this many days.</div>
+          </div>
+
+          <div class="col-12 mt-2">
+            <div class="d-flex align-items-center justify-content-between">
+              <h6 class="mb-0 fw-bold"><i class="bi bi-receipt me-1"></i>Legacy Pricing</h6>
+              <span class="hint">Feeds existing backend fields.</span>
+            </div>
+          </div>
+
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">Initial Price</label>
+            <div class="input-group">
+              <span class="input-group-text">GHS</span>
+              <input type="number" id="initial_price" name="initial_price" class="form-control" step="0.01" min="0" required placeholder="0.00">
+            </div>
+          </div>
+
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">Profit (Amount or %)</label>
+            <input type="text" id="profit" name="profit" class="form-control" required placeholder="e.g. 50  or  30%">
+          </div>
+
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">Final Price (Auto)</label>
+            <div class="input-group">
+              <span class="input-group-text">GHS</span>
+              <input type="number" id="price" name="price" class="form-control" step="0.01" readonly required>
+            </div>
+          </div>
+
+          <div class="col-12 mt-3">
+            <div class="d-flex align-items-center justify-content-between">
+              <h6 class="mb-0 fw-bold"><i class="bi bi-cash-coin me-1"></i>Modern Pricing (New Fields)</h6>
+              <span class="hint">Additional, won't break old logic.</span>
+            </div>
+          </div>
+
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">Cost Price</label>
+            <div class="input-group">
+              <span class="input-group-text">GHS</span>
+              <input type="number" id="cost_price" name="cost_price" class="form-control" step="0.01" min="0" placeholder="e.g. 120.00">
+            </div>
+          </div>
+
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">Selling Price</label>
+            <div class="input-group">
+              <span class="input-group-text">GHS</span>
+              <input type="number" id="selling_price" name="selling_price" class="form-control" step="0.01" min="0" placeholder="e.g. 160.00">
+            </div>
+          </div>
+
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">Margin (Auto)</label>
+            <div class="input-group">
+              <span class="input-group-text">GHS</span>
+              <input type="number" id="margin" name="margin" class="form-control" step="0.01" readonly>
+            </div>
+            <div id="marginBadge" class="hint mt-1"></div>
+          </div>
+
+          <div class="col-12">
+            <label class="form-label fw-semibold">Description</label>
+            <textarea name="description" class="form-control" rows="3" required placeholder="Short description, model, warranty, etc."></textarea>
+          </div>
+
+          <div class="col-12">
+            <label for="image" class="form-label fw-semibold">Upload Image</label>
+            <input type="file" id="image" name="image" class="form-control" accept="image/*" required>
+            <input type="hidden" id="image_url" name="image_url">
+            <input type="hidden" id="image_id" name="image_id">
+
+            <div id="upload-status" class="mt-2" aria-live="polite"></div>
+
+            <div class="thumb-wrap">
+              <img id="thumb" class="thumb" alt="Preview">
+              <div>
+                <div id="uploadMessage" class="small text-muted"></div>
+                <div class="hint">Image must upload successfully before you can submit.</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-12">
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+              <label class="form-label fw-semibold mb-0">Select Branch(es)</label>
+
+              <div class="d-flex gap-2">
+                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="clearManagers()" data-lock="1">
+                  <i class="bi bi-x-circle me-1"></i>Clear
+                </button>
+                <button type="button" class="btn btn-warning btn-sm" onclick="selectAllManagers()" data-lock="1">
+                  <i class="bi bi-check2-all me-1"></i>Select All
+                </button>
+              </div>
+            </div>
+
+            <div class="hint mb-2">Pick one or more branches to receive the same product record.</div>
+
+            <div class="manager-box">
+              {% for manager in managers %}
+                <div class="manager-item">
+                  <div class="d-flex align-items-center gap-2">
+                    <input type="checkbox" class="form-check-input manager-checkbox mt-0" name="manager_ids" value="{{ manager._id }}" id="m{{ manager._id }}">
+                    <label for="m{{ manager._id }}" class="mb-0">
+                      <div class="manager-name">{{ manager.name }}</div>
+                      <div class="manager-meta">{{ manager.branch }}</div>
+                    </label>
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+
+            <div class="hint mt-2" id="selectedManagersHint">0 branch(es) selected</div>
+          </div>
+
+          <div class="col-12">
+            <div class="actionbar d-flex flex-wrap gap-2 align-items-center justify-content-between">
+              <div class="hint">
+                <i class="bi bi-shield-check me-1"></i>
+                Submitting is enabled only after image upload.
+              </div>
+              <button id="submitBtn" type="submit" class="btn btn-success px-4" disabled>
+                <i class="bi bi-plus-circle me-1"></i>Add Product
+              </button>
+            </div>
+          </div>
+
+        </div>
+      </form>
+    </div>
+
+        <div class="tab-pane fade" id="tab-missing" role="tabpanel" aria-labelledby="tab-missing-btn">
+          <div class="card border-0 shadow-sm">
+            <div class="card-body p-3">
+              <div class="d-flex flex-wrap align-items-center gap-2">
+                <div class="flex-grow-1">
+                  <label class="form-label fw-semibold mb-1">Target Manager (for missing products)</label>
+                  <select id="missingManagerSelect" class="form-select">
+                    <option value="">-- Select Manager --</option>
+                    {% for manager in managers %}
+                      <option value="{{ manager._id }}">{{ manager.name }} ({{ manager.branch }})</option>
+                    {% endfor %}
+                  </select>
+                </div>
+                <div class="pt-4">
+                  <button type="button" class="btn btn-primary btn-sm" id="findMissingBtn" disabled>
+                    <i class="bi bi-search"></i> Find Missing Products
+                  </button>
+                </div>
+              </div>
+              <div class="hint mt-2">Find products that exist for other managers but are missing for this branch.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer class="footer text-center mb-3 text-muted">
+    CYTECH | Admin Panel
+  </footer>
+
+  <!-- Missing Products Modal -->
+  <div class="modal fade" id="missingProductsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-fullscreen-sm-down">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Missing Products</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="d-flex flex-wrap gap-2 mb-3 align-items-center justify-content-between">
+            <input id="missingSearch" class="form-control" placeholder="Search missing products..." style="max-width:360px;">
+            <div class="d-flex gap-2">
+              <button type="button" class="btn btn-outline-secondary btn-sm" id="missingSelectAll">Select All</button>
+              <button type="button" class="btn btn-outline-secondary btn-sm" id="missingClear">Clear</button>
+            </div>
+          </div>
+          <div id="missingStatus" class="small text-muted mb-2"></div>
+          <div id="missingLoading" class="text-center py-4 d-none">
+            <div class="spinner-border text-primary" role="status" aria-hidden="true"></div>
+            <div class="small text-muted mt-2">Loading missing products...</div>
+          </div>
+          <div id="missingList" class="row g-3"></div>
+          <div id="missingEmpty" class="text-center py-5 d-none">
+            <div class="text-muted">No missing products found.</div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <div class="me-auto text-muted small" id="missingSummary"></div>
+          <button type="button" class="btn btn-primary" id="addMissingBtn" disabled>
+            Add Selected to Manager
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const asMoney = (v) => isNaN(v) ? "" : Number(v).toFixed(2);
+    let isUploading = false;
+    let isSubmitting = false;
+    let uploadController = null;
+    const lockTargets = Array.from(document.querySelectorAll('[data-lock="1"]'));
+    const submitBtn = $('submitBtn');
+    const imageInput = $('image');
+    const missingManagerSelect = $('missingManagerSelect');
+    const findMissingBtn = $('findMissingBtn');
+    const missingModalEl = document.getElementById('missingProductsModal');
+    const missingModal = missingModalEl ? new bootstrap.Modal(missingModalEl) : null;
+    const missingList = $('missingList');
+    const missingSearch = $('missingSearch');
+    const missingStatus = $('missingStatus');
+    const missingLoadingEl = $('missingLoading');
+    const missingEmpty = $('missingEmpty');
+    const missingSummary = $('missingSummary');
+    const missingSelectAll = $('missingSelectAll');
+    const missingClear = $('missingClear');
+    const addMissingBtn = $('addMissingBtn');
+    let missingItems = [];
+    let missingLoading = false;
+    let missingAdding = false;
+
+    function setRequestId(){
+      const el = $('request_id');
+      if (!el) return;
+      const gen = (crypto && crypto.randomUUID)
+        ? crypto.randomUUID()
+        : `req_${Date.now().toString(16)}${Math.random().toString(16).slice(2)}`;
+      el.value = gen;
+    }
+
+    function lockUI(){
+      submitBtn.disabled = true;
+      imageInput.disabled = true;
+      lockTargets.forEach(btn => { btn.disabled = true; });
+    }
+
+    function unlockUI(){
+      imageInput.disabled = false;
+      lockTargets.forEach(btn => { btn.disabled = false; });
+      enableSubmitIfReady();
+    }
+
+    function setSubmitBusy(busy){
+      if (busy){
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>Saving...';
+      }else{
+        submitBtn.innerHTML = '<i class="bi bi-plus-circle me-1"></i>Add Product';
+      }
+    }
+
+    function toggleDarkMode() {
+      document.body.classList.toggle('dark-mode');
+      const btn = $('darkModeToggle');
+      btn.textContent = document.body.classList.contains('dark-mode') ? '🌞' : '🌙';
+    }
+
+    function selectAllManagers() {
+      document.querySelectorAll('.manager-checkbox').forEach(cb => cb.checked = true);
+      updateSelectedManagersCount();
+    }
+    function clearManagers() {
+      document.querySelectorAll('.manager-checkbox').forEach(cb => cb.checked = false);
+      updateSelectedManagersCount();
+    }
+    function updateSelectedManagersCount() {
+      const count = [...document.querySelectorAll('.manager-checkbox')].filter(x => x.checked).length;
+      $('selectedManagersHint').textContent = `${count} branch(es) selected`;
+    }
+    document.querySelectorAll('.manager-checkbox').forEach(cb => cb.addEventListener('change', updateSelectedManagersCount));
+    updateSelectedManagersCount();
+
+    function updateQtyBadge() {
+      const v = $('qty').value === "" ? null : Number($('qty').value);
+      const el = $('qtyBadge');
+      if (v === 0) el.innerHTML = '<span class="badge-neg">Out of stock (0)</span>';
+      else if (v > 0) el.innerHTML = '<span class="badge-pos">In stock</span>';
+      else el.textContent = '';
+    }
+    $('qty').addEventListener('input', updateQtyBadge);
+    updateQtyBadge();
+
+    // ✅ Expiry badge logic (Expired / Expiring soon / Valid / No expiry)
+    function updateExpiryBadge() {
+      const d = $('expiry_date').value;
+      const badge = $('expiryBadge');
+      const windowDays = Number($('expiry_window').value || 30);
+
+      if (!d) { badge.innerHTML = '<span class="badge-warn">No expiry</span>'; return; }
+
+      const today = new Date();
+      today.setHours(0,0,0,0);
+
+      const exp = new Date(d + 'T00:00:00');
+      const diffMs = exp.getTime() - today.getTime();
+      const diffDays = Math.ceil(diffMs / (1000*60*60*24));
+
+      if (diffDays < 0) badge.innerHTML = '<span class="badge-neg">Expired</span>';
+      else if (diffDays <= windowDays) badge.innerHTML = '<span class="badge-warn">Expiring soon (' + diffDays + 'd)</span>';
+      else badge.innerHTML = '<span class="badge-pos">Valid (' + diffDays + 'd)</span>';
+    }
+    $('expiry_date').addEventListener('change', updateExpiryBadge);
+    $('expiry_window').addEventListener('input', updateExpiryBadge);
+    updateExpiryBadge();
+
+    function computeMargin() {
+      const c = parseFloat($('cost_price').value);
+      const s = parseFloat($('selling_price').value);
+      const badge = $('marginBadge');
+
+      if (isNaN(c) || isNaN(s)) {
+        $('margin').value = "";
+        badge.innerHTML = '<span class="hint">Enter Cost & Selling to see margin.</span>';
+        return;
+      }
+      const m = s - c;
+      $('margin').value = asMoney(m);
+      if (m > 0) badge.innerHTML = '<span class="badge-pos">Profit +' + asMoney(m) + '</span>';
+      else if (m < 0) badge.innerHTML = '<span class="badge-neg">Loss ' + asMoney(m) + '</span>';
+      else badge.innerHTML = '<span class="badge-warn">Break-even</span>';
+    }
+
+    function softSyncModernFromLegacy() {
+      const init = parseFloat($('initial_price').value);
+      const fin = parseFloat($('price').value);
+      if (!isNaN(init) && ($('cost_price').value === "")) $('cost_price').value = asMoney(init);
+      if (!isNaN(fin) && ($('selling_price').value === "")) $('selling_price').value = asMoney(fin);
+      computeMargin();
+    }
+
+    function computeFinalPricePreview() {
+      const initial = parseFloat($('initial_price').value);
+      const profitInput = $('profit').value.trim();
+      if (isNaN(initial) || !profitInput) {
+        $('price').value = "";
+        softSyncModernFromLegacy();
+        return;
+      }
+
+      let fp = initial;
+      if (profitInput.endsWith('%')) {
+        const p = parseFloat(profitInput.slice(0, -1));
+        if (!isNaN(p)) fp += (initial * p / 100);
+      } else {
+        const amt = parseFloat(profitInput);
+        if (!isNaN(amt)) fp += amt;
+      }
+      $('price').value = asMoney(fp);
+      softSyncModernFromLegacy();
+    }
+
+    ['initial_price','profit'].forEach(id => $(id).addEventListener('input', computeFinalPricePreview));
+    ['cost_price','selling_price'].forEach(id => $(id).addEventListener('input', computeMargin));
+    computeFinalPricePreview();
+    computeMargin();
+
+    function enableSubmitIfReady() {
+      const ok = !!$('image_url').value;
+      $('submitBtn').disabled = !ok;
+    }
+
+    function onSubmitGuard() {
+      if (isSubmitting) return false;
+      computeFinalPricePreview();
+
+      const c = parseFloat($('cost_price').value);
+      const s = parseFloat($('selling_price').value);
+      if (!isNaN(c) && !isNaN(s) && (s - c) < 0) {
+        if (!confirm("Margin is negative. Do you still want to submit?")) return false;
+      }
+
+      const count = [...document.querySelectorAll('.manager-checkbox')].filter(x => x.checked).length;
+      if (count === 0) { alert("Please select at least one branch/manager."); return false; }
+
+      if (!$('image_url').value) { alert("Please upload an image first."); return false; }
+
+      isSubmitting = true;
+      setSubmitBusy(true);
+      lockUI();
+      return true;
+    }
+
+    $('image').addEventListener('change', async function (event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      if (isUploading) return;
+      isUploading = true;
+      imageInput.disabled = true;
+      uploadController = new AbortController();
+
+      $('image_url').value = '';
+      $('image_id').value = '';
+      $('thumb').style.display = 'none';
+      $('uploadMessage').textContent = '';
+      enableSubmitIfReady();
+
+      $('upload-status').innerHTML =
+        '<div class="spinner-border" role="status" aria-hidden="true"></div><span>Uploading image…</span>';
+
+      const formData = new FormData();
+      formData.append('image', file);
+
+      try {
+        const response = await fetch('/add_inventory/upload_image', {
+          method: 'POST',
+          body: formData,
+          signal: uploadController.signal
+        });
+        const data = await response.json();
+
+        if (data.success) {
+          $('image_url').value = data.image_url;
+          $('image_id').value = data.image_id || '';
+          $('thumb').src = data.image_url;
+          $('thumb').style.display = 'block';
+          $('upload-status').innerHTML = '<span class="status-ok"><i class="bi bi-check-circle me-1"></i>Image uploaded</span>';
+          enableSubmitIfReady();
+        } else {
+          $('upload-status').innerHTML = '<span class="status-fail"><i class="bi bi-x-circle me-1"></i>Upload failed</span>';
+          $('uploadMessage').textContent = (data.error || 'Please try again.');
+          console.error('Upload error:', data);
+        }
+      } catch (error) {
+        if (error.name !== 'AbortError') {
+          $('upload-status').innerHTML = '<span class="status-fail"><i class="bi bi-x-circle me-1"></i>Upload failed</span>';
+          $('uploadMessage').textContent = 'Network error. Please try again.';
+          console.error(error);
+        }
+      } finally {
+        isUploading = false;
+        uploadController = null;
+        imageInput.disabled = false;
+        event.target.value = '';
+      }
+    });
+
+    window.addEventListener('pageshow', () => {
+      if (isSubmitting) {
+        isSubmitting = false;
+        unlockUI();
+        setSubmitBusy(false);
+      }
+    });
+
+    setRequestId();
+    enableSubmitIfReady();
+
+    if (missingManagerSelect) {
+      missingManagerSelect.addEventListener('change', () => {
+        findMissingBtn.disabled = !missingManagerSelect.value;
+      });
+    }
+
+    function renderMissingList() {
+      const query = (missingSearch?.value || '').trim().toLowerCase();
+      missingList.innerHTML = '';
+      let visible = 0;
+      missingItems.forEach(item => {
+        const hay = `${item.name || ''} ${item.description || ''}`.toLowerCase();
+        if (query && !hay.includes(query)) return;
+        visible += 1;
+        const col = document.createElement('div');
+        col.className = 'col-12 col-md-6 col-lg-4';
+        col.innerHTML = `
+          <div class="card h-100">
+            <div class="card-body">
+              <div class="d-flex gap-2">
+                ${item.image_url ? `<img src="${item.image_url}" alt="" style="width:56px;height:56px;border-radius:10px;object-fit:cover;">` : `<div style="width:56px;height:56px;border-radius:10px;background:#f1f5f9;"></div>`}
+                <div class="flex-grow-1">
+                  <div class="fw-semibold">${item.name || '-'}</div>
+                  <div class="small text-muted">${item.description || ''}</div>
+                  <div class="small text-muted">Price: GHS ${Number(item.selling_price || item.price || 0).toFixed(2)}</div>
+                </div>
+                <div>
+                  <input type="checkbox" class="form-check-input missing-check" data-id="${item._id}">
+                </div>
+              </div>
+              <div class="mt-2">
+                <span class="badge bg-warning text-dark">Missing</span>
+              </div>
+            </div>
+          </div>
+        `;
+        missingList.appendChild(col);
+      });
+      missingEmpty.classList.toggle('d-none', visible > 0);
+      updateMissingSummary();
+    }
+
+    function updateMissingSummary() {
+      const checks = missingList.querySelectorAll('.missing-check:checked').length;
+      missingSummary.textContent = `${checks} selected`;
+      addMissingBtn.disabled = checks === 0 || missingAdding;
+    }
+
+    async function loadMissingProducts() {
+      if (missingLoading) return;
+      const managerId = missingManagerSelect?.value;
+      if (!managerId) return;
+      missingLoading = true;
+      missingStatus.textContent = 'Loading missing products...';
+      missingLoadingEl?.classList.remove('d-none');
+      missingEmpty.classList.add('d-none');
+      missingList.innerHTML = '';
+      missingSummary.textContent = '';
+      addMissingBtn.disabled = true;
+      try {
+        const res = await fetch(`/add_inventory/missing_products?manager_id=${encodeURIComponent(managerId)}`);
+        const data = await res.json();
+        if (!data.ok) throw new Error(data.message || 'Failed to load missing products.');
+        missingItems = data.results || [];
+        missingStatus.textContent = `Missing products for ${data.manager_name || 'manager'}: ${missingItems.length}`;
+        renderMissingList();
+      } catch (err) {
+        missingStatus.textContent = err.message || 'Failed to load missing products.';
+      } finally {
+        missingLoading = false;
+        missingLoadingEl?.classList.add('d-none');
+      }
+    }
+
+    findMissingBtn?.addEventListener('click', async () => {
+      if (!missingModal) return;
+      missingSearch.value = '';
+      missingModal.show();
+      await loadMissingProducts();
+    });
+
+    missingSearch?.addEventListener('input', renderMissingList);
+    missingList?.addEventListener('change', updateMissingSummary);
+
+    missingSelectAll?.addEventListener('click', () => {
+      missingList.querySelectorAll('.missing-check').forEach(cb => { cb.checked = true; });
+      updateMissingSummary();
+    });
+
+    missingClear?.addEventListener('click', () => {
+      missingList.querySelectorAll('.missing-check').forEach(cb => { cb.checked = false; });
+      updateMissingSummary();
+    });
+
+    addMissingBtn?.addEventListener('click', async () => {
+      const managerId = missingManagerSelect?.value;
+      if (!managerId) return;
+      if (missingAdding) return;
+      const ids = Array.from(missingList.querySelectorAll('.missing-check:checked')).map(cb => cb.dataset.id);
+      if (!ids.length) return;
+      missingAdding = true;
+      addMissingBtn.disabled = true;
+      addMissingBtn.textContent = 'Adding...';
+      try {
+        const res = await fetch('/add_inventory/add_missing_products', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ manager_id: managerId, product_ids: ids })
+        });
+        const data = await res.json();
+        if (!data.ok) throw new Error(data.message || 'Failed to add missing products.');
+        missingStatus.textContent = `Added ${data.added_count} missing products to ${data.manager_name || 'manager'}.`;
+        await loadMissingProducts();
+      } catch (err) {
+        missingStatus.textContent = err.message || 'Failed to add missing products.';
+      } finally {
+        missingAdding = false;
+        addMissingBtn.textContent = 'Add Selected to Manager';
+      }
+    });
+  </script>
+    {% include 'app_footer.html' %}
+
+</body>
+</html>
+
+

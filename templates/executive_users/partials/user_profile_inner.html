@@ -1,0 +1,185 @@
+{% if not user %}
+  <div class="alert alert-warning">User not found.</div>
+{% else %}
+  <div class="exec-card p-3 p-md-4 mb-3">
+    <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
+      <div>
+        <a href="/executive/users" data-ajax="true" class="btn btn-sm btn-outline-secondary mb-2">
+          <i class="bi bi-arrow-left"></i> Back
+        </a>
+        <div class="text-muted small">User Profile</div>
+        <h4 class="mb-1">{{ user.name or 'Unknown' }}</h4>
+        <div class="text-muted">@{{ user.username or '---' }}</div>
+      </div>
+      <div class="d-flex align-items-center gap-3">
+        <img src="{{ user.image_url or DEFAULT_PROFILE_IMAGE_URL }}" class="rounded-circle" style="width:72px;height:72px;object-fit:cover;border:1px solid rgba(226,232,240,0.9);" alt="{{ user.name }}" onerror="this.src='{{ DEFAULT_PROFILE_IMAGE_URL }}'">
+        <div>
+          <div class="text-muted small">Role</div>
+          <div class="fw-semibold text-capitalize">{{ user.role }}</div>
+          <div class="text-muted small">Branch</div>
+          <div class="fw-semibold">{{ user.branch or 'Unassigned' }}</div>
+        </div>
+        <span class="badge rounded-pill {{ 'bg-success-subtle text-success-emphasis' if user.status_display == 'Active' else 'bg-danger-subtle text-danger-emphasis' }}">{{ user.status_display }}</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="exec-card p-3 p-md-4 mb-3">
+    <ul class="nav nav-pills mb-3" id="profileTabs" role="tablist">
+      <li class="nav-item" role="presentation">
+        <button class="nav-link active" data-bs-toggle="pill" data-bs-target="#tab-login" type="button">Login Trend</button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" data-bs-toggle="pill" data-bs-target="#tab-activity" type="button">Activity Trend</button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" data-bs-toggle="pill" data-bs-target="#tab-logs" type="button">Logs</button>
+      </li>
+    </ul>
+
+    <div class="tab-content">
+      <div class="tab-pane fade show active" id="tab-login">
+        <div class="row g-3">
+          <div class="col-lg-8">
+            <div class="exec-card p-3">
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <div class="fw-semibold">Login Trend (30d)</div>
+                <div class="text-muted small" id="loginTrendMeta">Loading...</div>
+              </div>
+              <canvas id="loginTrendChart" height="220"></canvas>
+            </div>
+          </div>
+          <div class="col-lg-4">
+            <div class="exec-card p-3">
+              <div class="fw-semibold mb-2">Last Login</div>
+              <div class="text-muted" id="lastLogin">-</div>
+              <div class="fw-semibold mt-3">Logins (30d)</div>
+              <div class="text-muted" id="logins30d">-</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="tab-pane fade" id="tab-activity">
+        <div class="row g-3">
+          <div class="col-lg-8">
+            <div class="exec-card p-3">
+              <div class="fw-semibold mb-2">Activity Trend (30d)</div>
+              <canvas id="activityTrendChart" height="220"></canvas>
+            </div>
+          </div>
+          <div class="col-lg-4">
+            <div class="exec-card p-3">
+              <div class="fw-semibold mb-2">Top Actions</div>
+              <div id="topActions" class="text-muted">Loading...</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="tab-pane fade" id="tab-logs">
+        <div class="exec-card p-3">
+          <div class="fw-semibold mb-2">Recent Activity & Logins</div>
+          <div class="table-responsive">
+            <table class="table align-middle">
+              <thead>
+                <tr>
+                  <th>Time</th>
+                  <th>Type</th>
+                  <th>Description</th>
+                </tr>
+              </thead>
+              <tbody id="combinedLogs">
+                <tr><td colspan="3" class="text-muted">Loading logs...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function(){
+      const userId = {{ user._id | tojson }};
+      const loginTrendChart = document.getElementById('loginTrendChart');
+      const activityTrendChart = document.getElementById('activityTrendChart');
+      const lastLoginEl = document.getElementById('lastLogin');
+      const logins30El = document.getElementById('logins30d');
+      const topActionsEl = document.getElementById('topActions');
+      const combinedLogsEl = document.getElementById('combinedLogs');
+
+      function fmtDate(value){
+        if (!value) return '-';
+        const dt = new Date(value);
+        if (Number.isNaN(dt.getTime())) return '-';
+        return dt.toLocaleString();
+      }
+
+      function buildLineChart(canvas, labels, values, color){
+        if (!canvas || !window.Chart) return;
+        new Chart(canvas.getContext('2d'), {
+          type: 'line',
+          data: {
+            labels: labels,
+            datasets: [{
+              label: 'Count',
+              data: values,
+              borderColor: color,
+              backgroundColor: color + '22',
+              tension: 0.3,
+              fill: true
+            }]
+          },
+          options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+        });
+      }
+
+      Promise.all([
+        fetch(`/executive/users/${userId}/logs?days=30`, { credentials: 'same-origin' }).then(r => r.json()),
+        fetch(`/executive/users/${userId}/activities/summary?range=last_30`, { credentials: 'same-origin' }).then(r => r.json()),
+        fetch(`/executive/users/${userId}/activities/list?page=1&page_size=20&range=last_30`, { credentials: 'same-origin' }).then(r => r.json())
+      ]).then(([loginData, activityData, activityList]) => {
+        if (loginData.ok) {
+          buildLineChart(loginTrendChart, loginData.trend.labels || [], loginData.trend.values || [], '#0d6efd');
+          lastLoginEl.textContent = fmtDate(loginData.kpis.last_login);
+          logins30El.textContent = loginData.kpis.logins_30d || 0;
+        }
+        if (activityData.ok) {
+          buildLineChart(activityTrendChart, activityData.trend.labels || [], activityData.trend.values || [], '#f59e0b');
+          const tops = activityData.top_actions || [];
+          if (!tops.length) {
+            topActionsEl.textContent = 'No recent activity.';
+          } else {
+            topActionsEl.innerHTML = tops.map(t => `<div class="d-flex justify-content-between"><span>${t.label || t.action}</span><strong>${t.count}</strong></div>`).join('');
+          }
+        }
+
+        const logs = [];
+        (loginData.recent_logs || []).forEach(l => logs.push({
+          ts: l.timestamp,
+          type: 'Login',
+          desc: `Login from ${l.ip || '-'} (${l.city || '-'})`
+        }));
+        (activityList.rows || []).forEach(a => logs.push({
+          ts: a.timestamp,
+          type: 'Activity',
+          desc: a.action_label || a.action || 'Activity'
+        }));
+        logs.sort((a, b) => new Date(b.ts) - new Date(a.ts));
+        const top = logs.slice(0, 20);
+        if (!top.length) {
+          combinedLogsEl.innerHTML = '<tr><td colspan="3" class="text-muted">No logs found.</td></tr>';
+        } else {
+          combinedLogsEl.innerHTML = top.map(item => `
+            <tr>
+              <td>${fmtDate(item.ts)}</td>
+              <td>${item.type}</td>
+              <td>${item.desc}</td>
+            </tr>
+          `).join('');
+        }
+      });
+    })();
+  </script>
+{% endif %}

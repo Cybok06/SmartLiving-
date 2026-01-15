@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Manager Dashboard · SmartLiving</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <!-- Bootstrap & Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet" />
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png"
+        href="https://res.cloudinary.com/dljpgzbto/image/upload/v1743993646/company-logo_dksb23.jpg" />
+  <meta name="theme-color" content="#074073" />
+
+  <style>
+    :root{
+      --ax-navy:#074073;
+      --ax-gold:#facc15;
+
+      --ax-bg:#f5f7fb;
+      --ax-surface:#ffffff;
+
+      /* USER REQUEST: force readable black text */
+      --ax-ink:#000000;
+      --ax-muted:#000000;
+
+      --ax-border:rgba(148,163,184,.30);
+      --ax-navy-2: rgba(7,64,115,.10);
+      --ax-gold-2: rgba(250,204,21,.18);
+
+      --success:#16a34a;
+      --success-soft: rgba(22,163,74,.12);
+      --info:#0ea5e9;
+      --info-soft: rgba(14,165,233,.12);
+      --warning:#f59e0b;
+      --warning-soft: rgba(245,158,11,.14);
+      --danger:#dc2626;
+      --danger-soft: rgba(220,38,38,.10);
+
+      --shadow-1: 0 10px 30px rgba(2, 8, 23, .08);
+      --shadow-2: 0 18px 45px rgba(2, 8, 23, .10);
+
+      --r1: 16px;
+      --r2: 22px;
+      --ring: 0 0 0 .25rem rgba(250,204,21,.22);
+    }
+
+    *{ -webkit-tap-highlight-color: transparent; }
+    body{
+      background:
+        radial-gradient(1100px 650px at 15% 5%, var(--ax-navy-2), transparent 60%),
+        radial-gradient(900px 550px at 85% 95%, var(--ax-gold-2), transparent 55%),
+        var(--ax-bg);
+      color: var(--ax-ink);
+      font-family: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+    }
+    a{ text-decoration: none; }
+    .money{ font-variant-numeric: tabular-nums; letter-spacing: .2px; }
+    .text-muted-2{ color: var(--ax-ink) !important; opacity: .78; } /* still black but slightly softer */
+
+    /* Shell + fade in */
+    .page-wrap{
+      max-width:1200px;
+      margin: 0 auto;
+      padding: 20px 16px 52px;
+    }
+    .dashboard-main{
+      opacity: 0;
+      transform: translateY(6px);
+      transition: opacity .25s ease-out, transform .25s ease-out;
+    }
+    body.page-ready .dashboard-main{
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* Topbar */
+    .topbar{
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      backdrop-filter: blur(10px);
+      background: rgba(255,255,255,.88);
+      border-bottom: 1px solid rgba(148,163,184,.28);
+    }
+    .brand{
+      color: var(--ax-navy);
+      font-weight: 900;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      font-size: .86rem;
+    }
+    .top-title{
+      font-weight: 900;
+      color: #000;
+    }
+
+    /* Buttons */
+    .btn-ax{
+      border-radius: 999px;
+      font-weight: 800;
+      border: 1px solid rgba(7,64,115,.22);
+      background: rgba(255,255,255,.92);
+      color: #000;
+    }
+    .btn-ax:hover{ box-shadow: var(--shadow-1); }
+    .btn-ax:focus{ box-shadow: var(--ring); }
+
+    .btn-ax-gold{
+      border: 1px solid rgba(250,204,21,.45);
+      background: rgba(250,204,21,.35);
+      color: #000;
+    }
+    .btn-ax-danger{
+      border: 1px solid rgba(220,38,38,.25);
+      background: rgba(220,38,38,.10);
+      color: #000;
+    }
+    .btn-ax-primary{
+      border: none;
+      background: linear-gradient(180deg, rgba(7,64,115,1), rgba(5,50,90,1));
+      color: #fff;
+    }
+    .btn-ax-primary:hover{ filter: brightness(1.05); box-shadow: var(--shadow-2); }
+
+    /* Cards */
+    .card-ax{
+      border-radius: var(--r2);
+      border: 1px solid rgba(148,163,184,.30);
+      background: rgba(255,255,255,.95);
+      box-shadow: var(--shadow-1);
+      overflow: hidden;
+    }
+
+    /* Section heads */
+    .section-h{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      margin: 18px 0 10px;
+    }
+    .section-title{
+      font-size: .85rem;
+      letter-spacing: .20em;
+      text-transform: uppercase;
+      font-weight: 950;
+      color: #000;
+      margin: 0;
+    }
+    .badge-soft{
+      background: rgba(250,204,21,.30);
+      color: #000;
+      border:1px solid rgba(250,204,21,.45);
+      font-weight:950;
+      border-radius:999px;
+      padding:.28rem .75rem;
+      font-size:.72rem;
+      text-transform:uppercase;
+      letter-spacing:.10em;
+      display:inline-flex;
+      align-items:center;
+      gap:.45rem;
+    }
+
+    /* HERO */
+    .hero{ position: relative; }
+    .hero::before{
+      content:"";
+      position:absolute;
+      inset:-120px -120px auto auto;
+      width: 360px; height: 360px;
+      background: radial-gradient(circle at 30% 30%, rgba(250,204,21,.45), transparent 60%);
+      transform: rotate(12deg);
+      pointer-events:none;
+    }
+    .hero::after{
+      content:"";
+      position:absolute;
+      inset:auto auto -140px -140px;
+      width: 420px; height: 420px;
+      background: radial-gradient(circle at 30% 30%, rgba(7,64,115,.18), transparent 60%);
+      transform: rotate(-10deg);
+      pointer-events:none;
+    }
+    .hero-inner{
+      position: relative;
+      z-index: 1;
+      padding: 1.1rem;
+    }
+    .hero-title{
+      font-weight: 950;
+      font-size: clamp(1.2rem, 2.2vw, 1.65rem);
+      margin: 0;
+      color:#000;
+    }
+    .hero-sub{
+      color: #000;
+      opacity:.78;
+      font-size: .95rem;
+      margin-top: .2rem;
+    }
+    .hero-actions{
+      display:flex;
+      gap:.5rem;
+      flex-wrap: wrap;
+      justify-content:flex-end;
+    }
+    .hero-kpis{
+      display:grid;
+      grid-template-columns: 1fr 1fr 1fr 1fr;
+      gap: .75rem;
+      margin-top: .9rem;
+    }
+    @media (max-width: 991.98px){
+      .hero-kpis{ grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 575.98px){
+      .hero-kpis{ grid-template-columns: 1fr; }
+      .hero-actions{ justify-content:flex-start; }
+      .page-wrap{ padding:16px 12px 48px; }
+    }
+
+    /* KPI tiles */
+    .kpi{
+      padding: .95rem;
+      border-radius: 18px;
+      border: 1px solid rgba(148,163,184,.22);
+      background: rgba(255,255,255,.86);
+      display:flex;
+      align-items:flex-start;
+      gap:.85rem;
+      min-height: 92px;
+    }
+    .kpi-ico{
+      width: 46px; height: 46px;
+      border-radius: 16px;
+      display:grid;
+      place-items:center;
+      font-size: 1.15rem;
+      border: 1px solid rgba(148,163,184,.22);
+      flex: 0 0 auto;
+    }
+    .ico-navy{ background: rgba(7,64,115,.10); color: var(--ax-navy); }
+    .ico-green{ background: rgba(22,163,74,.12); color: var(--success); }
+    .ico-sky{ background: rgba(14,165,233,.12); color: var(--info); }
+    .ico-amber{ background: rgba(245,158,11,.14); color: var(--warning); }
+
+    .kpi-label{
+      font-size: .78rem;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: #000;
+      opacity:.75;
+      font-weight: 950;
+    }
+    .kpi-value{
+      color:#000;
+      font-weight: 950;
+      font-size: 1.55rem;
+      line-height: 1.1;
+      margin-top: .15rem;
+    }
+    .kpi-note{
+      margin: 0;
+      margin-top: .35rem;
+      font-size: .82rem;
+      color: #000;
+      opacity:.72;
+    }
+
+    /* Skeleton shimmer */
+    .skeleton {
+      display:inline-block;
+      min-width: 96px;
+      height: 22px;
+      background: linear-gradient(90deg, #eef2f7 25%, #e6edf7 37%, #eef2f7 63%);
+      background-size: 400% 100%;
+      border-radius: 8px;
+      animation: shimmer 1.2s ease-in-out infinite;
+      vertical-align: middle;
+    }
+    @keyframes shimmer {
+      0% { background-position: 100% 0; }
+      100% { background-position: -100% 0; }
+    }
+
+    /* Targets / panels */
+    .metric-card,
+    .panel-card{
+      border: 1px solid rgba(148,163,184,.25);
+      background: rgba(255,255,255,.95);
+      border-radius: var(--r2);
+      padding: 16px;
+      box-shadow: var(--shadow-1);
+    }
+    .metric-card:hover,
+    .panel-card:hover{
+      transform: translateY(-2px);
+      transition: transform .15s ease;
+    }
+
+    /* Premium progress */
+    .pbar{
+      height: 10px;
+      background: rgba(148,163,184,.20);
+      border-radius: 999px;
+      overflow:hidden;
+    }
+    .pbar > div{
+      height: 100%;
+      width: 0%;
+      border-radius: 999px;
+      transition: width .7s ease;
+    }
+    .p-green{ background: linear-gradient(90deg, #16a34a, rgba(22,163,74,.75)); }
+    .p-navy{ background: linear-gradient(90deg, var(--ax-navy), rgba(7,64,115,.85)); }
+    .p-gold{ background: linear-gradient(90deg, rgba(250,204,21,.95), rgba(250,204,21,.65)); }
+
+    /* Attendance */
+    .panel-card{
+      display:flex;
+      flex-direction:column;
+      height:100%;
+    }
+    .panel-header{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      margin-bottom:10px;
+    }
+    .panel-body-scroll{
+      margin-top:8px;
+      padding-top:8px;
+      border-top:1px dashed rgba(148,163,184,.35);
+      flex:1 1 auto;
+      max-height:380px;
+      overflow-y:auto;
+    }
+    .agent-row{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      padding:10px 8px;
+      border-radius:14px;
+      border: 1px solid transparent;
+    }
+    .agent-row + .agent-row{ margin-top:6px; }
+    .agent-row:hover{
+      background: rgba(255,255,255,.75);
+      border-color: rgba(148,163,184,.20);
+    }
+    .agent-avatar{
+      width:44px;
+      height:44px;
+      border-radius:999px;
+      object-fit:cover;
+      border: 2px solid rgba(250,204,21,.55);
+      box-shadow: 0 8px 18px rgba(2,8,23,.10);
+      background: rgba(148,163,184,.12);
+    }
+    .agent-name{ font-size:.92rem; font-weight:950; color:#000; }
+    .agent-meta{ font-size:.82rem; color:#000; opacity:.75; }
+
+    .status-pill{
+      font-size:.70rem;
+      padding:.18rem .60rem;
+      border-radius:999px;
+      font-weight:950;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+      white-space:nowrap;
+      border: 1px solid transparent;
+      color:#000;
+    }
+    .status-worked{
+      background: rgba(22,163,74,.12);
+      border-color: rgba(22,163,74,.18);
+    }
+    .status-absent{
+      background: rgba(220,38,38,.10);
+      border-color: rgba(220,38,38,.18);
+    }
+
+    @media (prefers-reduced-motion: reduce){
+      .pbar > div{ transition: none; }
+    }
+  </style>
+</head>
+
+<body>
+
+{% include 'manager_sidebar.html' %}
+
+<!-- Topbar -->
+<nav class="topbar navbar navbar-light">
+  <div class="container-fluid px-3 py-1">
+    <a class="navbar-brand d-flex align-items-center gap-2" href="#">
+      <img src="https://res.cloudinary.com/dljpgzbto/image/upload/v1743993646/company-logo_dksb23.jpg"
+           alt="SmartLiving"
+           style="width:34px;height:34px;border-radius:12px;object-fit:cover;border:1px solid rgba(148,163,184,.35);">
+      <div class="d-flex flex-column lh-sm">
+        <span class="brand">SmartLiving</span>
+        <span class="top-title">Manager Dashboard</span>
+      </div>
+    </a>
+
+    <div class="d-flex align-items-center gap-2 flex-wrap justify-content-end">
+      <span class="text-muted-2 small d-none d-md-inline">
+        Today: <strong>{{ today }}</strong>
+      </span>
+
+      <!-- NEW: Close Sales button -->
+      <a href="http://127.0.0.1:5000/manager-close/"
+         class="btn btn-ax btn-ax-primary btn-sm d-inline-flex align-items-center gap-2">
+        <i class="bi bi-lock-fill"></i>
+        <span>Close Sales</span>
+      </a>
+
+      <a href="{{ url_for('issues.new_issue') }}"
+         class="btn btn-ax btn-sm d-inline-flex align-items-center gap-2"
+         id="reportIssueBtn">
+        <i class="bi bi-exclamation-circle"></i>
+        <span class="d-none d-sm-inline">Report Issue</span>
+        <span id="managerIssuesBadge"
+              class="badge rounded-pill ms-1 d-none"
+              style="background:rgba(220,38,38,.12); color:#000; border:1px solid rgba(220,38,38,.2);">
+          0
+        </span>
+      </a>
+
+      <a href="{{ url_for('login.logout') }}"
+         class="btn btn-ax btn-ax-danger btn-sm d-inline-flex align-items-center gap-2">
+        <i class="bi bi-box-arrow-right"></i>
+        <span class="d-none d-sm-inline">Logout</span>
+      </a>
+    </div>
+  </div>
+</nav>
+
+<main class="page-wrap">
+  <div class="dashboard-main">
+
+    <!-- HERO -->
+    <section class="card-ax hero mb-3">
+      <div class="hero-inner">
+        <div class="d-flex align-items-start justify-content-between gap-3 flex-wrap">
+          <div>
+            <h3 class="hero-title m-0">Hello, {{ manager_name }}</h3>
+            <div class="hero-sub">Branch performance and field activity at a glance.</div>
+          </div>
+          <div class="hero-actions">
+            <span class="badge-soft d-inline-flex">
+              <i class="bi bi-broadcast"></i> Live Overview
+            </span>
+            <a href="/manager/targets/" class="btn btn-ax btn-ax-gold btn-sm d-inline-flex align-items-center gap-2">
+              <i class="bi bi-flag"></i> Targets
+            </a>
+          </div>
+        </div>
+
+        <!-- KPI GRID -->
+        <div class="hero-kpis">
+          <div class="kpi">
+            <div class="kpi-ico ico-navy"><i class="bi bi-cash-stack"></i></div>
+            <div class="min-w-0">
+              <div class="kpi-label">Payments Today</div>
+              <div class="kpi-value money">₵{{ "{:,.2f}".format(today_total_payment) }}</div>
+              <div class="kpi-note">Total received today.</div>
+            </div>
+          </div>
+
+          <div class="kpi">
+            <div class="kpi-ico ico-green"><i class="bi bi-receipt"></i></div>
+            <div class="min-w-0">
+              <div class="kpi-label">Expenses Today</div>
+              <div class="kpi-value money"><span id="kpiExpToday" class="skeleton">&nbsp;</span></div>
+              <div class="kpi-note">Approved only.</div>
+            </div>
+          </div>
+
+          <div class="kpi">
+            <div class="kpi-ico ico-sky"><i class="bi bi-calendar-week"></i></div>
+            <div class="min-w-0">
+              <div class="kpi-label">Expenses This Week</div>
+              <div class="kpi-value money"><span id="kpiExpWeek" class="skeleton">&nbsp;</span></div>
+              <div class="kpi-note">Mon-Sun (UTC).</div>
+            </div>
+          </div>
+
+          <div class="kpi">
+            <div class="kpi-ico ico-amber"><i class="bi bi-calendar2-month"></i></div>
+            <div class="min-w-0">
+              <div class="kpi-label">Expenses This Month</div>
+              <div class="kpi-value money"><span id="kpiExpMonth" class="skeleton">&nbsp;</span></div>
+              <div class="kpi-note">
+                Pending:
+                <strong class="text-danger" style="color:#000 !important;">
+                  <span id="kpiExpPendingTotal" class="skeleton">&nbsp;</span>
+                </strong>
+                <span class="text-muted-2">
+                  (<span id="kpiExpPendingCount" class="skeleton" style="min-width: 28px;">&nbsp;</span> items)
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CONTENT SPLIT -->
+    <div class="row g-3">
+      <!-- Monthly Targets -->
+      <div class="col-lg-7">
+        <div class="section-h">
+          <h5 class="section-title">Monthly Targets</h5>
+          <a href="/manager/targets/" class="btn btn-ax btn-sm d-inline-flex align-items-center gap-2">
+            <i class="bi bi-flag"></i> View All
+          </a>
+        </div>
+
+        {% if results and results|length %}
+          <div class="row g-3">
+            {% for item in results %}
+            <div class="col-md-6">
+              <div class="metric-card h-100">
+                <div class="d-flex align-items-start justify-content-between gap-2">
+                  <div class="small text-muted-2">
+                    <i class="bi bi-calendar-event me-1"></i>
+                    {{ item.start_date }} → {{ item.end_date }}
+                  </div>
+                  <span class="badge-soft">Overall: {{ item.overall }}%</span>
+                </div>
+
+                <div class="mt-1 mb-3" style="font-weight: 950; font-size: 1.02rem; color:#000;">
+                  {{ item.title }}
+                </div>
+
+                <div class="d-flex justify-content-between small fw-semibold mb-1">
+                  <span>🛒 Product</span><span>{{ item.product_pct }}%</span>
+                </div>
+                <div class="pbar mb-2" role="progressbar" aria-label="Product progress">
+                  <div class="p-green js-pbar" data-width="{{ item.product_pct or 0 }}"></div>
+                </div>
+                <div class="text-muted-2 small mb-3">
+                  Units: <strong>{{ item.product_achieved }}</strong> / {{ item.product_target }}
+                </div>
+
+                <div class="d-flex justify-content-between small fw-semibold mb-1">
+                  <span>💰 Cash</span><span>{{ item.payment_pct }}%</span>
+                </div>
+                <div class="pbar mb-2" role="progressbar" aria-label="Cash progress">
+                  <div class="p-navy js-pbar" data-width="{{ item.payment_pct or 0 }}"></div>
+                </div>
+                <div class="text-muted-2 small mb-3">
+                  GHS: <strong class="money">{{ item.cash_achieved }}</strong> / <span class="money">{{ item.cash_target }}</span>
+                </div>
+
+                <div class="d-flex justify-content-between small fw-semibold mb-1">
+                  <span>👥 Customers</span><span>{{ item.customer_pct }}%</span>
+                </div>
+                <div class="pbar mb-2" role="progressbar" aria-label="Customers progress">
+                  <div class="p-gold js-pbar" data-width="{{ item.customer_pct or 0 }}"></div>
+                </div>
+                <div class="text-muted-2 small">
+                  Count: <strong>{{ item.customer_achieved }}</strong> / {{ item.customer_target }}
+                </div>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="alert alert-info mb-0">
+            No monthly targets have been assigned yet.
+          </div>
+        {% endif %}
+      </div>
+
+      <!-- Attendance Panel -->
+      <div class="col-lg-5">
+        <div class="section-h mb-1">
+          <h5 class="section-title">Attendance</h5>
+          <span class="text-muted-2 small">
+            {{ today }} · Customers attended:
+            <strong>{{ attended_customers_count }}</strong> / {{ total_customer_count }}
+          </span>
+        </div>
+
+        <div class="panel-card">
+          <div class="panel-header">
+            <div class="small text-muted-2">
+              Field agents who recorded payments today.
+            </div>
+            <span class="badge-soft">
+              <i class="bi bi-people"></i> Agents
+            </span>
+          </div>
+
+          <div class="panel-body-scroll">
+            {% if attendance_data and attendance_data|length %}
+              {% for agent in attendance_data %}
+              <div class="agent-row">
+                <img
+                  src="{{ agent.image_url or 'https://imagedelivery.net/h9fmMoa1o2c2P55TcWJGOg/f1b8f81c-1aac-4580-6b1c-869ffafcb400/public' }}"
+                  class="agent-avatar"
+                  alt="Agent"
+                  loading="lazy"
+                  onerror="this.onerror=null;this.src='https://imagedelivery.net/h9fmMoa1o2c2P55TcWJGOg/f1b8f81c-1aac-4580-6b1c-869ffafcb400/public';"
+                >
+                <div class="flex-grow-1 min-w-0">
+                  <div class="d-flex justify-content-between align-items-center">
+                    <span class="agent-name text-truncate">{{ agent.name }}</span>
+                    <span class="status-pill {{ 'status-worked' if agent.status == 'Worked' else 'status-absent' }}">
+                      {{ 'Worked' if agent.status == 'Worked' else 'Absent' }}
+                    </span>
+                  </div>
+                  <div class="agent-meta">
+                    Payments: <strong>{{ agent.payment_count }}</strong>
+                  </div>
+                </div>
+              </div>
+              {% endfor %}
+            {% else %}
+              <div class="text-muted-2 small">No agents found under this manager.</div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" defer></script>
+
+<script>
+  function fmtMoney(n){
+    const num = Number(n || 0);
+    return '₵' + num.toLocaleString(undefined, { minimumFractionDigits:2, maximumFractionDigits:2 });
+  }
+
+  function setTextSafe(el, txt){
+    if(!el) return;
+    el.textContent = txt;
+    el.classList.remove('skeleton');
+  }
+
+  async function loadExpenseKPIs(){
+    const $today   = document.getElementById('kpiExpToday');
+    const $week    = document.getElementById('kpiExpWeek');
+    const $month   = document.getElementById('kpiExpMonth');
+    const $pendCnt = document.getElementById('kpiExpPendingCount');
+    const $pendTot = document.getElementById('kpiExpPendingTotal');
+
+    try{
+      const res = await fetch('{{ url_for("manager_dashboard.manager_dashboard_expense_totals") }}', {
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        credentials: 'same-origin'
+      });
+      const data = await res.json();
+
+      if(res.ok && data && data.ok){
+        setTextSafe($today, fmtMoney(data.expense_today));
+        setTextSafe($week, fmtMoney(data.expense_week));
+        setTextSafe($month, fmtMoney(data.expense_month));
+        setTextSafe($pendCnt, String(data.expense_pending_count));
+        setTextSafe($pendTot, fmtMoney(data.expense_pending_total));
+      }else{
+        [$today,$week,$month,$pendCnt,$pendTot].forEach(el => setTextSafe(el, '--'));
+      }
+    }catch(e){
+      [$today,$week,$month,$pendCnt,$pendTot].forEach(el => setTextSafe(el, '--'));
+    }
+  }
+
+  async function refreshManagerIssuesBadge(){
+    try{
+      const res = await fetch("{{ url_for('issues.issue_count') }}", { credentials: 'same-origin' });
+      if(!res.ok) throw new Error('HTTP ' + res.status);
+      const data = await res.json();
+      if(!data || !data.ok) return;
+
+      const n = Number(data.count || 0);
+      const badge = document.getElementById('managerIssuesBadge');
+      if(badge){
+        badge.textContent = n;
+        badge.classList.toggle('d-none', n <= 0);
+      }
+    }catch(e){ /* silent */ }
+  }
+
+  function clamp(v){
+    v = Number(v) || 0;
+    return Math.max(0, Math.min(100, v));
+  }
+
+  function applyProgressBars(){
+    const bars = document.querySelectorAll('.js-pbar');
+    for(let i=0;i<bars.length;i++){
+      const v = clamp(bars[i].getAttribute('data-width'));
+      bars[i].style.width = v + '%';
+      bars[i].setAttribute('aria-valuenow', v);
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    document.body.classList.add('page-ready');
+    applyProgressBars();
+
+    setTimeout(loadExpenseKPIs, 60);
+
+    refreshManagerIssuesBadge();
+    setInterval(refreshManagerIssuesBadge, 30000);
+  });
+</script>
+
+{% include 'app_footer.html' %}
+</body>
+</html>

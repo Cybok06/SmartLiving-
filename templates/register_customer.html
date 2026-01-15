@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>Register Customer -  SMARTLIVING EMPORIUM PLUS (Flux360)</title>
+
+  <!-- Bootstrap -->
+  <link
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+    rel="stylesheet"
+  />
+
+  <!-- SmartLiving Favicon -->
+  <link
+    rel="icon"
+    href="https://imagedelivery.net/h9fmMoa1o2c2P55TcWJGOg/10283f28-b9a0-4100-b254-19a854386800/public"
+    type="image/png"
+  />
+
+  <meta name="theme-color" content="#0d6efd" />
+
+  <style>
+    body {
+      background: #f8fafc;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+        sans-serif;
+      color: #0f172a;
+      padding-bottom: 40px;
+    }
+
+    .page-title {
+      text-align: center;
+      margin: 28px 0 4px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      font-size: 1.1rem;
+      text-transform: uppercase;
+    }
+
+    .page-subtitle {
+      text-align: center;
+      font-size: 0.8rem;
+      color: #64748b;
+      margin-bottom: 24px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .card-wrapper {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    .card-clean {
+      background: #ffffff;
+      border-radius: 16px;
+      padding: 26px 24px;
+      box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
+      border: 1px solid #e5e7eb;
+    }
+
+    .card-header-clean {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 18px;
+    }
+
+    .card-header-clean h2 {
+      font-size: 0.95rem;
+      margin: 0;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      font-weight: 600;
+    }
+
+    .tag {
+      font-size: 0.7rem;
+      padding: 5px 12px;
+      border-radius: 999px;
+      background: #0d6efd;
+      color: #ffffff;
+      font-weight: 600;
+    }
+
+    label {
+      font-size: 0.85rem;
+      font-weight: 500;
+      margin-bottom: 4px;
+    }
+
+    .form-control {
+      border-radius: 10px;
+      font-size: 0.9rem;
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 110px;
+    }
+
+    .btn-primary {
+      border-radius: 999px;
+      padding: 11px 18px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    footer {
+      margin-top: 32px;
+      text-align: center;
+      font-size: 0.75rem;
+      color: #64748b;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    footer img {
+      height: 18px;
+      vertical-align: middle;
+      margin-left: 6px;
+    }
+
+    /* Floating message */
+    .floating-message {
+      position: fixed;
+      top: 18px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 10px 22px;
+      border-radius: 999px;
+      font-weight: 600;
+      font-size: 0.9rem;
+      display: none;
+      z-index: 9999;
+    }
+
+    .floating-message.success {
+      background: #22c55e;
+      color: #ffffff;
+    }
+
+    .floating-message.error {
+      background: #ef4444;
+      color: #ffffff;
+    }
+  </style>
+</head>
+
+<body>
+  {% include 'side_bar.html' %}
+
+  <div id="message" class="floating-message"></div>
+
+  <h1 class="page-title">Register New Customer</h1>
+  <p class="page-subtitle">Field Agent Registration</p>
+
+  <div class="card-wrapper">
+    <div class="card-clean">
+      <div class="card-header-clean">
+        <h2>Customer Details</h2>
+        <span class="tag">Geo Tagged</span>
+      </div>
+
+      <form
+        id="customerForm"
+        method="POST"
+        action="/customer/add"
+      >
+        <!-- Date -->
+        <div class="mb-3">
+          <label>Date Registered</label>
+          <input
+            type="text"
+            id="date_registered"
+            name="date_registered"
+            class="form-control"
+            readonly
+          />
+        </div>
+
+        <div class="mb-3">
+          <label>Full Name</label>
+          <input type="text" name="name" class="form-control" required />
+        </div>
+
+        <div class="mb-3">
+          <label>Upload Image</label>
+          <div class="d-flex flex-column gap-2">
+            <input
+              type="file"
+              id="imageFile"
+              class="form-control"
+              accept="image/*"
+            />
+            <div id="imageUploadStatus" class="small text-muted d-none">
+              <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+              Uploading image...
+            </div>
+            <div id="imagePreviewWrap" class="d-none d-flex align-items-center gap-3">
+              <img id="imagePreview" src="" alt="Customer preview" style="width:72px;height:72px;object-fit:cover;border-radius:12px;border:1px solid #e5e7eb;">
+              <button type="button" id="changeImageBtn" class="btn btn-link p-0 text-decoration-none">Change image</button>
+            </div>
+            <input type="hidden" name="image_url" id="image_url">
+            <input type="hidden" name="image_id" id="image_id">
+          </div>
+        </div>
+
+        <div class="mb-3">
+          <label>Location</label>
+          <input type="text" name="location" class="form-control" required />
+        </div>
+
+        <div class="mb-3">
+          <label>Occupation</label>
+          <input type="text" name="occupation" class="form-control" required />
+        </div>
+
+        <div class="mb-3">
+          <label>Phone Number</label>
+          <input type="tel" name="phone_number" class="form-control" required />
+        </div>
+
+        <div class="mb-3">
+          <label>Additional Comments</label>
+          <textarea name="comment" class="form-control"></textarea>
+        </div>
+
+        <input type="hidden" name="agent_id" value="{{ agent_id }}" />
+        <input type="hidden" name="latitude" id="latitude" />
+        <input type="hidden" name="longitude" id="longitude" />
+
+        <button type="submit" class="btn btn-primary w-100" id="submitBtn">
+          Review & Register
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <footer>
+    SMARTLIVING EMPORIUM PLUS -  Powered by Flux360
+    <img
+      src="https://imagedelivery.net/h9fmMoa1o2c2P55TcWJGOg/237a407f-0df9-4a4b-b777-7ecbaacc0300/public"
+      alt="Flux360"
+    />
+  </footer>
+
+  <script>
+    // Set today date automatically
+    const today = new Date().toISOString().split("T")[0];
+    document.getElementById("date_registered").value = today;
+
+    // Geo location
+    if ("geolocation" in navigator) {
+      navigator.geolocation.getCurrentPosition((pos) => {
+        document.getElementById("latitude").value =
+          pos.coords.latitude.toFixed(6);
+        document.getElementById("longitude").value =
+          pos.coords.longitude.toFixed(6);
+      });
+    }
+  </script>
+
+  <script>
+    (function () {
+      const form = document.getElementById("customerForm");
+      const messageEl = document.getElementById("message");
+      const sellUrl = "{{ url_for('sell.sell_product_page') }}";
+      const imageInput = document.getElementById("imageFile");
+      const imageUrlInput = document.getElementById("image_url");
+      const imageIdInput = document.getElementById("image_id");
+      const imagePreviewWrap = document.getElementById("imagePreviewWrap");
+      const imagePreview = document.getElementById("imagePreview");
+      const uploadStatus = document.getElementById("imageUploadStatus");
+      const changeImageBtn = document.getElementById("changeImageBtn");
+      const submitBtn = document.getElementById("submitBtn");
+      let uploadToken = 0;
+      let uploadInProgress = false;
+      if (!form) return;
+
+      function showMessage(text, isError) {
+        if (!messageEl) return;
+        messageEl.textContent = text;
+        messageEl.classList.remove("success", "error");
+        messageEl.classList.add(isError ? "error" : "success");
+        messageEl.style.display = "block";
+      }
+
+      function updateSubmitState() {
+        const hasImage = imageUrlInput && imageUrlInput.value;
+        if (submitBtn) submitBtn.disabled = uploadInProgress || !hasImage;
+      }
+
+      function setUploadState(isUploading) {
+        uploadInProgress = isUploading;
+        if (uploadStatus) uploadStatus.classList.toggle("d-none", !isUploading);
+        updateSubmitState();
+      }
+
+      function resetImageState() {
+        if (imageUrlInput) imageUrlInput.value = "";
+        if (imageIdInput) imageIdInput.value = "";
+        if (imagePreview) imagePreview.src = "";
+        if (imagePreviewWrap) imagePreviewWrap.classList.add("d-none");
+        if (imageInput) imageInput.value = "";
+        updateSubmitState();
+      }
+
+      async function uploadImage(file) {
+        const currentToken = ++uploadToken;
+        setUploadState(true);
+        if (imagePreviewWrap) imagePreviewWrap.classList.add("d-none");
+        if (imageUrlInput) imageUrlInput.value = "";
+        if (imageIdInput) imageIdInput.value = "";
+
+        try {
+          const fd = new FormData();
+          fd.append("image", file);
+          const res = await fetch("/customer/upload_image", {
+            method: "POST",
+            body: fd
+          });
+          const data = await res.json();
+          if (currentToken !== uploadToken) return;
+          if (!res.ok || !data.success) {
+            throw new Error(data.error || "Upload failed");
+          }
+          if (imageUrlInput) imageUrlInput.value = data.image_url || "";
+          if (imageIdInput) imageIdInput.value = data.image_id || "";
+          if (imagePreview) imagePreview.src = data.image_url || "";
+          if (imagePreviewWrap) imagePreviewWrap.classList.remove("d-none");
+          updateSubmitState();
+        } catch (err) {
+          resetImageState();
+          showMessage(err.message || "Image upload failed.", true);
+        } finally {
+          if (currentToken === uploadToken) {
+            setUploadState(false);
+          }
+        }
+      }
+
+      if (imageInput) {
+        imageInput.addEventListener("change", function () {
+          const file = imageInput.files && imageInput.files[0];
+          if (!file) {
+            resetImageState();
+            return;
+          }
+          uploadImage(file);
+        });
+      }
+
+      if (changeImageBtn) {
+        changeImageBtn.addEventListener("click", function () {
+          resetImageState();
+          if (imageInput) imageInput.click();
+        });
+      }
+
+      updateSubmitState();
+
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        if (uploadInProgress) {
+          showMessage("Please wait, image is uploading...", true);
+          return;
+        }
+        if (!imageUrlInput || !imageUrlInput.value) {
+          showMessage("Please upload a customer image before saving.", true);
+          return;
+        }
+        const fd = new FormData(form);
+        if (submitBtn) submitBtn.disabled = true;
+
+        try {
+          const res = await fetch(form.action, {
+            method: "POST",
+            body: fd,
+            headers: { "X-Requested-With": "XMLHttpRequest" }
+          });
+          const data = await res.json();
+          if (!res.ok || data.error) {
+            showMessage(data.error || "Failed to register customer.", true);
+            return;
+          }
+          const customerId = data.customer_id;
+          if (customerId) {
+            const url = `${sellUrl}?customer_id=${encodeURIComponent(customerId)}`;
+            window.location.href = url;
+            return;
+          }
+          showMessage(data.message || "Customer registered successfully.", false);
+        } catch (err) {
+          showMessage("An error occurred while registering the customer.", true);
+        } finally {
+          if (submitBtn) submitBtn.disabled = false;
+        }
+      });
+    })();
+  </script>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  {% include 'app_footer.html' %}
+
+</body>
+</html>

@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Trading, Profit & Loss -- Smart Living</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <link rel="icon" href="https://res.cloudinary.com/dljpgzbto/image/upload/v1743993646/company-logo_dksb23.jpg" />
+  <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+
+  <style>
+    body { font-family: system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; background:#f4f6fb; min-height:100vh; }
+    .skeleton { background:#e2e8f0; border-radius:6px; animation: pulse 1.2s infinite ease-in-out; }
+    @keyframes pulse { 0% { opacity:1; } 50% { opacity:0.5; } 100% { opacity:1; } }
+    .chart-bar { display:flex; align-items:center; gap:0.75rem; }
+    .chart-bar-label { flex:1; font-size:0.8rem; color:#475569; }
+    .chart-bar-track { flex:2; height:6px; background:#e2e8f0; border-radius:999px; overflow:hidden; position:relative; }
+    .chart-bar-fill { height:100%; background:#6366f1; border-radius:999px; }
+    .card-muted { color:#64748b; }
+    .pill { font-size:12px; padding:2px 10px; border-radius:999px; background:#eef2ff; color:#3730a3; }
+  </style>
+
+  <script>
+    window.PL_SHELL = {
+      periodDefaults: { range: "{{ default_range }}" },
+      api: {
+        summary: "{{ url_for('profit_loss.profit_loss_api_summary') }}",
+        sales: "{{ url_for('profit_loss.profit_loss_api_sales') }}",
+        cost_of_sales: "{{ url_for('profit_loss.profit_loss_api_cost_of_sales') }}",
+        income: "{{ url_for('profit_loss.profit_loss_api_income') }}",
+        opex: "{{ url_for('profit_loss.profit_loss_api_opex') }}",
+      },
+      exportUrl: "{{ export_url }}",
+    };
+  </script>
+</head>
+
+<body>
+  {% include 'accounting/sidebar.html' %}
+
+  <main class="p-4 sm:p-6 lg:p-10">
+    <header class="flex flex-col gap-1 mb-6">
+      <div class="flex flex-wrap items-center gap-3">
+        <h1 class="text-2xl font-semibold text-slate-900">Trading, Profit &amp; Loss</h1>
+        <span class="pill">Live</span>
+      </div>
+      <p class="text-sm text-slate-500">
+        Default range: {{ default_range.replace('_', ' ') | title }}.
+      </p>
+    </header>
+
+    <section class="bg-white rounded-xl shadow p-4 mb-6">
+      <div class="flex flex-wrap items-center gap-3">
+        <div class="flex items-center gap-2">
+          <label class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Range</label>
+          <select id="pl-range" class="border rounded px-2 py-1 text-sm">
+            <option value="all_time" {% if default_range == 'all_time' %}selected{% endif %}>All time</option>
+            <option value="this_month" {% if default_range == 'this_month' %}selected{% endif %}>This month</option>
+            <option value="year" {% if default_range == 'year' %}selected{% endif %}>Year</option>
+            <option value="custom" {% if default_range == 'custom' %}selected{% endif %}>Custom</option>
+          </select>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <input id="pl-from" type="date" class="border rounded px-2 py-1 text-sm hidden">
+          <input id="pl-to" type="date" class="border rounded px-2 py-1 text-sm hidden">
+          <select id="pl-year" class="border rounded px-2 py-1 text-sm hidden">
+            {% for year in year_options %}
+              <option value="{{ year }}">{{ year }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <button id="pl-apply" class="bg-indigo-600 hover:bg-indigo-700 text-white rounded px-4 py-1 text-sm">
+          Apply
+        </button>
+
+        <a id="pl-export" href="{{ export_url }}" class="ml-auto text-sm text-indigo-600 underline">
+          Export CSV
+        </a>
+      </div>
+
+      <div id="pl-meta" class="text-xs text-slate-500 mt-3">
+        Period: <span class="font-semibold" id="pl-period-label">--</span>
+      </div>
+    </section>
+
+    <div id="pl-summary" class="grid gap-4 mb-6 sm:grid-cols-2 lg:grid-cols-4">
+      {% for label in ["Net Sales","Gross Profit","Total Expenses","Net Profit"] %}
+      <article class="summary-card bg-white rounded-xl shadow p-4">
+        <div class="text-sm text-slate-500">{{ label }}</div>
+        <div class="text-2xl font-semibold mt-2 text-slate-900 skeleton value-placeholder">GHS 0.00</div>
+        <div class="text-xs text-slate-400 mt-2">Updated <span class="pl-ts">--</span></div>
+      </article>
+      {% endfor %}
+    </div>
+
+    <div class="grid gap-6 lg:grid-cols-2">
+      <section id="pl-sales" class="bg-white rounded-xl shadow p-4">
+        <div class="flex items-center justify-between">
+          <h2 class="text-base font-semibold">Revenue &amp; Returns</h2>
+          <span class="text-xs text-slate-500">Summary · <span class="pl-ts">--</span></span>
+        </div>
+        <div class="pl-section-body mt-4 space-y-3">
+          <div class="skeleton h-6 w-6/12"></div>
+          <div class="skeleton h-4 w-4/12"></div>
+        </div>
+      </section>
+
+      <section id="pl-cost_of_sales" class="bg-white rounded-xl shadow p-4">
+        <div class="flex items-center justify-between">
+          <h2 class="text-base font-semibold">Cost of Sales</h2>
+          <span class="text-xs text-slate-500">Details · <span class="pl-ts">--</span></span>
+        </div>
+        <div class="pl-section-body mt-4 space-y-3">
+          <div class="skeleton h-6 w-6/12"></div>
+          <div class="skeleton h-4 w-4/12"></div>
+          <div id="pl-cost-cogs" class="space-y-2"></div>
+        </div>
+      </section>
+    </div>
+
+    <div class="grid gap-6 lg:grid-cols-2 mt-6">
+      <section id="pl-income" class="bg-white rounded-xl shadow p-4">
+        <div class="flex items-center justify-between">
+          <h2 class="text-base font-semibold">Other Income</h2>
+          <span class="text-xs text-slate-500">Insights · <span class="pl-ts">--</span></span>
+        </div>
+        <div class="pl-section-body mt-4 space-y-2">
+          <div class="skeleton h-6 w-6/12"></div>
+          <div class="skeleton h-4 w-4/12"></div>
+        </div>
+      </section>
+
+      <section id="pl-opex" class="bg-white rounded-xl shadow p-4">
+        <div class="flex items-center justify-between">
+          <h2 class="text-base font-semibold">Manager Expenses</h2>
+          <span class="text-xs text-slate-500">Approved (filtered)</span>
+        </div>
+        <div class="pl-section-body mt-4 space-y-3">
+          <div class="skeleton h-6 w-6/12"></div>
+          <div id="pl-opex-summary" class="space-y-2 mt-3 text-sm text-slate-600"></div>
+          <div id="pl-opex-categories" class="space-y-2 mt-3 text-sm text-slate-600"></div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    const sectionKeyMap = {
+      summary: window.PL_SHELL.api.summary,
+      sales: window.PL_SHELL.api.sales,
+      cost_of_sales: window.PL_SHELL.api.cost_of_sales,
+      income: window.PL_SHELL.api.income,
+      opex: window.PL_SHELL.api.opex,
+    };
+
+    const cache = {};
+    const summaryFields = ["net_sales", "gross_profit", "total_expenses", "net_profit"];
+
+    const formatGHS = (value) => {
+      const number = Number(value) || 0;
+      return `GHS ${number.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    };
+
+    const updateTimestamp = (container) => {
+      const ts = container.querySelector(".pl-ts");
+      if (ts) ts.textContent = new Date().toLocaleTimeString();
+    };
+
+    const setRangeControls = (value) => {
+      document.getElementById("pl-from").classList.toggle("hidden", value !== "custom");
+      document.getElementById("pl-to").classList.toggle("hidden", value !== "custom");
+      document.getElementById("pl-year").classList.toggle("hidden", value !== "year");
+    };
+
+    document.getElementById("pl-range").addEventListener("change", (e) => {
+      setRangeControls(e.target.value);
+    });
+
+    const buildParams = () => {
+      const range = document.getElementById("pl-range").value;
+      const params = new URLSearchParams();
+      params.set("range", range);
+
+      if (range === "custom") {
+        const from = document.getElementById("pl-from").value;
+        const to = document.getElementById("pl-to").value;
+        if (from) params.set("from", from);
+        if (to) params.set("to", to);
+      }
+
+      if (range === "year") {
+        params.set("year", document.getElementById("pl-year").value);
+      }
+
+      return params.toString();
+    };
+
+    const updateExportLink = (params) => {
+      const link = document.getElementById("pl-export");
+      if (!link) return;
+      link.href = `${window.PL_SHELL.exportUrl}?${params}`;
+    };
+
+    const setPeriodLabel = (meta) => {
+      const label = meta?.label || "--";
+      document.getElementById("pl-period-label").textContent = label;
+    };
+
+    const renderSummary = (payload) => {
+      const data = payload.data || {};
+      const cards = document.querySelectorAll("#pl-summary article");
+      summaryFields.forEach((key, i) => {
+        const card = cards[i];
+        if (!card) return;
+        const el = card.querySelector(".value-placeholder");
+        el.textContent = formatGHS(data[key]);
+        el.classList.remove("skeleton");
+        updateTimestamp(card);
+      });
+      setPeriodLabel(payload.meta);
+    };
+
+    const renderSales = (payload) => {
+      const container = document.getElementById("pl-sales");
+      const data = payload.data || {};
+      const body = container.querySelector(".pl-section-body");
+
+      const rows = [
+        { label: "Sales", amount: data.sales },
+        { label: "Returns Inwards", amount: data.returns_inwards },
+        { label: "Net Sales", amount: data.net_sales },
+      ];
+
+      body.innerHTML = rows
+        .map(row => `<div class="flex justify-between text-sm py-1"><span>${row.label}</span><span>${formatGHS(row.amount)}</span></div>`)
+        .join("");
+
+      if (data.returns_inwards_count) {
+        body.innerHTML += `<div class="text-xs text-slate-400 mt-2">${data.returns_inwards_count} approved returns</div>`;
+      }
+
+      updateTimestamp(container);
+    };
+
+    const renderChartBars = (containerId, items) => {
+      const container = document.getElementById(containerId);
+      if (!container) return;
+      if (!items.length) {
+        container.innerHTML = "";
+        return;
+      }
+      const maxAmount = Math.max(...items.map((item) => Math.abs(item.amount)), 1);
+      container.innerHTML = items.map((item) => `
+        <div class="chart-bar" title="${item.label}">
+          <span class="chart-bar-label">${item.label}</span>
+          <div class="chart-bar-track">
+            <div class="chart-bar-fill" style="width:${Math.min(100, (Math.abs(item.amount) / maxAmount) * 100)}%"></div>
+          </div>
+          <span class="text-xs text-slate-500">${formatGHS(item.amount)}</span>
+        </div>
+      `).join("");
+    };
+
+    const renderCostOfSales = (payload) => {
+      const container = document.getElementById("pl-cost_of_sales");
+      const data = payload.data || {};
+      const body = container.querySelector(".pl-section-body");
+
+      const rows = [
+        { label: "Opening stock", amount: data.opening_stock },
+        { label: "Purchases", amount: data.purchases },
+        { label: "Returns outwards", amount: data.returns_outwards },
+        { label: "Carriage inwards", amount: data.carriage_inwards },
+        { label: "Goods drawn", amount: data.goods_drawn },
+        { label: "Net purchases", amount: data.net_purchases },
+        { label: "Cost goods available", amount: data.cost_goods_available },
+        { label: "Closing stock", amount: data.closing_stock },
+        { label: "COGS", amount: data.cost_goods_sold },
+        { label: "Wages", amount: data.wages },
+        { label: "Cost of sales", amount: data.cost_of_sales },
+      ];
+
+      body.innerHTML = rows
+        .map(row => `<div class="flex justify-between text-sm py-1"><span>${row.label}</span><span>${formatGHS(row.amount)}</span></div>`)
+        .join("");
+
+      if (Array.isArray(data.purchases_breakdown) && data.purchases_breakdown.length) {
+        body.innerHTML += `<div class="text-xs text-slate-500 mt-3">Purchases breakdown</div>`;
+        body.innerHTML += data.purchases_breakdown.map(entry => `
+          <div class="flex justify-between text-xs text-slate-600">
+            <span>${entry.label}</span>
+            <span>${formatGHS(entry.amount)}${entry.count ? ` (${entry.count})` : ""}</span>
+          </div>
+        `).join("");
+      }
+
+      const bySrc = data.cogs_by_source || {};
+      const chartItems = Object.entries(bySrc).map(([label, amount]) => ({ label, amount }));
+      if (chartItems.length) {
+        body.innerHTML += `<div class="text-xs text-slate-500 mt-3">COGS by source</div>`;
+      }
+      renderChartBars("pl-cost-cogs", chartItems);
+
+      if (data.cogs_missing_cost_count) {
+        body.innerHTML += `<div class="text-xs text-amber-600 mt-2">Warning: ${data.cogs_missing_cost_count} outflow rows missing unit cost.</div>`;
+      }
+
+      updateTimestamp(container);
+    };
+
+    const renderIncome = (payload) => {
+      const container = document.getElementById("pl-income");
+      const data = payload.data || {};
+      const body = container.querySelector(".pl-section-body");
+
+      const rows = [
+        { label: "Discount received", amount: data.discount_received },
+        { label: "Investment income", amount: data.investment_income },
+        { label: "Other incomes", amount: data.other_incomes },
+      ];
+
+      body.innerHTML = rows
+        .map(row => `<div class="flex justify-between text-sm py-1"><span>${row.label}</span><span>${formatGHS(row.amount)}</span></div>`)
+        .join("");
+
+      if (data.income_info?.count !== undefined) {
+        body.innerHTML += `<div class="text-xs text-slate-500 mt-2">Entries: ${data.income_info.count}</div>`;
+      }
+
+      updateTimestamp(container);
+    };
+
+    const renderOpex = (payload) => {
+      const container = document.getElementById("pl-opex");
+      const data = payload.data || {};
+      const body = container.querySelector(".pl-section-body");
+
+      const summary = document.getElementById("pl-opex-summary");
+      const categoriesContainer = document.getElementById("pl-opex-categories");
+
+      if (summary) {
+        summary.innerHTML = `
+          <div class="flex justify-between text-sm py-1">
+            <span>Total manager expenses</span>
+            <span>${formatGHS(data.manager_total)}</span>
+          </div>
+          <div class="flex justify-between text-sm py-1">
+            <span>Records</span>
+            <span>${data.manager_count || 0}</span>
+          </div>
+          <div class="flex justify-between text-sm py-1">
+            <span>Accounting expenses</span>
+            <span>${formatGHS(data.accounting_total || 0)}</span>
+          </div>
+          <div class="flex justify-between text-sm py-1 font-semibold">
+            <span>Total Expenses</span>
+            <span>${formatGHS(data.total_expenses || 0)}</span>
+          </div>
+        `;
+      }
+
+      if (categoriesContainer) {
+        const categories = data.manager_categories || [];
+        if (categories.length) {
+          categoriesContainer.innerHTML = categories
+            .map(entry => `<div class="flex justify-between text-xs text-slate-600"><span>${entry.category}</span><span>${formatGHS(entry.amount)}</span></div>`)
+            .join("");
+        } else {
+          categoriesContainer.innerHTML = `<div class="text-xs text-slate-400">No manager expenses recorded this period.</div>`;
+        }
+      }
+
+      // clear skeleton blocks if any remain
+      const sk = body.querySelectorAll(".skeleton");
+      sk.forEach(n => n.remove());
+
+      updateTimestamp(container);
+    };
+
+    const sectionRenderers = {
+      summary: renderSummary,
+      sales: renderSales,
+      cost_of_sales: renderCostOfSales,
+      income: renderIncome,
+      opex: renderOpex,
+    };
+
+    const setLoadingState = (key) => {
+      if (key === "summary") return;
+      const container = document.getElementById(`pl-${key}`);
+      if (!container) return;
+      const body = container.querySelector(".pl-section-body");
+      if (!body) return;
+      body.innerHTML = `
+        <div class="skeleton h-6 w-6/12"></div>
+        <div class="skeleton h-4 w-4/12"></div>
+      `;
+    };
+
+    const showSectionError = (key, message) => {
+      const container = document.getElementById(`pl-${key}`);
+      if (!container) return;
+      const body = container.querySelector(".pl-section-body");
+      if (!body) return;
+
+      body.innerHTML = `
+        <div class="text-sm text-red-600">
+          ${message}
+          <button class="text-indigo-600 ml-2 underline" onclick="window.retrySection('${key}')">Retry</button>
+        </div>
+      `;
+      updateTimestamp(container);
+    };
+
+    let lastLoadParams = "";
+    window.retrySection = (key) => loadSection(key, lastLoadParams || buildParams());
+
+    const loadSection = async (key, params) => {
+      setLoadingState(key);
+      const url = `${sectionKeyMap[key]}?${params}`;
+      const cacheKey = `${key}|${params}`;
+      const now = Date.now();
+
+      if (cache[cacheKey] && now - cache[cacheKey].ts < 60000) {
+        sectionRenderers[key](cache[cacheKey].data);
+        return;
+      }
+
+      try {
+        const res = await fetch(url, { headers: { "Accept": "application/json" } });
+        const payload = await res.json();
+        if (!payload.ok) throw new Error("API returned error");
+        cache[cacheKey] = { ts: now, data: payload };
+        sectionRenderers[key](payload);
+      } catch (err) {
+        showSectionError(key, "Failed to load section.");
+      }
+    };
+
+    const sectionOrder = ["summary", "sales", "cost_of_sales", "income", "opex"];
+
+    const loadAllSections = () => {
+      const params = buildParams();
+      lastLoadParams = params;
+      updateExportLink(params);
+      sectionOrder.forEach((k) => loadSection(k, params));
+    };
+
+    document.getElementById("pl-apply").addEventListener("click", loadAllSections);
+
+    document.addEventListener("DOMContentLoaded", () => {
+      setRangeControls(document.getElementById("pl-range").value);
+      loadAllSections();
+    });
+  </script>
+</body>
+</html>

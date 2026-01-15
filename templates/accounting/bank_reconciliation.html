@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html class="light" lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+  <title>Bank Reconciliation - Smart Living</title>
+
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com" rel="preconnect"/>
+  <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+  <link rel="icon" href="https://res.cloudinary.com/dljpgzbto/image/upload/v1743993646/company-logo_dksb23.jpg" type="image/png">
+
+  <style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;
+    }
+  </style>
+
+  <script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "primary": "#16a34a",
+            "background-light": "#f6f8f7",
+            "background-dark": "#112117",
+          },
+          fontFamily: {
+            "display": ["Inter", "sans-serif"]
+          },
+          borderRadius: {
+            "DEFAULT": "1rem",
+            "lg": "2rem",
+            "xl": "3rem",
+            "full": "9999px"
+          },
+          boxShadow: {
+            card: "0 10px 30px rgba(15,23,42,.18)"
+          }
+        },
+      },
+    }
+  </script>
+</head>
+
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-800 dark:text-slate-200">
+  {% include 'accounting/sidebar.html' %}
+
+  <div class="min-h-screen flex flex-col">
+    <!-- Main Content -->
+    <main class="flex-1">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8 space-y-6">
+        <!-- PageHeading -->
+        <header class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div class="flex flex-col gap-2">
+            <div class="flex flex-wrap items-center gap-2">
+              <h1 class="text-slate-900 dark:text-white text-2xl sm:text-3xl lg:text-4xl font-bold leading-tight tracking-tight">
+                Bank Reconciliation
+              </h1>
+              {% if selected_account %}
+                <span class="inline-flex items-center rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-200 px-3 py-1 text-xs font-medium">
+                  {{ selected_account.label }}
+                </span>
+              {% endif %}
+            </div>
+            <p class="text-slate-500 dark:text-slate-400 text-sm sm:text-base leading-normal max-w-2xl">
+              Match Smart Living's internal ledger with the bank or mobile wallet statement for
+              {% if selected_account %}
+                <strong>account ending in {{ selected_account.last4 }}</strong>.
+              {% else %}
+                <strong>the selected account</strong>.
+              {% endif %}
+            </p>
+
+            <!-- Account selector -->
+            <form class="mt-2 inline-flex flex-wrap items-center gap-2" onsubmit="return false;">
+              <label class="text-[11px] sm:text-xs font-medium text-slate-500 dark:text-slate-300">
+                Bank / Wallet account
+              </label>
+              <select
+                name="account_id"
+                id="accountSelector"
+                class="h-9 rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 text-xs sm:text-sm text-slate-700 dark:text-slate-100 focus:border-primary focus:ring-primary"
+                data-url-template="{{ url_for('bank_recon.view', account_id='__ACC__') }}"
+              >
+                {% for acc in accounts %}
+                  <option value="{{ acc.id }}"
+                          {% if selected_account and acc.id == selected_account.id %}selected{% endif %}>
+                    {{ acc.label }}
+                  </option>
+                {% endfor %}
+              </select>
+            </form>
+          </div>
+
+          <div class="flex flex-col items-stretch sm:items-end gap-2">
+            <div class="flex flex-wrap items-center justify-start sm:justify-end gap-2">
+              <a
+                href="{{ export_url if export_url is defined else '#' }}"
+                class="flex min-w-[84px] cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-full h-9 sm:h-10 px-3 sm:px-4 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs sm:text-sm font-semibold border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700"
+              >
+                <span class="material-symbols-outlined text-sm sm:text-base">description</span>
+                <span class="truncate">Export Excel</span>
+              </a>
+
+              <button
+                type="button"
+                id="btnAddManualBank"
+                class="flex min-w-[110px] cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-full h-9 sm:h-10 px-3 sm:px-4 bg-slate-900 text-white text-xs sm:text-sm font-semibold leading-normal tracking-[0.015em] hover:bg-slate-800"
+              >
+                <span class="material-symbols-outlined text-sm sm:text-base">edit_note</span>
+                <span class="truncate">Add Bank Line</span>
+              </button>
+
+              <form
+                method="post"
+                enctype="multipart/form-data"
+                action="{{ url_for('bank_recon.import_statement', account_id=selected_account.id) if selected_account else '#' }}"
+                class="flex items-center gap-2"
+              >
+                <label
+                  class="flex min-w-[120px] cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-full h-9 sm:h-10 px-3 sm:px-4 bg-primary text-white text-xs sm:text-sm font-semibold leading-normal tracking-[0.015em] hover:bg-primary/90"
+                >
+                  <span class="material-symbols-outlined text-sm sm:text-base">upload_file</span>
+                  <span class="truncate hidden xs:inline sm:inline">Import Statement</span>
+                  <input type="file" name="statement_file" accept=".csv,.xlsx" class="hidden" onchange="this.form.submit()"/>
+                </label>
+              </form>
+            </div>
+
+            {% if statement_period %}
+              <p class="text-[11px] text-slate-500 dark:text-slate-400">
+                Statement period: {{ statement_period }}
+              </p>
+            {% endif %}
+          </div>
+        </header>
+
+        <!-- LIVE BANK METRICS -->
+        {% if bank_metrics %}
+        <section class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+          <div class="p-3 sm:p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-card/40">
+            <p class="text-[11px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide">Opening Balance</p>
+            <p class="mt-1 text-lg sm:text-xl font-semibold text-slate-900 dark:text-white">
+              {{ currency_symbol or '' }}{{ "%.2f"|format(bank_metrics.opening_balance) }}
+            </p>
+          </div>
+          <div class="p-3 sm:p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-card/40">
+            <p class="text-[11px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide">Confirmed In</p>
+            <p class="mt-1 text-lg sm:text-xl font-semibold text-emerald-700 dark:text-emerald-300">
+              {{ currency_symbol or '' }}{{ "%.2f"|format(bank_metrics.total_in) }}
+            </p>
+          </div>
+          <div class="p-3 sm:p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-card/40">
+            <p class="text-[11px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide">P-Tax Out</p>
+            <p class="mt-1 text-lg sm:text-xl font-semibold text-amber-700 dark:text-amber-300">
+              {{ currency_symbol or '' }}{{ "%.2f"|format(bank_metrics.ptax_out) }}
+            </p>
+          </div>
+          <div class="p-3 sm:p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-card/40">
+            <p class="text-[11px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide">Net Flow</p>
+            <p class="mt-1 text-lg sm:text-xl font-semibold {% if bank_metrics.net_flow >= 0 %}text-emerald-700 dark:text-emerald-300{% else %}text-rose-700 dark:text-rose-300{% endif %}">
+              {{ currency_symbol or '' }}{{ "%.2f"|format(bank_metrics.net_flow) }}
+            </p>
+          </div>
+          <div class="p-3 sm:p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-card/40">
+            <p class="text-[11px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide">Live Balance</p>
+            <p class="mt-1 text-lg sm:text-xl font-semibold text-slate-900 dark:text-white">
+              {{ currency_symbol or '' }}{{ "%.2f"|format(bank_metrics.live_balance) }}
+            </p>
+          </div>
+        </section>
+        {% endif %}
+
+        <!-- Summary Section (ledger vs statement) -->
+        <section class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div class="p-4 sm:p-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm">
+            <p class="text-xs font-medium text-slate-500 dark:text-slate-400">Cleared Ledger Balance</p>
+            <p class="mt-1 text-2xl sm:text-3xl font-semibold text-slate-900 dark:text-white">
+              {{ currency_symbol or '' }}{{ "%.2f"|format(cleared_balance or 0) }}
+            </p>
+          </div>
+          <div class="p-4 sm:p-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm">
+            <p class="text-xs font-medium text-slate-500 dark:text-slate-400">Statement Balance</p>
+            <p class="mt-1 text-2xl sm:text-3xl font-semibold text-slate-900 dark:text-white">
+              {{ currency_symbol or '' }}{{ "%.2f"|format(statement_balance or 0) }}
+            </p>
+          </div>
+          <div class="p-4 sm:p-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm">
+            <p class="text-xs font-medium text-slate-500 dark:text-slate-400">Difference</p>
+            {% set diff = (difference or 0) %}
+            <p class="mt-1 text-2xl sm:text-3xl font-semibold {% if diff == 0 %}text-emerald-600 dark:text-emerald-400{% elif diff < 0 %}text-red-600 dark:text-red-400{% else %}text-amber-600 dark:text-amber-400{% endif %}">
+              {{ currency_symbol or '' }}{{ "%.2f"|format(diff) }}
+            </p>
+          </div>
+        </section>
+
+        <!-- Reconciliation Workspace -->
+        <section class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+          <!-- Left Pane: General Ledger Entries -->
+          <div class="flex flex-col gap-4">
+            <div class="flex flex-col gap-2">
+              <h2 class="text-slate-900 dark:text-white text-[18px] sm:text-[20px] font-bold leading-tight tracking-[-0.015em] px-1">
+                General Ledger Entries
+              </h2>
+              <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 px-1">
+                <div class="w-full sm:w-auto max-w-full overflow-x-auto">
+                  <div class="inline-flex items-center justify-center rounded-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-1 text-xs whitespace-nowrap">
+                    <label class="flex cursor-pointer h-full items-center justify-center overflow-hidden rounded-full px-3 py-1 has-[:checked]:bg-primary/10 has-[:checked]:text-primary text-slate-500 dark:text-slate-400 dark:has-[:checked]:bg-primary dark:has-[:checked]:text-white font-medium">
+                      <span class="truncate">All ({{ gl_counts.total or 0 }})</span>
+                      <input checked class="invisible w-0" name="gl-filter" type="radio" value="All"/>
+                    </label>
+                    <label class="flex cursor-pointer h-full items-center justify-center overflow-hidden rounded-full px-3 py-1 has-[:checked]:bg-primary/10 has-[:checked]:text-primary text-slate-500 dark:text-slate-400 dark:has-[:checked]:bg-primary dark:has-[:checked]:text-white font-medium">
+                      <span class="truncate">Unmatched ({{ gl_counts.unmatched or 0 }})</span>
+                      <input class="invisible w-0" name="gl-filter" type="radio" value="Unmatched"/>
+                    </label>
+                    <label class="flex cursor-pointer h-full items-center justify-center overflow-hidden rounded-full px-3 py-1 has-[:checked]:bg-primary/10 has-[:checked]:text-primary text-slate-500 dark:text-slate-400 dark:has-[:checked]:bg-primary dark:has-[:checked]:text-white font-medium">
+                      <span class="truncate">Matched ({{ gl_counts.matched or 0 }})</span>
+                      <input class="invisible w-0" name="gl-filter" type="radio" value="Matched"/>
+                    </label>
+                  </div>
+                </div>
+                <span class="text-[11px] text-slate-500 dark:text-slate-400">
+                  {{ gl_counts.unmatched or 0 }} items to match
+                </span>
+              </div>
+            </div>
+
+            <!-- GL Table -->
+            <div class="overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm">
+              <div class="max-h-[420px] overflow-auto">
+                <table class="w-full min-w-[640px] text-xs sm:text-sm">
+                  <thead class="bg-slate-50 dark:bg-slate-800/50 sticky top-0 z-10">
+                    <tr>
+                      <th class="p-3 text-left font-medium text-slate-600 dark:text-slate-300 w-10">
+                        <input class="h-4 w-4 rounded border-slate-300 dark:border-slate-600 text-primary focus:ring-primary/50" type="checkbox"/>
+                      </th>
+                      <th class="p-3 text-left font-medium text-slate-600 dark:text-slate-300">Date</th>
+                      <th class="p-3 text-left font-medium text-slate-600 dark:text-slate-300">Description</th>
+                      <th class="p-3 text-right font-medium text-slate-600 dark:text-slate-300">Amount</th>
+                      <th class="p-3 text-center font-medium text-slate-600 dark:text-slate-300 hidden sm:table-cell">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for row in gl_entries %}
+                      {% set matched = row.matched or False %}
+                      <tr class="border-t border-slate-200 dark:border-slate-800
+                                 {% if matched %}bg-emerald-50 dark:bg-primary/20{% else %}hover:bg-slate-50 dark:hover:bg-slate-800/40{% endif %}">
+                        <td class="p-3">
+                          <input
+                            class="h-4 w-4 rounded border-slate-300 dark:border-slate-600 text-primary focus:ring-primary/50"
+                            type="checkbox"
+                            {% if matched %}checked{% endif %}
+                          />
+                        </td>
+                        <td class="p-3 text-slate-500 dark:text-slate-400 whitespace-nowrap">
+                          {{ row.date }}
+                        </td>
+                        <td class="p-3 text-slate-800 dark:text-slate-200">
+                          {{ row.description }}
+                        </td>
+                        <td class="p-3 text-right text-slate-800 dark:text-slate-200 font-medium whitespace-nowrap">
+                          {{ currency_symbol or '' }}{{ "%.2f"|format(row.amount or 0) }}
+                        </td>
+                        <td class="p-3 text-center hidden sm:table-cell">
+                          {% if matched %}
+                            <span class="inline-flex items-center rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200 px-2.5 py-0.5 text-[11px] font-medium">
+                              Matched
+                            </span>
+                          {% else %}
+                            <span class="inline-flex items-center rounded-full bg-amber-50 text-amber-700 dark:bg-amber-900/40 dark:text-amber-200 px-2.5 py-0.5 text-[11px] font-medium">
+                              Unmatched
+                            </span>
+                          {% endif %}
+                        </td>
+                      </tr>
+                    {% else %}
+                      <tr>
+                        <td colspan="5" class="px-4 py-10 text-center text-slate-500 dark:text-slate-400 text-xs sm:text-sm">
+                          No ledger entries available for this period.
+                        </td>
+                      </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right Pane: Bank Statement -->
+          <div class="flex flex-col gap-4">
+            <div class="flex flex-col gap-2">
+              <h2 class="text-slate-900 dark:text-white text-[18px] sm:text-[20px] font-bold leading-tight tracking-[-0.015em] px-1">
+                Imported Bank Statement
+              </h2>
+              <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 px-1">
+                <div class="w-full sm:w-auto max-w-full overflow-x-auto">
+                  <div class="inline-flex items-center justify-center rounded-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-1 text-xs whitespace-nowrap">
+                    <label class="flex cursor-pointer h-full items-center justify-center overflow-hidden rounded-full px-3 py-1 has-[:checked]:bg-primary/10 has-[:checked]:text-primary text-slate-500 dark:text-slate-400 dark:has-[:checked]:bg-primary dark:has-[:checked]:text-white font-medium">
+                      <span class="truncate">All ({{ bank_counts.total or 0 }})</span>
+                      <input checked class="invisible w-0" name="bank-filter" type="radio" value="All"/>
+                    </label>
+                    <label class="flex cursor-pointer h-full items-center justify-center overflow-hidden rounded-full px-3 py-1 has-[:checked]:bg-primary/10 has-[:checked]:text-primary text-slate-500 dark:text-slate-400 dark:has-[:checked]:bg-primary dark:has-[:checked]:text-white font-medium">
+                      <span class="truncate">Unmatched ({{ bank_counts.unmatched or 0 }})</span>
+                      <input class="invisible w-0" name="bank-filter" type="radio" value="Unmatched"/>
+                    </label>
+                    <label class="flex cursor-pointer h-full items-center justify-center overflow-hidden rounded-full px-3 py-1 has-[:checked]:bg-primary/10 has-[:checked]:text-primary text-slate-500 dark:text-slate-400 dark:has-[:checked]:bg-primary dark:has-[:checked]:text-white font-medium">
+                      <span class="truncate">Matched ({{ bank_counts.matched or 0 }})</span>
+                      <input class="invisible w-0" name="bank-filter" type="radio" value="Matched"/>
+                    </label>
+                  </div>
+                </div>
+                <span class="text-[11px] text-slate-500 dark:text-slate-400">
+                  {{ bank_counts.unmatched or 0 }} items not matched
+                </span>
+              </div>
+            </div>
+
+            <!-- Bank Table -->
+            <div class="overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm">
+              <div class="max-h-[420px] overflow-auto">
+                <table class="w-full min-w-[640px] text-xs sm:text-sm">
+                  <thead class="bg-slate-50 dark:bg-slate-800/50 sticky top-0 z-10">
+                    <tr>
+                      <th class="p-3 text-left font-medium text-slate-600 dark:text-slate-300 w-10">
+                        <input class="h-4 w-4 rounded border-slate-300 dark:border-slate-600 text-primary focus:ring-primary/50" type="checkbox"/>
+                      </th>
+                      <th class="p-3 text-left font-medium text-slate-600 dark:text-slate-300">Date</th>
+                      <th class="p-3 text-left font-medium text-slate-600 dark:text-slate-300">Description</th>
+                      <th class="p-3 text-right font-medium text-slate-600 dark:text-slate-300">Amount</th>
+                      <th class="p-3 text-center font-medium text-slate-600 dark:text-slate-300 hidden sm:table-cell">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for row in bank_entries %}
+                      {% set matched = row.matched or False %}
+                      <tr class="border-t border-slate-200 dark:border-slate-800
+                                 {% if matched %}bg-emerald-50 dark:bg-primary/20{% else %}hover:bg-slate-50 dark:hover:bg-slate-800/40{% endif %}">
+                        <td class="p-3">
+                          <input
+                            class="h-4 w-4 rounded border-slate-300 dark:border-slate-600 text-primary focus:ring-primary/50"
+                            type="checkbox"
+                            {% if matched %}checked{% endif %}
+                          />
+                        </td>
+                        <td class="p-3 text-slate-500 dark:text-slate-400 whitespace-nowrap">
+                          {{ row.date }}
+                        </td>
+                        <td class="p-3 text-slate-800 dark:text-slate-200">
+                          {{ row.description }}
+                        </td>
+                        <td class="p-3 text-right text-slate-800 dark:text-slate-200 font-medium whitespace-nowrap">
+                          {{ currency_symbol or '' }}{{ "%.2f"|format(row.amount or 0) }}
+                        </td>
+                        <td class="p-3 text-center hidden sm:table-cell">
+                          {% if matched %}
+                            <span class="inline-flex items-center rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200 px-2.5 py-0.5 text-[11px] font-medium">
+                              Matched
+                            </span>
+                          {% else %}
+                            <span class="inline-flex items-center rounded-full bg-amber-50 text-amber-700 dark:bg-amber-900/40 dark:text-amber-200 px-2.5 py-0.5 text-[11px] font-medium">
+                              Unmatched
+                            </span>
+                          {% endif %}
+                        </td>
+                      </tr>
+                    {% else %}
+                      <tr>
+                        <td colspan="5" class="px-4 py-10 text-center text-slate-500 dark:text-slate-400 text-xs sm:text-sm">
+                          No bank statement lines imported yet. Upload a CSV or Excel statement to begin.
+                        </td>
+                      </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <!-- Sticky Footer -->
+      <footer class="sticky bottom-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm border-t border-slate-200 dark:border-slate-800">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs sm:text-sm">
+          <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-slate-700 dark:text-slate-300">
+            <span class="font-medium">
+              {{ bank_counts.unmatched or 0 }} bank items &amp; {{ gl_counts.unmatched or 0 }} ledger items unmatched
+            </span>
+            <span class="text-slate-500 dark:text-slate-400">
+              | Difference:
+              {% set diff = (difference or 0) %}
+              <strong
+                class="{% if diff == 0 %}text-emerald-600 dark:text-emerald-400{% elif diff < 0 %}text-red-600 dark:text-red-400{% else %}text-amber-600 dark:text-amber-400{% endif %}">
+                {{ currency_symbol or '' }}{{ "%.2f"|format(diff) }}
+              </strong>
+            </span>
+          </div>
+          <button
+            type="button"
+            id="btnFinalizeReconciliation"
+            class="flex min-w-[140px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-9 sm:h-10 px-5 sm:px-6 bg-primary text-white text-xs sm:text-sm font-bold leading-normal tracking-[0.015em] hover:bg-primary/90 disabled:bg-slate-300 dark:disabled:bg-slate-700 disabled:cursor-not-allowed"
+            {% if diff != 0 %}disabled{% endif %}
+          >
+            <span class="truncate">Finalize Reconciliation</span>
+          </button>
+        </div>
+      </footer>
+    </main>
+  </div>
+
+  <!-- Add Manual Bank Line Slide-over -->
+  <div
+    id="bankLineBackdrop"
+    class="fixed inset-0 z-40 hidden bg-slate-900/40 backdrop-blur-sm"
+  ></div>
+
+  <section
+    id="bankLinePanel"
+    class="fixed inset-y-0 right-0 z-50 hidden w-full max-w-lg bg-white dark:bg-slate-900 shadow-xl border-l border-slate-200 dark:border-slate-800 flex flex-col"
+    aria-hidden="true"
+  >
+    <header class="flex items-center justify-between px-5 py-4 border-b border-slate-200 dark:border-slate-800">
+      <div>
+        <h2 class="text-base font-semibold text-slate-900 dark:text-slate-50">
+          Add Manual Bank Line
+        </h2>
+        <p class="text-xs text-slate-500 dark:text-slate-300">
+          Record a bank-only adjustment line (charges, interest, corrections).
+        </p>
+      </div>
+      <button
+        type="button"
+        id="bankLineClose"
+        class="inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 dark:border-slate-700 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900"
+      >
+        <span class="material-symbols-outlined text-base">close</span>
+      </button>
+    </header>
+
+    <form id="bankLineForm" class="flex-1 overflow-y-auto px-5 py-4 space-y-4">
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">Date</label>
+          <input
+            type="date"
+            name="date"
+            required
+            value="{{ today or '' }}"
+            class="w-full rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2 text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:border-primary focus:ring-primary"
+          />
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">Type</label>
+          <select
+            name="line_type"
+            class="w-full rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2 text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:border-primary focus:ring-primary"
+          >
+            <option value="charge">Bank Charge</option>
+            <option value="interest">Interest</option>
+            <option value="correction">Correction</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">Description</label>
+        <input
+          type="text"
+          name="description"
+          required
+          placeholder="e.g., Monthly bank charges"
+          class="w-full rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2 text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:border-primary focus:ring-primary"
+        />
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">Amount</label>
+          <input
+            type="number"
+            step="0.01"
+            name="amount"
+            required
+            placeholder="0.00"
+            class="w-full rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2 text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:border-primary focus:ring-primary"
+          />
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">Direction</label>
+          <select
+            name="direction"
+            class="w-full rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2 text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:border-primary focus:ring-primary"
+          >
+            <option value="debit">Debit (reduce bank)</option>
+            <option value="credit">Credit (increase bank)</option>
+          </select>
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">Notes (optional)</label>
+        <textarea
+          name="notes"
+          rows="3"
+          class="w-full rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2 text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:border-primary focus:ring-primary"
+          placeholder="Any additional details about this line…"
+        ></textarea>
+      </div>
+    </form>
+
+    <footer class="flex items-center justify-between gap-3 border-t border-slate-200 dark:border-slate-800 px-5 py-3 bg-slate-50 dark:bg-slate-900/80">
+      <button
+        type="button"
+        id="bankLineCancel"
+        class="inline-flex items-center justify-center h-9 px-4 rounded-lg text-xs sm:text-sm font-medium text-slate-600 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800"
+      >
+        Cancel
+      </button>
+      <button
+        type="submit"
+        form="bankLineForm"
+        id="bankLineSubmit"
+        class="inline-flex items-center justify-center gap-2 h-9 px-5 rounded-full bg-primary text-white text-xs sm:text-sm font-semibold shadow-sm hover:bg-primary/90 disabled:opacity-60 disabled:cursor-not-allowed"
+      >
+        <span class="material-symbols-outlined text-base hidden" id="bankLineSpinner">sync</span>
+        <span>Save Line</span>
+      </button>
+    </footer>
+  </section>
+
+  <script>
+    (function(){
+      const backdrop    = document.getElementById('bankLineBackdrop');
+      const panel       = document.getElementById('bankLinePanel');
+      const openBtn     = document.getElementById('btnAddManualBank');
+      const closeBtn    = document.getElementById('bankLineClose');
+      const cancelBtn   = document.getElementById('bankLineCancel');
+      const form        = document.getElementById('bankLineForm');
+      const submitBtn   = document.getElementById('bankLineSubmit');
+      const spinner     = document.getElementById('bankLineSpinner');
+      const finalizeBtn = document.getElementById('btnFinalizeReconciliation');
+      const accountSelector = document.getElementById('accountSelector');
+
+      // Handle account change -> navigate using data-url-template
+      if (accountSelector) {
+        const urlTemplate = accountSelector.getAttribute('data-url-template');
+        accountSelector.addEventListener('change', function () {
+          if (!this.value || !urlTemplate) return;
+          const target = urlTemplate.replace('__ACC__', this.value);
+          window.location.href = target;
+        });
+      }
+
+      function openPanel(){
+        if (backdrop) backdrop.classList.remove('hidden');
+        if (panel) {
+          panel.classList.remove('hidden');
+          panel.setAttribute('aria-hidden','false');
+        }
+      }
+      function closePanel(){
+        if (backdrop) backdrop.classList.add('hidden');
+        if (panel) {
+          panel.classList.add('hidden');
+          panel.setAttribute('aria-hidden','true');
+        }
+        if (form && typeof form.reset === 'function') {
+          form.reset();
+        }
+      }
+
+      if (openBtn) {
+        openBtn.addEventListener('click', openPanel);
+      }
+      if (closeBtn) {
+        closeBtn.addEventListener('click', closePanel);
+      }
+      if (cancelBtn) {
+        cancelBtn.addEventListener('click', closePanel);
+      }
+      if (backdrop) {
+        backdrop.addEventListener('click', function(e){
+          if(e.target === backdrop) closePanel();
+        });
+      }
+      window.addEventListener('keydown', function(e){
+        if(e.key === 'Escape') closePanel();
+      });
+
+      if (form) {
+        form.addEventListener('submit', async function(e){
+          e.preventDefault();
+          if (submitBtn) submitBtn.disabled = true;
+          if (spinner) spinner.classList.remove('hidden');
+
+          const fd = new FormData(form);
+
+          try{
+            const resp = await fetch("{{ url_for('bank_recon.add_manual_entry', account_id=selected_account.id) if selected_account else '#' }}", {
+              method: "POST",
+              body: fd
+            });
+            const data = await resp.json().catch(function(){ return {}; });
+
+            if(!resp.ok || !data.ok){
+              alert(data.message || "Failed to save manual bank line.");
+            }else{
+              closePanel();
+              window.location.reload();
+            }
+          }catch(err){
+            console.error(err);
+            alert("An error occurred while saving the bank line.");
+          }finally{
+            if (submitBtn) submitBtn.disabled = false;
+            if (spinner) spinner.classList.add('hidden');
+          }
+        });
+      }
+
+      if (finalizeBtn) {
+        finalizeBtn.addEventListener('click', async function(){
+          if(finalizeBtn.disabled) return;
+          if(!confirm("Finalize reconciliation for this period?")) return;
+
+          finalizeBtn.disabled = true;
+          try{
+            const resp = await fetch("{{ url_for('bank_recon.finalize', account_id=selected_account.id) if selected_account else '#' }}", {
+              method: "POST"
+            });
+            const data = await resp.json().catch(function(){ return {}; });
+
+            if(!resp.ok || !data.ok){
+              alert(data.message || "Failed to finalize reconciliation.");
+            }else{
+              alert("Reconciliation finalized.");
+              window.location.reload();
+            }
+          }catch(err){
+            console.error(err);
+            alert("Error finalizing reconciliation.");
+          }finally{
+            finalizeBtn.disabled = false;
+          }
+        });
+      }
+    })();
+  </script>
+</body>
+</html>

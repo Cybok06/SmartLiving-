@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Accounts Receivable -  Invoices</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&family=Material+Symbols+Outlined" rel="stylesheet"/>
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link rel="icon"
+          href="https://imagedelivery.net/h9fmMoa1o2c2P55TcWJGOg/10283f28-b9a0-4100-b254-19a854386800/public"
+          type="image/png">
+  <script>
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors:{ primary:"#0f172a", accent:"#16a34a", soft:"#f9fafb" },
+          fontFamily:{ display:["Inter","system-ui","sans-serif"] },
+          borderRadius:{ xl:"1.125rem" }
+        }
+      }
+    }
+  </script>
+  <style>
+    .material-symbols-outlined{
+      font-variation-settings:'FILL' 0,'wght' 500,'GRAD' 0,'opsz' 24
+    }
+  </style>
+</head>
+<body class="min-h-full bg-soft text-primary font-display">
+  {% include 'accounting/sidebar.html' %}
+
+  <main class="max-w-7xl mx-auto px-4 lg:px-8 py-6 lg:py-8 acc-with-sidebar">
+    <!-- Header -->
+    <header class="mb-6 flex flex-wrap items-center justify-between gap-3">
+      <div>
+        <h1 class="text-3xl lg:text-4xl font-black tracking-tight">Accounts Receivable -  Invoices</h1>
+        <p class="text-sm text-slate-500">Manage and track all client invoices (GH₵).</p>
+      </div>
+      <div class="flex gap-2">
+        <a href="{{ export_url }}" class="h-10 px-4 rounded-full border font-semibold hover:bg-white/60 flex items-center gap-2">
+          <span class="material-symbols-outlined">download</span> Export
+        </a>
+        <button id="openInv" type="button" class="h-10 px-4 rounded-full bg-accent text-white font-bold hover:bg-accent/90 flex items-center gap-2">
+          <span class="material-symbols-outlined">add</span> New Invoice
+        </button>
+      </div>
+    </header>
+
+    <!-- Filters -->
+    <section class="bg-white rounded-xl border border-slate-200 p-4 mb-4">
+      <form method="get" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
+        <input
+          name="q"
+          value="{{ request.args.get('q','') }}"
+          placeholder="Invoice # / Client"
+          class="h-10 rounded-full border px-4 bg-slate-50"
+        />
+        <input
+          name="from"
+          value="{{ request.args.get('from','') }}"
+          type="date"
+          class="h-10 rounded-full border px-3"
+        >
+        <input
+          name="to"
+          value="{{ request.args.get('to','') }}"
+          type="date"
+          class="h-10 rounded-full border px-3"
+        >
+        <input
+          name="customer"
+          value="{{ request.args.get('customer','') }}"
+          placeholder="Client code"
+          class="h-10 rounded-full border px-4 bg-slate-50"
+        />
+        <select name="status" class="h-10 rounded-full border px-3">
+          {% set st = request.args.get('status','') %}
+          <option value="">All status</option>
+          <option value="draft"   {{ 'selected' if st=='draft' }}>Draft</option>
+          <option value="sent"    {{ 'selected' if st=='sent'  }}>Sent</option>
+          <option value="part"    {{ 'selected' if st=='part'  }}>Part-paid</option>
+          <option value="overdue" {{ 'selected' if st=='overdue' }}>Overdue</option>
+          <option value="paid"    {{ 'selected' if st=='paid' }}>Paid</option>
+        </select>
+        <div class="lg:col-span-5">
+          <button class="h-10 px-4 rounded-full border font-semibold">Apply</button>
+        </div>
+      </form>
+    </section>
+
+    <!-- Stats (simple) -->
+    {% if stats %}
+    <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+      <div class="rounded-xl bg-white border p-4">
+        <p class="text-sm text-slate-500">Overdue</p>
+        <p class="text-2xl font-bold text-red-600">GH₵{{ "%.2f"|format(stats.overdue) }}</p>
+      </div>
+      <div class="rounded-xl bg-white border p-4">
+        <p class="text-sm text-slate-500">Awaiting Payment</p>
+        <p class="text-2xl font-bold">GH₵{{ "%.2f"|format(stats.awaiting) }}</p>
+      </div>
+      <div class="rounded-xl bg-white border p-4">
+        <p class="text-sm text-slate-500">Paid (Last 30d)</p>
+        <p class="text-2xl font-bold">GH₵{{ "%.2f"|format(stats.paid30) }}</p>
+      </div>
+    </section>
+    {% endif %}
+
+    <!-- Table -->
+    <section class="rounded-xl border border-slate-200 bg-white overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="min-w-full text-left text-sm">
+          <thead class="bg-slate-50">
+            <tr>
+              <th class="px-4 py-3 font-semibold">Invoice No</th>
+              <th class="px-4 py-3 font-semibold">Client</th>
+              <th class="px-4 py-3 font-semibold">Issue Date</th>
+              <th class="px-4 py-3 font-semibold">Due Date</th>
+              <th class="px-4 py-3 font-semibold text-right">Amount</th>
+              <th class="px-4 py-3 font-semibold text-right">Balance</th>
+              <th class="px-4 py-3 font-semibold">Status</th>
+              <th class="px-4 py-3"></th>
+            </tr>
+          </thead>
+          <tbody class="divide-y">
+            {% for r in rows %}
+            <tr class="hover:bg-slate-50">
+              <td class="px-4 py-3 font-medium">{{ r.no }}</td>
+              <td class="px-4 py-3">{{ r.customer_name or r.customer }}</td>
+              <td class="px-4 py-3">{{ r.issue }}</td>
+              <td class="px-4 py-3">{{ r.due }}</td>
+              <td class="px-4 py-3 text-right">GH₵{{ "%.2f"|format(r.amount) }}</td>
+              <td class="px-4 py-3 text-right font-medium">GH₵{{ "%.2f"|format(r.balance) }}</td>
+              <td class="px-4 py-3">
+                {% set cls = 'bg-green-100 text-green-800' if r.status=='paid'
+                             else ('bg-yellow-100 text-yellow-800' if r.status in ['part','sent']
+                             else ('bg-red-100 text-red-800' if r.status=='overdue' else 'bg-slate-200 text-slate-800')) %}
+                <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold {{ cls }}">
+                  {{ r.status|title }}
+                </span>
+              </td>
+              <td class="px-4 py-3 text-right">
+                <!-- Go to AR Payments filtered by this client -->
+                <a
+                  class="text-accent hover:underline"
+                  href="{{ url_for('ar_payments.payments', customer=r.customer) }}"
+                >
+                  Allocate
+                </a>
+              </td>
+            </tr>
+            {% else %}
+            <tr>
+              <td colspan="8" class="px-4 py-12 text-center text-slate-500">
+                No invoices match your filters.
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Pagination -->
+    {% if pager and pager.pages > 1 %}
+    <nav class="mt-6 flex items-center justify-between">
+      <a
+        class="px-3 py-2 rounded-lg border {{ 'pointer-events-none opacity-50' if not pager.prev_url else '' }}"
+        href="{{ pager.prev_url or '#' }}"
+      >Previous</a>
+      <div class="text-sm text-slate-500">Page {{ pager.page }} of {{ pager.pages }}</div>
+      <a
+        class="px-3 py-2 rounded-lg border {{ 'pointer-events-none opacity-50' if not pager.next_url else '' }}"
+        href="{{ pager.next_url or '#' }}"
+      >Next</a>
+    </nav>
+    {% endif %}
+  </main>
+
+  <!-- Quick New Invoice Modal -->
+  <div id="invBackdrop" class="fixed inset-0 bg-black/40 z-[100] hidden"></div>
+  <div id="invModal" class="fixed inset-0 z-[101] hidden p-4 overflow-y-auto">
+    <div class="mx-auto max-w-xl">
+      <div class="rounded-xl border border-slate-200 bg-white shadow">
+        <div class="flex items-center justify-between px-5 py-3 border-b">
+          <h3 class="text-lg font-bold">New Invoice</h3>
+          <button id="closeInv" class="h-9 w-9 grid place-items-center rounded-lg border hover:bg-slate-50">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </div>
+        <form id="invForm" class="p-5 space-y-4">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <label class="block">
+              <span class="text-sm font-medium">Invoice No</span>
+              <input
+                name="no"
+                required
+                class="mt-1 w-full h-11 rounded-xl border p-2.5"
+                placeholder="INV-0001"
+              >
+            </label>
+
+            <!-- Client dropdown (backend field name `customer`) -->
+            <label class="block">
+              <span class="text-sm font-medium">Client</span>
+              <select
+                name="customer"
+                required
+                class="mt-1 w-full h-11 rounded-xl border p-2.5 bg-white cursor-pointer"
+              >
+                <option value="">Select client…</option>
+                {% if customers_list and customers_list|length > 0 %}
+                  {% set current_cust = request.args.get('customer','') %}
+                  {% for c in customers_list %}
+                    <option value="{{ c.code }}" {{ 'selected' if current_cust == c.code }}>
+                      {{ c.code }} -- {{ c.name }}
+                    </option>
+                  {% endfor %}
+                {% else %}
+                  <option value="" disabled>No clients found. Create one in Clients first.</option>
+                {% endif %}
+              </select>
+            </label>
+
+            <label class="block">
+              <span class="text-sm font-medium">Issue Date</span>
+              <input
+                name="issue"
+                type="date"
+                required
+                class="mt-1 w-full h-11 rounded-xl border p-2.5"
+              >
+            </label>
+            <label class="block">
+              <span class="text-sm font-medium">Due Date</span>
+              <input
+                name="due"
+                type="date"
+                required
+                class="mt-1 w-full h-11 rounded-xl border p-2.5"
+              >
+            </label>
+            <label class="block">
+              <span class="text-sm font-medium">Amount (GH₵)</span>
+              <input
+                name="amount"
+                type="number"
+                step="0.01"
+                min="0.01"
+                required
+                class="mt-1 w-full h-11 rounded-xl border p-2.5"
+              >
+            </label>
+            <label class="block">
+              <span class="text-sm font-medium">Status</span>
+              <select name="status" class="mt-1 w-full h-11 rounded-xl border p-2.5 bg-white cursor-pointer">
+                <option value="draft">Draft</option>
+                <option value="sent">Sent</option>
+                <option value="part">Part-paid</option>
+                <option value="overdue">Overdue</option>
+                <option value="paid">Paid</option>
+              </select>
+            </label>
+          </div>
+          <div class="flex items-center justify-between pt-2">
+            <p id="invMsg" class="text-sm text-slate-500"></p>
+            <div class="flex gap-2">
+              <button type="button" id="cancelInv" class="h-11 px-5 rounded-full border">Cancel</button>
+              <button type="submit" id="saveInv" class="h-11 px-6 rounded-full bg-accent text-white font-bold hover:bg-accent/90">
+                Save
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function openM(m,b){ m.classList.remove('hidden'); b.classList.remove('hidden'); }
+    function closeM(m,b){ m.classList.add('hidden'); b.classList.add('hidden'); }
+
+    const m = document.getElementById('invModal'),
+          b = document.getElementById('invBackdrop');
+
+    document.getElementById('openInv')?.addEventListener('click', ()=>openM(m,b));
+    document.getElementById('closeInv')?.addEventListener('click', ()=>closeM(m,b));
+    document.getElementById('cancelInv')?.addEventListener('click', ()=>closeM(m,b));
+    b?.addEventListener('click', ()=>closeM(m,b));
+    window.addEventListener('keydown',e=>{ if(e.key==='Escape') closeM(m,b); });
+
+    const form = document.getElementById('invForm'),
+          msg  = document.getElementById('invMsg'),
+          btn  = document.getElementById('saveInv');
+
+    form?.addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      msg.textContent='';
+      btn.disabled=true;
+      try{
+        const fd = new FormData(form);
+        const res = await fetch("{{ url_for('ar_invoices.quick_create') }}",{
+          method:"POST",
+          body:fd
+        });
+        const data = await res.json();
+        if(!res.ok || !data.ok){
+          msg.textContent=data.message||'Failed';
+          btn.disabled=false;
+          return;
+        }
+        closeM(m,b);
+        location.reload();
+      }catch(err){
+        console.error(err);
+        msg.textContent='Network error';
+        btn.disabled=false;
+      }
+    });
+  </script>
+</body>
+</html>

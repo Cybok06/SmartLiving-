@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Inventory Analysis</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" href="https://res.cloudinary.com/dljpgzbto/image/upload/v1743993646/company-logo_dksb23.jpg" type="image/png">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"/>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet"/>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    :root{
+      --ink:#0b3b52; --muted:#64748b; --ring:rgba(15,23,42,.10);
+      --bg1: rgba(168,85,247,.14);
+      --bg2: rgba(59,130,246,.12);
+      --ok:#16a34a; --bad:#dc2626; --warn:#f59e0b;
+    }
+    body{
+      background: radial-gradient(1200px 600px at 20% 0%, var(--bg1), transparent 60%),
+                  radial-gradient(1000px 500px at 100% 10%, var(--bg2), transparent 55%),
+                  #f7f7ff;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      color:#0f172a;
+    }
+    .dark-mode{ background:#0b1220 !important; color:#e5e7eb; }
+    .dark-mode .card, .dark-mode .navbar, .dark-mode .panel { background:#0f172a !important; color:#e5e7eb; border-color: rgba(148,163,184,.15) !important; }
+    .dark-mode .form-control, .dark-mode .form-select{ background:#0b1220; color:#e5e7eb; border-color:rgba(148,163,184,.25); }
+    .dark-mode .muted{ color:#a1a1aa; }
+
+    .navbar{
+      background: rgba(255,255,255,.86);
+      border-bottom:1px solid rgba(15,23,42,.08);
+      backdrop-filter: blur(10px);
+    }
+    .card{
+      border:1px solid var(--ring);
+      border-radius: 18px;
+      box-shadow: 0 14px 34px rgba(2,6,23,.08);
+    }
+    .muted{ color: var(--muted); }
+
+    .kpi{
+      border-radius: 16px;
+      border:1px solid var(--ring);
+      background: rgba(255,255,255,.82);
+      padding: 14px;
+    }
+    .dark-mode .kpi{ background: rgba(2,6,23,.35); }
+    .kpi .label{ font-size:.82rem; color:var(--muted); }
+    .kpi .value{ font-size:1.35rem; font-weight: 900; letter-spacing: -.02em; }
+
+    .pill{
+      border:1px solid var(--ring);
+      border-radius:999px;
+      padding:.2rem .65rem;
+      font-size:.8rem;
+      background:#fff;
+      display:inline-flex; align-items:center; gap:.45rem;
+    }
+    .dark-mode .pill{ background:#0b1220; }
+
+    .panel{
+      background: rgba(255,255,255,.86);
+      border:1px solid var(--ring);
+      border-radius: 18px;
+      padding: 14px;
+    }
+
+    .insight{
+      border:1px solid rgba(15,23,42,.10);
+      border-radius: 14px;
+      padding: 10px 12px;
+      background: rgba(255,255,255,.72);
+      display:flex; gap:10px; align-items:flex-start;
+    }
+    .dark-mode .insight{ background: rgba(2,6,23,.35); border-color: rgba(148,163,184,.18); }
+
+    @media (prefers-reduced-motion: reduce){
+      *{ transition:none !important; scroll-behavior:auto !important; }
+    }
+  </style>
+</head>
+
+<body>
+  <nav class="navbar px-3 py-2">
+    <div class="d-flex align-items-center gap-2">
+      <a class="btn btn-outline-primary btn-sm" href="{{ url_for('manager_dashboard.manager_dashboard_view') }}">
+        <i class="bi bi-arrow-left"></i> Dashboard
+      </a>
+      <span class="pill"><i class="bi bi-graph-up-arrow"></i> Inventory Analytics</span>
+    </div>
+
+    <div class="d-flex align-items-center gap-2">
+      <button class="btn btn-outline-dark btn-sm" type="button" onclick="toggleDarkMode()" id="darkModeToggle" aria-label="Toggle dark mode">
+        🌙
+      </button>
+    </div>
+  </nav>
+
+  <div class="container my-4">
+
+    <div class="d-flex flex-wrap align-items-end justify-content-between gap-3 mb-3">
+      <div>
+        <h3 class="mb-1" style="font-weight:950; letter-spacing:-.02em;">Warehouse Overview</h3>
+        <div class="muted">High-level stock health, expiry risk, and margin signals.</div>
+      </div>
+      <div class="d-flex gap-2 flex-wrap">
+        <span class="pill"><i class="bi bi-box-seam"></i> SKUs: <b>{{ summary.total_skus }}</b></span>
+        <span class="pill"><i class="bi bi-stack"></i> Qty: <b>{{ summary.total_qty }}</b></span>
+      </div>
+    </div>
+
+    <!-- KPIs -->
+    <div class="row g-3 mb-3">
+      <div class="col-6 col-lg-2"><div class="kpi"><div class="label">Low Stock</div><div class="value">{{ summary.low_stock }}</div></div></div>
+      <div class="col-6 col-lg-2"><div class="kpi"><div class="label">Out of Stock</div><div class="value">{{ summary.out_of_stock }}</div></div></div>
+      <div class="col-6 col-lg-2"><div class="kpi"><div class="label">Expired</div><div class="value">{{ summary.expired }}</div></div></div>
+      <div class="col-6 col-lg-2"><div class="kpi"><div class="label">Expiring Soon</div><div class="value">{{ summary.expiring_soon }}</div></div></div>
+      <div class="col-6 col-lg-2"><div class="kpi"><div class="label">Pos. Margin</div><div class="value">{{ summary.positive_margin }}</div></div></div>
+      <div class="col-6 col-lg-2"><div class="kpi"><div class="label">Neg. Margin</div><div class="value">{{ summary.negative_margin }}</div></div></div>
+    </div>
+
+    <!-- Filters -->
+    <div class="panel mb-3">
+      <form class="row g-2 align-items-end" method="GET">
+        <div class="col-md-4">
+          <label class="form-label fw-semibold mb-1">Search (affects analytics)</label>
+          <input name="q" value="{{ filters.q }}" class="form-control" placeholder="e.g. fridge, TV, rice...">
+        </div>
+
+        <div class="col-md-2">
+          <label class="form-label fw-semibold mb-1">Stock filter</label>
+          <select name="stock" class="form-select">
+            <option value="all" {{ 'selected' if filters.stock=='all' else '' }}>All</option>
+            <option value="in" {{ 'selected' if filters.stock=='in' else '' }}>In stock only</option>
+            <option value="low" {{ 'selected' if filters.stock=='low' else '' }}>Low stock only</option>
+            <option value="out" {{ 'selected' if filters.stock=='out' else '' }}>Out of stock only</option>
+          </select>
+        </div>
+
+        <div class="col-md-3">
+          <label class="form-label fw-semibold mb-1">Low stock threshold</label>
+          <input name="low" type="number" min="1" class="form-control" value="{{ filters.low_threshold }}">
+          <div class="muted" style="font-size:.85rem;">Low stock = qty ≤ this value</div>
+        </div>
+
+        <div class="col-md-3">
+          <label class="form-label fw-semibold mb-1">Expiry window (days)</label>
+          <input name="expiry_window" type="number" min="1" class="form-control" value="{{ filters.expiry_window }}">
+          <div class="muted" style="font-size:.85rem;">"Expiring soon" within this window</div>
+        </div>
+
+        <div class="col-12 d-flex gap-2 mt-1">
+          <button class="btn btn-primary"><i class="bi bi-funnel"></i> Apply</button>
+          <a class="btn btn-outline-secondary" href="{{ url_for('manager_inventory_analysis.manager_inventory_analysis') }}">Reset</a>
+        </div>
+      </form>
+    </div>
+
+    <!-- Insights -->
+    <div class="row g-3 mb-3">
+      <div class="col-lg-4">
+        <div class="card p-3">
+          <div class="fw-bold mb-2"><i class="bi bi-lightning-charge"></i> Insights</div>
+          {% if insights and insights|length %}
+            <div class="d-flex flex-column gap-2">
+              {% for msg in insights %}
+                <div class="insight">
+                  <div><i class="bi bi-info-circle"></i></div>
+                  <div class="small">{{ msg }}</div>
+                </div>
+              {% endfor %}
+            </div>
+          {% else %}
+            <div class="muted small">No red flags detected from the current filter.</div>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="col-lg-8">
+        <div class="card p-3">
+          <div class="d-flex align-items-center justify-content-between mb-2">
+            <div class="fw-bold"><i class="bi bi-bar-chart-line"></i> Top Products by Quantity</div>
+            <div class="muted" style="font-size:.85rem;">Top 12 (from current filter)</div>
+          </div>
+          <canvas id="barChart" height="120"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Donuts -->
+    <div class="row g-3 mb-3">
+      <div class="col-md-4">
+        <div class="card p-3">
+          <div class="fw-bold mb-2"><i class="bi bi-pie-chart"></i> Stock Split</div>
+          <canvas id="stockPie" height="180"></canvas>
+        </div>
+      </div>
+
+      <div class="col-md-4">
+        <div class="card p-3">
+          <div class="fw-bold mb-2"><i class="bi bi-hourglass-split"></i> Expiry Risk</div>
+          <canvas id="expiryPie" height="180"></canvas>
+        </div>
+      </div>
+
+      <div class="col-md-4">
+        <div class="card p-3">
+          <div class="fw-bold mb-2"><i class="bi bi-cash-coin"></i> Margin Health</div>
+          <canvas id="marginPie" height="180"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <div class="text-center text-muted mt-4 mb-2" style="font-size:.9rem;">
+      CYTECH | Manager Panel
+    </div>
+  </div>
+
+  <script id="chart-json" type="application/json">
+    {{ chart | tojson | safe }}
+  </script>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    const data = JSON.parse(document.getElementById("chart-json").textContent);
+
+    function toggleDarkMode(){
+      document.body.classList.toggle("dark-mode");
+      const btn = document.getElementById("darkModeToggle");
+      btn.textContent = document.body.classList.contains("dark-mode") ? "🌞" : "🌙";
+    }
+
+    new Chart(document.getElementById("barChart"), {
+      type: "bar",
+      data: {
+        labels: data.labels,
+        datasets: [{
+          label: "Quantity",
+          data: data.quantities,
+          borderWidth: 1
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { display: false } },
+        scales: { y: { beginAtZero: true } }
+      }
+    });
+
+    new Chart(document.getElementById("stockPie"), {
+      type: "doughnut",
+      data: {
+        labels: data.stock_split_labels,
+        datasets: [{ data: data.stock_split_values, borderWidth: 1 }]
+      },
+      options: { responsive: true }
+    });
+
+    new Chart(document.getElementById("expiryPie"), {
+      type: "doughnut",
+      data: {
+        labels: data.expiry_split_labels,
+        datasets: [{ data: data.expiry_split_values, borderWidth: 1 }]
+      },
+      options: { responsive: true }
+    });
+
+    new Chart(document.getElementById("marginPie"), {
+      type: "doughnut",
+      data: {
+        labels: data.margin_split_labels,
+        datasets: [{ data: data.margin_split_values, borderWidth: 1 }]
+      },
+      options: { responsive: true }
+    });
+  </script>
+  {% include 'app_footer.html' %}
+
+</body>
+</html>

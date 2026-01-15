@@ -1,0 +1,223 @@
+{# templates/hr_pages/partials/employee_hr_files_tab.html #}
+
+<div class="row g-3">
+  <div class="col-12 col-lg-4">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-header">
+        <h6 class="mb-0">Upload HR File</h6>
+        <p class="small text-muted mb-0">
+          Attach CVs, ID scans, guarantor letters, and other HR documents.
+        </p>
+      </div>
+      <div class="card-body">
+        <form id="hr-file-upload-form" enctype="multipart/form-data">
+          <div class="mb-2">
+            <label class="form-label small mb-1">File Name / Label</label>
+            <input type="text"
+                   name="name"
+                   class="form-control form-control-sm"
+                   placeholder="e.g. CV - 2025, Ghana Card, Guarantor Letter">
+          </div>
+
+          <div class="mb-2">
+            <label class="form-label small mb-1">Description (optional)</label>
+            <textarea name="description"
+                      rows="2"
+                      class="form-control form-control-sm"
+                      placeholder="Short note about this file"></textarea>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label small mb-1">Choose File</label>
+            <input type="file"
+                   name="file"
+                   accept="image/*"
+                   class="form-control form-control-sm">
+            <small class="text-muted d-block mt-1 extra-small">
+              Supported: PNG, JPG, JPEG, GIF.
+            </small>
+          </div>
+
+          <button type="submit"
+                  class="btn btn-sm btn-primary w-100">
+            <span class="spinner-border spinner-border-sm me-2 d-none"
+                  id="hr-file-upload-spinner"
+                  role="status"></span>
+            Upload File
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12 col-lg-8">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <div>
+          <h6 class="mb-0">HR Files Library</h6>
+          <p class="small text-muted mb-0">
+            All documents attached to this employee's HR record.
+          </p>
+        </div>
+        <button type="button"
+                class="btn btn-sm btn-outline-secondary"
+                id="hr-files-refresh-btn">
+          <i class="bi bi-arrow-clockwise me-1"></i> Refresh
+        </button>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-sm align-middle mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>File</th>
+                <th class="d-none d-md-table-cell">Description</th>
+                <th class="d-none d-lg-table-cell">Uploaded</th>
+                <th style="width: 120px;">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="hr-files-tbody">
+              <tr id="hr-files-empty-row">
+                <td colspan="4" class="text-center text-muted small py-3">
+                  No HR files uploaded yet.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="card-footer small text-muted">
+        Tip: Click <strong>Open</strong> to view in a new tab and print to PDF if needed.
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  const employeeId = "{{ employee._id }}";
+
+  const uploadForm   = document.getElementById('hr-file-upload-form');
+  const uploadSpinner = document.getElementById('hr-file-upload-spinner');
+  const filesTbody   = document.getElementById('hr-files-tbody');
+  const refreshBtn   = document.getElementById('hr-files-refresh-btn');
+  const emptyRow     = document.getElementById('hr-files-empty-row');
+
+  function setSpinner(visible) {
+    if (!uploadSpinner) return;
+    if (visible) {
+      uploadSpinner.classList.remove('d-none');
+    } else {
+      uploadSpinner.classList.add('d-none');
+    }
+  }
+
+  function renderFiles(files) {
+    if (!filesTbody) return;
+    filesTbody.innerHTML = '';
+
+    if (!files || !files.length) {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td colspan="4" class="text-center text-muted small py-3">
+          No HR files uploaded yet.
+        </td>
+      `;
+      filesTbody.appendChild(tr);
+      return;
+    }
+
+    files.forEach(f => {
+      const tr = document.createElement('tr');
+      const safeName = f.name || f.original_filename || 'Untitled';
+      const desc = f.description || '';
+      const created = f.created_at || '';
+
+      tr.innerHTML = `
+        <td>
+          <div class="fw-semibold small">${safeName}</div>
+          <div class="text-muted extra-small">${f.original_filename || ''}</div>
+        </td>
+        <td class="d-none d-md-table-cell small">
+          ${desc || '<span class="text-muted fst-italic">No description</span>'}
+        </td>
+        <td class="d-none d-lg-table-cell small text-muted">
+          ${created}
+        </td>
+        <td>
+          <div class="btn-group btn-group-sm">
+            <a href="${f.url || '#'}" target="_blank"
+               class="btn btn-outline-primary btn-sm"
+               ${f.url ? '' : 'disabled'}>
+              Open
+            </a>
+            <a href="${f.id ? `/hr/employee/${employeeId}/hr_files/${f.id}/download` : '#'}"
+               class="btn btn-outline-secondary btn-sm"
+               ${f.id ? '' : 'disabled'}>
+              Download
+            </a>
+          </div>
+        </td>
+      `;
+      filesTbody.appendChild(tr);
+    });
+  }
+
+  function loadFiles() {
+    fetch(`/hr/employee/${employeeId}/hr_files`)
+      .then(resp => resp.json())
+      .then(data => {
+        if (!data.ok) {
+          throw new Error(data.message || 'Failed to load HR files');
+        }
+        renderFiles(data.files || []);
+      })
+      .catch(err => {
+        console.error(err);
+        if (window.showToast) {
+          window.showToast('danger', err.message || 'Error loading HR files.');
+        }
+      });
+  }
+
+  if (refreshBtn) {
+    refreshBtn.addEventListener('click', function () {
+      loadFiles();
+    });
+  }
+
+  if (uploadForm) {
+    uploadForm.addEventListener('submit', function (e) {
+      e.preventDefault();
+      const formData = new FormData(uploadForm);
+      setSpinner(true);
+
+      fetch(`/hr/employee/${employeeId}/hr_files/upload`, {
+        method: 'POST',
+        body: formData
+      })
+        .then(resp => resp.json())
+        .then(data => {
+          if (!data.ok) {
+            throw new Error(data.message || 'Upload failed');
+          }
+          if (window.showToast) {
+            window.showToast('success', data.message || 'HR file uploaded.');
+          }
+          uploadForm.reset();
+          loadFiles();
+        })
+        .catch(err => {
+          console.error(err);
+          if (window.showToast) {
+            window.showToast('danger', err.message || 'Upload failed.');
+          }
+        })
+        .finally(() => setSpinner(false));
+    });
+  }
+
+  // Initial load
+  loadFiles();
+})();
+</script>

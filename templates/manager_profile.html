@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>Manager Profile</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="icon"
+          href="https://imagedelivery.net/h9fmMoa1o2c2P55TcWJGOg/10283f28-b9a0-4100-b254-19a854386800/public"
+          type="image/png">    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #f8f9fa;
+            --text: #212529;
+            --card-bg: #ffffff;
+            --primary: #0d6efd;
+        }
+
+        [data-theme="dark"] {
+            --bg: #121212;
+            --text: #e0e0e0;
+            --card-bg: #1e1e1e;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            transition: background 0.3s, color 0.3s;
+        }
+
+        .navbar {
+            background-color: #ffffff;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .profile-card {
+            background: var(--card-bg);
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+            padding: 30px;
+            margin-top: 50px;
+        }
+
+        .profile-pic {
+            width: 150px;
+            height: 150px;
+            object-fit: cover;
+            border-radius: 50%;
+            border: 4px solid var(--primary);
+        }
+
+        .label {
+            font-weight: 500;
+            color: var(--text);
+        }
+
+        .value {
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .title {
+            font-size: 2rem;
+            font-weight: bold;
+            margin-bottom: 20px;
+            color: var(--primary);
+        }
+
+        .theme-toggle {
+            cursor: pointer;
+            font-size: 1.3rem;
+        }
+    </style>
+</head>
+<body data-theme="light">
+<nav class="navbar navbar-expand-lg px-3">
+    <div class="container-fluid">
+        <a class="navbar-brand fw-bold" href="#">Manager Panel</a>
+        <div class="d-flex align-items-center gap-3">
+            <a href="{{ url_for('manager_dashboard.manager_dashboard_view') }}" class="btn btn-outline-primary btn-sm">🏠 Dashboard</a>
+            <span class="theme-toggle" onclick="toggleTheme()">🌓</span>
+        </div>
+    </div>
+</nav>
+
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-10 col-lg-8">
+            <div class="profile-card text-center">
+                <div class="title">Manager Profile</div>
+
+                <img src="{{ manager.image_url or 'https://via.placeholder.com/150' }}" alt="Profile Picture" class="profile-pic mb-3">
+
+                <div class="row text-start mt-4">
+                    <div class="col-sm-6 mb-3"><span class="label">Username:</span> <span class="value">{{ manager.username }}</span></div>
+                    <div class="col-sm-6 mb-3"><span class="label">Name:</span> <span class="value">{{ manager.name }}</span></div>
+                    <div class="col-sm-6 mb-3"><span class="label">Phone:</span> <span class="value">{{ manager.phone }}</span></div>
+                    <div class="col-sm-6 mb-3"><span class="label">Email:</span> <span class="value">{{ manager.email }}</span></div>
+                    <div class="col-sm-6 mb-3"><span class="label">Gender:</span> <span class="value">{{ manager.gender }}</span></div>
+                    <div class="col-sm-6 mb-3"><span class="label">Branch:</span> <span class="value">{{ manager.branch }}</span></div>
+                    <div class="col-sm-6 mb-3"><span class="label">Position:</span> <span class="value">{{ manager.position }}</span></div>
+                    <div class="col-sm-6 mb-3"><span class="label">Location:</span> <span class="value">{{ manager.location }}</span></div>
+                    <div class="col-sm-6 mb-3"><span class="label">Start Date:</span> <span class="value">{{ manager.start_date }}</span></div>
+                    <div class="col-sm-6 mb-3"><span class="label">Status:</span> <span class="value">{{ manager.status }}</span></div>
+                    <div class="col-sm-6 mb-3"><span class="label">Date Registered:</span> <span class="value">{{ manager.date_registered }}</span></div>
+                </div>
+
+                <div class="mt-4 text-start">
+                    <h5 class="mb-3">Recent Logs (Last 5)</h5>
+                    <div class="d-flex flex-wrap gap-2 mb-3">
+                        <span class="badge bg-light text-dark border">Last login:
+                            {% if login_stats.last_login %}
+                                {{ login_stats.last_login.strftime('%Y-%m-%d %H:%M') }}
+                            {% else %}
+                                --
+                            {% endif %}
+                        </span>
+                        <span class="badge bg-light text-dark border">Total logins (30 days): {{ login_stats.total_logins }}</span>
+                        <span class="badge bg-light text-dark border">Unique IPs (30 days): {{ login_stats.unique_ips }}</span>
+                        <span class="badge bg-light text-dark border">Unique devices (30 days): {{ login_stats.unique_devices }}</span>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table table-sm align-middle">
+                            <thead class="table-light">
+                            <tr>
+                                <th>Date/Time</th>
+                                <th>IP</th>
+                                <th>Device</th>
+                                <th>Location</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            {% if login_logs and login_logs|length %}
+                                {% for log in login_logs %}
+                                    <tr>
+                                        <td>
+                                            {% if log.timestamp %}
+                                                {{ log.timestamp.strftime('%Y-%m-%d %H:%M') if log.timestamp.__class__.__name__ == 'datetime' else log.timestamp }}
+                                            {% else %}--{% endif %}
+                                            {% if log.is_new_location %}
+                                                <span class="badge bg-warning text-dark ms-2">New location</span>
+                                            {% endif %}
+                                            {% if log.is_low_accuracy %}
+                                                <span class="badge bg-secondary ms-2">Low accuracy</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ log.ip or '--' }}</td>
+                                        <td>
+                                            <div>{{ (log.device.os or 'Unknown') }} -  {{ (log.device.browser or 'Unknown') }}</div>
+                                            <small class="text-muted">{{ 'Mobile' if log.device.is_mobile else 'Desktop' }}</small>
+                                        </td>
+                                        <td>
+                                            {% if log.geo and log.geo.lat is not none %}
+                                                <div>Lat {{ log.geo.lat }}, Lng {{ log.geo.lng }} (±{{ log.geo.accuracy_m or 0 }}m)</div>
+                                                <a class="btn btn-outline-primary btn-sm mt-1" target="_blank"
+                                                   href="https://www.google.com/maps?q={{ log.geo.lat }},{{ log.geo.lng }}">
+                                                    Open Map
+                                                </a>
+                                            {% else %}
+                                                --
+                                            {% endif %}
+                                            {% set ip_loc = log.ip_location or log.location %}
+                                            {% if ip_loc %}
+                                                <div class="text-muted small">
+                                                    {{ ip_loc.city or '' }} {{ ip_loc.region or '' }} {{ ip_loc.country or '' }}
+                                                </div>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr><td colspan="4" class="text-center text-muted py-3">No login activity yet.</td></tr>
+                            {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="logout mt-4">
+                    <a href="{{ url_for('login.logout') }}" class="btn btn-danger px-4">Logout</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Scroll to Top Button -->
+<button onclick="window.scrollTo({top: 0, behavior: 'smooth'})" class="btn btn-primary position-fixed bottom-0 end-0 m-4">↑</button>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    function toggleTheme() {
+        const body = document.body;
+        const current = body.getAttribute('data-theme');
+        body.setAttribute('data-theme', current === 'dark' ? 'light' : 'dark');
+    }
+</script>
+{% include 'app_footer.html' %}
+
+</body>
+</html>

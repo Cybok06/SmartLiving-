@@ -1,0 +1,15 @@
+{# templates/hr_pages/employee_profile_page.html #}
+{% extends "hr_pages/hr_shell.html" %}
+
+{% block hr_content %}
+    {% if employee_error %}
+        {{ employee_error|safe }}
+    {% else %}
+        {# Reuse the same modal partial as a normal page section #}
+        <div class="card border-0 shadow-sm">
+            <div class="card-body p-0">
+                {% include "hr_pages/partials/hr_employee_profile.html" %}
+            </div>
+        </div>
+    {% endif %}
+{% endblock %}

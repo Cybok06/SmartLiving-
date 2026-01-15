@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>My Profile - Accounting</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+  <link rel="icon" href="https://res.cloudinary.com/dljpgzbto/image/upload/v1743993646/company-logo_dksb23.jpg" type="image/png" />
+  <style>
+    :root{
+      --acc-blue:#1d4ed8;
+      --acc-ink:#0f172a;
+      --acc-muted:#64748b;
+      --acc-border:rgba(226,232,240,0.9);
+    }
+    body{
+      background: #f8fafc;
+      color: var(--acc-ink);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    .profile-shell{
+      min-height:100vh;
+      padding: 24px;
+    }
+    .hero-card{
+      background: linear-gradient(120deg, rgba(29,78,216,0.12), rgba(14,165,233,0.14));
+      border: 1px solid rgba(148,163,184,0.35);
+      border-radius: 18px;
+      padding: 22px;
+      box-shadow: 0 16px 36px rgba(15,23,42,0.08);
+    }
+    .avatar{
+      width: 88px;
+      height: 88px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 3px solid #fff;
+      box-shadow: 0 8px 16px rgba(15,23,42,0.12);
+      background: #e2e8f0;
+    }
+    .card-soft{
+      background:#fff;
+      border:1px solid var(--acc-border);
+      border-radius:16px;
+      box-shadow: 0 10px 22px rgba(15,23,42,0.06);
+    }
+    .section-title{
+      font-size:.78rem;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+      color:var(--acc-muted);
+      font-weight:600;
+    }
+  </style>
+</head>
+<body>
+  {% include 'accounting/sidebar.html' %}
+
+  <main class="profile-shell acc-with-sidebar">
+    <div class="container-fluid">
+      <div class="hero-card mb-4">
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+          <div class="d-flex align-items-center gap-3">
+            <img id="profileAvatar"
+                 class="avatar"
+                 src="{{ profile.image_url or DEFAULT_PROFILE_IMAGE_URL }}"
+                 alt="Profile avatar"
+                 onerror="this.src='{{ DEFAULT_PROFILE_IMAGE_URL }}'">
+            <div>
+              <div class="section-title">Accounting Workspace</div>
+              <h3 class="mb-1">My Profile</h3>
+              <div class="text-muted">Manage your account details and security.</div>
+            </div>
+          </div>
+          <div class="text-end">
+            <span class="badge rounded-pill bg-success-subtle text-success-emphasis">
+              {{ profile.status or "Active" }}
+            </span>
+            <div class="text-muted small mt-2">Role: {{ profile.role }}</div>
+          </div>
+        </div>
+      </div>
+
+      <div id="alertHost"></div>
+
+      <div class="row g-4">
+        <div class="col-lg-4">
+          <div class="card-soft p-4 h-100">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+              <div class="section-title">Profile Header</div>
+              <button class="btn btn-sm btn-outline-primary" id="changePhotoBtn" type="button">
+                <i class="bi bi-camera"></i> Change Photo
+              </button>
+              <input type="file" id="avatarInput" class="d-none" accept="image/*">
+            </div>
+            <div class="text-muted small mb-3">Upload a profile picture for your account.</div>
+            <div class="d-flex align-items-center gap-3">
+              <img id="avatarPreview"
+                   class="avatar"
+                   src="{{ profile.image_url or DEFAULT_PROFILE_IMAGE_URL }}"
+                   alt="Preview"
+                   onerror="this.src='{{ DEFAULT_PROFILE_IMAGE_URL }}'">
+              <div class="small text-muted" id="avatarStatus">No upload yet.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-lg-8">
+          <div class="card-soft p-4">
+            <div class="section-title mb-3">Account Details</div>
+            <form id="detailsForm" class="row g-3">
+              <input type="hidden" name="image_url" id="imageUrl" value="{{ profile.image_url or '' }}">
+
+              <div class="col-md-6">
+                <label class="form-label">Full name</label>
+                <input class="form-control" name="name" value="{{ profile.name }}" required>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Username</label>
+                <input class="form-control" value="{{ profile.username }}" disabled>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Phone</label>
+                <input class="form-control" name="phone" value="{{ profile.phone }}">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Email</label>
+                <input class="form-control" name="email" type="email" value="{{ profile.email }}">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Branch</label>
+                <input class="form-control" name="branch" value="{{ profile.branch }}">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Position</label>
+                <input class="form-control" name="position" value="{{ profile.position }}">
+              </div>
+              <div class="col-12">
+                <label class="form-label">Location</label>
+                <input class="form-control" name="location" value="{{ profile.location }}">
+              </div>
+              <div class="col-12 d-flex justify-content-end">
+                <button class="btn btn-primary" id="detailsBtn" type="submit">
+                  <span class="spinner-border spinner-border-sm me-2 d-none" id="detailsSpinner"></span>
+                  Save Changes
+                </button>
+              </div>
+            </form>
+            <div class="pt-3 small text-muted">
+              <div>Date registered: <span class="fw-semibold">{{ profile.date_registered or '--' }}</span></div>
+              <div>Last updated: <span class="fw-semibold">{{ profile.updated_at or '--' }}</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-12">
+          <div class="card-soft p-4">
+            <div class="section-title mb-3">Change Password</div>
+            <form id="passwordForm" class="row g-3">
+              <div class="col-md-4">
+                <label class="form-label">Current password</label>
+                <input class="form-control" name="current_password" type="password" required>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">New password</label>
+                <input class="form-control" name="new_password" type="password" minlength="8" required>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Confirm new password</label>
+                <input class="form-control" name="confirm_password" type="password" minlength="8" required>
+              </div>
+              <div class="col-12 d-flex justify-content-end">
+                <button class="btn btn-outline-primary" id="passwordBtn" type="submit">
+                  <span class="spinner-border spinner-border-sm me-2 d-none" id="passwordSpinner"></span>
+                  Update Password
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    (function(){
+      const alertHost = document.getElementById('alertHost');
+      const detailsForm = document.getElementById('detailsForm');
+      const passwordForm = document.getElementById('passwordForm');
+      const detailsBtn = document.getElementById('detailsBtn');
+      const passwordBtn = document.getElementById('passwordBtn');
+      const detailsSpinner = document.getElementById('detailsSpinner');
+      const passwordSpinner = document.getElementById('passwordSpinner');
+      const avatarInput = document.getElementById('avatarInput');
+      const changePhotoBtn = document.getElementById('changePhotoBtn');
+      const imageUrl = document.getElementById('imageUrl');
+      const avatarPreview = document.getElementById('avatarPreview');
+      const profileAvatar = document.getElementById('profileAvatar');
+      const avatarStatus = document.getElementById('avatarStatus');
+      const defaultAvatar = "{{ DEFAULT_PROFILE_IMAGE_URL }}";
+
+      function showAlert(type, message){
+        if (!alertHost) return;
+        alertHost.innerHTML = `
+          <div class="alert alert-${type} alert-dismissible fade show" role="alert">
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+          </div>`;
+      }
+
+      function toggleButton(btn, spinner, state){
+        btn.disabled = state;
+        spinner.classList.toggle('d-none', !state);
+      }
+
+      if (changePhotoBtn && avatarInput) {
+        changePhotoBtn.addEventListener('click', () => avatarInput.click());
+      }
+
+      if (avatarInput) {
+        avatarInput.addEventListener('change', async () => {
+          const file = avatarInput.files && avatarInput.files[0];
+          if (!file) return;
+          avatarStatus.textContent = 'Uploading...';
+          const form = new FormData();
+          form.append('file', file);
+          try {
+            const res = await fetch('/products/upload_image', { method: 'POST', body: form });
+            const data = await res.json();
+            if (!data.success) throw new Error(data.error || 'Upload failed.');
+            const url = data.image_url || defaultAvatar;
+            imageUrl.value = url;
+            avatarPreview.src = url;
+            profileAvatar.src = url;
+            avatarStatus.textContent = 'Upload complete.';
+          } catch (err) {
+            avatarStatus.textContent = 'Upload failed.';
+            showAlert('danger', err.message || 'Upload failed.');
+          }
+        });
+      }
+
+      detailsForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        toggleButton(detailsBtn, detailsSpinner, true);
+        const payload = Object.fromEntries(new FormData(detailsForm).entries());
+        try{
+          const res = await fetch('/accounting/profile/update', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+            credentials: 'same-origin'
+          });
+          const data = await res.json();
+          if (!data.ok) throw new Error(data.message || 'Update failed.');
+          showAlert('success', data.message || 'Profile updated.');
+        }catch(err){
+          showAlert('danger', err.message || 'Update failed.');
+        }finally{
+          toggleButton(detailsBtn, detailsSpinner, false);
+        }
+      });
+
+      passwordForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        toggleButton(passwordBtn, passwordSpinner, true);
+        const payload = Object.fromEntries(new FormData(passwordForm).entries());
+        try{
+          const res = await fetch('/accounting/profile/change_password', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+            credentials: 'same-origin'
+          });
+          const data = await res.json();
+          if (!data.ok) throw new Error(data.message || 'Password update failed.');
+          passwordForm.reset();
+          showAlert('success', data.message || 'Password updated.');
+        }catch(err){
+          showAlert('danger', err.message || 'Password update failed.');
+        }finally{
+          toggleButton(passwordBtn, passwordSpinner, false);
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

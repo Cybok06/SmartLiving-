@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>{{ role.capitalize() }} To-Do List ? SMARTLIVING EMPORIUM PLUS (Flux360)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0d6efd">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="icon" type="image/png" href="https://imagedelivery.net/h9fmMoa1o2c2P55TcWJGOg/10283f28-b9a0-4100-b254-19a854386800/public">
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f4f4f4;
+      padding-top: 80px;
+      opacity: 0;
+      transition: background 0.3s, color 0.3s, opacity 1s ease-in;
+    }
+
+    body.loaded {
+      opacity: 1;
+    }
+
+    body.dark-mode {
+      background-color: #121212;
+      color: #e0e0e0;
+    }
+
+    .navbar {
+      background-color: white;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      position: fixed;
+      top: 0;
+      width: 100%;
+      z-index: 1000;
+    }
+
+    .dark-mode .navbar {
+      background-color: #1e1e1e;
+    }
+
+    .navbar-brand img {
+      height: 40px;
+      margin-right: 10px;
+    }
+
+    .container {
+      max-width: 600px;
+      margin: auto;
+      background: white;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+      transition: transform 0.3s ease;
+    }
+
+    body.dark-mode .container {
+      background-color: #2a2a2a;
+    }
+
+    h2 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    .task-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #f9f9f9;
+      padding: 12px 15px;
+      border-radius: 8px;
+      margin-bottom: 10px;
+      transition: 0.3s;
+    }
+
+    body.dark-mode .task-item {
+      background-color: #3a3a3a;
+    }
+
+    .task-item.completed {
+      text-decoration: line-through;
+      opacity: 0.6;
+    }
+
+    .btn-sm {
+      padding: 5px 10px;
+    }
+
+    .back-btn {
+      margin-bottom: 15px;
+    }
+
+    .toggle-mode {
+      cursor: pointer;
+      font-size: 20px;
+      margin-left: auto;
+    }
+
+    .form-section {
+      display: none;
+      animation: fadeIn 0.5s ease-in;
+    }
+
+    .form-section.show {
+      display: block;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @media (max-width: 600px) {
+      .task-item {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .task-item form {
+        width: 100%;
+        margin-top: 8px;
+      }
+
+      .toggle-mode {
+        font-size: 18px;
+      }
+    }
+
+    .brand-lockup{ display:flex; align-items:center; gap:10px; }
+    .brand-logo{ height:32px; width:auto; object-fit:contain; }
+    .platform-logo{ height:18px; width:auto; object-fit:contain; }
+    .brand-footer{
+      margin-top: 24px;
+      padding-top: 14px;
+      border-top: 1px solid #e2e8f0;
+      color:#6b7280;
+      font-size:.85rem;
+      display:flex;
+      flex-wrap:wrap;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+    }
+    .brand-footer .brand-name-text{
+      font-weight:700;
+      letter-spacing:.04em;
+      text-transform:uppercase;
+      color:#0f172a;
+      font-size:.8rem;
+    }
+    body.dark-mode .brand-footer{
+      border-top-color:#2a2a2a;
+      color:#9ca3af;
+    }
+    body.dark-mode .brand-footer .brand-name-text{
+      color:#e5e7eb;
+    }
+  </style>
+</head>
+<body>
+
+<!-- Navbar -->
+<nav class="navbar navbar-expand-lg navbar-light px-4">
+  <a class="navbar-brand d-flex align-items-center" href="#">
+    <img src="https://imagedelivery.net/h9fmMoa1o2c2P55TcWJGOg/10283f28-b9a0-4100-b254-19a854386800/public" alt="SmartLiving Emporium Plus" class="brand-logo">
+    <strong>SMARTLIVING EMPORIUM PLUS</strong>
+  </a>
+  <span class="toggle-mode" onclick="toggleMode()">🌙</span>
+</nav>
+
+<div class="container mt-4">
+
+
+  <h2>{{ role.capitalize() }} To-Do List</h2>
+
+  <div class="text-center mb-3">
+    <button class="btn btn-outline-primary" onclick="toggleForm()">➕ Add New Task</button>
+  </div>
+
+  <form method="POST" class="mb-4 form-section" id="taskForm">
+    <div class="mb-3">
+      <input type="text" class="form-control" name="task" placeholder="Task description..." required>
+    </div>
+    <div class="mb-3">
+      <input type="date" class="form-control" name="due_date" required>
+    </div>
+    <div class="mb-3">
+      <select class="form-select" name="priority" required>
+        <option value="">Select priority</option>
+        <option value="Low">Low</option>
+        <option value="Medium">Medium</option>
+        <option value="High">High</option>
+      </select>
+    </div>
+    <button type="submit" class="btn btn-primary w-100">Add Task</button>
+  </form>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      {% for category, msg in messages %}
+        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+          {{ msg }}
+          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+      {% endfor %}
+    {% endif %}
+  {% endwith %}
+
+  {% for task in tasks %}
+    <div class="task-item {% if task.completed %}completed{% endif %}">
+      <div>
+        <strong>{{ task.task }}</strong><br>
+        <small>Due: {{ task.due_date }} | Priority: {{ task.priority }}</small>
+      </div>
+      <div>
+        {% if not task.completed %}
+          <form method="POST" action="{{ url_for('todo.complete_task', task_id=task._id) }}" class="d-inline">
+            <button class="btn btn-success btn-sm">Mark Done</button>
+          </form>
+        {% endif %}
+        <form method="POST" action="{{ url_for('todo.delete_task', task_id=task._id) }}" class="d-inline">
+          <button class="btn btn-danger btn-sm">Delete</button>
+        </form>
+      </div>
+    </div>
+  {% else %}
+    <p class="text-center text-muted">No tasks yet.</p>
+  {% endfor %}
+
+  <footer class="brand-footer">
+    <div class="brand-lockup">
+      <img src="https://imagedelivery.net/h9fmMoa1o2c2P55TcWJGOg/10283f28-b9a0-4100-b254-19a854386800/public"
+           alt="SmartLiving Emporium Plus"
+           class="brand-logo">
+      <span class="brand-name-text">SMARTLIVING EMPORIUM PLUS</span>
+    </div>
+    <div class="brand-lockup">
+      <span>Powered by Flux360</span>
+      <img src="https://imagedelivery.net/h9fmMoa1o2c2P55TcWJGOg/237a407f-0df9-4a4b-b777-7ecbaacc0300/public"
+           alt="Flux360"
+           class="platform-logo">
+    </div>
+  </footer>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+  function toggleMode() {
+    document.body.classList.toggle("dark-mode");
+    const toggleIcon = document.querySelector(".toggle-mode");
+    toggleIcon.textContent = document.body.classList.contains("dark-mode") ? "☀️" : "🌙";
+  }
+
+  function toggleForm() {
+    const form = document.getElementById("taskForm");
+    form.classList.toggle("show");
+  }
+
+  // Animate on load
+  window.addEventListener("DOMContentLoaded", () => {
+    document.body.classList.add("loaded");
+  });
+</script>
+</body>
+</html>

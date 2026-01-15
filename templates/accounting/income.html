@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en" class="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Investment &amp; Income</title>
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="icon" href="https://res.cloudinary.com/dljpgzbto/image/upload/v1743993646/company-logo_dksb23.jpg" type="image/png">
+</head>
+<body class="bg-slate-50 text-slate-900">
+  {% include 'accounting/sidebar.html' %}
+
+  <main class="min-h-screen p-5 lg:p-8 acc-with-sidebar space-y-6">
+    <header class="flex flex-col gap-2">
+      <h1 class="text-3xl font-extrabold">Investment &amp; Income</h1>
+      <p class="text-sm text-slate-600">Record discount, investment and other non-sales incomes for Profit &amp; Loss.</p>
+    </header>
+
+    <section class="rounded-xl bg-white border border-slate-200 p-4 space-y-4">
+      <div class="grid gap-3 md:grid-cols-5">
+        <div>
+          <label class="text-xs text-slate-500">From</label>
+          <input id="filterFrom" type="date" value="{{ start }}" class="w-full rounded-lg border-slate-200">
+        </div>
+        <div>
+          <label class="text-xs text-slate-500">To</label>
+          <input id="filterTo" type="date" value="{{ end }}" class="w-full rounded-lg border-slate-200">
+        </div>
+        <div>
+          <label class="text-xs text-slate-500">Category</label>
+          <select id="filterCategory" class="w-full rounded-lg border-slate-200">
+            <option value="All">All</option>
+            {% for cat in categories %}
+            <option value="{{ cat }}" {% if category == cat %}selected{% endif %}>{{ cat }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="text-xs text-slate-500">Status</label>
+          <select id="filterStatus" class="w-full rounded-lg border-slate-200">
+            {% for option in ['posted', 'draft', 'voided', 'all'] %}
+            <option value="{{ option }}" {% if status == option %}selected{% endif %}>{{ option.title() }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="text-xs text-slate-500">Search</label>
+          <input id="filterQuery" type="text" value="{{ search }}" placeholder="description" class="w-full rounded-lg border-slate-200">
+        </div>
+      </div>
+      <div class="flex flex-wrap gap-2">
+        <button id="applyFilters" class="rounded-lg bg-slate-900 text-white px-4 py-2 text-sm font-semibold">Apply</button>
+        <button id="exportCsv" class="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">Export CSV</button>
+        <button id="openForm" class="rounded-lg bg-emerald-600 text-white px-4 py-2 text-sm font-semibold">Add Income</button>
+      </div>
+    </section>
+
+    <section class="grid gap-4 lg:grid-cols-4">
+      <article class="rounded-xl bg-white border border-slate-200 p-4 shadow-sm">
+        <div class="text-xs text-slate-500">Period total</div>
+        <div class="text-2xl font-bold">GHS {{ totals.total|round(2) }}</div>
+      </article>
+      <article class="rounded-xl bg-white border border-slate-200 p-4 shadow-sm">
+        <div class="text-xs text-slate-500">Discount Received</div>
+        <div class="text-2xl font-bold">GHS {{ totals.discount|round(2) }}</div>
+      </article>
+      <article class="rounded-xl bg-white border border-slate-200 p-4 shadow-sm">
+        <div class="text-xs text-slate-500">Investment Income</div>
+        <div class="text-2xl font-bold">GHS {{ totals.investment|round(2) }}</div>
+      </article>
+      <article class="rounded-xl bg-white border border-slate-200 p-4 shadow-sm">
+        <div class="text-xs text-slate-500">Other Incomes</div>
+        <div class="text-2xl font-bold">GHS {{ totals.other|round(2) }}</div>
+      </article>
+    </section>
+
+    <section class="rounded-xl bg-white border border-slate-200 p-4 space-y-6">
+      <div class="grid gap-4 lg:grid-cols-3">
+        <div class="col-span-1 space-y-2">
+          <h3 class="text-sm font-semibold text-slate-700">Daily income</h3>
+          <canvas id="lineChart" class="h-40"></canvas>
+        </div>
+        <div class="col-span-1 space-y-2">
+          <h3 class="text-sm font-semibold text-slate-700">Category share</h3>
+          <canvas id="donutChart" class="h-40"></canvas>
+        </div>
+        <div class="col-span-1 space-y-2">
+          <h3 class="text-sm font-semibold text-slate-700">Category totals</h3>
+          <canvas id="barChart" class="h-40"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <section class="rounded-xl bg-white border border-slate-200 p-4 space-y-4">
+      <div class="flex items-center justify-between">
+        <h2 class="text-lg font-semibold">Records</h2>
+        <span class="text-xs text-slate-500">Showing {{ rows|length }} records</span>
+      </div>
+      <div class="overflow-auto max-h-[420px]">
+        <table class="w-full text-sm text-left">
+          <thead class="bg-slate-50 text-slate-600">
+            <tr>
+              <th class="px-2 py-2">Date</th>
+              <th class="px-2 py-2">Category</th>
+              <th class="px-2 py-2">Description</th>
+              <th class="px-2 py-2">Amount</th>
+              <th class="px-2 py-2">Status</th>
+              <th class="px-2 py-2">Created by</th>
+              <th class="px-2 py-2">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="recordsTable">
+            {% for row in rows %}
+            <tr class="border-b border-slate-100">
+              <td class="px-2 py-1 whitespace-nowrap">{{ row.date }}</td>
+              <td class="px-2 py-1">{{ row.category }}</td>
+              <td class="px-2 py-1">{{ row.description }}</td>
+              <td class="px-2 py-1 font-semibold">GHS {{ row.amount|round(2) }}</td>
+              <td class="px-2 py-1">{{ row.status }}</td>
+              <td class="px-2 py-1">{{ row.created_by }}</td>
+              <td class="px-2 py-1">
+                <button class="text-xs text-rose-600 underline">Void</button>
+              </td>
+            </tr>
+            {% else %}
+            <tr>
+              <td colspan="7" class="text-center text-xs text-slate-400 py-4">No records found</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <div id="modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/60">
+      <div class="w-full max-w-xl rounded-2xl bg-white p-6 space-y-4">
+        <div class="flex items-center justify-between">
+          <h3 class="text-lg font-semibold">Add Income</h3>
+          <button id="closeModal" class="text-slate-500">✕</button>
+        </div>
+        <form id="incomeForm" class="grid gap-3 md:grid-cols-2">
+          <label class="flex flex-col">
+            <span class="text-xs text-slate-500">Date</span>
+            <input required name="date" type="date" class="rounded-lg border border-slate-200">
+          </label>
+          <label class="flex flex-col">
+            <span class="text-xs text-slate-500">Category</span>
+            <select required name="category" class="rounded-lg border border-slate-200">
+              {% for cat in categories %}
+              <option value="{{ cat }}">{{ cat }}</option>
+              {% endfor %}
+            </select>
+          </label>
+          <label class="flex flex-col">
+            <span class="text-xs text-slate-500">Amount</span>
+            <input required name="amount" type="number" min="0.01" step="0.01" class="rounded-lg border border-slate-200">
+          </label>
+          <label class="flex flex-col">
+            <span class="text-xs text-slate-500">Subcategory</span>
+            <input name="subcategory" type="text" class="rounded-lg border border-slate-200">
+          </label>
+          <label class="flex flex-col md:col-span-2">
+            <span class="text-xs text-slate-500">Description</span>
+            <textarea name="description" rows="2" class="rounded-lg border border-slate-200"></textarea>
+          </label>
+          <button type="submit" class="rounded-lg bg-emerald-600 text-white px-4 py-2 font-semibold md:col-span-2">Save income</button>
+        </form>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    const lineCtx = document.getElementById("lineChart").getContext("2d");
+    const donutCtx = document.getElementById("donutChart").getContext("2d");
+    const barCtx = document.getElementById("barChart").getContext("2d");
+    let lineChart, donutChart, barChart;
+
+    const fetchStats = async () => {
+      const params = new URLSearchParams({
+        from: document.getElementById("filterFrom").value,
+        to: document.getElementById("filterTo").value,
+        category: document.getElementById("filterCategory").value,
+        status: document.getElementById("filterStatus").value,
+        q: document.getElementById("filterQuery").value,
+      });
+      const res = await fetch(`{{ url_for('accounting_income.stats') }}?${params}`);
+      return res.json();
+    };
+
+    const renderCharts = async () => {
+      const data = await fetchStats();
+      const lineLabels = data.daily.labels;
+      const lineValues = data.daily.values;
+      const donutLabels = data.by_category.map(item => item.name);
+      const donutValues = data.by_category.map(item => item.total);
+      const barLabels = donutLabels;
+      const barValues = donutValues;
+
+      if (lineChart) lineChart.destroy();
+      if (donutChart) donutChart.destroy();
+      if (barChart) barChart.destroy();
+
+      lineChart = new Chart(lineCtx, {
+        type: "line",
+        data: {
+          labels: lineLabels,
+          datasets: [{ label: "Daily income", data: lineValues, borderColor: "#0ea5e9", backgroundColor: "rgba(14,165,233,0.2)", fill: true }],
+        },
+      });
+      donutChart = new Chart(donutCtx, {
+        type: "doughnut",
+        data: {
+          labels: donutLabels,
+          datasets: [{ data: donutValues, backgroundColor: ["#0ea5e9", "#f97316", "#22c55e", "#a855f7"] }],
+        },
+      });
+      barChart = new Chart(barCtx, {
+        type: "bar",
+        data: {
+          labels: barLabels,
+          datasets: [{ label: "Category totals", data: barValues, backgroundColor: "#2563eb" }],
+        },
+        options: { scales: { y: { beginAtZero: true } } },
+      });
+    };
+
+    document.getElementById("applyFilters").addEventListener("click", () => {
+      window.location = "{{ url_for('accounting_income.page') }}?" + new URLSearchParams({
+        from: document.getElementById("filterFrom").value,
+        to: document.getElementById("filterTo").value,
+        category: document.getElementById("filterCategory").value,
+        status: document.getElementById("filterStatus").value,
+        q: document.getElementById("filterQuery").value,
+      });
+    });
+
+    document.getElementById("exportCsv").addEventListener("click", () => {
+      const params = new URLSearchParams({
+        from: document.getElementById("filterFrom").value,
+        to: document.getElementById("filterTo").value,
+        category: document.getElementById("filterCategory").value,
+        status: document.getElementById("filterStatus").value,
+        q: document.getElementById("filterQuery").value,
+      });
+      window.location = "{{ url_for('accounting_income.export') }}?" + params;
+    });
+
+    document.getElementById("openForm").addEventListener("click", () => {
+      document.getElementById("modal").classList.remove("hidden");
+    });
+    document.getElementById("closeModal").addEventListener("click", () => {
+      document.getElementById("modal").classList.add("hidden");
+    });
+
+    document.getElementById("incomeForm").addEventListener("submit", async (evt) => {
+      evt.preventDefault();
+      const form = new FormData(evt.target);
+      const payload = Object.fromEntries(form);
+      const res = await fetch("{{ url_for('accounting_income.create_income') }}", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        window.location.reload();
+      } else {
+        alert(data.message || "Failed");
+      }
+    });
+
+    renderCharts();
+  </script>
+</body>
+</html>

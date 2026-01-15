@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Executive Users</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+  <link rel="icon" href="https://res.cloudinary.com/dljpgzbto/image/upload/v1743993646/company-logo_dksb23.jpg" type="image/png" />
+  <style>
+    body {
+      background-color: #f8f9fa;
+      padding-left: 260px;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    @media (max-width: 768px) { body { padding-left: 0; } }
+
+    .exec-shell { opacity: 0; transform: translateY(6px); transition: opacity .25s ease-out, transform .25s ease-out; }
+    body.page-ready .exec-shell { opacity: 1; transform: translateY(0); }
+
+    .exec-card {
+      background: #fff;
+      border: 1px solid rgba(226, 232, 240, 0.9);
+      border-radius: 16px;
+      box-shadow: 0 8px 18px rgba(15, 23, 42, 0.06);
+    }
+
+    .exec-skeleton {
+      border-radius: 14px;
+      background: linear-gradient(90deg, #f3f4f6 25%, #e5e7eb 37%, #f3f4f6 63%);
+      background-size: 400% 100%;
+      animation: shimmer 1.2s ease-in-out infinite;
+    }
+    @keyframes shimmer {
+      0% { background-position: -400px 0; }
+      100% { background-position: 400px 0; }
+    }
+  </style>
+</head>
+<body>
+  {% include 'executive_sidebar.html' %}
+
+  <div class="container mt-4 exec-shell" id="execShell">
+    <div id="execContent" data-initial-url="{{ initial_url }}">
+      {% if initial_html %}
+        {{ initial_html | safe }}
+      {% else %}
+        <div class="exec-card p-4">
+          <div class="exec-skeleton" style="height: 18px; width: 220px;"></div>
+          <div class="exec-skeleton mt-3" style="height: 14px; width: 60%;"></div>
+          <div class="row g-3 mt-2">
+            {% for _ in range(6) %}
+            <div class="col-12 col-md-6 col-lg-4">
+              <div class="exec-card p-3">
+                <div class="exec-skeleton" style="height: 120px;"></div>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script>
+    (function(){
+      const contentEl = document.getElementById('execContent');
+      if (!contentEl) return;
+
+      function showSkeleton(){
+        contentEl.innerHTML = `
+          <div class="exec-card p-4">
+            <div class="exec-skeleton" style="height: 18px; width: 220px;"></div>
+            <div class="exec-skeleton mt-3" style="height: 14px; width: 60%;"></div>
+            <div class="row g-3 mt-2">
+              ${Array.from({length:6}).map(()=>`<div class=\"col-12 col-md-6 col-lg-4\"><div class=\"exec-card p-3\"><div class=\"exec-skeleton\" style=\"height:120px;\"></div></div></div>`).join('')}
+            </div>
+          </div>
+        `;
+      }
+
+      function runScripts(scope){
+        const scripts = scope.querySelectorAll('script');
+        scripts.forEach(oldScript => {
+          const newScript = document.createElement('script');
+          if (oldScript.src) {
+            newScript.src = oldScript.src;
+          } else {
+            newScript.textContent = oldScript.textContent;
+          }
+          document.body.appendChild(newScript);
+          oldScript.remove();
+        });
+      }
+
+      async function loadExecPage(url, pushState = true){
+        if (!url) return;
+        showSkeleton();
+        try {
+          const res = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+          if (!res.ok) throw new Error('Failed to load page.');
+          const html = await res.text();
+          contentEl.innerHTML = html;
+          runScripts(contentEl);
+          if (pushState) window.history.pushState({ execUsers:true, url }, '', url);
+          document.body.classList.add('page-ready');
+        } catch (err) {
+          contentEl.innerHTML = `<div class="alert alert-danger">${err.message || 'Unable to load page.'}</div>`;
+        }
+      }
+
+      document.addEventListener('click', (e) => {
+        const link = e.target.closest('[data-ajax="true"]');
+        if (!link) return;
+        const url = link.getAttribute('href');
+        if (!url) return;
+        e.preventDefault();
+        loadExecPage(url, true);
+      });
+
+      document.addEventListener('submit', (e) => {
+        const form = e.target.closest('form[data-ajax="true"]');
+        if (!form) return;
+        e.preventDefault();
+        const params = new URLSearchParams(new FormData(form));
+        const url = form.getAttribute('action') || window.location.pathname;
+        loadExecPage(`${url}?${params.toString()}`, true);
+      });
+
+      window.addEventListener('popstate', (e) => {
+        const state = e.state;
+        if (state && state.execUsers && state.url) {
+          loadExecPage(state.url, false);
+        }
+      });
+
+      const initialUrl = contentEl.dataset.initialUrl || (window.location.pathname + window.location.search);
+      loadExecPage(initialUrl, false);
+    })();
+  </script>
+  {% include 'app_footer.html' %}
+</body>
+</html>

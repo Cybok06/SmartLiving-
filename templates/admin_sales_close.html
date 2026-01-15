@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <title>Admin -- Sales Close (Managers)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"/>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet"/>
+
+  <style>
+    :root{
+      --ink:#0f172a; --muted:#64748b; --soft:#f6f8fb; --brand:#0d6efd;
+      --ok:#16a34a; --ok-bg:#e7f8ec; --danger:#b91c1c; --danger-bg:#fdecec;
+    }
+    body{ background:var(--soft); color:var(--ink); }
+    .page-wrap{ max-width:1200px; margin:40px auto; padding:0 16px; }
+
+    .card-summary .icon{
+      width:46px;height:46px;border-radius:12px;display:flex;align-items:center;justify-content:center;
+      margin-right:12px;flex:0 0 auto;font-size:1.25rem
+    }
+    .stat{ font-weight:800; font-size:1.6rem; line-height:1; letter-spacing:.2px }
+    .substat{ font-size:.875rem; color:var(--muted) }
+    .muted{ color:var(--muted) }
+
+    .stat-close{ color:var(--ok) }
+    .card-close .icon{ background:var(--ok-bg); color:var(--ok) }
+
+    .stat-unclose{ color:var(--danger) }
+    .card-unclose .icon{ background:var(--danger-bg); color:var(--danger) }
+
+    .mgr-card .amt{ font-size:1.7rem; font-weight:800; letter-spacing:.3px }
+    .mgr-card .meta{ font-size:.9rem; color:var(--muted) }
+
+    .search-wrap .form-control{ border-radius:10px }
+
+    .spinner { display:inline-block; width:1rem; height:1rem; border:.2rem solid rgba(255,255,255,.35); border-top-color:#fff; border-radius:50%; animation:spin .8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    @media (max-width: 575.98px){
+      .stat{ font-size:1.35rem }
+      .page-wrap{ margin:20px auto; }
+    }
+
+    /* History table */
+    #historyTable thead th{ position:sticky; top:0; background:#fff; z-index:2 }
+  </style>
+</head>
+<body>
+
+{% include 'admin_sidebar.html' %}
+
+<div class="page-wrap">
+  <div class="d-flex align-items-center justify-content-between mb-3">
+    <h3 class="m-0">Admin -- Sales Close (Managers)</h3>
+    <div class="muted small">Welcome, <span class="fw-semibold">{{ admin_name }}</span> · Today: <span class="fw-semibold">{{ today }}</span></div>
+  </div>
+
+  <!-- Summary cards: Close (green) and Unclose (red) -->
+  <div class="row g-3 mb-3">
+    <div class="col-12 col-lg-6">
+      <div class="card shadow-sm h-100 card-summary card-close">
+        <div class="card-body d-flex align-items-center">
+          <div class="icon"><i class="bi bi-bank2"></i></div>
+          <div>
+            <div class="muted">Close Total (Admin Account)</div>
+            <div class="stat stat-close" id="closeTotal">GHS {{ close_total }}</div>
+            <div class="substat">Total credited to admin (all time)</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12 col-lg-6">
+      <div class="card shadow-sm h-100 card-summary card-unclose">
+        <div class="card-body d-flex align-items-center">
+          <div class="icon"><i class="bi bi-exclamation-octagon"></i></div>
+          <div>
+            <div class="muted">Unclose Total (Managers)</div>
+            <div class="stat stat-unclose" id="uncloseTotal">GHS {{ unclose_total }}</div>
+            <div class="substat">Sum of all managers' balances (all time)</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Alerts -->
+  <div id="alertHost"></div>
+
+  <!-- Managers toolbar -->
+  <div class="d-flex justify-content-between align-items-center mb-2">
+    <div class="fw-bold">Managers -- Highest Balances First</div>
+    <div class="search-wrap" style="max-width: 260px;">
+      <input type="search" id="mgrSearch" class="form-control form-control-sm" placeholder="Search managers...">
+    </div>
+  </div>
+
+  <!-- Manager cards grid -->
+  <div class="row g-3" id="managersGrid">
+    {% if managers|length == 0 %}
+      <div class="col-12"><div class="alert alert-info">No managers found.</div></div>
+    {% else %}
+      {% for m in managers %}
+      <div class="col-12 col-md-6 col-lg-4 manager-col"
+           data-name="{{ m.name|lower }}" data-phone="{{ m.phone|lower }}" data-available="{{ m.available_num }}">
+        <div class="card mgr-card shadow-sm h-100" data-manager-id="{{ m._id }}">
+          <div class="card-body d-flex flex-column">
+            <div class="d-flex justify-content-between align-items-start">
+              <div>
+                <div class="fw-semibold">{{ m.name }}</div>
+                <div class="meta">{{ m.phone or '--' }}</div>
+              </div>
+              <span class="badge bg-light text-dark">{{ today }}</span>
+            </div>
+
+            <div class="mt-3 muted">Total (All Time)</div>
+            <div class="amt" id="bal-{{ m._id }}">GHS {{ m.available }}</div>
+
+            <div class="mt-auto d-flex gap-2">
+              <button class="btn btn-outline-primary btn-sm withdraw-btn"
+                      data-manager-id="{{ m._id }}"
+                      data-manager-name="{{ m.name|e }}"
+                      data-manager-phone="{{ m.phone|e }}"
+                      data-available="{{ m.available }}">
+                <i class="bi bi-cash-coin"></i> Withdraw
+              </button>
+
+              <button class="btn btn-outline-secondary btn-sm history-btn"
+                      data-manager-id="{{ m._id }}"
+                      data-manager-name="{{ m.name|e }}">
+                <i class="bi bi-clock-history"></i> History
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    {% endif %}
+  </div>
+</div>
+
+<!-- Withdraw Modal -->
+<div class="modal fade" id="withdrawModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0">
+      <div class="modal-header">
+        <h5 class="modal-title">Withdraw from <span id="wMgrName">Manager</span></h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form id="withdrawForm">
+        <div class="modal-body">
+          <input type="hidden" name="manager_id" id="wMgrId">
+          <div class="row g-3">
+            <div class="col-12">
+              <div class="small text-muted">Phone</div>
+              <div class="fw-semibold" id="wMgrPhone">--</div>
+            </div>
+            <div class="col-12">
+              <div class="small text-muted">Total (All Time)</div>
+              <div class="fw-bold">GHS <span id="wMgrAvail">0.00</span></div>
+            </div>
+            <div class="col-12">
+              <label class="form-label">Amount (GHS)</label>
+              <div class="input-group">
+                <input type="number" name="amount" id="wAmount" class="form-control" step="0.01" min="0.01" required>
+                <button class="btn btn-outline-secondary" type="button" id="wMaxBtn">Max</button>
+              </div>
+              <div class="form-text">This credits the Admin account and debits the manager's ledger (today first; else most recent day with funds).</div>
+            </div>
+            <div class="col-12">
+              <label class="form-label">Note (optional)</label>
+              <input type="text" name="note" id="wNote" class="form-control" placeholder="e.g., HQ collection">
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <div class="me-auto small text-muted">Today: <span class="fw-semibold">{{ today }}</span></div>
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" id="wSubmitBtn" class="btn btn-primary">
+            <span class="label">Withdraw</span>
+            <span class="spinner ms-2" style="display:none;"></span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- History Modal -->
+<div class="modal fade" id="historyModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content border-0">
+      <div class="modal-header">
+        <h5 class="modal-title">Withdrawal History -- <span id="hMgrName">Manager</span></h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div id="historyEmpty" class="text-center text-muted" style="display:none;">No withdrawals yet.</div>
+        <div class="table-responsive" id="historyWrap" style="max-height:420px; overflow:auto; display:none;">
+          <table class="table table-sm align-middle" id="historyTable">
+            <thead>
+              <tr>
+                <th style="min-width:120px">Date</th>
+                <th style="min-width:100px">Time</th>
+                <th style="min-width:140px">Amount (GHS)</th>
+                <th style="min-width:220px">Note</th>
+                <th style="min-width:180px">By</th>
+              </tr>
+            </thead>
+            <tbody id="historyTbody"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <div class="small text-muted" id="historyCount">0 records</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Data for JS -->
+<script id="managers-data" type="application/json">
+  {{ managers | tojson }}
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+(function(){
+  const managers = JSON.parse(document.getElementById('managers-data').textContent || '[]');
+  const mgrMap = Object.fromEntries(managers.map(m => [String(m._id), m]));
+
+  const alertHost   = document.getElementById('alertHost');
+  const managersGrid= document.getElementById('managersGrid');
+  const searchInput = document.getElementById('mgrSearch');
+
+  const withdrawModalEl = document.getElementById('withdrawModal');
+  const withdrawModal   = new bootstrap.Modal(withdrawModalEl);
+
+  const wMgrName  = document.getElementById('wMgrName');
+  const wMgrPhone = document.getElementById('wMgrPhone');
+  const wMgrAvail = document.getElementById('wMgrAvail');
+  const wMgrId    = document.getElementById('wMgrId');
+  const wAmount   = document.getElementById('wAmount');
+  const wMaxBtn   = document.getElementById('wMaxBtn');
+  const wNote     = document.getElementById('wNote');
+  const wSubmitBtn= document.getElementById('wSubmitBtn');
+  const wLabel    = wSubmitBtn.querySelector('.label');
+  const wSpin     = wSubmitBtn.querySelector('.spinner');
+
+  const uncloseTotalEl = document.getElementById('uncloseTotal');
+  const closeTotalEl   = document.getElementById('closeTotal');
+
+  const historyModalEl = document.getElementById('historyModal');
+  const historyModal   = new bootstrap.Modal(historyModalEl);
+  const hMgrName       = document.getElementById('hMgrName');
+  const historyTbody   = document.getElementById('historyTbody');
+  const historyWrap    = document.getElementById('historyWrap');
+  const historyEmpty   = document.getElementById('historyEmpty');
+  const historyCount   = document.getElementById('historyCount');
+
+  function showAlert(kind, message){
+    const wrap = document.createElement('div');
+    wrap.className = `alert alert-${kind} alert-dismissible fade show`;
+    wrap.role = 'alert';
+    wrap.innerHTML = `${message}<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>`;
+    alertHost.innerHTML = '';
+    alertHost.appendChild(wrap);
+    setTimeout(()=>{ try{ bootstrap.Alert.getOrCreateInstance(wrap).close(); }catch(e){} }, 5000);
+  }
+
+  function setLoading(on){
+    wSubmitBtn.disabled = !!on;
+    wSpin.style.display = on ? 'inline-block' : 'none';
+    wLabel.textContent  = on ? 'Processing...' : 'Withdraw';
+  }
+
+  // Search/filter
+  searchInput?.addEventListener('input', ()=>{
+    const q = searchInput.value.trim().toLowerCase();
+    const cols = managersGrid.querySelectorAll('.manager-col');
+    cols.forEach(col=>{
+      const name = col.dataset.name || '';
+      const phone = col.dataset.phone || '';
+      col.style.display = (name.includes(q) || phone.includes(q)) ? '' : 'none';
+    });
+  });
+
+  // Reorder cards by available (desc)
+  function resortGrid(){
+    const cols = Array.from(managersGrid.querySelectorAll('.manager-col'));
+    cols.sort((a,b)=> (parseFloat(b.dataset.available || '0') - parseFloat(a.dataset.available || '0')));
+    cols.forEach(c => managersGrid.appendChild(c));
+  }
+
+  // Open Withdraw modal (delegated)
+  managersGrid.addEventListener('click', (e)=>{
+    const btn = e.target.closest('.withdraw-btn');
+    if(!btn) return;
+
+    const managerId = btn.dataset.managerId;
+    const managerName = btn.dataset.managerName || 'Manager';
+    const managerPhone = btn.dataset.managerPhone || '--';
+    const available = btn.dataset.available || '0.00';
+
+    wMgrId.value   = managerId;
+    wMgrName.textContent = managerName;
+    wMgrPhone.textContent= managerPhone;
+    wMgrAvail.textContent= available;
+    wAmount.value = '';
+    wNote.value   = '';
+
+    withdrawModal.show();
+    setTimeout(()=> wAmount.focus(), 200);
+  });
+
+  // Open History modal (delegated)
+  managersGrid.addEventListener('click', async (e)=>{
+    const btn = e.target.closest('.history-btn');
+    if(!btn) return;
+
+    const managerId = btn.dataset.managerId;
+    const managerName = btn.dataset.managerName || 'Manager';
+    hMgrName.textContent = managerName;
+
+    historyTbody.innerHTML = '';
+    historyEmpty.style.display = 'none';
+    historyWrap.style.display  = 'none';
+    historyCount.textContent = 'Loading...';
+
+    try{
+      const resp = await fetch(`/admin-close/manager/${managerId}/withdrawals`, { headers: { 'X-Requested-With': 'XMLHttpRequest' }});
+      const data = await resp.json().catch(()=> ({}));
+      if(resp.ok && data && data.ok){
+        const rows = data.withdrawals || [];
+        if(rows.length === 0){
+          historyEmpty.style.display = 'block';
+          historyWrap.style.display  = 'none';
+          historyCount.textContent = '0 records';
+        }else{
+          const frag = document.createDocumentFragment();
+          rows.forEach(r=>{
+            const tr = document.createElement('tr');
+            const amt = (typeof r.amount === 'number' ? r.amount : parseFloat(r.amount || '0')).toFixed(2);
+            tr.innerHTML = `
+              <td>${r.date || ''}</td>
+              <td>${r.time || ''}</td>
+              <td class="fw-semibold">GHS ${amt}</td>
+              <td>${(r.note || '').replace(/</g,'&lt;')}</td>
+              <td>${(r.by_admin_name || '')}</td>
+            `;
+            frag.appendChild(tr);
+          });
+          historyTbody.appendChild(frag);
+          historyWrap.style.display  = 'block';
+          historyEmpty.style.display = 'none';
+          historyCount.textContent = rows.length + ' record' + (rows.length===1?'':'s');
+        }
+      }else{
+        historyEmpty.style.display = 'block';
+        historyWrap.style.display  = 'none';
+        historyCount.textContent = '0 records';
+      }
+    }catch(err){
+      console.error(err);
+      historyEmpty.style.display = 'block';
+      historyWrap.style.display  = 'none';
+      historyCount.textContent = '0 records';
+    }
+
+    historyModal.show();
+  });
+
+  // Max button -> set amount to available
+  wMaxBtn.addEventListener('click', ()=>{
+    const raw = (wMgrAvail.textContent || '0').replaceAll(',', '').trim();
+    const num = parseFloat(raw);
+    if(!isNaN(num) && num > 0){
+      wAmount.value = num.toFixed(2);
+      wAmount.focus();
+    }
+  });
+
+  // Submit modal form
+  document.getElementById('withdrawForm').addEventListener('submit', async (e)=>{
+    e.preventDefault();
+
+    const manager_id = wMgrId.value;
+    const amount = parseFloat(wAmount.value || '0');
+
+    if(!manager_id){ showAlert('warning','No manager selected.'); return; }
+    if(!(amount > 0)){ showAlert('warning','Enter a positive amount.'); return; }
+
+    const fd = new FormData();
+    fd.set('manager_id', manager_id);
+    fd.set('amount', amount);
+    fd.set('note', wNote.value || '');
+
+    setLoading(true);
+    try{
+      const resp = await fetch("{{ url_for('admin_sales_close.admin_withdraw') }}", {
+        method: 'POST',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        body: fd
+      });
+      const data = await resp.json().catch(()=> ({}));
+
+      if(resp.ok && data && data.ok){
+        // Update manager card balance
+        const balEl = document.getElementById('bal-' + manager_id);
+        if(balEl && data.available){
+          balEl.textContent = 'GHS ' + data.available;
+        }
+        // Update the card's data-available for sorting
+        const col = managersGrid.querySelector(`.manager-col [data-manager-id="${manager_id}"]`)?.closest('.manager-col');
+        if(col && data.available){
+          const num = parseFloat(String(data.available).replaceAll(',', '')) || 0;
+          col.dataset.available = num.toString();
+        }
+
+        // Update button dataset available (so next modal open is accurate)
+        const btn = managersGrid.querySelector(`.withdraw-btn[data-manager-id="${manager_id}"]`);
+        if(btn && data.available){ btn.dataset.available = data.available; }
+        // Update modal info too
+        if(data.available){ wMgrAvail.textContent = data.available; }
+
+        // Update top cards
+        if(data.unclose_total){ uncloseTotalEl.textContent = 'GHS ' + data.unclose_total; }
+        if(data.close_total){   closeTotalEl.textContent   = 'GHS ' + data.close_total;   }
+
+        // Resort grid after amounts change
+        resortGrid();
+
+        showAlert('success', data.message || 'Withdrawal successful.');
+        bootstrap.Modal.getInstance(withdrawModalEl)?.hide();
+      }else{
+        showAlert('danger', (data && data.message) || 'Withdrawal failed.');
+      }
+    }catch(err){
+      console.error(err);
+      showAlert('danger', 'Network error. Please try again.');
+    }finally{
+      setLoading(false);
+    }
+  });
+
+  // Initial DOM sort (server already sorted; ensure on load)
+  resortGrid();
+})();
+</script>
+  {% include 'app_footer.html' %}
+
+</body>
+</html>

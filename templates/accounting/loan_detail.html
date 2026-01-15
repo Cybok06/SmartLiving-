@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en" class="light">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Loan Detail · TRUEtype Services</title>
+  <script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  <style>
+    body { font-family: "Inter", sans-serif; }
+    .diagram-box {
+      border-radius: 1rem;
+      padding: 1rem;
+      border: 1px dashed #cbd5f5;
+      background: linear-gradient(135deg, rgba(59,130,246,0.08), transparent);
+    }
+    .donut {
+      width: 140px;
+      height: 140px;
+      border-radius: 50%;
+      position: relative;
+    }
+    .donut::after {
+      content: "";
+      position: absolute;
+      inset: 20px;
+      border-radius: 50%;
+      background: #fff;
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-900">
+  {% include 'accounting/sidebar.html' %}
+  <main class="acc-with-sidebar min-h-screen p-6 lg:p-8">
+    <div class="max-w-6xl mx-auto space-y-6">
+      <header class="rounded-2xl bg-white p-5 shadow flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+        <div>
+          <p class="text-xs uppercase tracking-wide text-slate-500">Loan Detail</p>
+          <h1 class="text-2xl font-bold">{{ loan.loan_no }} · {{ loan.lender_name }}</h1>
+          <p class="text-sm text-slate-500">{{ loan.lender_type|title }} · {{ loan.start_date_dt.strftime("%Y-%m-%d") if loan.start_date_dt else "" }}</p>
+        </div>
+        <span class="px-4 py-1 rounded-full text-xs font-semibold {% if loan.status == 'active' %}bg-emerald-100 text-emerald-800{% else %}bg-slate-100 text-slate-600{% endif %}">
+          {{ loan.status|title }}
+        </span>
+      </header>
+
+      <section class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div class="rounded-2xl bg-white p-4 shadow space-y-3">
+          <p class="text-xs uppercase tracking-wide text-slate-500">Summary</p>
+          <div class="text-3xl font-semibold">GH¢ {{ "{:,.2f}".format(loan.outstanding) }}</div>
+          <div class="text-sm text-slate-500 space-y-1">
+            <p>Principal GH¢ {{ "{:,.2f}".format(loan.principal) }}</p>
+            <p>Monthly GH¢ {{ loan.monthly_payment_display }}</p>
+            <p>Rate {{ "{:,.2f}".format(loan.annual_interest_rate) }}% · {{ loan.term_months }} mo</p>
+            <p>Last posted period: {{ last_posted_period or "--" }}</p>
+            <p>Interest due this month: GH¢ {{ "{:,.2f}".format(interest_due_month or 0) }}</p>
+          </div>
+        </div>
+        <div class="rounded-2xl bg-white p-4 shadow space-y-3">
+          <p class="text-xs uppercase tracking-wide text-slate-500">Auto posting</p>
+          <div class="text-sm text-slate-500">
+            <p>Next period: {{ auto_next_period or "--" }}</p>
+            <p class="text-sm mt-2">
+              Interest posting keeps the balance sheet liability accurate while payments reduce principal.
+            </p>
+          </div>
+          <button id="postInterestBtn" data-period-key="{{ selected_period.period_key or '' }}"
+            class="w-full px-3 py-2 rounded-full bg-primary text-white text-xs font-semibold">
+            Post Interest for Selected Period
+          </button>
+        </div>
+        <div class="rounded-2xl bg-white p-4 shadow space-y-3">
+          <p class="text-xs uppercase tracking-wide text-slate-500">Auto ledger</p>
+          <div class="text-sm text-slate-600 space-y-1">
+            <p class="font-semibold">Posting logic mini-ledger</p>
+            <p>Post Interest → Dr Interest Expense · Cr Loan Liability</p>
+            <p>Record Payment → Dr Loan Liability · Cr Bank/Cash</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="rounded-2xl bg-white p-6 shadow space-y-6">
+        <div class="grid grid-cols-1 lg:grid-cols-[2fr,_1fr] gap-6">
+          <div class="space-y-3">
+            <div class="flex items-center justify-between">
+              <h2 class="text-xl font-semibold">Amortization schedule</h2>
+              <div class="text-xs uppercase tracking-wider text-slate-400">Status · {{ schedule_status }}</div>
+            </div>
+            <div class="grid grid-cols-1 gap-2">
+              <div class="grid grid-cols-12 text-xs text-slate-500 font-semibold uppercase border-b border-slate-200 pb-2">
+                <span class="col-span-1">#</span>
+                <span class="col-span-2">Due</span>
+                <span class="col-span-2">Opening</span>
+                <span class="col-span-2">Payment</span>
+                <span class="col-span-1">Interest</span>
+                <span class="col-span-1">Principal</span>
+                <span class="col-span-2">Closing</span>
+                <span class="col-span-1 text-right">Status</span>
+              </div>
+              {% for row in schedule %}
+                <button
+                  type="button"
+                  data-interest="{{ row.interest }}"
+                  data-principal="{{ row.principal }}"
+                  data-period-key="{{ row.period_key }}"
+                  class="grid grid-cols-12 text-sm text-slate-700 hover:bg-slate-50 rounded-xl p-2 transition border border-transparent hover:border-slate-200"
+                >
+                  <span class="col-span-1 font-semibold">{{ row.period_no }}</span>
+                  <span class="col-span-2">{{ row.period_date_dt.strftime("%Y-%m-%d") }}</span>
+                  <span class="col-span-2">GH¢ {{ "{:,.2f}".format(row.opening_balance) }}</span>
+                  <span class="col-span-2">GH¢ {{ "{:,.2f}".format(row.payment) }}</span>
+                  <span class="col-span-1">GH¢ {{ "{:,.2f}".format(row.interest) }}</span>
+                  <span class="col-span-1">GH¢ {{ "{:,.2f}".format(row.principal) }}</span>
+                  <span class="col-span-2">GH¢ {{ "{:,.2f}".format(row.closing_balance) }}</span>
+                  <span class="col-span-1 text-right">
+                    <span class="px-2 py-0.5 text-[11px] rounded-full {% if row.status == 'due' %}bg-slate-100 text-slate-500{% elif row.status == 'posted' %}bg-amber-100 text-amber-800{% else %}bg-emerald-100 text-emerald-800{% endif %}">
+                      {{ row.status|title }}
+                    </span>
+                  </span>
+                </button>
+              {% else %}
+                <div class="text-sm text-slate-500 py-4 text-center">No schedule entries yet.</div>
+              {% endfor %}
+            </div>
+          </div>
+          <div class="space-y-6">
+            <div class="diagram-box space-y-3">
+              <p class="text-xs uppercase tracking-wide text-slate-500">How a loan flows</p>
+              <div class="grid grid-cols-1 gap-3 text-sm">
+                <div class="flex items-center gap-3">
+                  <span class="material-symbols-outlined text-slate-400">payments</span>
+                  Loan received
+                </div>
+                <div class="flex items-center gap-3">
+                  <span class="material-symbols-outlined text-slate-400">date_range</span>
+                  Interest accrues monthly
+                </div>
+                <div class="flex items-center gap-3">
+                  <span class="material-symbols-outlined text-slate-400">receipt_long</span>
+                  Payment collected
+                </div>
+                <div class="flex items-center gap-3">
+                  <span class="material-symbols-outlined text-slate-400">trending_down</span>
+                  Balance reduces
+                </div>
+              </div>
+            </div>
+            <div class="rounded-2xl bg-slate-900 text-white p-4 flex flex-col items-center gap-3">
+              <div class="donut" id="paymentDonut" style="background: conic-gradient(#f97316 0deg, #f97316 90deg, #38bdf8 90deg);"></div>
+              <div class="text-sm text-slate-300">
+                Interest vs Principal for selected period
+              </div>
+              <div class="text-sm space-y-1">
+                <div id="interestValue">Interest: GH¢ {{ "{:,.2f}".format(selected_period.interest or 0) }}</div>
+                <div id="principalValue">Principal: GH¢ {{ "{:,.2f}".format(selected_period.principal or 0) }}</div>
+              </div>
+            </div>
+            <div class="rounded-2xl bg-white p-4 border border-slate-200 space-y-3">
+              <p id="payment-panel" class="text-xs uppercase tracking-wide text-slate-500">Record payment</p>
+              <form id="paymentForm" class="space-y-3">
+                <input type="hidden" name="period_key" value="{{ selected_period.period_key or '' }}" id="selectedPeriodKey"/>
+                <label class="text-xs text-slate-500">Amount (GH¢)</label>
+                <input name="amount" type="number" step="0.01" min="0.01" required class="w-full border rounded-xl px-3 py-2 focus:border-slate-600 focus:ring-0"/>
+                <label class="text-xs text-slate-500">Account name</label>
+                <input name="account_name" value="Bank / Cash" class="w-full border rounded-xl px-3 py-2 focus:border-slate-600 focus:ring-0"/>
+                <label class="text-xs text-slate-500">Account code</label>
+                <input name="account_code" value="BANK-001" class="w-full border rounded-xl px-3 py-2 focus:border-slate-600 focus:ring-0"/>
+                <button
+                  type="submit"
+                  class="w-full rounded-full bg-accent text-white font-semibold py-2 text-sm"
+                >
+                  Record payment
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="rounded-2xl bg-white p-5 shadow">
+        <h2 class="text-lg font-semibold mb-3">Recent postings</h2>
+        <div class="space-y-2 text-sm">
+          {% for posting in postings %}
+            <div class="flex justify-between items-center">
+              <div>
+                <p class="text-slate-600 text-xs uppercase tracking-wide">Period {{ posting.period_key }}</p>
+                <p class="text-slate-900">Interest: GH¢ {{ "{:,.2f}".format(posting.amount_interest or 0) }}, Principal: GH¢ {{ "{:,.2f}".format(posting.amount_principal or 0) }}</p>
+              </div>
+              <div class="text-xs text-slate-500">Ref {{ posting.journal_ref }}</div>
+            </div>
+          {% else %}
+            <div class="text-sm text-slate-500">No postings yet.</div>
+          {% endfor %}
+        </div>
+      </section>
+    </div>
+  </main>
+  <script>
+    (function () {
+      const scheduleRows = document.querySelectorAll("[data-period-key]");
+      const donut = document.getElementById("paymentDonut");
+      const interestValue = document.getElementById("interestValue");
+      const principalValue = document.getElementById("principalValue");
+      const selectedInput = document.getElementById("selectedPeriodKey");
+      const postBtn = document.getElementById("postInterestBtn");
+
+      function clamp(value) {
+        const v = parseFloat(value) || 0;
+        return Math.min(Math.max(v, 0), Number.MAX_SAFE_INTEGER);
+      }
+
+      function updateDonut(interest, principal, key) {
+        const total = clamp(interest) + clamp(principal);
+        const interestPct = total ? (interest / total) * 100 : 50;
+        const principalPct = total ? (principal / total) * 100 : 50;
+        const angle = (interestPct / 100) * 360;
+        donut.style.background = `conic-gradient(#f97316 0deg, #f97316 ${angle}deg, #38bdf8 ${angle}deg, #38bdf8 360deg)`;
+        interestValue.textContent = `Interest: GH¢ ${interest.toFixed(2)}`;
+        principalValue.textContent = `Principal: GH¢ ${principal.toFixed(2)}`;
+        selectedInput.value = key;
+        if (postBtn) {
+          postBtn.dataset.periodKey = key;
+        }
+      }
+
+      scheduleRows.forEach(row => {
+        row.addEventListener("click", () => {
+          const interest = parseFloat(row.dataset.interest) || 0;
+          const principal = parseFloat(row.dataset.principal) || 0;
+          const key = row.dataset.periodKey || "";
+          updateDonut(interest, principal, key);
+        });
+      });
+
+      const initialInterest = parseFloat("{{ selected_period.interest or 0 }}") || 0;
+      const initialPrincipal = parseFloat("{{ selected_period.principal or 0 }}") || 0;
+      const initialKey = "{{ (selected_period.period_key or '') | e }}";
+      updateDonut(initialInterest, initialPrincipal, initialKey);
+
+      document.getElementById("paymentForm").addEventListener("submit", function (e) {
+        e.preventDefault();
+        const form = e.target;
+        const data = new FormData(form);
+        fetch("{{ url_for('acc_loans.record_payment', loan_id=loan.id) }}", {
+          method: "POST",
+          body: data,
+          headers: { "X-Requested-With": "XMLHttpRequest" },
+        })
+          .then(res => res.json())
+          .then(json => {
+            if (!json.ok) {
+              alert(json.message || "Payment could not be recorded.");
+              return;
+            }
+            alert(`Payment booked. Outstanding: GH¢ ${json.outstanding.toFixed(2)}`);
+            window.location.reload();
+          });
+      });
+
+      document.getElementById("postInterestBtn").addEventListener("click", function () {
+        const periodKey = postBtn.dataset.periodKey;
+        if (!periodKey) {
+          alert("Select a period first.");
+          return;
+        }
+        const form = new FormData();
+        form.append("period_key", periodKey);
+        fetch("{{ url_for('acc_loans.post_interest', loan_id=loan.id) }}", {
+          method: "POST",
+          body: form,
+          headers: { "X-Requested-With": "XMLHttpRequest" },
+        })
+          .then(res => res.json())
+          .then(json => {
+            if (!json.ok) {
+              alert(json.message || "Interest could not be posted.");
+              return;
+            }
+            alert("Interest posted.");
+            window.location.reload();
+          });
+      });
+    })();
+  </script>
+</body>
+</html>

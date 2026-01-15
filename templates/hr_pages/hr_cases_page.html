@@ -1,0 +1,815 @@
+{# templates/hr_pages/hr_cases_page.html #}
+{% extends "hr_pages/hr_shell.html" %}
+{% block hr_content %}
+
+<style>
+  .hr-cases .kpi{
+    border:1px solid rgba(0,0,0,.06);
+    border-radius: 14px;
+    background: #fff;
+    box-shadow: 0 .35rem 1.1rem rgba(0,0,0,.06);
+  }
+  .hr-cases .kpi .icon{
+    width:40px;height:40px;border-radius:12px;
+    display:flex;align-items:center;justify-content:center;
+    background: rgba(220,53,69,.08);
+  }
+  .hr-cases .pill{
+    display:inline-flex;align-items:center;gap:.35rem;
+    padding:.25rem .6rem;border-radius:999px;font-size:.72rem;
+    border:1px solid rgba(0,0,0,.08); background:#fff;
+  }
+  .hr-cases .extra-small{ font-size:.72rem; }
+  .hr-cases .nowrap{ white-space:nowrap; }
+  .hr-cases .sev{
+    font-weight:700;
+    border:1px solid rgba(0,0,0,.08);
+  }
+  .hr-cases .sev-critical{ background: rgba(220,53,69,.08); color:#b02a37; border-color: rgba(220,53,69,.18);}
+  .hr-cases .sev-high{ background: rgba(255,193,7,.16); color:#8a6d00; border-color: rgba(255,193,7,.22);}
+  .hr-cases .sev-normal{ background: rgba(13,110,253,.08); color:#0b5ed7; border-color: rgba(13,110,253,.18);}
+  .hr-cases .sev-low{ background: rgba(25,135,84,.08); color:#146c43; border-color: rgba(25,135,84,.18);}
+
+  .hr-cases .status-badge{
+    font-weight:650;border:1px solid rgba(0,0,0,.08);
+  }
+  .hr-cases .timeline{
+    border-left:2px solid rgba(0,0,0,.08);
+    padding-left: .9rem;
+  }
+  .hr-cases .timeline .item{
+    position:relative;
+    margin-bottom:.75rem;
+  }
+  .hr-cases .timeline .item:before{
+    content:"";
+    width:10px;height:10px;border-radius:99px;
+    background: rgba(13,110,253,.45);
+    border:2px solid #fff;
+    position:absolute;
+    left:-1.12rem;
+    top:.25rem;
+    box-shadow:0 0 0 2px rgba(0,0,0,.08);
+  }
+</style>
+
+<div class="hr-cases">
+
+  <!-- Header -->
+  <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
+    <div>
+      <div class="d-flex align-items-center gap-2 flex-wrap">
+        <h4 class="mb-0">Cases & Disciplinary Tracking</h4>
+        <span class="pill" style="background:rgba(220,53,69,.08); border-color:rgba(220,53,69,.18); color:#b02a37;">
+          <i class="bi bi-shield-exclamation"></i> Compliance
+        </span>
+      </div>
+      <div class="text-muted small mt-1">
+        Record policy breaches (theft, fraud, misconduct), update statuses, and add follow-ups until closure.
+      </div>
+    </div>
+
+    <div class="d-flex gap-2 flex-wrap">
+      <button class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#hrCaseModal">
+        <i class="bi bi-plus-circle me-1"></i>New Case
+      </button>
+      <button class="btn btn-outline-secondary btn-sm" id="hrCasesRefreshBtn">
+        <i class="bi bi-arrow-clockwise me-1"></i>Refresh
+      </button>
+    </div>
+  </div>
+
+  <!-- KPIs -->
+  <div class="row g-3 mb-3">
+    <div class="col-12 col-md-3">
+      <div class="kpi p-3 h-100">
+        <div class="d-flex align-items-start justify-content-between">
+          <div>
+            <div class="text-muted small">Total cases</div>
+            <div class="display-6 fw-bold mb-0" id="kpiTotal">--</div>
+            <div class="text-muted extra-small">Across all employees</div>
+          </div>
+          <div class="icon"><i class="bi bi-collection fs-5"></i></div>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-md-3">
+      <div class="kpi p-3 h-100">
+        <div class="d-flex align-items-start justify-content-between">
+          <div>
+            <div class="text-muted small">Open cases</div>
+            <div class="display-6 fw-bold mb-0" id="kpiOpen">--</div>
+            <div class="text-muted extra-small">Open / Review / Escalated</div>
+          </div>
+          <div class="icon" style="background:rgba(255,193,7,.16);"><i class="bi bi-hourglass-split fs-5 text-warning"></i></div>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-md-3">
+      <div class="kpi p-3 h-100">
+        <div class="d-flex align-items-start justify-content-between">
+          <div>
+            <div class="text-muted small">Overdue follow-up</div>
+            <div class="display-6 fw-bold mb-0" id="kpiOverdue">--</div>
+            <div class="text-muted extra-small">Due date passed</div>
+          </div>
+          <div class="icon" style="background:rgba(13,110,253,.08);"><i class="bi bi-bell fs-5 text-primary"></i></div>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-md-3">
+      <div class="kpi p-3 h-100">
+        <div class="d-flex align-items-start justify-content-between">
+          <div>
+            <div class="text-muted small">High / Critical</div>
+            <div class="display-6 fw-bold mb-0" id="kpiHigh">--</div>
+            <div class="text-muted extra-small">Priority cases</div>
+          </div>
+          <div class="icon" style="background:rgba(220,53,69,.08);"><i class="bi bi-exclamation-triangle fs-5 text-danger"></i></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-3">
+    <!-- Left: Top offenders -->
+    <div class="col-12 col-lg-4">
+      <div class="card border-0 shadow-sm mb-3">
+        <div class="card-header bg-white">
+          <div class="fw-semibold">Top Open Cases</div>
+          <div class="text-muted small">Employees with most unresolved cases.</div>
+        </div>
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+              <thead class="table-light small">
+                <tr>
+                  <th>Employee</th>
+                  <th class="text-end">Open</th>
+                </tr>
+              </thead>
+              <tbody id="topCasesBody" class="small">
+                <tr><td colspan="2" class="text-muted fst-italic">Loading...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick filters -->
+      <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white">
+          <div class="fw-semibold">Filters</div>
+          <div class="text-muted small">Search + refine case list.</div>
+        </div>
+        <div class="card-body">
+          <div class="row g-2">
+            <div class="col-12">
+              <label class="form-label small mb-1">Search</label>
+              <input class="form-control form-control-sm" id="fQ" placeholder="Name, title, details...">
+            </div>
+            <div class="col-6">
+              <label class="form-label small mb-1">Status</label>
+              <select class="form-select form-select-sm" id="fStatus"></select>
+            </div>
+            <div class="col-6">
+              <label class="form-label small mb-1">Severity</label>
+              <select class="form-select form-select-sm" id="fSeverity"></select>
+            </div>
+            <div class="col-12">
+              <label class="form-label small mb-1">Branch</label>
+              <select class="form-select form-select-sm" id="fBranch">
+                <option value="">All Branches</option>
+              </select>
+            </div>
+            <div class="col-6">
+              <label class="form-label small mb-1">From</label>
+              <input type="date" class="form-control form-control-sm" id="fFrom">
+            </div>
+            <div class="col-6">
+              <label class="form-label small mb-1">To</label>
+              <input type="date" class="form-control form-control-sm" id="fTo">
+            </div>
+            <div class="col-12 d-grid mt-1">
+              <button class="btn btn-outline-secondary btn-sm" id="applyFiltersBtn">
+                <i class="bi bi-funnel me-1"></i>Apply Filters
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: Cases table -->
+    <div class="col-12 col-lg-8">
+      <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white d-flex justify-content-between align-items-center flex-wrap gap-2">
+          <div>
+            <div class="fw-semibold">Case Register</div>
+            <div class="text-muted small">Click "View" for timeline + follow-ups.</div>
+          </div>
+          <div class="d-flex gap-2 align-items-center">
+            <select class="form-select form-select-sm" id="limitSel" style="width:120px;">
+              <option value="100">100</option>
+              <option value="200" selected>200</option>
+              <option value="500">500</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="card-body">
+          <div id="casesLoading" class="text-muted small fst-italic">Loading cases...</div>
+
+          <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+              <thead class="table-light small">
+                <tr>
+                  <th style="width:22%;">Employee</th>
+                  <th style="width:18%;">Case</th>
+                  <th style="width:12%;">Severity</th>
+                  <th style="width:14%;">Status</th>
+                  <th style="width:12%;">Due</th>
+                  <th style="width:10%;" class="text-end">Follow-ups</th>
+                  <th style="width:12%;" class="text-end">Action</th>
+                </tr>
+              </thead>
+              <tbody id="casesBody" class="small"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= New Case Modal ================= -->
+  <div class="modal fade" id="hrCaseModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header">
+          <div>
+            <h5 class="modal-title mb-0">Record New Case</h5>
+            <div class="text-muted small">This will be saved in employee profile and visible globally.</div>
+          </div>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row g-3">
+            <div class="col-12">
+              <label class="form-label small mb-1">Employee</label>
+              <select class="form-select form-select-sm" id="caseEmp"></select>
+              <div class="text-muted extra-small mt-1" id="caseEmpHint"></div>
+            </div>
+
+            <div class="col-6">
+              <label class="form-label small mb-1">Case Type</label>
+              <input class="form-control form-control-sm" id="caseType" placeholder="Misconduct / Theft / Fraud / ...">
+            </div>
+
+            <div class="col-6">
+              <label class="form-label small mb-1">Severity</label>
+              <select class="form-select form-select-sm" id="caseSeverity"></select>
+            </div>
+
+            <div class="col-12">
+              <label class="form-label small mb-1">Title</label>
+              <input class="form-control form-control-sm" id="caseTitle" placeholder="Short title (required)">
+            </div>
+
+            <div class="col-12">
+              <label class="form-label small mb-1">Details</label>
+              <textarea class="form-control form-control-sm" id="caseDetails" rows="4" placeholder="Evidence, notes, witnesses, steps taken..."></textarea>
+            </div>
+
+            <div class="col-6">
+              <label class="form-label small mb-1">Incident Date</label>
+              <input type="date" class="form-control form-control-sm" id="caseIncidentDate">
+            </div>
+
+            <div class="col-6">
+              <label class="form-label small mb-1">Follow-up Due Date</label>
+              <input type="date" class="form-control form-control-sm" id="caseDueDate">
+            </div>
+
+            <div class="col-6">
+              <label class="form-label small mb-1">Estimated Loss Amount (optional)</label>
+              <input type="number" step="0.01" class="form-control form-control-sm" id="caseLoss" placeholder="0.00">
+            </div>
+
+            <div class="col-6">
+              <label class="form-label small mb-1">Status</label>
+              <select class="form-select form-select-sm" id="caseStatus"></select>
+            </div>
+
+            <div class="col-12 d-grid">
+              <button class="btn btn-danger btn-sm" id="caseSaveBtn">
+                <span class="spinner-border spinner-border-sm me-1 d-none" id="caseSaveSpin"></span>
+                Save Case
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= View Case Modal ================= -->
+  <div class="modal fade" id="hrCaseViewModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header">
+          <div>
+            <h5 class="modal-title mb-0" id="viewTitle">Case</h5>
+            <div class="text-muted small" id="viewSub">--</div>
+          </div>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+
+        <div class="modal-body">
+          <div class="d-flex gap-2 flex-wrap mb-2" id="viewBadges"></div>
+
+          <div class="mb-3">
+            <div class="fw-semibold">Details</div>
+            <div class="text-muted small" id="viewDetails">--</div>
+          </div>
+
+          <div class="row g-2 mb-3">
+            <div class="col-12 col-md-6">
+              <label class="form-label small mb-1">Update Status</label>
+              <select class="form-select form-select-sm" id="viewStatusSel"></select>
+            </div>
+            <div class="col-12 col-md-6">
+              <label class="form-label small mb-1">Status note (optional)</label>
+              <input class="form-control form-control-sm" id="viewStatusNote" placeholder="Short note...">
+            </div>
+            <div class="col-12 d-grid">
+              <button class="btn btn-outline-primary btn-sm" id="viewUpdateStatusBtn">
+                <span class="spinner-border spinner-border-sm me-1 d-none" id="viewUpdateStatusSpin"></span>
+                Update Status
+              </button>
+            </div>
+          </div>
+
+          <hr>
+
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <div class="fw-semibold">Follow-ups</div>
+            <span class="text-muted extra-small" id="viewFollowCount">--</span>
+          </div>
+
+          <div class="timeline mb-3" id="viewTimeline"></div>
+
+          <div class="row g-2">
+            <div class="col-12">
+              <label class="form-label small mb-1">Add Follow-up</label>
+              <textarea class="form-control form-control-sm" id="viewFollowNote" rows="3" placeholder="What happened? Next action?"></textarea>
+            </div>
+            <div class="col-12 d-grid">
+              <button class="btn btn-primary btn-sm" id="viewAddFollowBtn">
+                <span class="spinner-border spinner-border-sm me-1 d-none" id="viewAddFollowSpin"></span>
+                Add Follow-up
+              </button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+(function(){
+  const EP = {
+    employees: "{{ url_for('hr.cases_employees_list') }}",
+    list: "{{ url_for('hr.cases_list') }}",
+    stats: "{{ url_for('hr.cases_stats') }}",
+    addCaseTpl: "{{ url_for('hr.add_case', employee_id='__E__') }}",
+    updateStatusTpl: "{{ url_for('hr.update_case_status', employee_id='__E__', case_id='__C__') }}",
+    addFollowTpl: "{{ url_for('hr.add_case_followup', employee_id='__E__', case_id='__C__') }}",
+  };
+
+  const refreshBtn = document.getElementById('hrCasesRefreshBtn');
+
+  const kpiTotal = document.getElementById('kpiTotal');
+  const kpiOpen  = document.getElementById('kpiOpen');
+  const kpiOver  = document.getElementById('kpiOverdue');
+  const kpiHigh  = document.getElementById('kpiHigh');
+
+  const topBody  = document.getElementById('topCasesBody');
+  const loadEl   = document.getElementById('casesLoading');
+  const tbody    = document.getElementById('casesBody');
+
+  const fQ = document.getElementById('fQ');
+  const fStatus = document.getElementById('fStatus');
+  const fSeverity = document.getElementById('fSeverity');
+  const fBranch = document.getElementById('fBranch');
+  const fFrom = document.getElementById('fFrom');
+  const fTo = document.getElementById('fTo');
+  const applyBtn = document.getElementById('applyFiltersBtn');
+  const limitSel = document.getElementById('limitSel');
+
+  // new case modal
+  const caseEmp = document.getElementById('caseEmp');
+  const caseEmpHint = document.getElementById('caseEmpHint');
+  const caseType = document.getElementById('caseType');
+  const caseSeverity = document.getElementById('caseSeverity');
+  const caseTitle = document.getElementById('caseTitle');
+  const caseDetails = document.getElementById('caseDetails');
+  const caseIncidentDate = document.getElementById('caseIncidentDate');
+  const caseDueDate = document.getElementById('caseDueDate');
+  const caseLoss = document.getElementById('caseLoss');
+  const caseStatus = document.getElementById('caseStatus');
+  const caseSaveBtn = document.getElementById('caseSaveBtn');
+  const caseSaveSpin = document.getElementById('caseSaveSpin');
+
+  // view modal
+  const viewTitle = document.getElementById('viewTitle');
+  const viewSub   = document.getElementById('viewSub');
+  const viewBadges= document.getElementById('viewBadges');
+  const viewDetails = document.getElementById('viewDetails');
+  const viewStatusSel = document.getElementById('viewStatusSel');
+  const viewStatusNote= document.getElementById('viewStatusNote');
+  const viewUpdateStatusBtn = document.getElementById('viewUpdateStatusBtn');
+  const viewUpdateStatusSpin= document.getElementById('viewUpdateStatusSpin');
+  const viewTimeline = document.getElementById('viewTimeline');
+  const viewFollowCount = document.getElementById('viewFollowCount');
+  const viewFollowNote = document.getElementById('viewFollowNote');
+  const viewAddFollowBtn = document.getElementById('viewAddFollowBtn');
+  const viewAddFollowSpin= document.getElementById('viewAddFollowSpin');
+
+  let employees = [];
+  let branches = [];
+  let severities = [];
+  let statuses = [];
+  let casesCache = [];
+  let currentCase = null;
+
+  function toast(type, msg){
+    window.showToast ? window.showToast(type, msg) : alert(msg);
+  }
+
+  function qs(obj){
+    const p = new URLSearchParams();
+    Object.keys(obj || {}).forEach(k => {
+      const v = obj[k];
+      if(v !== undefined && v !== null && String(v).trim() !== '') p.set(k, v);
+    });
+    const s = p.toString();
+    return s ? `?${s}` : '';
+  }
+
+  function sevBadge(s){
+    const sev = (s||'Normal');
+    let cls = 'badge rounded-pill sev ';
+    if(sev === 'Critical') cls += 'sev-critical';
+    else if(sev === 'High') cls += 'sev-high';
+    else if(sev === 'Low') cls += 'sev-low';
+    else cls += 'sev-normal';
+    return `<span class="${cls}">${sev}</span>`;
+  }
+
+  function statusBadge(s){
+    const st = (s||'Open');
+    let cls = 'badge rounded-pill status-badge ';
+    if(st === 'Closed' || st === 'Resolved') cls += 'bg-success-subtle text-success-emphasis';
+    else if(st === 'Escalated') cls += 'bg-danger-subtle text-danger-emphasis';
+    else if(st === 'Under Review') cls += 'bg-warning-subtle text-warning-emphasis';
+    else cls += 'bg-primary-subtle text-primary-emphasis';
+    return `<span class="${cls}">${st}</span>`;
+  }
+
+  function postJson(url, payload){
+    return fetch(url, {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json' },
+      body: JSON.stringify(payload || {})
+    })
+    .then(r => r.json())
+    .then(d => {
+      if(!d.ok) throw new Error(d.message || 'Failed');
+      return d;
+    });
+  }
+
+  function loadEmployees(){
+    return fetch(EP.employees)
+      .then(r => r.json())
+      .then(d => {
+        if(!d.ok) throw new Error(d.message || 'Failed to load employees');
+        employees = d.employees || [];
+        branches = d.branches || [];
+
+        caseEmp.innerHTML = employees.map(e => `<option value="${e.id}">${e.name}${e.branch ? ' -- ' + e.branch : ''}</option>`).join('');
+
+        // branches filter
+        fBranch.innerHTML = `<option value="">All Branches</option>` + branches.map(b => `<option value="${b}">${b}</option>`).join('');
+        caseEmpHint.textContent = '';
+
+        caseEmp.addEventListener('change', () => {
+          const emp = employees.find(x => x.id === caseEmp.value);
+          caseEmpHint.textContent = emp ? `${emp.employee_code || ''} -  ${emp.role || ''}` : '';
+        });
+        const first = employees[0];
+        if(first) caseEmpHint.textContent = `${first.employee_code || ''} -  ${first.role || ''}`;
+      });
+  }
+
+  function loadCases(){
+    loadEl.classList.remove('d-none');
+    loadEl.textContent = 'Loading cases...';
+    tbody.innerHTML = '';
+
+    const params = {
+      q: (fQ.value || '').trim(),
+      status: fStatus.value || '',
+      severity: fSeverity.value || '',
+      branch: fBranch.value || '',
+      from: fFrom.value || '',
+      to: fTo.value || '',
+      limit: limitSel.value || '200',
+    };
+
+    return fetch(EP.list + qs(params))
+      .then(r => r.json())
+      .then(d => {
+        if(!d.ok) throw new Error(d.message || 'Failed to load');
+        casesCache = d.cases || [];
+
+        severities = d.severities || [];
+        statuses   = d.statuses || [];
+
+        // init filters if empty
+        if(!fSeverity.options.length){
+          fSeverity.innerHTML = `<option value="">All Severities</option>` + severities.map(s => `<option value="${s}">${s}</option>`).join('');
+        }
+        if(!fStatus.options.length){
+          fStatus.innerHTML = `<option value="">All Status</option>` + statuses.map(s => `<option value="${s}">${s}</option>`).join('');
+        }
+
+        // init modal dropdowns
+        caseSeverity.innerHTML = severities.map(s => `<option value="${s}">${s}</option>`).join('');
+        caseStatus.innerHTML = statuses.map(s => `<option value="${s}">${s}</option>`).join('');
+        viewStatusSel.innerHTML = statuses.map(s => `<option value="${s}">${s}</option>`).join('');
+
+        // kpis
+        const k = d.kpis || {};
+        kpiTotal.textContent = k.total ?? casesCache.length ?? 0;
+        kpiOpen.textContent  = k.open ?? 0;
+        kpiOver.textContent  = k.overdue ?? 0;
+        kpiHigh.textContent  = k.high_critical ?? 0;
+
+        renderTable(casesCache);
+        loadEl.classList.add('d-none');
+      })
+      .catch(err => {
+        console.error(err);
+        loadEl.textContent = 'Failed to load cases.';
+        tbody.innerHTML = `<tr><td colspan="7" class="text-danger small">Failed to load cases.</td></tr>`;
+      });
+  }
+
+  function loadStats(){
+    return fetch(EP.stats)
+      .then(r => r.json())
+      .then(d => {
+        if(!d.ok) throw new Error(d.message || 'Failed');
+        renderTop(d.top || []);
+      })
+      .catch(err => {
+        console.error(err);
+        renderTop([]);
+      });
+  }
+
+  function renderTop(list){
+    topBody.innerHTML = '';
+    if(!list.length){
+      topBody.innerHTML = `<tr><td colspan="2" class="text-muted fst-italic">No open cases yet.</td></tr>`;
+      return;
+    }
+    list.forEach(x => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${x.name || '--'}</td>
+        <td class="text-end fw-semibold">${x.count ?? 0}</td>
+      `;
+      topBody.appendChild(tr);
+    });
+  }
+
+  function renderTable(items){
+    tbody.innerHTML = '';
+    if(!items.length){
+      tbody.innerHTML = `<tr><td colspan="7" class="text-muted fst-italic">No cases found.</td></tr>`;
+      return;
+    }
+
+    items.forEach(c => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>
+          <div class="fw-semibold">${c.employee_name || '--'}</div>
+          <div class="text-muted extra-small">${c.employee_code || ''} -  ${c.branch || ''}</div>
+        </td>
+        <td>
+          <div class="fw-semibold">${c.title || '--'}</div>
+          <div class="text-muted extra-small">${c.case_type || 'Misconduct'} -  ${c.created_at || ''}</div>
+        </td>
+        <td class="nowrap">${sevBadge(c.severity)}</td>
+        <td class="nowrap">${statusBadge(c.status)}</td>
+        <td class="nowrap">${c.due_date || '--'}</td>
+        <td class="text-end fw-semibold">${c.followups_count ?? 0}</td>
+        <td class="text-end">
+          <button class="btn btn-outline-primary btn-sm" data-view="1" data-e="${c.employee_id}" data-c="${c.id}">
+            <i class="bi bi-eye me-1"></i>View
+          </button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    tbody.querySelectorAll('button[data-view]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const e = btn.getAttribute('data-e');
+        const c = btn.getAttribute('data-c');
+        const found = casesCache.find(x => x.employee_id === e && x.id === c);
+        if(!found) return;
+        openView(found);
+      });
+    });
+  }
+
+  function openView(c){
+    currentCase = c;
+
+    viewTitle.textContent = c.title || 'Case';
+    viewSub.textContent = `${c.employee_name || ''} -  ${c.employee_code || ''} -  ${c.branch || ''}`;
+
+    viewBadges.innerHTML = `
+      ${sevBadge(c.severity)}
+      ${statusBadge(c.status)}
+      <span class="pill"><i class="bi bi-tag"></i> ${c.case_type || 'Misconduct'}</span>
+      ${c.due_date ? `<span class="pill"><i class="bi bi-alarm"></i> Due: ${c.due_date}</span>` : ''}
+      ${c.loss_amount != null ? `<span class="pill"><i class="bi bi-cash"></i> Loss: ${c.loss_amount}</span>` : ''}
+    `;
+
+    viewDetails.textContent = c.details || '--';
+    viewStatusSel.value = c.status || 'Open';
+    viewStatusNote.value = '';
+
+    // timeline
+    renderTimeline(c.followups || []);
+
+    // open modal
+    const modalEl = document.getElementById('hrCaseViewModal');
+    const modal = new bootstrap.Modal(modalEl);
+    modal.show();
+  }
+
+  function renderTimeline(followups){
+    const f = followups || [];
+    viewFollowCount.textContent = `${f.length} follow-up(s)`;
+
+    if(!f.length){
+      viewTimeline.innerHTML = `<div class="text-muted small fst-italic">No follow-ups yet.</div>`;
+      return;
+    }
+
+    viewTimeline.innerHTML = f.map(x => `
+      <div class="item">
+        <div class="small fw-semibold">${x.note || ''}</div>
+        <div class="text-muted extra-small">${x.created_at || ''} -  ${x.recorded_by || ''}</div>
+      </div>
+    `).join('');
+  }
+
+  // Create new case
+  caseSaveBtn.addEventListener('click', async () => {
+    const employee_id = caseEmp.value;
+    const payload = {
+      case_type: (caseType.value || 'Misconduct').trim(),
+      severity: caseSeverity.value,
+      status: caseStatus.value,
+      title: (caseTitle.value || '').trim(),
+      details: (caseDetails.value || '').trim(),
+      incident_date: (caseIncidentDate.value || '').trim(),
+      due_date: (caseDueDate.value || '').trim(),
+      loss_amount: (caseLoss.value || '').trim(),
+    };
+
+    if(!employee_id || !payload.title){
+      toast('warning', 'Employee and Title are required.');
+      return;
+    }
+
+    caseSaveBtn.disabled = true;
+    caseSaveSpin.classList.remove('d-none');
+
+    try{
+      await postJson(EP.addCaseTpl.replace('__E__', employee_id), payload);
+      toast('success', 'Case recorded.');
+
+      // reset
+      caseTitle.value = '';
+      caseDetails.value = '';
+      caseLoss.value = '';
+      caseType.value = '';
+
+      // close modal
+      const modalEl = document.getElementById('hrCaseModal');
+      const modal = bootstrap.Modal.getInstance(modalEl);
+      modal && modal.hide();
+
+      await init();
+    }catch(err){
+      console.error(err);
+      toast('danger', err.message || 'Failed');
+    }finally{
+      caseSaveBtn.disabled = false;
+      caseSaveSpin.classList.add('d-none');
+    }
+  });
+
+  // Update status
+  viewUpdateStatusBtn.addEventListener('click', async () => {
+    if(!currentCase) return;
+
+    const payload = {
+      status: viewStatusSel.value,
+      note: (viewStatusNote.value || '').trim(),
+    };
+
+    viewUpdateStatusBtn.disabled = true;
+    viewUpdateStatusSpin.classList.remove('d-none');
+
+    try{
+      await postJson(
+        EP.updateStatusTpl.replace('__E__', currentCase.employee_id).replace('__C__', currentCase.id),
+        payload
+      );
+      toast('success', 'Status updated.');
+      await init();
+
+      // refresh currentCase from cache
+      const updated = casesCache.find(x => x.employee_id === currentCase.employee_id && x.id === currentCase.id);
+      if(updated) openView(updated);
+    }catch(err){
+      console.error(err);
+      toast('danger', err.message || 'Failed');
+    }finally{
+      viewUpdateStatusBtn.disabled = false;
+      viewUpdateStatusSpin.classList.add('d-none');
+    }
+  });
+
+  // Add follow-up
+  viewAddFollowBtn.addEventListener('click', async () => {
+    if(!currentCase) return;
+    const note = (viewFollowNote.value || '').trim();
+    if(!note){
+      toast('warning', 'Follow-up note is required.');
+      return;
+    }
+
+    viewAddFollowBtn.disabled = true;
+    viewAddFollowSpin.classList.remove('d-none');
+
+    try{
+      await postJson(
+        EP.addFollowTpl.replace('__E__', currentCase.employee_id).replace('__C__', currentCase.id),
+        { note }
+      );
+      toast('success', 'Follow-up added.');
+      viewFollowNote.value = '';
+      await init();
+
+      const updated = casesCache.find(x => x.employee_id === currentCase.employee_id && x.id === currentCase.id);
+      if(updated) openView(updated);
+    }catch(err){
+      console.error(err);
+      toast('danger', err.message || 'Failed');
+    }finally{
+      viewAddFollowBtn.disabled = false;
+      viewAddFollowSpin.classList.add('d-none');
+    }
+  });
+
+  // Filters
+  applyBtn.addEventListener('click', () => init());
+  refreshBtn.addEventListener('click', () => init());
+
+  function init(){
+    return Promise.resolve()
+      .then(loadEmployees)
+      .then(loadStats)
+      .then(loadCases)
+      .catch(console.error);
+  }
+
+  init();
+
+})();
+</script>
+
+{% endblock %}

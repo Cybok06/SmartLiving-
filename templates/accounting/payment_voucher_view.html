@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Payment Voucher - {{ v.pv_number }}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" href="https://res.cloudinary.com/dljpgzbto/image/upload/v1743993646/company-logo_dksb23.jpg" type="image/png">
+
+  <style>
+    :root {
+      --ink: #111827;
+      --muted: #6b7280;
+      --line: #d1d5db;
+      --accent: #0d6efd;
+      --accent-soft: #e0f2fe;
+      --bg: #f3f4f6;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      padding: 24px;
+      color: var(--ink);
+    }
+
+    .pv-shell {
+      max-width: 960px;
+      margin: 0 auto;
+    }
+
+    .pv-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .pv-btn {
+      border-radius: 999px;
+      border: 1px solid #cbd5f5;
+      background: #fff;
+      padding: 6px 14px;
+      font-size: 0.85rem;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      box-shadow: 0 2px 5px rgba(15,23,42,.12);
+    }
+    .pv-btn-primary {
+      background: linear-gradient(135deg, #0d6efd, #2563eb);
+      color: #fff;
+      border-color: transparent;
+    }
+
+    .pv-page {
+      background: #fff;
+      border: 1px solid var(--line);
+      box-shadow: 0 12px 30px rgba(15,23,42,.12);
+      padding: 24px 32px 28px;
+    }
+
+    /* header */
+    .pv-header {
+      display: grid;
+      grid-template-columns: 1.2fr 1.6fr;
+      gap: 8px;
+      align-items: center;
+      border-bottom: 3px solid var(--accent-soft);
+      padding-bottom: 8px;
+      margin-bottom: 10px;
+    }
+
+    .pv-logo img {
+      max-width: 180px;
+      height: auto;
+      display: block;
+      object-fit: contain;
+      border-radius: 50%;
+    height: 100PX;
+    }
+
+    .pv-title-block {
+      text-align: right;
+    }
+
+    .pv-company {
+      font-size: 1.05rem;
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+
+    .pv-subtitle {
+      margin-top: 4px;
+      font-weight: 600;
+      letter-spacing: .16em;
+      color: #f97316;
+      text-transform: uppercase;
+      font-size: 0.78rem;
+    }
+
+    .pv-meta-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 16px;
+      margin-top: 10px;
+      font-size: 0.8rem;
+    }
+
+    .pv-meta-box {
+      border: 1px solid var(--line);
+      padding: 4px 8px;
+    }
+
+    .pv-meta-label {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      color: var(--muted);
+      letter-spacing: .08em;
+    }
+
+    .pv-meta-value {
+      font-weight: 600;
+      margin-top: 2px;
+    }
+
+    /* payee / method */
+    .pv-payee-row {
+      margin-top: 12px;
+      font-size: 0.85rem;
+    }
+
+    .pv-payee-row span.label {
+      font-weight: 600;
+    }
+
+    .pv-payee-row .line {
+      border-bottom: 1px solid var(--line);
+      display: inline-block;
+      min-width: 260px;
+      padding-bottom: 2px;
+    }
+
+    .pv-method-row {
+      margin-top: 6px;
+      display: flex;
+      gap: 18px;
+      font-size: 0.82rem;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .pv-method-option {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .pv-check {
+      width: 11px;
+      height: 11px;
+      border: 1px solid var(--ink);
+      display: inline-block;
+      border-radius: 2px;
+      text-align: center;
+      font-size: 9px;
+      line-height: 11px;
+    }
+
+    /* table */
+    table.pv-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 14px;
+      font-size: 0.84rem;
+    }
+
+    table.pv-table th,
+    table.pv-table td {
+      border: 1px solid var(--line);
+      padding: 6px 8px;
+      vertical-align: top;
+    }
+
+    table.pv-table th {
+      background: #f9fafb;
+      text-align: left;
+      font-size: 0.78rem;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+    }
+
+    .pv-desc-col { width: 72%; }
+    .pv-amt-col  { width: 28%; text-align: right; }
+
+    .pv-currency {
+      font-size: 0.7rem;
+      color: var(--muted);
+    }
+
+    /* totals block */
+    .pv-totals {
+      width: 55%;
+      margin-left: auto;
+      margin-top: 10px;
+      border-collapse: collapse;
+      font-size: 0.8rem;
+    }
+
+    .pv-totals td {
+      border: 1px solid var(--line);
+      padding: 4px 8px;
+    }
+
+    .pv-totals tr td:first-child {
+      text-align: right;
+      font-weight: 500;
+      background: #f9fafb;
+    }
+
+    .pv-totals .pv-total-row td:first-child {
+      font-weight: 700;
+    }
+
+    .pv-totals .pv-total-row td:last-child {
+      font-weight: 700;
+      font-size: 0.9rem;
+    }
+
+    /* amount in words */
+    .pv-words {
+      border: 1px solid var(--line);
+      margin-top: 12px;
+      font-size: 0.82rem;
+      display: grid;
+      grid-template-columns: 140px 1fr;
+    }
+
+    .pv-words-label {
+      padding: 6px 8px;
+      border-right: 1px solid var(--line);
+      background: #f9fafb;
+      font-weight: 500;
+    }
+
+    .pv-words-text {
+      padding: 6px 10px;
+      min-height: 32px;
+    }
+
+    /* signatures section */
+    .pv-signature-title {
+      margin-top: 18px;
+      text-align: center;
+      font-size: 0.82rem;
+      color: var(--muted);
+      letter-spacing: .16em;
+      text-transform: uppercase;
+    }
+
+    table.pv-sign-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 4px;
+      font-size: 0.8rem;
+    }
+
+    table.pv-sign-table th,
+    table.pv-sign-table td {
+      border: 1px solid var(--line);
+      padding: 5px 8px;
+    }
+
+    table.pv-sign-table th {
+      background: #f9fafb;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      text-align: left;
+    }
+
+    table.pv-sign-table td:nth-child(2),
+    table.pv-sign-table td:nth-child(3),
+    table.pv-sign-table td:nth-child(4) {
+      min-width: 140px;
+    }
+
+    .pv-dots {
+      display: inline-block;
+      width: 100%;
+      border-bottom: 1px dotted #9ca3af;
+      height: 1.1em;
+    }
+
+    .pv-sign-label {
+      font-weight: 500;
+    }
+
+    .pv-recipient-row {
+      margin-top: 10px;
+      font-size: 0.8rem;
+    }
+
+    .pv-recipient-label {
+      font-weight: 500;
+      margin-right: 6px;
+    }
+
+    .pv-recipient-line {
+      border-bottom: 1px dotted #9ca3af;
+      display: inline-block;
+      min-width: 280px;
+      padding-bottom: 2px;
+    }
+
+    @media print {
+      body {
+        padding: 0;
+        background: #fff;
+      }
+      .pv-shell {
+        margin: 0;
+      }
+      .pv-actions {
+        display: none !important;
+      }
+      .pv-page {
+        border: none;
+        box-shadow: none;
+        padding: 12mm 16mm 14mm;
+      }
+    }
+  </style>
+</head>
+<body>
+    {% include 'accounting/sidebar.html' %}
+
+<div class="pv-shell">
+
+  <!-- on-screen buttons -->
+  <div class="pv-actions no-print">
+    <button class="pv-btn pv-btn-primary" onclick="window.print()">
+      🖨 Print / Download PDF
+    </button>
+  </div>
+
+  <div class="pv-page">
+
+    <!-- header -->
+    <header class="pv-header">
+      <div class="pv-logo">
+        <img src="https://res.cloudinary.com/dljpgzbto/image/upload/v1743993646/company-logo_dksb23.jpg"
+             alt="TRUEtype Group Holdings logo">
+      </div>
+      <div class="pv-title-block">
+        <div class="pv-company">SMARTLIVING EMPORIUM PLUS</div>
+        <div class="pv-subtitle">PAYMENT VOUCHER</div>
+
+        <div class="pv-meta-row">
+          <div class="pv-meta-box">
+            <div class="pv-meta-label">PV No.</div>
+            <div class="pv-meta-value">{{ v.pv_number }}</div>
+          </div>
+          <div class="pv-meta-box" style="min-width: 130px;">
+            <div class="pv-meta-label">Date</div>
+            <div class="pv-meta-value">
+              {% if v.date %}
+                {{ v.date.strftime('%d-%b-%Y') }}
+              {% else %}
+                &nbsp;
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- payee + method -->
+    <section class="pv-payee-row">
+      <span class="label">To:&nbsp;</span>
+      <span class="line">
+        {{ v.to_name or '' }}
+      </span>
+    </section>
+
+    <section class="pv-method-row">
+      <div class="pv-method-option">
+        <span class="pv-check">
+          {% if v.pay_method == 'cash' %}✓{% endif %}
+        </span>
+        <span>Cash</span>
+      </div>
+
+      <div class="pv-method-option">
+        <span class="pv-check">
+          {% if v.pay_method != 'cash' %}✓{% endif %}
+        </span>
+        <span>TFR/Chq No:</span>
+        <span class="line" style="min-width: 120px;">
+          {{ v.tfr_no or '' }}
+        </span>
+      </div>
+
+      <div class="pv-method-option">
+        <span>Bank:</span>
+        <span class="line" style="min-width: 160px;">
+          {{ v.bank_name or '' }}
+        </span>
+      </div>
+    </section>
+
+    <!-- lines -->
+    <table class="pv-table">
+      <thead>
+      <tr>
+        <th class="pv-desc-col">Description</th>
+        <th class="pv-amt-col">Amount <span class="pv-currency">(GH₵)</span></th>
+      </tr>
+      </thead>
+      <tbody>
+      {% if v.line_items %}
+        {% for item in v.line_items %}
+          <tr>
+            <td>{{ item.description }}</td>
+            <td class="pv-amt-col">
+              {{ '%.2f'|format(item.amount or 0) }}
+            </td>
+          </tr>
+        {% endfor %}
+      {% else %}
+        <!-- keep blank rows for handwriting -->
+        {% for i in range(6) %}
+          <tr>
+            <td style="height:26px;"></td>
+            <td class="pv-amt-col"></td>
+          </tr>
+        {% endfor %}
+      {% endif %}
+      </tbody>
+    </table>
+
+    <!-- totals -->
+    <table class="pv-totals">
+      <tr>
+        <td>Sub-Total</td>
+        <td class="pv-amt-col">
+          {{ '%.2f'|format(v.subtotal or 0) }}
+        </td>
+      </tr>
+      <tr>
+        <td>VAT &amp; NHIL ({{ '%.2f'|format(v.vat_pct or 0) }}%)</td>
+        <td class="pv-amt-col">
+          {{ '%.2f'|format(v.vat_amount or 0) }}
+        </td>
+      </tr>
+      <tr>
+        <td>Withholding Tax ({{ '%.2f'|format(v.wht_pct or 0) }}%)</td>
+        <td class="pv-amt-col">
+          {{ '%.2f'|format(v.wht_amount or 0) }}
+        </td>
+      </tr>
+      <tr class="pv-total-row">
+        <td>Total Amount Payable</td>
+        <td class="pv-amt-col">
+          {{ '%.2f'|format(v.total_payable or 0) }}
+        </td>
+      </tr>
+    </table>
+
+    <!-- amount in words -->
+    <div class="pv-words">
+      <div class="pv-words-label">Amount in words:</div>
+      <div class="pv-words-text">
+        {{ v.amount_in_words or '' }}
+      </div>
+    </div>
+
+    <!-- signatures -->
+    <div class="pv-signature-title">Signature</div>
+
+    <table class="pv-sign-table">
+      <thead>
+      <tr>
+        <th style="width: 26%;">Role</th>
+        <th style="width: 27%;">Name</th>
+        <th style="width: 27%;">Signature</th>
+        <th style="width: 20%;">Date</th>
+      </tr>
+      </thead>
+      <tbody>
+      <tr>
+        <td class="pv-sign-label">Prepared By</td>
+        <td>
+          {% if v.prepared_by %}
+            {{ v.prepared_by }}
+          {% else %}
+            <span class="pv-dots"></span>
+          {% endif %}
+        </td>
+        <td><span class="pv-dots"></span></td>
+        <td><span class="pv-dots"></span></td>
+      </tr>
+      <tr>
+        <td class="pv-sign-label">Authorised By</td>
+        <td>
+          {% if v.authorised_by %}
+            {{ v.authorised_by }}
+          {% else %}
+            <span class="pv-dots"></span>
+          {% endif %}
+        </td>
+        <td><span class="pv-dots"></span></td>
+        <td><span class="pv-dots"></span></td>
+      </tr>
+      <tr>
+        <td class="pv-sign-label">Approved By</td>
+        <td>
+          {% if v.approved_by %}
+            {{ v.approved_by }}
+          {% else %}
+            <span class="pv-dots"></span>
+          {% endif %}
+        </td>
+        <td><span class="pv-dots"></span></td>
+        <td><span class="pv-dots"></span></td>
+      </tr>
+      <tr>
+        <td class="pv-sign-label">Received By</td>
+        <td>
+          {% if v.received_by %}
+            {{ v.received_by }}
+          {% else %}
+            <span class="pv-dots"></span>
+          {% endif %}
+        </td>
+        <td><span class="pv-dots"></span></td>
+        <td><span class="pv-dots"></span></td>
+      </tr>
+      </tbody>
+    </table>
+
+    <div class="pv-recipient-row">
+      <span class="pv-recipient-label">Recipient Payment Details / Tel:</span>
+      <span class="pv-recipient-line">
+        {{ v.recipient_details or '' }}
+      </span>
+    </div>
+
+  </div>
+</div>
+
+</body>
+</html>

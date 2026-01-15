@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>{{ product.name }} - Profile</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <link rel="icon" href="https://res.cloudinary.com/dljpgzbto/image/upload/v1743993646/company-logo_dksb23.jpg" type="image/png" />
+  <style>
+    :root{
+      --ink:#0b3b52; --muted:#64748b; --ring:#e9eaf1; --soft:#f6f8fb;
+    }
+    body{ font-family:'Segoe UI',system-ui,Arial; background:linear-gradient(135deg,#f5f7fb,#e9edf7); min-height:100vh; }
+    .dark-mode{ background:#101827; color:#f1f1f1; }
+    .dark-mode .card,.dark-mode .component-card,.dark-mode .section-surface{ background:#111827; color:#e5e7eb; border-color:#1f2937; }
+    .dark-mode .pill{ background:#111827; border-color:#374151; color:#e5e7eb; }
+    .dark-mode .muted{ color:#9ca3af; }
+    .dark-mode .divider{ background:#374151; }
+    .page-shell{ max-width:1200px; margin:1.5rem auto; padding:1.25rem; border-radius:18px; background:#ffffffdd; backdrop-filter:blur(10px); box-shadow:0 16px 40px rgba(15,23,42,.12); }
+    .dark-mode .page-shell{ background:rgba(15,23,42,.96); box-shadow:0 16px 40px rgba(0,0,0,.7); }
+    .brand{ display:flex; align-items:center; gap:.75rem; }
+    .brand img{ width:40px; height:40px; border-radius:12px; object-fit:cover; }
+    .product-header img{ width:100%; border-radius:14px; object-fit:cover; max-height:300px; }
+    .pill{ display:inline-flex; align-items:center; gap:.35rem; padding:.25rem .7rem; border:1px solid var(--ring); border-radius:999px; background:#f9fafb; font-size:.75rem; color:#0f172a; text-transform:uppercase; letter-spacing:.08em; font-weight:600; }
+    .stat{ display:inline-flex; align-items:center; gap:.35rem; padding:.25rem .65rem; border:1px solid var(--ring); border-radius:10px; background:#fff; font-size:.85rem; white-space:nowrap; }
+    .muted{ color:var(--muted); }
+    .section-title{ color:var(--ink); font-weight:700; letter-spacing:.02em; }
+    .divider{ height:1px; background:var(--ring); margin:1.25rem 0; }
+    .btn-clean{ border-radius:999px; padding-inline:1rem; font-weight:500; }
+    .search{ border-radius:999px; padding:.55rem 1rem; }
+    .section-surface{ background:#fff; border-radius:16px; padding:1.25rem 1.5rem; border:1px solid #e5e7eb; box-shadow:0 6px 18px rgba(15,23,42,.06); }
+    .component-card{ background:#fff; border-radius:14px; padding:0.75rem; box-shadow:0 4px 12px rgba(15,23,42,.06); border:1px solid var(--ring); display:flex; flex-direction:column; height:100%; position:relative; overflow:hidden; }
+    .component-card-header{ position:relative; border-radius:10px; overflow:hidden; }
+    .component-card img{ border-radius:10px; width:100%; height:150px; object-fit:cover; }
+    .component-pill{ position:absolute; top:.4rem; left:.4rem; padding:.2rem .55rem; border-radius:999px; font-size:.7rem; background:rgba(15,23,42,.86); color:#f9fafb; backdrop-filter:blur(6px); }
+    .component-body{ padding-top:.6rem; display:flex; flex-direction:column; flex:1; }
+    .card-img-top{ border-radius:12px 12px 0 0; width:100%; height:150px; object-fit:cover; }
+    .inventory-card{ border-radius:14px; overflow:hidden; border:1px solid #e5e7eb; box-shadow:0 4px 14px rgba(15,23,42,.05); transition:transform .12s ease, box-shadow .12s ease, border-color .12s ease; }
+    .inventory-card:hover{ transform:translateY(-2px); box-shadow:0 10px 24px rgba(15,23,42,.10); border-color:#cbd5f5; }
+    .badge-soft{ background:rgba(37,99,235,.06); color:#1d4ed8; border-radius:999px; font-size:.7rem; padding:.2rem .5rem; }
+    .dark-mode .badge-soft{ background:rgba(59,130,246,.18); color:#bfdbfe; }
+    #loadingOverlay{ display:none; position:fixed; inset:0; background:rgba(255,255,255,.88); z-index:9999; align-items:center; justify-content:center; flex-direction:column; }
+    .dark-mode #loadingOverlay{ background:rgba(0,0,0,.55); }
+    .spinner-lg{ width:3rem; height:3rem; }
+    .previewable-img{ cursor:zoom-in; transition:transform .12s ease, box-shadow .12s ease; }
+    .previewable-img:hover{ transform:scale(1.01); box-shadow:0 6px 18px rgba(15,23,42,.18); }
+    @media (max-width:576px){
+      .col-sm-6{ flex:0 0 50%; max-width:50%; }
+      .page-shell{ margin:0.75rem; padding:0.9rem; }
+    }
+    .calc-box{
+      border:1px solid #e5e7eb; border-radius:12px; padding:10px; background:#f8fafc;
+    }
+    .dark-mode .calc-box{ background:#0b1220; border-color:#1f2937; }
+  </style>
+</head>
+
+<body>
+<div class="container">
+  <div class="page-shell">
+
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+      <div class="brand">
+        <img src="https://res.cloudinary.com/dljpgzbto/image/upload/v1743993646/company-logo_dksb23.jpg" alt="Logo"/>
+        <div>
+          <h4 class="mb-0 fw-semibold">Smart Living</h4>
+          <div class="small muted">Product Profile &amp; Components</div>
+        </div>
+      </div>
+      <div class="d-flex gap-2 mt-2 mt-md-0">
+        <a href="{{ url_for('login.admin_dashboard') }}" class="btn btn-outline-secondary btn-clean">Dashboard</a>
+        <button onclick="toggleMode()" class="btn btn-outline-dark btn-clean" id="modeBtn">🌓</button>
+      </div>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+          </div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <div class="row g-3 mb-4">
+      <div class="col-lg-6">
+        <div class="section-surface product-header h-100">
+          <img src="{{ product.image_url }}" alt="{{ product.name }}" class="previewable-img" data-title="{{ product.name }}"/>
+        </div>
+      </div>
+
+      <div class="col-lg-6">
+        <div class="section-surface h-100 d-flex flex-column justify-content-between">
+          <div>
+            <div class="d-flex align-items-start justify-content-between gap-2 mb-1">
+              <div>
+                <h3 class="mb-1 section-title">{{ product.name }}</h3>
+                <p class="muted mb-2">
+                  {{ product.category or '--' }}
+                  {% if product.package_name %} -  {{ product.package_name }}{% endif %}
+                </p>
+              </div>
+              <span class="pill">{{ product.product_type or 'General' }}</span>
+            </div>
+
+            <div class="d-flex flex-wrap gap-2 mb-2">
+              <span class="stat"><strong>Cost:</strong> GHS {{ '%.2f'|format(product.cost_price|default(0.0)) }}</span>
+              <span class="stat"><strong>Price:</strong> GHS {{ '%.2f'|format(product.price|default(0.0)) }}</span>
+              <span class="stat"><strong>Cash:</strong> GHS {{ '%.2f'|format(product.cash_price|default(0.0)) }}</span>
+            </div>
+            <div class="d-flex flex-wrap gap-2 mb-2">
+              <span class="stat"><strong>Main Margin:</strong> {{ product.profit_margin_price|default(0) }}%</span>
+              <span class="stat"><strong>Cash Margin:</strong> {{ product.profit_margin_cash|default(0) }}%</span>
+              <span class="stat"><strong>Main Profit:</strong> GHS {{ '%.2f'|format(product.profit_price|default(0.0)) }}</span>
+              <span class="stat"><strong>Cash Profit:</strong> GHS {{ '%.2f'|format(product.profit_cash|default(0.0)) }}</span>
+            </div>
+
+            <div class="mb-1 small"><strong>Manager:</strong> {{ manager.name }} ({{ manager.branch }})</div>
+            <div class="mb-2 small"><strong>Description:</strong> <span class="muted">{{ product.description }}</span></div>
+
+            <div class="small text-uppercase text-muted fw-semibold mt-3 mb-1">Quick Stats</div>
+            <div class="d-flex flex-wrap gap-2">
+              <span class="badge-soft">Components: {{ components|length }}</span>
+              <span class="badge-soft">Inventory Items: {{ inventory|length }}</span>
+              {% if product.cf_image_id %}<span class="badge-soft">CF: {{ product.cf_image_id }}</span>{% endif %}
+            </div>
+          </div>
+
+          <div class="d-flex flex-wrap gap-2 mt-3">
+            <button class="btn btn-info btn-clean" data-bs-toggle="modal" data-bs-target="#changeImageModal">Change Image</button>
+            <button class="btn btn-warning btn-clean" data-bs-toggle="modal" data-bs-target="#editProductModal">Edit</button>
+            <button class="btn btn-danger btn-clean" data-bs-toggle="modal" data-bs-target="#deleteProductModal">Delete</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Components -->
+    <div class="d-flex align-items-center justify-content-between mb-2">
+      <h5 class="mb-0 section-title">Component Products</h5>
+      <span class="muted small">{{ components|length }} item(s)</span>
+    </div>
+
+    <div class="row g-3 mb-4">
+      {% for comp in components %}
+      <div class="col-sm-6 col-lg-4">
+        <div class="component-card">
+          <div class="component-card-header">
+            <img src="{{ comp.image_url }}" alt="{{ comp.name }}" class="previewable-img" data-title="{{ comp.name }}">
+            <span class="component-pill">Component</span>
+          </div>
+
+          <div class="component-body">
+            <h6 class="mt-2 mb-1 fw-semibold">{{ comp.name }}</h6>
+
+            <div class="d-flex flex-wrap gap-2 mb-2">
+              <span class="stat"><strong>Qty:</strong> {{ comp.qty }}</span>
+              <span class="stat"><strong>Price:</strong> GHS {{ comp.price }}</span>
+            </div>
+
+            <p class="muted small mb-2 flex-grow-1">{{ comp.description }}</p>
+
+            <!-- ✅ Update Qty -->
+            <form method="POST"
+                  action="{{ url_for('product_profile.update_component_qty', product_id=product._id, comp_id=comp.id) }}"
+                  class="show-loader-on-submit"
+                  data-loading-text="Updating quantity...">
+              <div class="input-group input-group-sm mb-2">
+                <span class="input-group-text">Qty</span>
+                <input type="number" name="qty" min="1" value="{{ comp.qty }}" class="form-control">
+                <button class="btn btn-outline-primary" type="submit">Update</button>
+              </div>
+            </form>
+
+            <!-- ✅ Remove (FIXED ENDPOINT) -->
+            <form method="POST"
+                  action="{{ url_for('product_profile.remove_component', product_id=product._id, comp_id=comp.id) }}"
+                  class="show-loader-on-submit"
+                  data-loading-text="Removing component...">
+              <button type="submit" class="btn btn-sm btn-outline-danger w-100 btn-clean">Remove</button>
+            </form>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+
+      {% if components|length == 0 %}
+      <div class="col-12">
+        <div class="section-surface text-center">
+          <p class="muted mb-1">No components attached yet.</p>
+          <p class="small mb-0">Use inventory section below to add components.</p>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Add components -->
+    <div class="divider"></div>
+    <div class="d-flex align-items-center justify-content-between mb-2">
+      <h5 class="mb-0 section-title">Add More Components from Inventory</h5>
+      <span class="muted small">Select items + set qty + Add</span>
+    </div>
+
+    <div class="section-surface mb-3">
+      <div class="d-flex flex-column flex-md-row gap-2 align-items-md-center justify-content-between mb-3">
+        <div class="flex-grow-1">
+          <input type="text" id="searchInput" class="form-control search" placeholder="Search inventory by product name..." />
+        </div>
+        <div class="small muted">Tip: typing qty auto-selects item.</div>
+      </div>
+
+      <form method="POST"
+            action="{{ url_for('product_profile.add_components', product_id=product._id) }}"
+            class="show-loader-on-submit"
+            data-loading-text="Adding selected components...">
+
+        <div class="row g-3" id="inventoryContainer">
+          {% for item in inventory.values() %}
+          <div class="col-sm-6 col-lg-4 mb-2 inventory-item">
+            <div class="card inventory-card h-100">
+              <img src="{{ item.image_url }}" class="card-img-top previewable-img" alt="{{ item.name }}" data-title="{{ item.name }}">
+              <div class="card-body d-flex flex-column">
+                <h6 class="card-title mb-1">{{ item.name }}</h6>
+
+                <div class="form-check mb-2">
+                  <input type="checkbox" class="form-check-input component-checkbox"
+                         name="components" value="{{ item._id }}" id="comp_{{ item._id }}">
+                  <label class="form-check-label small" for="comp_{{ item._id }}">Add / Update</label>
+                </div>
+
+                <div class="mt-auto">
+                  <label class="form-label small mb-1">Quantity</label>
+                  <input type="number" name="qty_{{ item._id }}" class="form-control form-control-sm qty-input"
+                         min="1" value="1" placeholder="Qty">
+                </div>
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+
+        <div class="d-flex justify-content-end mt-3">
+          <button type="submit" class="btn btn-primary btn-clean">Add Selected Components</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Modal -->
+<div class="modal fade" id="editProductModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <form method="POST"
+          action="{{ url_for('product_profile.edit_product', product_id=product._id) }}"
+          class="modal-content show-loader-on-submit"
+          data-loading-text="Saving product changes...">
+      <div class="modal-header">
+        <h5 class="modal-title">Edit Product</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body">
+        <div class="row g-2">
+          <div class="col-md-6">
+            <label class="form-label">Name</label>
+            <input type="text" name="name" class="form-control" value="{{ product.name }}" required>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Product Type</label>
+            <input type="text" name="product_type" class="form-control" value="{{ product.product_type }}">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Category</label>
+            <input type="text" name="category" class="form-control" value="{{ product.category }}">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Package Name</label>
+            <input type="text" name="package_name" class="form-control" value="{{ product.package_name }}">
+          </div>
+        </div>
+
+        <hr class="my-3">
+
+        <div class="row g-2">
+          <div class="col-md-4">
+            <label class="form-label">Cost Price (GHS)</label>
+            <input type="number" step="0.01" min="0" name="cost_price" id="e_cost" class="form-control"
+                   value="{{ product.cost_price|default(0) }}">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Main Margin (%)</label>
+            <input type="number" step="0.01" min="0" name="profit_margin_price" id="e_m1" class="form-control"
+                   value="{{ product.profit_margin_price|default(0) }}">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Cash Margin (%)</label>
+            <input type="number" step="0.01" min="0" name="profit_margin_cash" id="e_m2" class="form-control"
+                   value="{{ product.profit_margin_cash|default(0) }}">
+          </div>
+        </div>
+
+        <div class="form-check mt-2">
+          <input class="form-check-input" type="checkbox" value="1" id="e_auto" name="auto_calc" checked>
+          <label class="form-check-label" for="e_auto">
+            Auto-calculate Price & Cash Price from Cost + Margins
+          </label>
+        </div>
+
+        <div class="row g-2 mt-2">
+          <div class="col-md-6">
+            <label class="form-label">Price (GHS)</label>
+            <input type="number" step="0.01" name="price" id="e_price" class="form-control" value="{{ product.price|default(0) }}">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Cash Price (GHS)</label>
+            <input type="number" step="0.01" name="cash_price" id="e_cash" class="form-control" value="{{ product.cash_price|default(0) }}">
+          </div>
+        </div>
+
+        <div class="calc-box mt-2 small">
+          <div class="d-flex justify-content-between"><span>Main Profit:</span><b id="e_pprofit">GHS 0.00</b></div>
+          <div class="d-flex justify-content-between"><span>Cash Profit:</span><b id="e_cprofit">GHS 0.00</b></div>
+        </div>
+
+        <label class="form-label mt-3">Description</label>
+        <textarea name="description" class="form-control" rows="3">{{ product.description }}</textarea>
+
+        <div class="form-text mt-2">
+          Note: If auto-calc is ON, your manual Price/Cash entries will be ignored and recalculated.
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="submit" class="btn btn-primary btn-clean">Save Changes</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Delete Modal -->
+<div class="modal fade" id="deleteProductModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable">
+    <form method="POST"
+          action="{{ url_for('product_profile.delete_product', product_id=product._id) }}"
+          class="show-loader-on-submit"
+          data-loading-text="Deleting product...">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Delete Product</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <p>Delete <strong>{{ product.name }}</strong>?</p>
+          <p class="text-muted">Optionally delete same product for other managers:</p>
+          <button type="button" class="btn btn-sm btn-outline-primary mb-2 btn-clean" onclick="toggleAllManagers()">Select / Unselect All</button>
+          <div class="mb-3" style="max-height: 220px; overflow-y: auto;">
+            {% for mgr in all_managers %}
+              {% if mgr._id != product.manager_id %}
+              <div class="form-check">
+                <input class="form-check-input delete-manager-checkbox" type="checkbox" name="delete_for[]" value="{{ mgr._id }}" id="del_{{ mgr._id }}">
+                <label class="form-check-label" for="del_{{ mgr._id }}">{{ mgr.name }} ({{ mgr.branch }})</label>
+              </div>
+              {% endif %}
+            {% endfor %}
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="submit" class="btn btn-danger btn-clean">Yes, Delete</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Change Image Modal -->
+<div class="modal fade" id="changeImageModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <form method="POST"
+          action="{{ url_for('product_profile.change_image', product_id=product._id) }}"
+          class="modal-content show-loader-on-submit"
+          enctype="multipart/form-data"
+          data-loading-text="Uploading image...">
+      <div class="modal-header">
+        <h5 class="modal-title">Change Product Image</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="text-center mb-3">
+          <img src="{{ product.image_url }}" class="img-fluid rounded previewable-img" style="max-height: 220px;"
+               data-title="Current image - {{ product.name }}">
+        </div>
+        <input type="file" name="image" class="form-control" accept="image/*" required id="newImageInput">
+        <div class="form-text">This updates image for all products with same name & price.</div>
+
+        <div class="mt-3" id="previewWrap" style="display:none;">
+          <div class="text-muted mb-1">Preview</div>
+          <img id="previewImg" class="img-fluid rounded border previewable-img" style="max-height:200px;" alt="Preview">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="submit" class="btn btn-success btn-clean">Upload New Image</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Global Image Preview Modal -->
+<div class="modal fade" id="imagePreviewModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content bg-dark text-white">
+      <div class="modal-header border-0">
+        <h6 class="modal-title" id="imagePreviewTitle"></h6>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body text-center">
+        <img id="imagePreviewImg" src="" alt="" class="img-fluid rounded shadow">
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="loadingOverlay">
+  <div class="spinner-border text-primary spinner-lg" role="status"></div>
+  <div class="mt-3 fw-semibold" id="loadingText">Processing...</div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+  const $ = (s)=>document.querySelector(s);
+
+  function toggleMode(){
+    document.body.classList.toggle("dark-mode");
+    const btn = $("#modeBtn");
+    if(btn) btn.textContent = document.body.classList.contains("dark-mode") ? "🌞" : "🌓";
+  }
+
+  function toggleAllManagers(){
+    const boxes = document.querySelectorAll('.delete-manager-checkbox');
+    const allChecked = Array.from(boxes).every(cb => cb.checked);
+    boxes.forEach(cb => cb.checked = !allChecked);
+  }
+
+  // Inventory search
+  const search = $("#searchInput");
+  if(search){
+    search.addEventListener('input', function(){
+      const q = this.value.toLowerCase();
+      document.querySelectorAll('.inventory-item').forEach(card=>{
+        const name = card.querySelector('.card-title')?.textContent.toLowerCase() || '';
+        card.style.display = name.includes(q) ? '' : 'none';
+      });
+    });
+  }
+
+  // Qty -> auto-check
+  document.querySelectorAll('.qty-input').forEach(input=>{
+    input.addEventListener('input', function(){
+      const cb = this.closest('.card').querySelector('.component-checkbox');
+      if(cb){
+        const v = Number(this.value||0);
+        cb.checked = v > 0;
+        if(v <= 0) this.value = 1;
+      }
+    });
+  });
+
+  // Change Image: live preview
+  const newImageInput = $("#newImageInput");
+  if(newImageInput){
+    newImageInput.addEventListener('change', function(){
+      const file = this.files && this.files[0];
+      if(!file){ $("#previewWrap").style.display = 'none'; return; }
+      const url = URL.createObjectURL(file);
+      $("#previewImg").src = url;
+      $("#previewWrap").style.display = 'block';
+    });
+  }
+
+  // Loading overlay for all forms
+  const overlay = $("#loadingOverlay");
+  const loadingTextEl = $("#loadingText");
+  document.querySelectorAll("form.show-loader-on-submit").forEach(form => {
+    form.addEventListener("submit", function(){
+      if(overlay){
+        const msg = this.dataset.loadingText || "Processing...";
+        if(loadingTextEl) loadingTextEl.textContent = msg;
+        overlay.style.display = "flex";
+      }
+    });
+  });
+
+  // Global image preview
+  document.querySelectorAll(".previewable-img").forEach(img => {
+    img.addEventListener("click", () => {
+      const modalImg = $("#imagePreviewImg");
+      const modalTitle = $("#imagePreviewTitle");
+      if(modalImg){ modalImg.src = img.dataset.full || img.src; modalImg.alt = img.alt || ""; }
+      if(modalTitle){ modalTitle.textContent = img.dataset.title || img.alt || "Image preview"; }
+      const modalEl = document.getElementById("imagePreviewModal");
+      if(modalEl) bootstrap.Modal.getOrCreateInstance(modalEl).show();
+    });
+  });
+
+  // Edit modal calculator
+  function fmt(n){ return "GHS " + (Number(n||0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})); }
+  function calcEdit(){
+    const cost = Number($("#e_cost")?.value || 0);
+    const m1 = Number($("#e_m1")?.value || 0);
+    const m2 = Number($("#e_m2")?.value || 0);
+    const auto = $("#e_auto")?.checked;
+
+    if(auto){
+      const p = cost>0 ? cost*(1+m1/100) : 0;
+      const c = cost>0 ? cost*(1+m2/100) : 0;
+      $("#e_price").value = p ? p.toFixed(2) : "0.00";
+      $("#e_cash").value  = c ? c.toFixed(2) : "0.00";
+    }
+    const price = Number($("#e_price")?.value || 0);
+    const cash  = Number($("#e_cash")?.value || 0);
+    $("#e_pprofit").textContent = fmt(price - cost);
+    $("#e_cprofit").textContent = fmt(cash - cost);
+
+    // lock/unlock manual fields
+    $("#e_price").readOnly = auto;
+    $("#e_cash").readOnly = auto;
+  }
+  ["e_cost","e_m1","e_m2","e_price","e_cash","e_auto"].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el) el.addEventListener("input", calcEdit);
+    if(el) el.addEventListener("change", calcEdit);
+  });
+  document.addEventListener("DOMContentLoaded", calcEdit);
+
+  window.addEventListener("pageshow", function(){ if(overlay) overlay.style.display = "none"; });
+</script>
+{% include 'app_footer.html' %}
+
+</body>
+</html>

@@ -1,0 +1,316 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <title>Complaints -  Executive View</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="icon" href="https://res.cloudinary.com/dljpgzbto/image/upload/v1743993646/company-logo_dksb23.jpg" type="image/png">
+
+  <style>
+    :root{
+      --ink:#0b3b52; --muted:#64748b; --ring:#e9eef5; --soft:#f6f8fb; --brand:#0ea5e9;
+      --ok:#16a34a; --warn:#f59e0b; --bad:#dc2626;
+    }
+    body{ background:#f7fbfe; color:var(--ink); }
+    .card{ border-radius:18px; box-shadow: 0 8px 24px rgba(2,12,27,.06); border:1px solid var(--ring); }
+    .pill{ border:1px solid var(--ring); background:#fff; padding:.35rem .65rem; border-radius:999px; color:#0b3b52; }
+    .table thead th{ background:#eef2ff; }
+    .status-badge{ font-weight:600; }
+    .status-Unassigned{ background:#e0f2fe; color:#0369a1; }
+    .status-Assigned{ background:#fff7ed; color:#b45309; }
+    .status-In\ Progress{ background:#ecfeff; color:#0369a1; }
+    .status-Waiting\ for\ Customer{ background:#fef9c3; color:#854d0e; }
+    .status-Resolved{ background:#dcfce7; color:#166534; }
+    .status-Closed{ background:#e5e7eb; color:#374151; }
+    .search-input{ border-radius:12px; }
+    .sticky-top-lite{ position:sticky; top:0; z-index:100; background:#f7fbfe; padding-top:1rem; }
+    .muted{color:var(--muted)}
+    .kbd{font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono","Courier New", monospace; background:#eef2ff; padding:.1rem .4rem; border-radius:.35rem; border:1px solid #dde3ff}
+  </style>
+</head>
+<body>
+
+      {% include 'executive_sidebar.html' %}
+
+<div class="container py-4" style="max-width: 1300px;">
+
+  <!-- Header + Stats -->
+  <div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-3">
+    <div>
+      <h3 class="m-0">Executive -- Complaints (Read-only)</h3>
+      <div class="text-muted">Overview of all complaints across branches</div>
+    </div>
+    <div class="d-flex gap-2">
+      <span class="pill">Open: <strong>{{ stats.open }}</strong></span>
+      <span class="pill">Breaching: <strong class="text-danger">{{ stats.breaching }}</strong></span>
+      <span class="pill">Resolved: <strong class="text-success">{{ stats.resolved }}</strong></span>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div class="card p-3 sticky-top-lite">
+    <form class="row g-2 align-items-end" method="get">
+      <div class="col-md-2">
+        <label class="form-label">Status</label>
+        <select name="status" class="form-select">
+          <option value="">All</option>
+          {% for s in statuses %}
+            <option value="{{ s }}" {{ 'selected' if filters.status==s else '' }}>{{ s }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label">Issue</label>
+        <select name="issue_type" class="form-select">
+          <option value="">All</option>
+          {% for s in issue_types %}
+            <option value="{{ s }}" {{ 'selected' if filters.issue_type==s else '' }}>{{ s }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label">Channel</label>
+        <select name="channel" class="form-select">
+          <option value="">All</option>
+          {% for ch in channels %}
+            <option value="{{ ch }}" {{ 'selected' if filters.channel==ch else '' }}>{{ ch }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label">From</label>
+        <input name="from" type="date" class="form-control" value="{{ filters.from }}">
+      </div>
+      <div class="col-md-2">
+        <label class="form-label">To</label>
+        <input name="to" type="date" class="form-control" value="{{ filters.to }}">
+      </div>
+      <div class="col-md-2">
+        <label class="form-label">Search</label>
+        <div class="input-group">
+          <input name="q" type="text" class="form-control search-input" placeholder="Ticket / name / branch / phone…" value="{{ filters.q }}">
+          <button class="btn btn-outline-primary">Apply</button>
+        </div>
+      </div>
+      <div class="col-12 d-flex justify-content-between mt-1">
+        <small class="muted">Tip: Click a row to see details. Press <span class="kbd">/</span> to focus search.</small>
+        <a href="{{ url_for('complaints.executive_view') }}" class="btn btn-sm btn-light">Clear filters</a>
+      </div>
+    </form>
+  </div>
+
+  <!-- Table (view-only) -->
+  <div class="card p-3 mt-3">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle" id="execTable">
+        <thead>
+          <tr>
+            <th>Ticket</th>
+            <th>Date</th>
+            <th>Customer</th>
+            <th>Phone</th>
+            <th>Issue</th>
+            <th>Branch</th>
+            <th>Assigned</th>
+            <th>SLA Due</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for it in items %}
+          <tr class="viewRow" data-id="{{ it._id }}" style="cursor:pointer">
+            <td class="fw-semibold">{{ it.ticket_no }}</td>
+            <td>{{ it.date_reported }}</td>
+            <td>{{ it.customer_name }}</td>
+            <td>{{ it.customer_phone }}</td>
+            <td>{{ it.issue_type }}</td>
+            <td>{{ it.branch }}</td>
+            <td>{{ it.assigned_to_name or '' }}</td>
+            <td>{{ it.sla_due or '' }}</td>
+            <td><span class="badge status-badge status-{{ it.status|replace(' ','\\ ') }}">{{ it.status }}</span></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<!-- Details Modal (read-only) -->
+<div class="modal fade" id="detailModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content border-0">
+      <div class="modal-header">
+        <h5 class="modal-title">
+          Ticket <span id="dTicket" class="kbd"></span>
+          <span class="ms-2 badge" id="dStatusBadge"></span>
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <div><span class="muted">Date Reported:</span> <strong id="dDate"></strong></div>
+            <div><span class="muted">Channel:</span> <strong id="dChannel"></strong></div>
+            <div><span class="muted">Branch:</span> <strong id="dBranch"></strong></div>
+            <div><span class="muted">SLA Due:</span> <strong id="dSlaDue"></strong>
+              <span id="dSlaBreach" class="badge bg-danger d-none ms-2">Breached</span>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div><span class="muted">Customer:</span> <strong id="dCustomer"></strong></div>
+            <div><span class="muted">Phone:</span> <strong id="dPhone"></strong></div>
+            <div><span class="muted">Issue:</span> <strong id="dIssue"></strong></div>
+            <div><span class="muted">Assigned:</span> <strong id="dAssigned"></strong></div>
+          </div>
+
+          <div class="col-12"><hr/></div>
+
+          <div class="col-12">
+            <label class="form-label">Description</label>
+            <div class="form-control" style="min-height:84px; background:#fff;" id="dDescription">--</div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Resolution Notes</label>
+            <div class="form-control" id="dResolutionNotes">--</div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Customer Feedback</label>
+            <div class="form-control" id="dFeedback">--</div>
+          </div>
+
+          <div class="col-12 mt-2">
+            <div class="muted">Created/Updated: <span id="dAudit"></span></div>
+          </div>
+
+          <div class="col-12"><hr/></div>
+
+          <div class="col-12">
+            <div class="muted mb-1">SMS History</div>
+            <ul class="list-group" id="smsHistory"></ul>
+          </div>
+
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-light" data-bs-dismiss="modal" type="button">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+(function(){
+  // focus search with '/'
+  const searchInput = document.querySelector('input[name="q"]');
+  document.addEventListener('keydown', (e)=>{
+    if(e.key === '/' && searchInput){
+      e.preventDefault();
+      searchInput.focus();
+      searchInput.select();
+    }
+  });
+
+  // read-only details modal
+  const detailModal = new bootstrap.Modal(document.getElementById('detailModal'));
+
+  // DOM refs
+  const dTicket = document.getElementById('dTicket');
+  const dStatusBadge = document.getElementById('dStatusBadge');
+  const dDate = document.getElementById('dDate');
+  const dChannel = document.getElementById('dChannel');
+  const dBranch = document.getElementById('dBranch');
+  const dSlaDue = document.getElementById('dSlaDue');
+  const dSlaBreach = document.getElementById('dSlaBreach');
+  const dCustomer = document.getElementById('dCustomer');
+  const dPhone = document.getElementById('dPhone');
+  const dIssue = document.getElementById('dIssue');
+  const dAssigned = document.getElementById('dAssigned');
+  const dDescription = document.getElementById('dDescription');
+  const dResolutionNotes = document.getElementById('dResolutionNotes');
+  const dFeedback = document.getElementById('dFeedback');
+  const dAudit = document.getElementById('dAudit');
+  const smsHistory = document.getElementById('smsHistory');
+
+  function statusBadgeClass(txt){
+    const safe = (txt || '').replaceAll(' ', '\\ ');
+    return 'badge status-badge status-' + safe;
+  }
+
+  async function openDetail(id){
+    // clear
+    dTicket.textContent = '';
+    dStatusBadge.textContent = '';
+    dStatusBadge.className = 'badge';
+    dSlaBreach.classList.add('d-none');
+    dDescription.textContent = '--';
+    dResolutionNotes.textContent = '--';
+    dFeedback.textContent = '--';
+    smsHistory.innerHTML = '';
+
+    try{
+      const res = await fetch(`/complaints/${id}/detail`, { headers: {'X-Requested-With':'XMLHttpRequest'} });
+      const j = await res.json();
+      if(!j.ok){ alert(j.message || 'Not found'); return; }
+      const c = j.complaint;
+
+      dTicket.textContent = c.ticket_no || '';
+      dStatusBadge.textContent = c.status || '';
+      dStatusBadge.className = statusBadgeClass(c.status);
+      dDate.textContent = c.date_reported || '';
+      dChannel.textContent = c.channel || '';
+      dBranch.textContent = c.branch || '';
+      dSlaDue.textContent = c.sla_due || '';
+      if(c.sla_breached){ dSlaBreach.classList.remove('d-none'); }
+      dCustomer.textContent = c.customer_name || '';
+      dPhone.textContent = c.customer_phone || '';
+      dIssue.textContent = c.issue_type || '';
+      dAssigned.textContent = c.assigned_to_name || '';
+
+      dDescription.textContent = (c.description || '--');
+      dResolutionNotes.textContent = (c.resolution_notes || '--');
+      dFeedback.textContent = (c.customer_feedback || '--');
+      dAudit.textContent = `${c.created_at || ''} → ${c.updated_at || ''}`;
+
+      const events = Array.isArray(c.sms_events) ? c.sms_events : [];
+      if(events.length === 0){
+        smsHistory.innerHTML = '<li class="list-group-item">No SMS history.</li>';
+      }else{
+        smsHistory.innerHTML = events.map(e => {
+          const ok = e.ok ? '✅' : '❌';
+          const when = e.when || '';
+          const to = e.to || '';
+          const status = e.status || '';
+          const kind = e.kind || '';
+          return `<li class="list-group-item d-flex justify-content-between">
+            <span>${ok} <strong>${kind}</strong> → ${to} <span class="text-muted">(${status})</span></span>
+            <small class="text-muted">${when}</small>
+          </li>`;
+        }).join('');
+      }
+
+      detailModal.show();
+    }catch(err){
+      alert('Failed to fetch details.');
+    }
+  }
+
+  // row click
+  document.addEventListener('click', (e)=>{
+    const row = e.target.closest('.viewRow');
+    if(!row) return;
+    const id = row.getAttribute('data-id');
+    if(!id) return;
+    openDetail(id);
+  });
+})();
+</script>
+  {% include 'app_footer.html' %}
+
+</body>
+</html>

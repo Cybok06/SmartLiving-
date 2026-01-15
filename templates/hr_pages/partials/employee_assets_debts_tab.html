@@ -1,0 +1,389 @@
+{# templates/hr_pages/partials/employee_assets_debts_tab.html #}
+
+<div class="row g-3">
+  <!-- Assets -->
+  <div class="col-12 col-lg-6">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-header">
+        <h2 class="h6 mb-0">Assets</h2>
+        <p class="small text-muted mb-0">
+          Record company assets assigned to this employee and mark them as returned
+          when taken back.
+        </p>
+      </div>
+      <div class="card-body">
+        <form id="hr-asset-form" class="row g-2 mb-3">
+          <div class="col-12">
+            <label class="form-label small mb-1">Asset Name</label>
+            <input type="text"
+                   name="name"
+                   class="form-control form-control-sm"
+                   placeholder="Eg. Tablet, ID Card, Uniform"
+                   required>
+          </div>
+          <div class="col-12 col-md-6">
+            <label class="form-label small mb-1">Date Given</label>
+            <input type="date"
+                   name="given_date"
+                   class="form-control form-control-sm">
+            <small class="text-muted extra-small">
+              Leave empty to use today.
+            </small>
+          </div>
+          <div class="col-12 col-md-6 d-grid">
+            <button type="submit"
+                    class="btn btn-sm btn-primary"
+                    id="hr-asset-submit-btn">
+              <span class="spinner-border spinner-border-sm me-1 d-none"
+                    id="hr-asset-spinner"
+                    role="status"></span>
+              Assign Asset
+            </button>
+          </div>
+        </form>
+
+        <div class="table-responsive">
+          <table class="table table-sm align-middle mb-0">
+            <thead class="table-light small">
+              <tr>
+                <th>Name</th>
+                <th style="width:22%;">Given</th>
+                <th style="width:18%;">Status</th>
+                <th style="width:22%;">Returned</th>
+                <th style="width:12%;"></th>
+              </tr>
+            </thead>
+            <tbody id="hr-asset-body" class="small">
+              <tr id="hr-asset-empty-row">
+                <td colspan="5" class="text-muted fst-italic">
+                  No assets recorded yet.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Debts -->
+  <div class="col-12 col-lg-6">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-header">
+        <h2 class="h6 mb-0">Debts</h2>
+        <p class="small text-muted mb-0">
+          Track any debts the employee owes and payments made so far.
+        </p>
+      </div>
+      <div class="card-body">
+        <form id="hr-debt-form" class="row g-2 mb-3">
+          <div class="col-12">
+            <label class="form-label small mb-1">Description</label>
+            <input type="text"
+                   name="description"
+                   class="form-control form-control-sm"
+                   placeholder="Eg. Staff loan, item damage"
+                   required>
+          </div>
+          <div class="col-12 col-md-6">
+            <label class="form-label small mb-1">Total Amount (GHS)</label>
+            <input type="number"
+                   name="amount"
+                   min="0"
+                   step="0.01"
+                   class="form-control form-control-sm"
+                   required>
+          </div>
+          <div class="col-12 col-md-6 d-grid">
+            <button type="submit"
+                    class="btn btn-sm btn-primary"
+                    id="hr-debt-submit-btn">
+              <span class="spinner-border spinner-border-sm me-1 d-none"
+                    id="hr-debt-spinner"
+                    role="status"></span>
+              Record Debt
+            </button>
+          </div>
+        </form>
+
+        <div class="table-responsive">
+          <table class="table table-sm align-middle mb-0">
+            <thead class="table-light small">
+              <tr>
+                <th>Description</th>
+                <th style="width:16%;">Total</th>
+                <th style="width:16%;">Paid</th>
+                <th style="width:16%;">Owing</th>
+                <th style="width:14%;"></th>
+              </tr>
+            </thead>
+            <tbody id="hr-debt-body" class="small">
+              <tr id="hr-debt-empty-row">
+                <td colspan="5" class="text-muted fst-italic">
+                  No debts recorded yet.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  const employeeId = "{{ employee._id }}";
+
+  // ---------- ASSETS ----------
+  const assetBody    = document.getElementById('hr-asset-body');
+  const assetForm    = document.getElementById('hr-asset-form');
+  const assetBtn     = document.getElementById('hr-asset-submit-btn');
+  const assetSpinner = document.getElementById('hr-asset-spinner');
+
+  function renderAssets(assets) {
+    if (!assetBody) return;
+    assetBody.innerHTML = '';
+
+    if (!assets || !assets.length) {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td colspan="5" class="text-muted fst-italic">
+          No assets recorded yet.
+        </td>
+      `;
+      assetBody.appendChild(tr);
+      return;
+    }
+
+    assets.forEach(a => {
+      const tr = document.createElement('tr');
+      const statusBadge = a.status === 'Returned'
+        ? 'badge bg-success-subtle text-success-emphasis'
+        : 'badge bg-warning-subtle text-warning-emphasis';
+
+      const returned = a.returned_date || '';
+
+      tr.innerHTML = `
+        <td>${a.name || ''}</td>
+        <td>${a.given_date || ''}</td>
+        <td><span class="${statusBadge}">${a.status}</span></td>
+        <td>${returned}</td>
+        <td class="text-end">
+          ${
+            a.status === 'Returned'
+              ? '<button class="btn btn-xs btn-outline-secondary" disabled>Done</button>'
+              : `<button class="btn btn-xs btn-outline-success hr-asset-return-btn" data-id="${a.id}">Mark returned</button>`
+          }
+        </td>
+      `;
+      assetBody.appendChild(tr);
+    });
+  }
+
+  // ---------- DEBTS ----------
+  const debtBody    = document.getElementById('hr-debt-body');
+  const debtForm    = document.getElementById('hr-debt-form');
+  const debtBtn     = document.getElementById('hr-debt-submit-btn');
+  const debtSpinner = document.getElementById('hr-debt-spinner');
+
+  function renderDebts(debts) {
+    if (!debtBody) return;
+    debtBody.innerHTML = '';
+
+    if (!debts || !debts.length) {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td colspan="5" class="text-muted fst-italic">
+          No debts recorded yet.
+        </td>
+      `;
+      debtBody.appendChild(tr);
+      return;
+    }
+
+    debts.forEach(d => {
+      const total = parseFloat(d.total_amount || 0);
+      const paid  = parseFloat(d.amount_paid || 0);
+      const owing = total - paid;
+
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${d.description || ''}</td>
+        <td>${total.toFixed(2)}</td>
+        <td>${paid.toFixed(2)}</td>
+        <td>${owing.toFixed(2)}</td>
+        <td class="text-end">
+          <button class="btn btn-xs btn-outline-primary hr-debt-pay-btn"
+                  data-id="${d.id}">
+            Add payment
+          </button>
+        </td>
+      `;
+      debtBody.appendChild(tr);
+    });
+  }
+
+  function loadAssetsDebts() {
+    fetch("{{ url_for('hr.get_assets_debts', employee_id=employee._id) }}", {
+      method: 'GET'
+    })
+      .then(resp => resp.json())
+      .then(data => {
+        if (!data.ok) throw new Error(data.message || 'Unable to load assets & debts.');
+        renderAssets(data.assets || []);
+        renderDebts(data.debts || []);
+      })
+      .catch(err => {
+        console.error(err);
+        window.showToast && window.showToast('danger', err.message || 'Failed to load assets & debts.');
+      });
+  }
+
+  // ----- New asset -----
+  if (assetForm) {
+    assetForm.addEventListener('submit', function (e) {
+      e.preventDefault();
+      const fd = new FormData(assetForm);
+      const payload = {
+        name: fd.get('name'),
+        given_date: fd.get('given_date')
+      };
+      if (!payload.name) {
+        window.showToast && window.showToast('warning', 'Asset name is required.');
+        return;
+      }
+      if (assetBtn) assetBtn.disabled = true;
+      if (assetSpinner) assetSpinner.classList.remove('d-none');
+
+      fetch("{{ url_for('hr.add_asset', employee_id=employee._id) }}", {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+        .then(resp => resp.json())
+        .then(data => {
+          if (!data.ok) throw new Error(data.message || 'Unable to save asset.');
+          assetForm.reset();
+          loadAssetsDebts();
+          window.showToast && window.showToast('success', 'Asset recorded.');
+        })
+        .catch(err => {
+          console.error(err);
+          window.showToast && window.showToast('danger', err.message || 'Failed to save asset.');
+        })
+        .finally(() => {
+          if (assetBtn) assetBtn.disabled = false;
+          if (assetSpinner) assetSpinner.classList.add('d-none');
+        });
+    });
+
+    // Mark asset returned
+    if (assetBody) {
+      assetBody.addEventListener('click', function (e) {
+        const btn = e.target.closest('.hr-asset-return-btn');
+        if (!btn) return;
+        const id = btn.getAttribute('data-id');
+        if (!id) return;
+
+        fetch(
+          "{{ url_for('hr.mark_asset_returned', employee_id=employee._id, asset_id='__ASSET__') }}"
+            .replace('__ASSET__', id),
+          { method: 'POST' }
+        )
+          .then(resp => resp.json())
+          .then(data => {
+            if (!data.ok) throw new Error(data.message || 'Unable to update asset.');
+            loadAssetsDebts();
+            window.showToast && window.showToast('success', 'Asset marked as returned.');
+          })
+          .catch(err => {
+            console.error(err);
+            window.showToast && window.showToast('danger', err.message || 'Failed to update asset.');
+          });
+      });
+    }
+  }
+
+  // ----- New debt + debt payment -----
+  if (debtForm) {
+    // Create debt
+    debtForm.addEventListener('submit', function (e) {
+      e.preventDefault();
+      const fd = new FormData(debtForm);
+      const payload = {
+        description: fd.get('description'),
+        amount: fd.get('amount')
+      };
+      if (!payload.description || !payload.amount) {
+        window.showToast && window.showToast('warning', 'Description and amount are required.');
+        return;
+      }
+      if (debtBtn) debtBtn.disabled = true;
+      if (debtSpinner) debtSpinner.classList.remove('d-none');
+
+      fetch("{{ url_for('hr.add_debt', employee_id=employee._id) }}", {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+        .then(resp => resp.json())
+        .then(data => {
+          if (!data.ok) throw new Error(data.message || 'Unable to save debt.');
+          debtForm.reset();
+          loadAssetsDebts();
+          window.showToast && window.showToast('success', 'Debt recorded.');
+        })
+        .catch(err => {
+          console.error(err);
+          window.showToast && window.showToast('danger', err.message || 'Failed to save debt.');
+        })
+        .finally(() => {
+          if (debtBtn) debtBtn.disabled = false;
+          if (debtSpinner) debtSpinner.classList.add('d-none');
+        });
+    });
+
+    // Add payment to existing debt
+    if (debtBody) {
+      debtBody.addEventListener('click', function (e) {
+        const btn = e.target.closest('.hr-debt-pay-btn');
+        if (!btn) return;
+
+        const id = btn.getAttribute('data-id');
+        if (!id) return;
+
+        const amountStr = window.prompt('Enter payment amount (GHS):');
+        if (!amountStr) return;
+
+        const payload = { amount: amountStr };
+
+        fetch(
+          "{{ url_for('hr.add_debt_payment', employee_id=employee._id, debt_id='__DEBT__') }}"
+            .replace('__DEBT__', id),
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          }
+        )
+          .then(resp => resp.json())
+          .then(data => {
+            if (!data.ok) throw new Error(data.message || 'Unable to record payment.');
+            loadAssetsDebts();
+            window.showToast && window.showToast('success', 'Debt payment recorded.');
+          })
+          .catch(err => {
+            console.error(err);
+            window.showToast && window.showToast('danger', err.message || 'Failed to record payment.');
+          });
+      });
+    }
+  }
+
+  // Initial load
+  loadAssetsDebts();
+})();
+</script>
+

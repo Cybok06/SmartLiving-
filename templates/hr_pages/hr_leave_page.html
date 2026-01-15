@@ -1,0 +1,1062 @@
+{# templates/hr_pages/hr_leave_page.html #}
+{% extends "hr_pages/hr_shell.html" %}
+{% block hr_content %}
+
+<style>
+  /* ====== Leave Page (scoped) ====== */
+  .hr-leave-wrap .kpi{
+    border:1px solid rgba(0,0,0,.06);
+    border-radius: 14px;
+    background: #fff;
+  }
+  .hr-leave-wrap .kpi .icon{
+    width:40px;height:40px;border-radius:12px;
+    display:flex;align-items:center;justify-content:center;
+    background: rgba(13,110,253,.08);
+  }
+  .hr-leave-wrap .pill{
+    display:inline-flex;align-items:center;gap:.35rem;
+    padding:.25rem .6rem;border-radius:999px;font-size:.72rem;
+    border:1px solid rgba(0,0,0,.08); background:#fff;
+  }
+  .hr-leave-wrap .pill-soft{
+    background: rgba(13,110,253,.08);
+    border-color: rgba(13,110,253,.18);
+    color: #0b5ed7;
+  }
+  .hr-leave-wrap .table thead th{
+    font-size:.78rem;
+  }
+  .hr-leave-wrap .extra-small{ font-size:.72rem; }
+  .hr-leave-wrap .nowrap{ white-space:nowrap; }
+  .hr-leave-wrap .status-badge{
+    font-weight:600;
+    border:1px solid rgba(0,0,0,.08);
+  }
+  .hr-leave-wrap .cal-grid{
+    display:grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: .5rem;
+  }
+  .hr-leave-wrap .cal-cell{
+    border:1px solid rgba(0,0,0,.06);
+    border-radius: 14px;
+    background:#fff;
+    min-height: 108px;
+    padding: .6rem .65rem;
+  }
+  .hr-leave-wrap .cal-cell .day{
+    display:flex;justify-content:space-between;align-items:center;
+    margin-bottom:.35rem;
+  }
+  .hr-leave-wrap .cal-cell .day .num{
+    font-weight:700;
+  }
+  .hr-leave-wrap .cal-cell .dot{
+    width:8px;height:8px;border-radius:99px;
+    display:inline-block;background:rgba(25,135,84,.75);
+  }
+  .hr-leave-wrap .cal-cell .item{
+    display:block;
+    padding:.2rem .45rem;
+    border-radius:10px;
+    border:1px solid rgba(0,0,0,.06);
+    margin-bottom:.35rem;
+    font-size:.72rem;
+    background: rgba(25,135,84,.06);
+  }
+  .hr-leave-wrap .cal-cell .item small{ color:#6c757d; }
+  .hr-leave-wrap .cal-head{
+    display:grid;grid-template-columns: repeat(7, 1fr);
+    gap: .5rem;
+    margin-bottom:.5rem;
+    color:#6c757d;
+    font-size:.75rem;
+    font-weight:600;
+    padding: 0 .2rem;
+  }
+  .hr-leave-wrap .shadow-soft{
+    box-shadow: 0 .35rem 1.1rem rgba(0,0,0,.06);
+  }
+  .hr-leave-wrap .filter-row .form-select,
+  .hr-leave-wrap .filter-row .form-control{
+    border-radius: 12px;
+  }
+</style>
+
+<div class="hr-leave-wrap">
+
+  <!-- Header -->
+  <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
+    <div>
+      <div class="d-flex align-items-center gap-2 flex-wrap">
+        <h4 class="mb-0">Leave Management</h4>
+        <span class="pill pill-soft"><i class="bi bi-shield-check"></i> Policy + Approval</span>
+      </div>
+      <div class="text-muted small mt-1">
+        Central leave control: request, approve/reject, balances by leave type, critical-day protection, and branch filtering.
+      </div>
+    </div>
+
+    <div class="d-flex gap-2 flex-wrap">
+      <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#hrLeaveRequestModal">
+        <i class="bi bi-plus-circle me-1"></i>New Leave Request
+      </button>
+
+      <button class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#hrPolicyModal">
+        <i class="bi bi-sliders me-1"></i>Policy
+      </button>
+
+      <button class="btn btn-outline-secondary btn-sm" id="hrLeaveExportCsvBtn">
+        <i class="bi bi-download me-1"></i>Export CSV
+      </button>
+
+      <button class="btn btn-outline-secondary btn-sm" id="hrLeaveRefreshBtn">
+        <i class="bi bi-arrow-clockwise me-1"></i>Refresh
+      </button>
+    </div>
+  </div>
+
+  <!-- KPIs -->
+  <div class="row g-3 mb-3">
+    <div class="col-12 col-md-4">
+      <div class="kpi shadow-soft p-3 h-100">
+        <div class="d-flex align-items-start justify-content-between">
+          <div>
+            <div class="text-muted small">Leave records (Approved -  this year)</div>
+            <div class="display-6 fw-bold mb-0" id="hrLeaveMetricRecords">--</div>
+            <div class="text-muted extra-small">Only Approved leaves count as "used".</div>
+          </div>
+          <div class="icon"><i class="bi bi-journal-check fs-5"></i></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12 col-md-4">
+      <div class="kpi shadow-soft p-3 h-100">
+        <div class="d-flex align-items-start justify-content-between">
+          <div>
+            <div class="text-muted small">Total leave days (Approved -  this year)</div>
+            <div class="display-6 fw-bold mb-0" id="hrLeaveMetricDays">--</div>
+            <div class="text-muted extra-small">Pending requests do not reduce balance.</div>
+          </div>
+          <div class="icon" style="background: rgba(25,135,84,.08);">
+            <i class="bi bi-calendar-heart fs-5 text-success"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12 col-md-4">
+      <div class="kpi shadow-soft p-3 h-100">
+        <div class="d-flex align-items-start justify-content-between">
+          <div>
+            <div class="text-muted small">Top leave user (Approved -  this year)</div>
+            <div class="h4 fw-semibold mb-1" id="hrLeaveMetricTop">--</div>
+            <div class="text-muted extra-small">Based on total approved leave days.</div>
+          </div>
+          <div class="icon" style="background: rgba(255,193,7,.15);">
+            <i class="bi bi-trophy fs-5 text-warning"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Layout: Left = Top + Calendar, Right = Records -->
+  <div class="row g-3">
+
+    <!-- Left column -->
+    <div class="col-12 col-lg-4">
+
+      <!-- Top usage -->
+      <div class="card border-0 shadow-sm mb-3">
+        <div class="card-header bg-white">
+          <div class="fw-semibold">Top Leave Usage (This Year)</div>
+          <div class="text-muted small">Employees with highest approved leave days.</div>
+        </div>
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+              <thead class="table-light small">
+                <tr>
+                  <th>Employee</th>
+                  <th class="text-end">Days</th>
+                </tr>
+              </thead>
+              <tbody id="hrLeaveTopBody" class="small">
+                <tr><td colspan="2" class="text-muted fst-italic">Loading...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Calendar -->
+      <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white d-flex justify-content-between align-items-center gap-2 flex-wrap">
+          <div>
+            <div class="fw-semibold">Leave Calendar</div>
+            <div class="text-muted small">Approved leaves for selected month.</div>
+          </div>
+          <div class="d-flex gap-2 align-items-center">
+            <input type="month" class="form-control form-control-sm" id="hrLeaveCalMonth" style="width:160px;">
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="cal-head">
+            <div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div><div>Sun</div>
+          </div>
+
+          <div id="hrLeaveCalLoading" class="text-muted small fst-italic">Loading calendar...</div>
+          <div id="hrLeaveCalendar" class="cal-grid"></div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Right column -->
+    <div class="col-12 col-lg-8">
+      <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white">
+          <div class="d-flex justify-content-between align-items-start gap-2 flex-wrap">
+            <div>
+              <div class="fw-semibold">Leave Records</div>
+              <div class="text-muted small">All leave requests across employees (filterable).</div>
+            </div>
+
+            <div class="d-flex gap-2 flex-wrap align-items-center filter-row">
+              <select class="form-select form-select-sm" id="hrLeaveFilterStatus" style="width:150px;">
+                <option value="">All Status</option>
+              </select>
+
+              <select class="form-select form-select-sm" id="hrLeaveFilterType" style="width:160px;">
+                <option value="">All Types</option>
+              </select>
+
+              <input type="date" class="form-control form-control-sm" id="hrLeaveFilterFrom" style="width:150px;" placeholder="From">
+              <input type="date" class="form-control form-control-sm" id="hrLeaveFilterTo" style="width:150px;" placeholder="To">
+
+              <div class="input-group input-group-sm" style="width:320px;">
+                <span class="input-group-text"><i class="bi bi-search"></i></span>
+                <input type="text" class="form-control" id="hrLeaveSearch" placeholder="Search name, branch, reason, requester...">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card-body">
+          <div id="hrLeaveLoading" class="text-muted small fst-italic">Loading leave records...</div>
+
+          <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+              <thead class="table-light small">
+                <tr>
+                  <th style="width:22%;">Employee</th>
+                  <th style="width:12%;">Type</th>
+                  <th style="width:12%;">Start</th>
+                  <th style="width:12%;">End</th>
+                  <th style="width:7%;" class="text-end">Days</th>
+                  <th style="width:12%;">Status</th>
+                  <th style="width:14%;">Requested By</th>
+                  <th style="width:14%;">Approved By</th>
+                  <th style="width:14%;" class="text-end">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="hrLeaveBody" class="small"></tbody>
+            </table>
+          </div>
+
+          <div class="text-muted extra-small mt-2">
+            Tip: Approve/Reject updates the employee profile tab automatically because leaves are stored in <code>users.leaves[]</code>.
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+
+  <!-- ================= New Leave Request Modal ================= -->
+  <div class="modal fade" id="hrLeaveRequestModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header">
+          <div>
+            <h5 class="modal-title mb-0">New Leave Request</h5>
+            <div class="text-muted small">Creates a <span class="fw-semibold">Pending</span> request (approval required).</div>
+          </div>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+
+        <div class="modal-body">
+          <div class="row g-3">
+
+            <div class="col-12">
+              <label class="form-label small mb-1">Employee</label>
+              <select class="form-select form-select-sm" id="hrLeaveEmployee"></select>
+              <div class="small text-muted mt-1" id="hrLeaveEmployeeHint"></div>
+            </div>
+
+            <div class="col-6">
+              <label class="form-label small mb-1">Leave Type</label>
+              <select class="form-select form-select-sm" id="hrLeaveType"></select>
+            </div>
+
+            <div class="col-6">
+              <label class="form-label small mb-1">Start Date</label>
+              <input type="date" class="form-control form-control-sm" id="hrLeaveStart" required>
+              <div class="text-muted extra-small mt-1" id="hrLeaveConflictHint"></div>
+            </div>
+
+            <div class="col-6">
+              <label class="form-label small mb-1">Number of Days</label>
+              <input type="number" min="1" class="form-control form-control-sm" id="hrLeaveDays" required>
+            </div>
+
+            <div class="col-6">
+              <label class="form-label small mb-1">Requested By</label>
+              <input type="text" class="form-control form-control-sm" id="hrLeaveRequestedBy" placeholder="Manager / HR">
+            </div>
+
+            <div class="col-12">
+              <label class="form-label small mb-1">Reason</label>
+              <textarea class="form-control form-control-sm" id="hrLeaveReason" rows="3" placeholder="Reason for leave..."></textarea>
+            </div>
+
+            <div class="col-12 d-grid">
+              <button class="btn btn-primary btn-sm" id="hrLeaveSaveBtn">
+                <span class="spinner-border spinner-border-sm me-1 d-none" id="hrLeaveSaveSpin"></span>
+                Submit Request
+              </button>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ================= Policy Modal (Org policy quick edit) ================= -->
+  <div class="modal fade" id="hrPolicyModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header">
+          <div>
+            <h5 class="modal-title mb-0">Leave Policy</h5>
+            <div class="text-muted small">Set org defaults (per type) and carry-over cap.</div>
+          </div>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+
+        <div class="modal-body">
+          <div class="alert alert-light border small mb-3">
+            <i class="bi bi-info-circle me-1"></i>
+            Policy defaults can be overridden per employee later (optional).
+          </div>
+
+          <div class="row g-3">
+            <div class="col-12 col-md-6">
+              <label class="form-label small mb-1">Carry-over max (Annual)</label>
+              <input type="number" min="0" class="form-control form-control-sm" id="hrCarryMax" placeholder="e.g. 5">
+              <div class="text-muted extra-small mt-1">Unused Annual leave carried to next year is capped at this value.</div>
+            </div>
+
+            <div class="col-12">
+              <div class="fw-semibold mb-2">Max days per type (Org default)</div>
+              <div id="hrPolicyTypes" class="row g-2"></div>
+            </div>
+
+            <div class="col-12 d-grid">
+              <button class="btn btn-primary btn-sm" id="hrPolicySaveBtn">
+                <span class="spinner-border spinner-border-sm me-1 d-none" id="hrPolicySpin"></span>
+                Save Policy
+              </button>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+</div>
+
+
+<script>
+(function(){
+  // ===== Endpoints (match your new route) =====
+  const EP = {
+    types: "{{ url_for('hr.leave_types') }}",
+    employees: "{{ url_for('hr.leave_employees_list') }}",
+    list: "{{ url_for('hr.leave_list') }}",
+    stats: "{{ url_for('hr.leave_stats') }}",
+    create: "{{ url_for('hr.create_leave_request') }}",
+    orgPolicyGet: "{{ url_for('hr.get_org_leave_policy') }}",
+    orgPolicySet: "{{ url_for('hr.set_org_leave_policy') }}",
+    calendar: "{{ url_for('hr.leave_calendar') }}",
+    approveTpl: "{{ url_for('hr.approve_leave_request', employee_id='__E__', leave_id='__L__') }}",
+    rejectTpl: "{{ url_for('hr.reject_leave_request', employee_id='__E__', leave_id='__L__') }}",
+    cancelTpl: "{{ url_for('hr.cancel_leave_request', employee_id='__E__', leave_id='__L__') }}",
+  };
+
+  // ===== Elements =====
+  const refreshBtn = document.getElementById('hrLeaveRefreshBtn');
+  const exportBtn  = document.getElementById('hrLeaveExportCsvBtn');
+
+  const metricRecords = document.getElementById('hrLeaveMetricRecords');
+  const metricDays    = document.getElementById('hrLeaveMetricDays');
+  const metricTop     = document.getElementById('hrLeaveMetricTop');
+
+  const topBody   = document.getElementById('hrLeaveTopBody');
+  const loadingEl = document.getElementById('hrLeaveLoading');
+  const tbody     = document.getElementById('hrLeaveBody');
+
+  const searchEl  = document.getElementById('hrLeaveSearch');
+  const statusSel = document.getElementById('hrLeaveFilterStatus');
+  const typeSel   = document.getElementById('hrLeaveFilterType');
+  const fromEl    = document.getElementById('hrLeaveFilterFrom');
+  const toEl      = document.getElementById('hrLeaveFilterTo');
+
+  // calendar
+  const calMonth  = document.getElementById('hrLeaveCalMonth');
+  const calGrid   = document.getElementById('hrLeaveCalendar');
+  const calLoad   = document.getElementById('hrLeaveCalLoading');
+
+  // request modal
+  const empSel    = document.getElementById('hrLeaveEmployee');
+  const empHint   = document.getElementById('hrLeaveEmployeeHint');
+  const leaveType = document.getElementById('hrLeaveType');
+  const startEl   = document.getElementById('hrLeaveStart');
+  const daysEl    = document.getElementById('hrLeaveDays');
+  const reqByEl   = document.getElementById('hrLeaveRequestedBy');
+  const reasonEl  = document.getElementById('hrLeaveReason');
+  const conflictHint = document.getElementById('hrLeaveConflictHint');
+
+  const saveBtn   = document.getElementById('hrLeaveSaveBtn');
+  const saveSpin  = document.getElementById('hrLeaveSaveSpin');
+
+  // policy modal
+  const policyTypesWrap = document.getElementById('hrPolicyTypes');
+  const carryEl         = document.getElementById('hrCarryMax');
+  const policySaveBtn   = document.getElementById('hrPolicySaveBtn');
+  const policySpin      = document.getElementById('hrPolicySpin');
+
+  // ===== State =====
+  let employees = [];
+  let leaveTypes = [];
+  let statuses = [];
+  let orgPolicy = null;
+
+  function toast(type, msg){
+    window.showToast ? window.showToast(type, msg) : alert(msg);
+  }
+
+  function setDefaultMonth(){
+    const d = new Date();
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth()+1).padStart(2,'0');
+    calMonth.value = `${yyyy}-${mm}`;
+  }
+
+  function setToday(el){
+    const d = new Date();
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth()+1).padStart(2,'0');
+    const dd = String(d.getDate()).padStart(2,'0');
+    el.value = `${yyyy}-${mm}-${dd}`;
+  }
+
+  function badgeStatus(st){
+    const s = (st || '').toLowerCase();
+    let cls = 'badge rounded-pill status-badge ';
+    if(s === 'approved') cls += 'bg-success-subtle text-success-emphasis';
+    else if(s === 'pending') cls += 'bg-warning-subtle text-warning-emphasis';
+    else if(s === 'rejected') cls += 'bg-danger-subtle text-danger-emphasis';
+    else if(s === 'cancelled') cls += 'bg-secondary-subtle text-secondary-emphasis';
+    else cls += 'bg-light text-dark';
+    return `<span class="${cls}">${st || '--'}</span>`;
+  }
+
+  function safe(v){ return (v ?? '').toString(); }
+
+  function getFilters(){
+    return {
+      q: safe(searchEl.value).trim(),
+      status: safe(statusSel.value).trim(),
+      leave_type: safe(typeSel.value).trim(),
+      from: safe(fromEl.value).trim(),
+      to: safe(toEl.value).trim(),
+    };
+  }
+
+  function qs(obj){
+    const p = new URLSearchParams();
+    Object.keys(obj || {}).forEach(k => {
+      const v = obj[k];
+      if(v !== undefined && v !== null && String(v).trim() !== '') p.set(k, v);
+    });
+    const s = p.toString();
+    return s ? `?${s}` : '';
+  }
+
+  // ===== Loaders =====
+  function loadTypes(){
+    return fetch(EP.types)
+      .then(r => r.json())
+      .then(d => {
+        if(!d.ok) throw new Error(d.message || 'Failed to load leave types');
+        leaveTypes = d.leave_types || [];
+        statuses = d.statuses || [];
+        orgPolicy = d.org_policy || null;
+
+        // filters
+        statusSel.innerHTML = `<option value="">All Status</option>` + statuses.map(s => `<option value="${s}">${s}</option>`).join('');
+        typeSel.innerHTML = `<option value="">All Types</option>` + leaveTypes.map(t => `<option value="${t}">${t}</option>`).join('');
+
+        // request modal types
+        leaveType.innerHTML = leaveTypes.map(t => `<option value="${t}">${t}</option>`).join('');
+
+        // policy editor UI
+        renderPolicyEditor(orgPolicy);
+      });
+  }
+
+  function loadEmployees(){
+    return fetch(EP.employees)
+      .then(r => r.json())
+      .then(d => {
+        if(!d.ok) throw new Error(d.message || 'Failed to load employees');
+        employees = d.employees || [];
+
+        empSel.innerHTML = employees.map(e => {
+          const sub = e.branch ? ` -- ${e.branch}` : '';
+          return `<option value="${e.id}">${e.name}${sub}</option>`;
+        }).join('');
+
+        updateEmpHint();
+      });
+  }
+
+  function loadStats(){
+    return fetch(EP.stats)
+      .then(r => r.json())
+      .then(d => {
+        if(!d.ok) throw new Error(d.message || 'Failed to load stats');
+        metricRecords.textContent = d.stats?.records ?? 0;
+        metricDays.textContent    = d.stats?.total_days ?? 0;
+        metricTop.textContent     = d.stats?.top_employee ?? '--';
+        renderTop(d.top || []);
+      })
+      .catch(err => {
+        console.error(err);
+        renderTop([]);
+      });
+  }
+
+  function loadLeaves(){
+    loadingEl.classList.remove('d-none');
+    loadingEl.textContent = 'Loading leave records...';
+    tbody.innerHTML = '';
+
+    const params = getFilters();
+    return fetch(EP.list + qs(params))
+      .then(r => r.json())
+      .then(d => {
+        if(!d.ok) throw new Error(d.message || 'Failed to load leaves');
+        loadingEl.classList.add('d-none');
+        renderLeaves(d.leaves || []);
+      })
+      .catch(err => {
+        console.error(err);
+        loadingEl.classList.add('d-none');
+        tbody.innerHTML = `<tr><td colspan="9" class="text-danger small">Failed to load leave records.</td></tr>`;
+      });
+  }
+
+  function renderTop(top){
+    topBody.innerHTML = '';
+    if(!top || !top.length){
+      topBody.innerHTML = `<tr><td colspan="2" class="text-muted fst-italic">No data yet.</td></tr>`;
+      return;
+    }
+    top.forEach(x => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${x.name || '--'}</td>
+        <td class="text-end fw-semibold">${x.days ?? 0}</td>
+      `;
+      topBody.appendChild(tr);
+    });
+  }
+
+  function renderLeaves(items){
+    tbody.innerHTML = '';
+    if(!items.length){
+      tbody.innerHTML = `<tr><td colspan="9" class="text-muted fst-italic">No leave records yet.</td></tr>`;
+      return;
+    }
+
+    items.forEach(x => {
+      const tr = document.createElement('tr');
+
+      const actions = `
+        <div class="btn-group btn-group-sm" role="group">
+          <button class="btn btn-outline-success" data-act="approve" data-e="${x.employee_id}" data-l="${x.leave_id}" ${x.status === 'Approved' ? 'disabled' : ''}>
+            <i class="bi bi-check2-circle"></i>
+          </button>
+          <button class="btn btn-outline-danger" data-act="reject" data-e="${x.employee_id}" data-l="${x.leave_id}" ${x.status === 'Rejected' ? 'disabled' : ''}>
+            <i class="bi bi-x-circle"></i>
+          </button>
+          <button class="btn btn-outline-secondary" data-act="cancel" data-e="${x.employee_id}" data-l="${x.leave_id}" ${x.status === 'Cancelled' ? 'disabled' : ''}>
+            <i class="bi bi-slash-circle"></i>
+          </button>
+        </div>
+      `;
+
+      tr.innerHTML = `
+        <td>
+          <div class="fw-semibold">${x.employee_name || '--'}</div>
+          <div class="text-muted extra-small">${x.employee_code || ''} -  ${x.branch || ''}</div>
+        </td>
+        <td class="nowrap">${x.leave_type || '--'}</td>
+        <td class="nowrap">${x.start_date || ''}</td>
+        <td class="nowrap">${x.end_date || ''}</td>
+        <td class="text-end fw-semibold">${x.days ?? 0}</td>
+        <td>${badgeStatus(x.status)}</td>
+        <td>${x.requested_by || '--'}</td>
+        <td>${x.approved_by || '--'}</td>
+        <td class="text-end">${actions}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    // actions
+    tbody.querySelectorAll('button[data-act]').forEach(btn => {
+      btn.addEventListener('click', () => handleAction(btn));
+    });
+  }
+
+  async function handleAction(btn){
+    const act = btn.getAttribute('data-act');
+    const emp = btn.getAttribute('data-e');
+    const lv  = btn.getAttribute('data-l');
+    if(!act || !emp || !lv) return;
+
+    if(act === 'reject'){
+      const rr = prompt("Reason for rejection (optional):", "");
+      if(rr === null) return;
+
+      await postJson(
+        EP.rejectTpl.replace('__E__', emp).replace('__L__', lv),
+        { rejected_reason: rr || '' },
+        "Leave rejected."
+      );
+      init(true);
+      return;
+    }
+
+    if(act === 'approve'){
+      await postJson(
+        EP.approveTpl.replace('__E__', emp).replace('__L__', lv),
+        {},
+        "Leave approved."
+      );
+      init(true);
+      return;
+    }
+
+    if(act === 'cancel'){
+      const ok = confirm("Cancel this leave request?");
+      if(!ok) return;
+
+      await postJson(
+        EP.cancelTpl.replace('__E__', emp).replace('__L__', lv),
+        {},
+        "Leave cancelled."
+      );
+      init(true);
+      return;
+    }
+  }
+
+  function postJson(url, payload, successMsg){
+    return fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type':'application/json' },
+      body: JSON.stringify(payload || {})
+    })
+    .then(r => r.json())
+    .then(d => {
+      if(!d.ok) throw new Error(d.message || 'Request failed');
+      toast('success', successMsg || d.message || 'Done');
+      return d;
+    })
+    .catch(err => {
+      console.error(err);
+      toast('danger', err.message || 'Failed');
+      throw err;
+    });
+  }
+
+  // ===== Employee hint (balances per type) =====
+  function updateEmpHint(){
+    const id = empSel.value;
+    const emp = employees.find(x => x.id === id);
+    if(!emp){ empHint.textContent = ''; return; }
+
+    // show annual balances summary
+    const annual = emp.balances?.balances?.Annual || {};
+    const ent = (annual.entitlement ?? '--');
+    const used = (annual.used ?? 0);
+    const pend = (annual.pending ?? 0);
+    const rem = (annual.remaining ?? '--');
+    const carry = (annual.carry_over ?? 0);
+
+    const flag = annual.flag_low ? `<span class="pill" style="border-color: rgba(220,53,69,.25); background: rgba(220,53,69,.06); color:#b02a37;"><i class="bi bi-flag"></i> Low balance</span>` : '';
+
+    empHint.innerHTML = `
+      <div class="d-flex flex-wrap gap-2 align-items-center">
+        <span class="pill"><i class="bi bi-person-badge"></i> ${emp.name}</span>
+        <span class="pill"><i class="bi bi-building"></i> ${emp.branch || '--'}</span>
+        <span class="pill"><i class="bi bi-calendar2-week"></i> Annual: Ent ${ent} -  Used ${used} -  Pending ${pend} -  Remaining ${rem} -  Carry ${carry}</span>
+        ${flag}
+      </div>
+      <div class="text-muted extra-small mt-1">Tip: limits are per type; only Approved reduces Remaining.</div>
+    `;
+  }
+
+  empSel.addEventListener('change', updateEmpHint);
+
+  // ===== Submit new request =====
+  saveBtn.addEventListener('click', async () => {
+    const payload = {
+      employee_id: empSel.value,
+      leave_type: (leaveType.value || 'Annual').trim(),
+      start_date: (startEl.value || '').trim(),
+      days: (daysEl.value || '').trim(),
+      requested_by: (reqByEl.value || '').trim(),
+      reason: (reasonEl.value || '').trim(),
+    };
+
+    conflictHint.textContent = '';
+
+    if(!payload.employee_id || !payload.start_date || !payload.days){
+      toast('warning', 'Employee, start date and days are required.');
+      return;
+    }
+
+    saveBtn.disabled = true;
+    saveSpin.classList.remove('d-none');
+
+    try{
+      const res = await fetch(EP.create, {
+        method:'POST',
+        headers:{ 'Content-Type':'application/json' },
+        body: JSON.stringify(payload)
+      }).then(r => r.json());
+
+      if(!res.ok){
+        // show critical day conflicts if provided
+        if(res.conflicts && Array.isArray(res.conflicts) && res.conflicts.length){
+          conflictHint.innerHTML = `Conflicts: ${res.conflicts.map(c => `${c.date} (${c.label})`).join(', ')}`;
+        }
+        throw new Error(res.message || 'Failed to submit');
+      }
+
+      toast('success', res.message || 'Leave request submitted.');
+      daysEl.value = '';
+      reqByEl.value = '';
+      reasonEl.value = '';
+
+      // close modal
+      const modalEl = document.getElementById('hrLeaveRequestModal');
+      const modal = bootstrap.Modal.getInstance(modalEl);
+      modal && modal.hide();
+
+      init(true);
+    }catch(err){
+      console.error(err);
+      toast('danger', err.message || 'Failed');
+    }finally{
+      saveBtn.disabled = false;
+      saveSpin.classList.add('d-none');
+    }
+  });
+
+  // ===== Policy editor =====
+  function renderPolicyEditor(policy){
+    policyTypesWrap.innerHTML = '';
+    if(!policy || !policy.types){
+      policyTypesWrap.innerHTML = `<div class="text-muted small fst-italic">Policy not loaded.</div>`;
+      return;
+    }
+    carryEl.value = policy.carry_over_max ?? 5;
+
+    // grid of inputs
+    const types = policy.types || {};
+    const html = Object.keys(types).sort().map(t => {
+      const v = types[t]?.max_days;
+      const value = (v === null || v === undefined) ? '' : v;
+      return `
+        <div class="col-12 col-md-6 col-lg-4">
+          <div class="border rounded-3 p-2">
+            <div class="small fw-semibold mb-1">${t}</div>
+            <input type="number" min="0" class="form-control form-control-sm" data-policy-type="${t}" value="${value}" placeholder="Unlimited (blank)">
+            <div class="text-muted extra-small mt-1">Blank = unlimited</div>
+          </div>
+        </div>
+      `;
+    }).join('');
+    policyTypesWrap.innerHTML = html;
+  }
+
+  policySaveBtn.addEventListener('click', async () => {
+    policySaveBtn.disabled = true;
+    policySpin.classList.remove('d-none');
+
+    try{
+      const types = {};
+      policyTypesWrap.querySelectorAll('input[data-policy-type]').forEach(inp => {
+        const t = inp.getAttribute('data-policy-type');
+        const v = (inp.value || '').trim();
+        types[t] = { max_days: (v === '' ? null : parseInt(v, 10)) };
+      });
+
+      const payload = {
+        carry_over_max: (carryEl.value || '').trim() === '' ? 5 : parseInt(carryEl.value, 10),
+        types: types
+      };
+
+      const d = await fetch(EP.orgPolicySet, {
+        method:'POST',
+        headers:{ 'Content-Type':'application/json' },
+        body: JSON.stringify(payload)
+      }).then(r => r.json());
+
+      if(!d.ok) throw new Error(d.message || 'Failed to save policy');
+
+      toast('success', 'Policy saved.');
+      orgPolicy = d.policy;
+      renderPolicyEditor(orgPolicy);
+
+      const modalEl = document.getElementById('hrPolicyModal');
+      const modal = bootstrap.Modal.getInstance(modalEl);
+      modal && modal.hide();
+
+      init(true);
+    }catch(err){
+      console.error(err);
+      toast('danger', err.message || 'Failed');
+    }finally{
+      policySaveBtn.disabled = false;
+      policySpin.classList.add('d-none');
+    }
+  });
+
+  // ===== Calendar =====
+  calMonth.addEventListener('change', () => loadCalendar());
+
+  function buildCalendar(firstDowMondayBased, daysInMonth){
+    calGrid.innerHTML = '';
+
+    // firstDowMondayBased: 0=Mon..6=Sun
+    const blanks = firstDowMondayBased;
+    for(let i=0;i<blanks;i++){
+      const cell = document.createElement('div');
+      cell.className = 'cal-cell';
+      cell.style.opacity = '.35';
+      cell.innerHTML = `<div class="day"><span class="num">&nbsp;</span><span class="dot" style="opacity:0;"></span></div>`;
+      calGrid.appendChild(cell);
+    }
+
+    for(let day=1; day<=daysInMonth; day++){
+      const cell = document.createElement('div');
+      cell.className = 'cal-cell';
+      cell.setAttribute('data-day', String(day));
+      cell.innerHTML = `
+        <div class="day">
+          <span class="num">${day}</span>
+          <span class="dot" style="opacity:0;"></span>
+        </div>
+        <div class="items"></div>
+      `;
+      calGrid.appendChild(cell);
+    }
+  }
+
+  function loadCalendar(){
+    calLoad.classList.remove('d-none');
+    calLoad.textContent = 'Loading calendar...';
+
+    const month = (calMonth.value || '').trim();
+    if(!month){
+      calLoad.textContent = 'Select month.';
+      return;
+    }
+
+    // create grid skeleton
+    const y = parseInt(month.slice(0,4), 10);
+    const m = parseInt(month.slice(5,7), 10); // 1-12
+
+    const first = new Date(y, m-1, 1);
+    const last  = new Date(y, m, 0);
+    const daysInMonth = last.getDate();
+
+    // JS: getDay 0=Sun..6=Sat; convert to Mon=0..Sun=6
+    const jsDow = first.getDay();
+    const monBased = (jsDow === 0) ? 6 : (jsDow - 1);
+
+    buildCalendar(monBased, daysInMonth);
+
+    return fetch(EP.calendar + `?month=${encodeURIComponent(month)}`)
+      .then(r => r.json())
+      .then(d => {
+        if(!d.ok) throw new Error(d.message || 'Failed to load calendar');
+        calLoad.classList.add('d-none');
+        renderCalendarBlocks(month, d.blocks || []);
+      })
+      .catch(err => {
+        console.error(err);
+        calLoad.textContent = 'Failed to load calendar.';
+      });
+  }
+
+  function renderCalendarBlocks(month, blocks){
+    // blocks are approved leaves with start/end; mark each covered day
+    const y = parseInt(month.slice(0,4), 10);
+    const m = parseInt(month.slice(5,7), 10);
+
+    const map = {}; // day -> items
+    (blocks || []).forEach(b => {
+      const sd = new Date(b.start_date + "T00:00:00");
+      const ed = new Date(b.end_date + "T00:00:00");
+
+      // clamp to month
+      const cur = new Date(sd);
+      while(cur <= ed){
+        if(cur.getFullYear() === y && (cur.getMonth()+1) === m){
+          const day = cur.getDate();
+          map[day] = map[day] || [];
+          map[day].push(b);
+        }
+        cur.setDate(cur.getDate() + 1);
+      }
+    });
+
+    Object.keys(map).forEach(k => {
+      const day = parseInt(k, 10);
+      const cell = calGrid.querySelector(`.cal-cell[data-day="${day}"]`);
+      if(!cell) return;
+
+      const dot = cell.querySelector('.dot');
+      const itemsWrap = cell.querySelector('.items');
+
+      dot.style.opacity = '1';
+
+      const items = map[day].slice(0, 3).map(b => {
+        return `
+          <span class="item">
+            <span class="fw-semibold">${b.name}</span>
+            <small>-  ${b.leave_type}</small>
+          </span>
+        `;
+      }).join('');
+
+      const more = (map[day].length > 3) ? `<div class="text-muted extra-small mt-1">+${map[day].length - 3} more</div>` : '';
+
+      itemsWrap.innerHTML = items + more;
+    });
+  }
+
+  // ===== Export CSV (frontend) =====
+  exportBtn.addEventListener('click', async () => {
+    try{
+      const params = getFilters();
+      const res = await fetch(EP.list + qs(params)).then(r => r.json());
+      if(!res.ok) throw new Error(res.message || 'Failed');
+
+      const rows = res.leaves || [];
+      if(!rows.length){
+        toast('warning', 'No data to export.');
+        return;
+      }
+
+      const headers = [
+        "Employee", "Employee Code", "Branch", "Type", "Status",
+        "Start Date", "End Date", "Days",
+        "Requested By", "Approved By", "Approved At", "Reason"
+      ];
+
+      const csv = [
+        headers.join(','),
+        ...rows.map(r => ([
+          r.employee_name, r.employee_code, r.branch, r.leave_type, r.status,
+          r.start_date, r.end_date, r.days,
+          r.requested_by, r.approved_by, r.approved_at, (r.reason || '').replace(/\n/g,' ')
+        ]).map(v => `"${String(v ?? '').replace(/"/g,'""')}"`).join(','))
+      ].join('\n');
+
+      const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+      const url = URL.createObjectURL(blob);
+
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `leave_export_${new Date().toISOString().slice(0,10)}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+
+      toast('success', 'CSV exported.');
+    }catch(err){
+      console.error(err);
+      toast('danger', err.message || 'Failed');
+    }
+  });
+
+  // ===== Filters reload =====
+  function bindReload(el){
+    el.addEventListener('change', () => loadLeaves());
+  }
+  [statusSel, typeSel, fromEl, toEl].forEach(bindReload);
+
+  let searchT = null;
+  searchEl.addEventListener('input', () => {
+    clearTimeout(searchT);
+    searchT = setTimeout(() => loadLeaves(), 250);
+  });
+
+  refreshBtn.addEventListener('click', () => init(true));
+
+  // ===== Init =====
+  function init(reloadAll){
+    return Promise.resolve()
+      .then(() => loadTypes())
+      .then(() => loadEmployees())
+      .then(() => loadStats())
+      .then(() => loadLeaves())
+      .then(() => {
+        updateEmpHint();
+        if(!calMonth.value) setDefaultMonth();
+        loadCalendar();
+      })
+      .catch(err => {
+        console.error(err);
+        toast('danger', err.message || 'Initialization failed');
+      });
+  }
+
+  // defaults
+  setToday(startEl);
+  if(!calMonth.value) setDefaultMonth();
+
+  init(true);
+
+})();
+</script>
+
+{% endblock %}

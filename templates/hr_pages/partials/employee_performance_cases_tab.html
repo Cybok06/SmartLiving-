@@ -1,0 +1,468 @@
+{# templates/hr_pages/partials/employee_performance_cases_tab.html #}
+
+<style>
+  .extra-small{ font-size:.74rem; }
+  .kpi-card{
+    border:1px solid rgba(0,0,0,.06);
+    border-radius:14px;
+    background:#fff;
+    box-shadow:0 .35rem 1.1rem rgba(0,0,0,.06);
+  }
+  .pill{
+    display:inline-flex;align-items:center;gap:.35rem;
+    padding:.25rem .6rem;border-radius:999px;font-size:.72rem;
+    border:1px solid rgba(0,0,0,.08); background:#fff;
+    white-space:nowrap;
+  }
+  .sev{ font-weight:700;border:1px solid rgba(0,0,0,.08); }
+  .sev-critical{ background: rgba(220,53,69,.08); color:#b02a37; border-color: rgba(220,53,69,.18);}
+  .sev-high{ background: rgba(255,193,7,.16); color:#8a6d00; border-color: rgba(255,193,7,.22);}
+  .sev-normal{ background: rgba(13,110,253,.08); color:#0b5ed7; border-color: rgba(13,110,253,.18);}
+  .sev-low{ background: rgba(25,135,84,.08); color:#146c43; border-color: rgba(25,135,84,.18);}
+
+  .status-badge{ font-weight:650;border:1px solid rgba(0,0,0,.08); }
+  .timeline{
+    border-left:2px solid rgba(0,0,0,.08);
+    padding-left:.9rem;
+  }
+  .timeline .item{ position:relative; margin-bottom:.75rem; }
+  .timeline .item:before{
+    content:"";
+    width:10px;height:10px;border-radius:99px;
+    background: rgba(13,110,253,.45);
+    border:2px solid #fff;
+    position:absolute;
+    left:-1.12rem; top:.25rem;
+    box-shadow:0 0 0 2px rgba(0,0,0,.08);
+  }
+</style>
+
+<div class="row g-3">
+  <!-- KPIs -->
+  <div class="col-12">
+    <div class="kpi-card p-3">
+      <div class="row g-3 align-items-center">
+        <div class="col-6 col-md-3">
+          <div class="small text-muted">Average Rating</div>
+          <div class="fw-bold" id="hr-perf-avg-rating">-</div>
+        </div>
+        <div class="col-6 col-md-3">
+          <div class="small text-muted">Performance Records</div>
+          <div class="fw-bold" id="hr-perf-count">0</div>
+        </div>
+        <div class="col-6 col-md-3">
+          <div class="small text-muted">Open Cases</div>
+          <div class="fw-bold text-danger" id="hr-case-open">0</div>
+        </div>
+        <div class="col-6 col-md-3">
+          <div class="small text-muted">Closed / Resolved Cases</div>
+          <div class="fw-bold text-success" id="hr-case-closed">0</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Performance column (kept) -->
+  <div class="col-12 col-lg-6">
+    <div class="card border-0 shadow-sm mb-3">
+      <div class="card-header bg-white">
+        <h6 class="mb-0">Add Performance Entry</h6>
+        <p class="small text-muted mb-0">Record achievements, positive behaviour, and contributions.</p>
+      </div>
+      <div class="card-body">
+        <form id="hr-performance-form">
+          <div class="mb-2">
+            <label class="form-label small mb-1">Performance Title</label>
+            <input type="text" name="title" class="form-control form-control-sm"
+                   placeholder="e.g. Exceeded weekly sales target">
+          </div>
+          <div class="mb-2">
+            <label class="form-label small mb-1">Details</label>
+            <textarea name="details" rows="2" class="form-control form-control-sm"
+                      placeholder="Short narrative of what the employee did."></textarea>
+          </div>
+          <div class="mb-3">
+            <label class="form-label small mb-1 d-block">Rating</label>
+            <div class="d-flex align-items-center gap-2">
+              <div id="hr-performance-stars" data-rating="0">
+                {% for i in range(1, 6) %}
+                  <i class="bi bi-star hr-perf-star" data-value="{{ i }}"
+                     style="cursor:pointer;font-size:1.1rem;"></i>
+                {% endfor %}
+              </div>
+              <span class="small text-muted" id="hr-performance-rating-label">No rating</span>
+            </div>
+          </div>
+          <button type="submit" class="btn btn-sm btn-primary">
+            <span class="spinner-border spinner-border-sm me-2 d-none"
+                  id="hr-performance-spinner" role="status"></span>
+            Save Performance
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-white d-flex justify-content-between align-items-center">
+        <h6 class="mb-0">Performance History</h6>
+        <button type="button" class="btn btn-sm btn-outline-secondary" id="hr-perf-refresh-btn">
+          <i class="bi bi-arrow-clockwise me-1"></i> Refresh
+        </button>
+      </div>
+      <div class="card-body p-0">
+        <div class="list-group list-group-flush" id="hr-performance-list">
+          <div class="list-group-item text-muted small text-center py-3" id="hr-performance-empty">
+            No performance entries recorded yet.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Cases column (VIEW ONLY) -->
+  <div class="col-12 col-lg-6">
+    <div class="card border-0 shadow-sm mb-3">
+      <div class="card-header bg-white d-flex justify-content-between align-items-center">
+        <div>
+          <h6 class="mb-0">Cases &amp; Incidents</h6>
+          <div class="small text-muted">View recorded cases, status, severity and follow-ups.</div>
+        </div>
+        <button type="button" class="btn btn-sm btn-outline-secondary" id="hr-cases-refresh-btn">
+          <i class="bi bi-arrow-clockwise me-1"></i> Refresh
+        </button>
+      </div>
+
+      <div class="card-body p-0">
+        <div class="list-group list-group-flush" id="hr-cases-list">
+          <div class="list-group-item text-muted small text-center py-3" id="hr-cases-empty">
+            No cases recorded yet.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="alert alert-warning small mb-0">
+      <i class="bi bi-info-circle me-1"></i>
+      Cases are recorded and managed in the <span class="fw-semibold">Cases</span> module.
+      This tab is view-only.
+    </div>
+  </div>
+</div>
+
+<!-- ================= Case View Modal (read-only) ================= -->
+<div class="modal fade" id="hrCaseViewModalEmployee" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div>
+          <h5 class="modal-title mb-0" id="empCaseViewTitle">Case</h5>
+          <div class="text-muted small" id="empCaseViewSub">--</div>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body">
+        <div class="d-flex gap-2 flex-wrap mb-2" id="empCaseViewBadges"></div>
+
+        <div class="mb-3">
+          <div class="fw-semibold">Details</div>
+          <div class="text-muted small" id="empCaseViewDetails">--</div>
+        </div>
+
+        <hr>
+
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <div class="fw-semibold">Follow-ups</div>
+          <span class="text-muted extra-small" id="empCaseViewFollowCount">--</span>
+        </div>
+
+        <div class="timeline mb-0" id="empCaseViewTimeline"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  const employeeId = "{{ employee._id }}";
+
+  // KPI elements
+  const avgRatingEl = document.getElementById('hr-perf-avg-rating');
+  const perfCountEl = document.getElementById('hr-perf-count');
+  const caseOpenEl  = document.getElementById('hr-case-open');
+  const caseClosedEl= document.getElementById('hr-case-closed');
+
+  // Performance
+  const perfForm        = document.getElementById('hr-performance-form');
+  const perfSpinner     = document.getElementById('hr-performance-spinner');
+  const perfStarsWrap   = document.getElementById('hr-performance-stars');
+  const perfRatingLabel = document.getElementById('hr-performance-rating-label');
+  const perfList        = document.getElementById('hr-performance-list');
+  const perfRefresh     = document.getElementById('hr-perf-refresh-btn');
+  let   perfRatingVal   = 0;
+
+  // Cases (view-only)
+  const caseList      = document.getElementById('hr-cases-list');
+  const caseRefresh   = document.getElementById('hr-cases-refresh-btn');
+
+  // View modal
+  const empCaseViewTitle = document.getElementById('empCaseViewTitle');
+  const empCaseViewSub   = document.getElementById('empCaseViewSub');
+  const empCaseViewBadges= document.getElementById('empCaseViewBadges');
+  const empCaseViewDetails = document.getElementById('empCaseViewDetails');
+  const empCaseViewTimeline= document.getElementById('empCaseViewTimeline');
+  const empCaseViewFollowCount = document.getElementById('empCaseViewFollowCount');
+
+  let casesCache = [];
+
+  function setSpinner(el, visible) {
+    if (!el) return;
+    el.classList.toggle('d-none', !visible);
+  }
+
+  function sevBadge(sev){
+    sev = (sev || 'Normal');
+    let cls = 'badge rounded-pill sev ';
+    if(sev === 'Critical') cls += 'sev-critical';
+    else if(sev === 'High') cls += 'sev-high';
+    else if(sev === 'Low') cls += 'sev-low';
+    else cls += 'sev-normal';
+    return `<span class="${cls}">${sev}</span>`;
+  }
+
+  function statusBadge(st){
+    st = (st || 'Open');
+    let cls = 'badge rounded-pill status-badge ';
+    if(st === 'Closed' || st === 'Resolved') cls += 'bg-success-subtle text-success-emphasis';
+    else if(st === 'Escalated') cls += 'bg-danger-subtle text-danger-emphasis';
+    else if(st === 'Under Review') cls += 'bg-warning-subtle text-warning-emphasis';
+    else cls += 'bg-primary-subtle text-primary-emphasis';
+    return `<span class="${cls}">${st}</span>`;
+  }
+
+  // ------ Stars for performance rating ------
+  function updateStarUI(rating) {
+    perfRatingVal = rating;
+    const stars = perfStarsWrap ? perfStarsWrap.querySelectorAll('.hr-perf-star') : [];
+    stars.forEach(st => {
+      const value = parseInt(st.getAttribute('data-value') || '0', 10);
+      if (value <= rating) {
+        st.classList.remove('bi-star');
+        st.classList.add('bi-star-fill', 'text-warning');
+      } else {
+        st.classList.remove('bi-star-fill', 'text-warning');
+        st.classList.add('bi-star');
+      }
+    });
+    if (perfRatingLabel) {
+      perfRatingLabel.textContent = rating > 0 ? `${rating} star(s)` : 'No rating';
+    }
+  }
+
+  if (perfStarsWrap) {
+    perfStarsWrap.addEventListener('click', function (e) {
+      const icon = e.target.closest('.hr-perf-star');
+      if (!icon) return;
+      const val = parseInt(icon.getAttribute('data-value') || '0', 10);
+      if (!val) return;
+      updateStarUI(val);
+    });
+  }
+
+  // ------ Render Performance List ------
+  function renderPerformances(list) {
+    if (!perfList) return;
+    perfList.innerHTML = '';
+
+    if (!list || !list.length) {
+      perfList.innerHTML = `
+        <div class="list-group-item text-muted small text-center py-3">
+          No performance entries recorded yet.
+        </div>`;
+      return;
+    }
+
+    list.forEach(p => {
+      let starsHtml = '';
+      const rating = p.rating || 0;
+      for (let i = 1; i <= 5; i++) {
+        starsHtml += i <= rating
+          ? '<i class="bi bi-star-fill text-warning me-1"></i>'
+          : '<i class="bi bi-star text-muted me-1"></i>';
+      }
+
+      const item = document.createElement('div');
+      item.className = 'list-group-item';
+      item.innerHTML = `
+        <div class="d-flex justify-content-between align-items-start">
+          <div>
+            <div class="fw-semibold small">${p.title || 'Untitled performance'}</div>
+            <div class="text-muted extra-small mb-1">${p.created_at || ''}</div>
+            <div class="small">${p.details || ''}</div>
+          </div>
+          <div class="ms-3 text-end">
+            <div class="mb-1">${starsHtml}</div>
+            <div class="extra-small text-muted">Recorded by: ${p.recorded_by || 'HR'}</div>
+          </div>
+        </div>`;
+      perfList.appendChild(item);
+    });
+  }
+
+  // ------ Render Cases List (view-only) ------
+  function renderCases(list) {
+    if (!caseList) return;
+    caseList.innerHTML = '';
+
+    if (!list || !list.length) {
+      caseList.innerHTML = `
+        <div class="list-group-item text-muted small text-center py-3">
+          No cases recorded yet.
+        </div>`;
+      return;
+    }
+
+    casesCache = list;
+
+    list.forEach(c => {
+      const item = document.createElement('div');
+      item.className = 'list-group-item';
+
+      const due = (c.due_date || '').trim();
+      const type = (c.case_type || 'Misconduct').trim();
+      const followCount = (c.followups && c.followups.length) ? c.followups.length : (c.followups_count || 0);
+
+      item.innerHTML = `
+        <div class="d-flex justify-content-between align-items-start gap-3">
+          <div class="flex-grow-1">
+            <div class="fw-semibold small">${c.title || 'Untitled case'}</div>
+            <div class="text-muted extra-small mb-1">${c.created_at || ''}${type ? ' -  ' + type : ''}</div>
+            <div class="small text-muted">${(c.details || '').slice(0, 140)}${(c.details || '').length > 140 ? '…' : ''}</div>
+
+            <div class="d-flex gap-2 flex-wrap mt-2">
+              ${sevBadge(c.severity)}
+              ${statusBadge(c.status)}
+              ${due ? `<span class="pill"><i class="bi bi-alarm"></i> Due: ${due}</span>` : ''}
+              <span class="pill"><i class="bi bi-chat-left-text"></i> ${followCount} follow-up(s)</span>
+            </div>
+          </div>
+
+          <div class="text-end">
+            <button class="btn btn-sm btn-outline-primary" data-view="1" data-id="${c.id}">
+              <i class="bi bi-eye me-1"></i>View
+            </button>
+          </div>
+        </div>
+      `;
+
+      caseList.appendChild(item);
+    });
+
+    caseList.querySelectorAll('button[data-view]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.getAttribute('data-id');
+        const found = casesCache.find(x => String(x.id) === String(id));
+        if(!found) return;
+        openCaseView(found);
+      });
+    });
+  }
+
+  function openCaseView(c){
+    empCaseViewTitle.textContent = c.title || 'Case';
+    empCaseViewSub.textContent = `${c.severity || 'Normal'} -  ${c.status || 'Open'} -  ${c.created_at || ''}`;
+
+    const badges = [];
+    badges.push(sevBadge(c.severity));
+    badges.push(statusBadge(c.status));
+    if(c.case_type) badges.push(`<span class="pill"><i class="bi bi-tag"></i> ${c.case_type}</span>`);
+    if(c.due_date) badges.push(`<span class="pill"><i class="bi bi-alarm"></i> Due: ${c.due_date}</span>`);
+    if(c.loss_amount != null && c.loss_amount !== '') badges.push(`<span class="pill"><i class="bi bi-cash"></i> Loss: ${c.loss_amount}</span>`);
+    if(c.incident_date) badges.push(`<span class="pill"><i class="bi bi-calendar-event"></i> Incident: ${c.incident_date}</span>`);
+
+    empCaseViewBadges.innerHTML = badges.join(' ');
+    empCaseViewDetails.textContent = c.details || '--';
+
+    const f = c.followups || [];
+    empCaseViewFollowCount.textContent = `${f.length} follow-up(s)`;
+
+    if(!f.length){
+      empCaseViewTimeline.innerHTML = `<div class="text-muted small fst-italic">No follow-ups yet.</div>`;
+    }else{
+      empCaseViewTimeline.innerHTML = f.map(x => `
+        <div class="item">
+          <div class="small fw-semibold">${x.note || ''}</div>
+          <div class="text-muted extra-small">${x.created_at || ''} -  ${x.recorded_by || ''}</div>
+        </div>
+      `).join('');
+    }
+
+    const modalEl = document.getElementById('hrCaseViewModalEmployee');
+    const modal = new bootstrap.Modal(modalEl);
+    modal.show();
+  }
+
+  // ------ Load all data ------
+  function loadPerformanceAndCases() {
+    fetch(`/hr/employee/${employeeId}/performance_cases`)
+      .then(resp => resp.json())
+      .then(data => {
+        if (!data.ok) throw new Error(data.message || 'Failed to load performance & cases');
+
+        renderPerformances(data.performances || []);
+        renderCases(data.cases || []);
+
+        if (data.summary) {
+          if (avgRatingEl) avgRatingEl.textContent = data.summary.avg_rating ?? 0;
+          if (perfCountEl) perfCountEl.textContent = data.summary.performance_count ?? 0;
+          if (caseOpenEl) caseOpenEl.textContent = data.summary.open_cases ?? 0;
+          if (caseClosedEl) caseClosedEl.textContent = data.summary.closed_cases ?? 0;
+        }
+      })
+      .catch(err => {
+        console.error(err);
+        if (window.showToast) window.showToast('danger', err.message || 'Error loading performance and cases.');
+      });
+  }
+
+  // ------ Submit performance form ------
+  if (perfForm) {
+    perfForm.addEventListener('submit', function (e) {
+      e.preventDefault();
+      const formData = new FormData(perfForm);
+      const payload = {
+        title: formData.get('title') || '',
+        details: formData.get('details') || '',
+        rating: perfRatingVal,
+      };
+
+      setSpinner(perfSpinner, true);
+      fetch(`/hr/employee/${employeeId}/performance/add`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(payload),
+      })
+        .then(resp => resp.json())
+        .then(data => {
+          if (!data.ok) throw new Error(data.message || 'Failed to save performance');
+          if (window.showToast) window.showToast('success', data.message || 'Performance recorded.');
+          perfForm.reset();
+          updateStarUI(0);
+          loadPerformanceAndCases();
+        })
+        .catch(err => {
+          console.error(err);
+          if (window.showToast) window.showToast('danger', err.message || 'Error saving performance.');
+        })
+        .finally(() => setSpinner(perfSpinner, false));
+    });
+  }
+
+  if (perfRefresh) perfRefresh.addEventListener('click', loadPerformanceAndCases);
+  if (caseRefresh) caseRefresh.addEventListener('click', loadPerformanceAndCases);
+
+  // Initial load
+  updateStarUI(0);
+  loadPerformanceAndCases();
+})();
+</script>

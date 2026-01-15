@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Set Target</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon"
+      href="https://imagedelivery.net/h9fmMoa1o2c2P55TcWJGOg/10283f28-b9a0-4100-b254-19a854386800/public"
+      type="image/png">
+
+  <!-- Bootstrap 5 -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- SweetAlert2 -->
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+  <style>
+    body {
+      background-color: #f4f6f9;
+      font-family: 'Segoe UI', sans-serif;
+    }
+    .form-container {
+      max-width: 850px;
+      margin: 50px auto;
+    }
+    .form-card {
+      padding: 35px;
+      border-radius: 15px;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+      background-color: #fff;
+    }
+    .checkbox-group {
+      max-height: 260px;
+      overflow-y: auto;
+      border: 1px solid #dee2e6;
+      padding: 15px;
+      border-radius: 6px;
+      background-color: #fdfdfd;
+    }
+    .form-label strong {
+      color: #0d6efd;
+    }
+    .form-check-label {
+      font-weight: 500;
+    }
+  </style>
+</head>
+<body>
+  {% include 'executive_sidebar.html' %}
+
+<div class="container form-container">
+  <div class="form-card">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div id="flash-data" data-status="{{ messages[0][0] }}" data-message="{{ messages[0][1] }}"></div>
+      {% endif %}
+    {% endwith %}
+
+    <h3 class="mb-4 text-center">🎯 Set Manager Target</h3>
+
+    <form method="POST">
+      <!-- Manager checkboxes -->
+      <div class="mb-4">
+        <label class="form-label"><strong>Select Manager(s)</strong></label>
+        <div class="form-check mb-2">
+          <input class="form-check-input" type="checkbox" id="selectAll">
+          <label class="form-check-label text-primary fw-bold" for="selectAll">Select All Managers</label>
+        </div>
+        <div class="checkbox-group">
+          {% for manager in managers %}
+            <div class="form-check">
+              <input class="form-check-input manager-checkbox" type="checkbox" name="manager_ids" id="manager_{{ loop.index }}" value="{{ manager._id }}">
+              <label class="form-check-label" for="manager_{{ loop.index }}">
+                {{ manager.name }} ({{ manager.branch }})
+              </label>
+            </div>
+          {% endfor %}
+        </div>
+        <small class="text-muted">You can assign the same target to multiple managers at once.</small>
+      </div>
+
+      <!-- Title -->
+      <div class="mb-3">
+        <label for="title" class="form-label"><strong>Target Title or Label</strong></label>
+        <input type="text" name="title" id="title" class="form-control" placeholder="e.g. July Sales Push" required>
+      </div>
+
+      <!-- Duration -->
+      <div class="mb-3">
+        <label for="duration" class="form-label"><strong>Target Duration</strong></label>
+        <select name="duration" id="duration" class="form-select" required>
+          <option value="daily">Daily</option>
+          <option value="weekly">Weekly</option>
+          <option value="monthly">Monthly</option>
+          <option value="yearly">Yearly</option>
+        </select>
+      </div>
+
+      <!-- Numeric Targets -->
+      <div class="row g-3">
+        <div class="col-md-4">
+          <label class="form-label"><strong>Product Target</strong> (units)</label>
+          <input type="number" name="product_target" class="form-control" min="0" placeholder="e.g. 100">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label"><strong>Cash Collection</strong> (GH₵)</label>
+          <input type="number" name="cash_target" class="form-control" min="0" placeholder="e.g. 2000">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label"><strong>Customer Target</strong></label>
+          <input type="number" name="customer_target" class="form-control" min="0" placeholder="e.g. 20">
+        </div>
+      </div>
+
+      <!-- Submit -->
+      <div class="d-grid mt-4">
+        <button type="submit" class="btn btn-primary btn-lg shadow-sm">Set Target</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- SweetAlert2 Feedback -->
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const flashEl = document.getElementById("flash-data");
+    if (flashEl) {
+      const status = flashEl.dataset.status;
+      const message = flashEl.dataset.message;
+
+      Swal.fire({
+        icon: status === "error" ? "error" : "success",
+        title: message,
+        showConfirmButton: false,
+        timer: 2500
+      });
+    }
+
+    // Select All Checkbox Logic
+    const selectAll = document.getElementById('selectAll');
+    const checkboxes = document.querySelectorAll('.manager-checkbox');
+    selectAll.addEventListener('change', function () {
+      checkboxes.forEach(checkbox => {
+        checkbox.checked = selectAll.checked;
+      });
+    });
+  });
+</script>
+{% include 'app_footer.html' %}
+
+</body>
+</html>

@@ -1,0 +1,1086 @@
+{# templates/hr_pages/hr_exits_page.html #}
+{% extends "hr_pages/hr_shell.html" %}
+{% block hr_content %}
+
+<style>
+  :root{
+    --card-radius: 16px;
+    --card-border: rgba(2,6,23,.08);
+    --shadow: 0 .45rem 1.25rem rgba(2,6,23,.08);
+  }
+  .soft-card{
+    border:1px solid var(--card-border);
+    border-radius:var(--card-radius);
+    background:#fff;
+    box-shadow:var(--shadow);
+  }
+  .soft-card-header{
+    padding:14px 16px;
+    border-bottom:1px solid rgba(2,6,23,.08);
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+  }
+  .extra-small{ font-size:.74rem; }
+  .chip{
+    display:inline-flex; align-items:center; gap:.4rem;
+    border:1px solid rgba(2,6,23,.10);
+    border-radius:999px; padding:.25rem .55rem;
+    background:#f8fafc;
+    margin:.15rem .2rem 0 0;
+    font-size:.78rem;
+    white-space:nowrap;
+  }
+  .kpi-num{ font-size:1.55rem; font-weight:800; letter-spacing:-.02em; }
+  .progress-thin{ height:8px; border-radius:999px; }
+  .table thead th{ font-size:.78rem; letter-spacing:.02em; text-transform:uppercase; color:#475569; }
+  .click-row{ cursor:pointer; }
+  .click-row:hover{ background:#f8fafc; }
+
+  /* Drawer */
+  .drawer-backdrop{
+    position:fixed; inset:0; background:rgba(2,6,23,.55);
+    z-index:1800; display:none;
+  }
+  .drawer{
+    position:fixed; top:0; right:0; height:100vh; width:min(1020px, 96vw);
+    background:#fff; z-index:1900; transform:translateX(102%);
+    transition: transform .18s ease;
+    display:flex; flex-direction:column;
+    border-left:1px solid rgba(2,6,23,.10);
+    box-shadow:-24px 0 70px rgba(2,6,23,.22);
+  }
+  .drawer.open{ transform:translateX(0); }
+  .drawer-backdrop.show{ display:block; }
+  .drawer-header{
+    padding:14px 16px;
+    border-bottom:1px solid rgba(2,6,23,.10);
+    display:flex; align-items:center; justify-content:space-between; gap:12px;
+    position:sticky; top:0; background:#fff; z-index:2;
+  }
+  .drawer-body{ padding:14px 16px; overflow:auto; }
+  .mini{
+    border:1px solid rgba(2,6,23,.08);
+    border-radius:14px;
+    padding:12px 12px;
+    background:linear-gradient(180deg, #fbfdff 0%, #ffffff 100%);
+  }
+  .nav-pills .nav-link{ border-radius:999px; }
+  .nav-pills .nav-link.active{ box-shadow:0 .25rem .75rem rgba(2,6,23,.12); }
+  .mono{ font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+
+  /* Nice scrollbars (optional) */
+  .drawer-body::-webkit-scrollbar{ width:10px; }
+  .drawer-body::-webkit-scrollbar-thumb{ background:rgba(2,6,23,.12); border-radius:10px; border:3px solid #fff; }
+</style>
+
+<div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
+  <div>
+    <h4 class="mb-1">Exits &amp; Handover</h4>
+    <div class="text-muted small">
+      Exit files, clearance, transfer verification, settlement and audit trail.
+    </div>
+  </div>
+
+  <div class="d-flex gap-2">
+    <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#exitCreateModal">
+      <i class="bi bi-door-open me-1"></i>Start Exit
+    </button>
+    <button class="btn btn-outline-secondary btn-sm" id="exRefreshBtn">
+      <i class="bi bi-arrow-clockwise me-1"></i>Refresh
+    </button>
+  </div>
+</div>
+
+<!-- KPIs -->
+<div class="row g-3 mb-3">
+  <div class="col-12 col-md-3">
+    <div class="soft-card p-3">
+      <div class="small text-muted">Total Exits</div>
+      <div class="kpi-num" id="kTotal">--</div>
+    </div>
+  </div>
+  <div class="col-12 col-md-3">
+    <div class="soft-card p-3">
+      <div class="small text-muted">Open</div>
+      <div class="kpi-num text-primary" id="kOpen">--</div>
+    </div>
+  </div>
+  <div class="col-12 col-md-3">
+    <div class="soft-card p-3">
+      <div class="small text-muted">Pending Transfers</div>
+      <div class="kpi-num text-warning" id="kTransfers">--</div>
+    </div>
+  </div>
+  <div class="col-12 col-md-3">
+    <div class="soft-card p-3">
+      <div class="small text-muted">Pending Clearance</div>
+      <div class="kpi-num text-danger" id="kClearance">--</div>
+    </div>
+  </div>
+</div>
+
+<!-- Filters -->
+<div class="soft-card p-3 mb-3">
+  <div class="row g-2 align-items-end">
+    <div class="col-12 col-md-3">
+      <label class="form-label small mb-1">Branch</label>
+      <select class="form-select form-select-sm" id="fBranch">
+        <option value="">All branches</option>
+      </select>
+    </div>
+
+    <div class="col-6 col-md-2">
+      <label class="form-label small mb-1">Status</label>
+      <select class="form-select form-select-sm" id="fStatus">
+        <option value="">All</option>
+        <option>Initiated</option>
+        <option>Handover In Progress</option>
+        <option>Clearance Check</option>
+        <option>Final Settlement</option>
+        <option>Closed</option>
+      </select>
+    </div>
+
+    <div class="col-6 col-md-2">
+      <label class="form-label small mb-1">Exit Type</label>
+      <select class="form-select form-select-sm" id="fType">
+        <option value="">All</option>
+        <option>Resignation</option>
+        <option>Termination</option>
+        <option>Absconded</option>
+        <option>Contract Ended</option>
+        <option>Other</option>
+      </select>
+    </div>
+
+    <div class="col-12 col-md-4">
+      <label class="form-label small mb-1">Search</label>
+      <div class="input-group input-group-sm">
+        <span class="input-group-text"><i class="bi bi-search"></i></span>
+        <input class="form-control" id="fQ" placeholder="Employee, code, reason...">
+        <button class="btn btn-outline-secondary" id="fApply"><i class="bi bi-funnel me-1"></i>Apply</button>
+      </div>
+    </div>
+
+    <div class="col-12 col-md-1">
+      <button class="btn btn-light border btn-sm w-100" id="fReset" title="Reset filters">
+        <i class="bi bi-x-circle"></i>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Table -->
+<div class="soft-card p-3">
+  <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
+    <div>
+      <div class="fw-semibold">Exit Records</div>
+      <div class="small text-muted">Click a row to open the exit file.</div>
+    </div>
+    <div class="small text-muted" id="countHint">--</div>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table table-sm align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th style="width:28%;">Employee</th>
+          <th style="width:14%;">Type</th>
+          <th style="width:16%;">Stage</th>
+          <th style="width:16%;">Customers</th>
+          <th style="width:14%;">Clearance</th>
+          <th class="text-end" style="width:12%;">Action</th>
+        </tr>
+      </thead>
+      <tbody id="exBody" class="small">
+        <tr><td colspan="6" class="text-muted fst-italic">Loading...</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Create Exit Modal -->
+<div class="modal fade" id="exitCreateModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div>
+          <h5 class="modal-title mb-0">Start Employee Exit</h5>
+          <div class="text-muted small">Creates an exit file, locks account, and prepares clearance verification.</div>
+        </div>
+        <button class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body">
+        <div class="row g-3">
+          <div class="col-12">
+            <label class="form-label small mb-1">Employee</label>
+            <select class="form-select form-select-sm" id="cEmployee"></select>
+            <div class="extra-small text-muted mt-1" id="cEmpHint"></div>
+          </div>
+
+          <div class="col-6 col-md-4">
+            <label class="form-label small mb-1">Exit Type</label>
+            <select class="form-select form-select-sm" id="cType">
+              <option>Resignation</option>
+              <option>Termination</option>
+              <option>Absconded</option>
+              <option>Contract Ended</option>
+              <option selected>Other</option>
+            </select>
+          </div>
+
+          <div class="col-6 col-md-4">
+            <label class="form-label small mb-1">Notice Date</label>
+            <input type="date" class="form-control form-control-sm" id="cNotice">
+          </div>
+
+          <div class="col-12 col-md-4">
+            <label class="form-label small mb-1">Last Working Day</label>
+            <input type="date" class="form-control form-control-sm" id="cLastDay">
+          </div>
+
+          <div class="col-12">
+            <label class="form-label small mb-1">Reason / Notes</label>
+            <textarea class="form-control form-control-sm" id="cReason" rows="3"
+                      placeholder="Optional details (disciplinary, resignation notes, etc.)"></textarea>
+          </div>
+
+          <div class="col-12 d-grid">
+            <button class="btn btn-primary btn-sm" id="cCreateBtn">
+              <span class="spinner-border spinner-border-sm me-2 d-none" id="cSpin"></span>
+              Create Exit File
+            </button>
+          </div>
+
+          <div class="col-12">
+            <div class="alert alert-light border mb-0 small">
+              <i class="bi bi-info-circle me-1"></i>
+              Customer transfers are performed by Managers. HR only records transfer notes and verifies that no customers remain on the exiting staff before marking "customers transferred".
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Drawer -->
+<div class="drawer-backdrop" id="drawerBack"></div>
+<div class="drawer" id="drawer" aria-hidden="true">
+  <div class="drawer-header">
+    <div class="pe-2">
+      <div class="fw-semibold" id="dTitle">Exit File</div>
+      <div class="small text-muted" id="dSub">--</div>
+    </div>
+    <div class="d-flex gap-2">
+      <button class="btn btn-outline-secondary btn-sm" id="dCloseBtn" title="Close">
+        <i class="bi bi-x-lg"></i>
+      </button>
+    </div>
+  </div>
+
+  <div class="drawer-body">
+    <div class="row g-3 mb-3">
+      <div class="col-12 col-md-8">
+        <div class="mini">
+          <div class="d-flex justify-content-between flex-wrap gap-2">
+            <div>
+              <div class="small text-muted">Stage</div>
+              <div class="fw-semibold" id="dStatus">--</div>
+            </div>
+            <div>
+              <div class="small text-muted">Exit Type</div>
+              <div class="fw-semibold" id="dType">--</div>
+            </div>
+            <div>
+              <div class="small text-muted">Last Working Day</div>
+              <div class="fw-semibold" id="dLwd">--</div>
+            </div>
+          </div>
+
+          <div class="mt-2">
+            <div class="small text-muted">Reason</div>
+            <div class="small" id="dReason">--</div>
+          </div>
+
+          <div class="mt-2 d-flex gap-2 flex-wrap">
+            <span class="chip"><i class="bi bi-person-lock"></i><span id="dLockHint">Account locked</span></span>
+            <span class="chip"><i class="bi bi-clock-history"></i><span id="dUpdatedAt">--</span></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-12 col-md-4">
+        <div class="mini">
+          <div class="small text-muted mb-1">Progress</div>
+          <div class="progress progress-thin">
+            <div class="progress-bar" role="progressbar" id="dProg" style="width:0%"></div>
+          </div>
+          <div class="extra-small text-muted mt-2" id="dProgHint">--</div>
+        </div>
+      </div>
+    </div>
+
+    <ul class="nav nav-pills small mb-3" id="dTabs">
+      <li class="nav-item"><button class="nav-link active" data-tab="overview"><i class="bi bi-grid me-1"></i>Overview</button></li>
+      <li class="nav-item"><button class="nav-link" data-tab="clearance"><i class="bi bi-shield-check me-1"></i>Clearance</button></li>
+      <li class="nav-item"><button class="nav-link" data-tab="transfers"><i class="bi bi-arrow-left-right me-1"></i>Transfer Notes</button></li>
+      <li class="nav-item"><button class="nav-link" data-tab="settlement"><i class="bi bi-cash-coin me-1"></i>Settlement</button></li>
+      <li class="nav-item"><button class="nav-link" data-tab="audit"><i class="bi bi-activity me-1"></i>Audit</button></li>
+    </ul>
+
+    <div id="tabOverview"></div>
+    <div id="tabClearance" class="d-none"></div>
+    <div id="tabTransfers" class="d-none"></div>
+    <div id="tabSettlement" class="d-none"></div>
+    <div id="tabAudit" class="d-none"></div>
+
+  </div>
+</div>
+
+<script>
+(function(){
+  // ----------------------------
+  // DOM
+  // ----------------------------
+  const kTotal = document.getElementById('kTotal');
+  const kOpen = document.getElementById('kOpen');
+  const kTransfers = document.getElementById('kTransfers');
+  const kClearance = document.getElementById('kClearance');
+
+  const fBranch = document.getElementById('fBranch');
+  const fStatus = document.getElementById('fStatus');
+  const fType = document.getElementById('fType');
+  const fQ = document.getElementById('fQ');
+  const fApply = document.getElementById('fApply');
+  const fReset = document.getElementById('fReset');
+  const exRefreshBtn = document.getElementById('exRefreshBtn');
+
+  const body = document.getElementById('exBody');
+  const countHint = document.getElementById('countHint');
+
+  const cEmployee = document.getElementById('cEmployee');
+  const cEmpHint = document.getElementById('cEmpHint');
+  const cType = document.getElementById('cType');
+  const cNotice = document.getElementById('cNotice');
+  const cLastDay = document.getElementById('cLastDay');
+  const cReason = document.getElementById('cReason');
+  const cCreateBtn = document.getElementById('cCreateBtn');
+  const cSpin = document.getElementById('cSpin');
+
+  const drawerBack = document.getElementById('drawerBack');
+  const drawer = document.getElementById('drawer');
+  const dCloseBtn = document.getElementById('dCloseBtn');
+
+  const dTitle = document.getElementById('dTitle');
+  const dSub = document.getElementById('dSub');
+  const dStatus = document.getElementById('dStatus');
+  const dType = document.getElementById('dType');
+  const dLwd = document.getElementById('dLwd');
+  const dReason = document.getElementById('dReason');
+  const dProg = document.getElementById('dProg');
+  const dProgHint = document.getElementById('dProgHint');
+  const dUpdatedAt = document.getElementById('dUpdatedAt');
+
+  const tabOverview = document.getElementById('tabOverview');
+  const tabClearance = document.getElementById('tabClearance');
+  const tabTransfers = document.getElementById('tabTransfers');
+  const tabSettlement = document.getElementById('tabSettlement');
+  const tabAudit = document.getElementById('tabAudit');
+
+  let employees = [];
+  let branches = [];
+  let currentExitId = null;
+  let currentExit = null;
+
+  // ----------------------------
+  // Utils
+  // ----------------------------
+  function setSpinner(el, on){ el.classList.toggle('d-none', !on); }
+  function esc(s){ return (s||'').toString().replaceAll('<','&lt;'); }
+  function fmtDT(s){
+    const x = (s||'').toString();
+    if(!x) return '--';
+    return x.slice(0,19).replace('T',' ');
+  }
+  function fmtDate(s){
+    const x = (s||'').toString();
+    if(!x) return '--';
+    return x.slice(0,10);
+  }
+  function num(n){ const v = parseFloat(n); return isNaN(v) ? 0 : v; }
+  function byId(id){ return document.getElementById(id); }
+
+  async function api(url, opts={}){
+    const resp = await fetch(url, opts);
+    const d = await resp.json().catch(()=>({ok:false, message:'Bad JSON response'}));
+    if(!resp.ok || !d.ok){
+      const msg = d.message || 'Request failed';
+      throw new Error(msg);
+    }
+    return d;
+  }
+
+  function setKpis(k){
+    kTotal.textContent = k?.total ?? 0;
+    kOpen.textContent = k?.open ?? 0;
+    kTransfers.textContent = k?.pending_transfer ?? 0;
+    kClearance.textContent = k?.pending_clearance ?? 0;
+  }
+
+  function buildQuery(){
+    const p = new URLSearchParams();
+    if(fQ.value.trim()) p.set('q', fQ.value.trim());
+    if(fBranch.value) p.set('branch', fBranch.value);
+    if(fStatus.value) p.set('status', fStatus.value);
+    if(fType.value) p.set('exit_type', fType.value);
+    p.set('limit','300');
+    return p.toString();
+  }
+
+  function renderBranches(){
+    fBranch.innerHTML = `<option value="">All branches</option>` + branches.map(b => `<option value="${esc(b)}">${esc(b)}</option>`).join('');
+  }
+
+  function badgeStage(s){
+    const map = {
+      "Initiated": "bg-primary-subtle text-primary-emphasis",
+      "Handover In Progress": "bg-info-subtle text-info-emphasis",
+      "Clearance Check": "bg-warning-subtle text-warning-emphasis",
+      "Final Settlement": "bg-secondary-subtle text-secondary-emphasis",
+      "Closed": "bg-success-subtle text-success-emphasis"
+    };
+    return `<span class="badge rounded-pill ${map[s] || 'bg-light text-muted border'}">${esc(s)}</span>`;
+  }
+
+  function clearancePct(exit){
+    const checks = (exit?.clearance?.checks) || {};
+    const keys = Object.keys(checks);
+    const total = keys.length || 1;
+    const done = keys.filter(k => !!checks[k]).length;
+    return {pct: Math.round((done/total)*100), done, total};
+  }
+
+  function openDrawer(){
+    drawerBack.classList.add('show');
+    drawer.classList.add('open');
+    drawer.setAttribute('aria-hidden','false');
+  }
+  function closeDrawer(){
+    drawerBack.classList.remove('show');
+    drawer.classList.remove('open');
+    drawer.setAttribute('aria-hidden','true');
+    currentExitId = null;
+    currentExit = null;
+  }
+  drawerBack.addEventListener('click', closeDrawer);
+  dCloseBtn.addEventListener('click', closeDrawer);
+  document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape' && drawer.classList.contains('open')) closeDrawer(); });
+
+  function stageProgress(status){
+    const order = ["Initiated","Handover In Progress","Clearance Check","Final Settlement","Closed"];
+    const idx = Math.max(0, order.indexOf(status));
+    const pct = Math.round(((idx+1)/order.length)*100);
+    return {idx, pct, total: order.length};
+  }
+
+  // ----------------------------
+  // Rendering
+  // ----------------------------
+  function renderRows(list){
+    body.innerHTML = '';
+    countHint.textContent = `${(list||[]).length} record(s)`;
+
+    if(!list || !list.length){
+      body.innerHTML = `<tr><td colspan="6" class="text-muted fst-italic">No exits found.</td></tr>`;
+      return;
+    }
+
+    list.forEach(x => {
+      const emp = x.employee || {};
+      const code = emp.employee_code ? `<span class="chip">#${esc(emp.employee_code)}</span>` : '';
+      const branch = emp.branch ? `<span class="chip"><i class="bi bi-geo-alt"></i>${esc(emp.branch)}</span>` : '';
+
+      const t = x.transfers || {};
+      const c = x.clearance || {};
+      const p = clearancePct(x);
+
+      const remaining = (t.remaining_customers_count ?? t.pending_count ?? 0);
+      const custTxt = remaining > 0
+        ? `<span class="text-warning fw-semibold">${remaining}</span> pending`
+        : `<span class="text-success fw-semibold">0</span> pending`;
+
+      const tr = document.createElement('tr');
+      tr.className = 'click-row';
+      tr.setAttribute('data-id', x.id);
+      tr.innerHTML = `
+        <td>
+          <div class="fw-semibold">${esc(emp.name || '--')}</div>
+          <div class="mt-1">${code} ${branch}</div>
+          <div class="extra-small text-muted mt-1">${fmtDT(x.created_at)}</div>
+        </td>
+        <td>${esc(x.exit_type || '--')}</td>
+        <td>${badgeStage(x.status || '--')}</td>
+        <td>
+          <div class="fw-semibold">${custTxt}</div>
+          <div class="extra-small text-muted">Records: ${(t.records||[]).length}</div>
+        </td>
+        <td>
+          <div class="progress progress-thin">
+            <div class="progress-bar" role="progressbar" style="width:${p.pct}%"></div>
+          </div>
+          <div class="extra-small text-muted mt-1">${p.done}/${p.total} checks</div>
+          <div class="extra-small text-muted">Cases: ${c.cases_open_count||0} -  Debts: ${c.debts_open_count||0} -  Assets: ${c.assets_open_count||0}</div>
+        </td>
+        <td class="text-end">
+          <button class="btn btn-sm btn-outline-primary" data-open="${x.id}">
+            <i class="bi bi-folder2-open me-1"></i>Open
+          </button>
+        </td>
+      `;
+      body.appendChild(tr);
+    });
+
+    body.querySelectorAll('[data-open]').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openExit(btn.getAttribute('data-open'));
+      });
+    });
+    body.querySelectorAll('tr[data-id]').forEach(tr => {
+      tr.addEventListener('click', () => openExit(tr.getAttribute('data-id')));
+    });
+  }
+
+  function renderExit(exit){
+    currentExit = exit;
+
+    const emp = exit.employee || {};
+    dTitle.textContent = emp.name ? `Exit File -- ${emp.name}` : 'Exit File';
+    dSub.textContent = `${emp.branch || '--'} -  ${emp.role || '--'} ${emp.employee_code ? ' -  #'+emp.employee_code : ''}`;
+
+    dStatus.textContent = exit.status || '--';
+    dType.textContent = exit.exit_type || '--';
+    dLwd.textContent = fmtDate(exit.last_working_day);
+    dReason.innerHTML = esc(exit.reason || '--');
+    dUpdatedAt.textContent = `Updated: ${fmtDT(exit.updated_at || exit.created_at)}`;
+
+    const sp = stageProgress(exit.status || 'Initiated');
+    dProg.style.width = sp.pct + '%';
+    dProgHint.textContent = `Stage ${sp.idx+1}/${sp.total}`;
+
+    const c = exit.clearance || {};
+    const t = exit.transfers || {};
+    const p = clearancePct(exit);
+
+    const remaining = (t.remaining_customers_count ?? t.pending_count ?? 0);
+
+    // Overview
+    tabOverview.innerHTML = `
+      <div class="row g-3">
+        <div class="col-12 col-md-6">
+          <div class="mini">
+            <div class="fw-semibold mb-2"><i class="bi bi-shield-check me-1"></i>Clearance Summary</div>
+            <div class="small text-muted">Cases: <b>${c.cases_open_count||0}</b> -  Debts: <b>${c.debts_open_count||0}</b> -  Assets: <b>${c.assets_open_count||0}</b></div>
+            <div class="mt-2 progress progress-thin">
+              <div class="progress-bar" role="progressbar" style="width:${p.pct}%"></div>
+            </div>
+            <div class="extra-small text-muted mt-2">${p.done}/${p.total} checks completed</div>
+          </div>
+        </div>
+
+        <div class="col-12 col-md-6">
+          <div class="mini">
+            <div class="fw-semibold mb-2"><i class="bi bi-arrow-left-right me-1"></i>Transfer Verification</div>
+            <div class="small">Remaining customers on exiting staff: <b class="${remaining>0?'text-warning':'text-success'}">${remaining}</b></div>
+            <div class="small text-muted">Transfer records: <b>${(t.records||[]).length}</b></div>
+            <div class="small text-muted mt-1">Last transfer to: <b>${esc(t.last_transfer_to_name||'--')}</b></div>
+          </div>
+        </div>
+
+        <div class="col-12">
+          <div class="mini">
+            <div class="fw-semibold mb-2"><i class="bi bi-diagram-3 me-1"></i>Stage Control</div>
+            <div class="d-flex gap-2 flex-wrap">
+              ${["Initiated","Handover In Progress","Clearance Check","Final Settlement","Closed"].map(s => `
+                <button class="btn btn-sm ${exit.status===s?'btn-primary':'btn-outline-secondary'}" data-setstage="${esc(s)}">${esc(s)}</button>
+              `).join('')}
+            </div>
+            <div class="extra-small text-muted mt-2">Tip: Move to "Clearance Check" after handover begins.</div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    tabOverview.querySelectorAll('[data-setstage]').forEach(b => {
+      b.addEventListener('click', async () => {
+        const st = b.getAttribute('data-setstage');
+        try{
+          await api(`{{ url_for('hr.exits_update_status', exit_id='__ID__') }}`.replace('__ID__', currentExitId), {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({status: st, note: ""})
+          });
+          window.showToast && window.showToast('success', 'Exit stage updated.');
+          await openExit(currentExitId, true);
+          await load();
+        }catch(err){
+          console.error(err);
+          window.showToast && window.showToast('danger', err.message || 'Failed');
+        }
+      });
+    });
+
+    // Clearance
+    const checks = (c.checks || {});
+    tabClearance.innerHTML = `
+      <div class="mini mb-3">
+        <div class="fw-semibold mb-2"><i class="bi bi-list-check me-1"></i>Clearance Checklist</div>
+
+        <div class="row g-2">
+          ${Object.keys(checks).map(k => `
+            <div class="col-12 col-md-6">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="chk_${k}" ${checks[k]?'checked':''}>
+                <label class="form-check-label" for="chk_${k}">${k.replaceAll('_',' ')}</label>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+
+        <div class="mt-3">
+          <label class="form-label small mb-1">Clearance Notes</label>
+          <textarea class="form-control form-control-sm" rows="3" id="clrNotes" placeholder="What was verified / what is pending...">${esc(c.notes||'')}</textarea>
+        </div>
+
+        <div class="d-flex gap-2 flex-wrap mt-3">
+          <button class="btn btn-primary btn-sm" id="clrSave"><i class="bi bi-save me-1"></i>Save Clearance</button>
+          <button class="btn btn-outline-secondary btn-sm" id="clrOverride"><i class="bi bi-shield-exclamation me-1"></i>Override</button>
+          <button class="btn btn-success btn-sm ms-auto" id="closeExitBtn"><i class="bi bi-check2-circle me-1"></i>Close Exit</button>
+        </div>
+
+        <div class="extra-small text-muted mt-2">
+          Note: "customers_transferred" cannot be marked unless system confirms the exiting staff has <b>zero</b> customers remaining.
+        </div>
+      </div>
+    `;
+
+    tabClearance.querySelector('#clrSave').addEventListener('click', async () => {
+      const newChecks = {};
+      Object.keys(checks).forEach(k => newChecks[k] = !!tabClearance.querySelector('#chk_'+k).checked);
+      const notes = (tabClearance.querySelector('#clrNotes').value || '').trim();
+
+      try{
+        await api(`{{ url_for('hr.exits_update_clearance', exit_id='__ID__') }}`.replace('__ID__', currentExitId), {
+          method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({checks: newChecks, notes})
+        });
+        window.showToast && window.showToast('success', 'Clearance saved.');
+        await openExit(currentExitId, true);
+        await load();
+      }catch(err){
+        console.error(err);
+        window.showToast && window.showToast('danger', err.message || 'Failed');
+      }
+    });
+
+    tabClearance.querySelector('#clrOverride').addEventListener('click', async () => {
+      const key = prompt("Override which key? (example: documents_archived)");
+      if(!key) return;
+      const reason = prompt("Override reason (required)");
+      if(!reason) return;
+
+      const newChecks = {};
+      Object.keys(checks).forEach(k => newChecks[k] = !!tabClearance.querySelector('#chk_'+k).checked);
+      const notes = (tabClearance.querySelector('#clrNotes').value || '').trim();
+
+      try{
+        await api(`{{ url_for('hr.exits_update_clearance', exit_id='__ID__') }}`.replace('__ID__', currentExitId), {
+          method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({checks: newChecks, notes, override_key: key, override_reason: reason})
+        });
+        window.showToast && window.showToast('success', 'Override saved.');
+        await openExit(currentExitId, true);
+        await load();
+      }catch(err){
+        console.error(err);
+        window.showToast && window.showToast('danger', err.message || 'Failed');
+      }
+    });
+
+    tabClearance.querySelector('#closeExitBtn').addEventListener('click', async () => {
+      if(!confirm("Close this exit file? This will enforce clearance rules.")) return;
+      try{
+        await api(`{{ url_for('hr.exits_close', exit_id='__ID__') }}`.replace('__ID__', currentExitId), {method:'POST'});
+        window.showToast && window.showToast('success', 'Exit closed.');
+        await openExit(currentExitId, true);
+        await load();
+      }catch(err){
+        console.error(err);
+        window.showToast && window.showToast('danger', err.message || 'Failed');
+      }
+    });
+
+    // Transfers (record notes + verify)
+    const records = (t.records || []);
+    tabTransfers.innerHTML = `
+      <div class="mini mb-3">
+        <div class="d-flex justify-content-between flex-wrap gap-2">
+          <div>
+            <div class="fw-semibold mb-1"><i class="bi bi-arrow-left-right me-1"></i>Transfer Notes &amp; Verification</div>
+            <div class="small text-muted">
+              Managers transfer customers. HR records transfer notes and verifies the exit staff has <b>zero</b> customers remaining.
+            </div>
+          </div>
+          <div class="text-end">
+            <div class="small text-muted">Remaining</div>
+            <div class="fw-semibold ${remaining>0?'text-warning':'text-success'}">${remaining}</div>
+          </div>
+        </div>
+
+        <hr class="my-3">
+
+        <div class="row g-2">
+          <div class="col-12 col-md-5">
+            <label class="form-label small mb-1">Transferred to (Agent/Staff)</label>
+            <select class="form-select form-select-sm" id="trToUser">
+              <option value="">Select staff</option>
+              ${employees.map(u => `<option value="${u.id}">${esc(u.name)}${u.branch?' -- '+esc(u.branch):''}</option>`).join('')}
+            </select>
+          </div>
+          <div class="col-12 col-md-3">
+            <label class="form-label small mb-1">Transfer Date</label>
+            <input type="date" class="form-control form-control-sm" id="trDate">
+          </div>
+          <div class="col-12 col-md-4">
+            <label class="form-label small mb-1">Notes</label>
+            <input class="form-control form-control-sm" id="trNote" placeholder="e.g. Transferred by Manager John, route: Branch A">
+          </div>
+
+          <div class="col-12 d-flex gap-2 flex-wrap mt-1">
+            <button class="btn btn-outline-primary btn-sm" id="trAdd">
+              <i class="bi bi-plus-circle me-1"></i>Add Transfer Record
+            </button>
+            <button class="btn btn-warning btn-sm" id="trVerify">
+              <i class="bi bi-patch-check me-1"></i>Verify &amp; Mark Customers Transferred
+            </button>
+            <div class="ms-auto small text-muted align-self-center">
+              Multiple records allowed -  Verification uses live customer ownership
+            </div>
+          </div>
+
+          <div class="col-12">
+            <div class="alert alert-light border mb-0 small">
+              <i class="bi bi-shield-check me-1"></i>
+              HR can only mark <b>customers_transferred</b> after verification confirms the exiting staff has <b>0</b> customers remaining in the database.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="soft-card p-3">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <div class="fw-semibold">Transfer Records</div>
+          <div class="small text-muted">${records.length} record(s)</div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="table table-sm align-middle mb-0">
+            <thead class="table-light">
+              <tr>
+                <th style="width:26%;">To</th>
+                <th style="width:16%;">Date</th>
+                <th>Notes</th>
+                <th class="text-end" style="width:22%;">Logged</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${records.length ? records.map(r => `
+                <tr>
+                  <td>
+                    <div class="fw-semibold">${esc(r.to_name || '--')}</div>
+                    <div class="extra-small text-muted mono">${esc(r.to_user_id||'')}</div>
+                  </td>
+                  <td>${esc((r.transferred_on||'').slice(0,10) || '--')}</td>
+                  <td class="small">${esc(r.note||'')}</td>
+                  <td class="text-end">
+                    <div class="small">${esc(r.by||'HR')}</div>
+                    <div class="extra-small text-muted">${fmtDT(r.at)}</div>
+                  </td>
+                </tr>
+              `).join('') : `
+                <tr><td colspan="4" class="text-muted fst-italic">No transfer records yet.</td></tr>
+              `}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+
+    tabTransfers.querySelector('#trAdd').addEventListener('click', async () => {
+      const toUserId = tabTransfers.querySelector('#trToUser').value;
+      const transferDate = (tabTransfers.querySelector('#trDate').value || '').trim();
+      const note = (tabTransfers.querySelector('#trNote').value || '').trim();
+
+      if(!toUserId){ window.showToast && window.showToast('warning', 'Select the staff the customers were transferred to.'); return; }
+      if(!transferDate){ window.showToast && window.showToast('warning', 'Select the transfer date.'); return; }
+
+      try{
+        await api(`{{ url_for('hr.exits_transfer_add_record', exit_id='__ID__') }}`.replace('__ID__', currentExitId), {
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({to_user_id: toUserId, transferred_on: transferDate, note})
+        });
+        window.showToast && window.showToast('success', 'Transfer record added.');
+        tabTransfers.querySelector('#trNote').value = '';
+        await openExit(currentExitId, true);
+        await load();
+      }catch(err){
+        console.error(err);
+        window.showToast && window.showToast('danger', err.message || 'Failed');
+      }
+    });
+
+    tabTransfers.querySelector('#trVerify').addEventListener('click', async () => {
+      if(!confirm("Verify now? This will check the database and mark customers_transferred only if ZERO customers remain.")) return;
+      try{
+        const d = await api(`{{ url_for('hr.exits_transfer_verify', exit_id='__ID__') }}`.replace('__ID__', currentExitId), {method:'POST'});
+        window.showToast && window.showToast('success', d.message || 'Verified.');
+        await openExit(currentExitId, true);
+        await load();
+      }catch(err){
+        console.error(err);
+        window.showToast && window.showToast('danger', err.message || 'Verification failed');
+      }
+    });
+
+    // Settlement
+    const s = exit.settlement || {};
+    tabSettlement.innerHTML = `
+      <div class="mini">
+        <div class="fw-semibold mb-2"><i class="bi bi-cash-coin me-1"></i>Final Settlement</div>
+
+        <div class="row g-2">
+          <div class="col-6 col-md-3">
+            <label class="form-label small mb-1">Salary Due</label>
+            <input class="form-control form-control-sm" id="sSalary" value="${s.salary_due ?? 0}">
+          </div>
+          <div class="col-6 col-md-3">
+            <label class="form-label small mb-1">Commission Due</label>
+            <input class="form-control form-control-sm" id="sComm" value="${s.commission_due ?? 0}">
+          </div>
+          <div class="col-6 col-md-3">
+            <label class="form-label small mb-1">Deductions</label>
+            <input class="form-control form-control-sm" id="sDed" value="${s.deductions ?? 0}">
+          </div>
+          <div class="col-6 col-md-3">
+            <label class="form-label small mb-1">Net Pay</label>
+            <input class="form-control form-control-sm" id="sNet" value="${s.net_pay ?? 0}" disabled>
+          </div>
+
+          <div class="col-12 col-md-3">
+            <label class="form-label small mb-1">Paid?</label>
+            <select class="form-select form-select-sm" id="sPaid">
+              <option value="false" ${s.paid ? '' : 'selected'}>No</option>
+              <option value="true" ${s.paid ? 'selected' : ''}>Yes</option>
+            </select>
+          </div>
+          <div class="col-12 col-md-3">
+            <label class="form-label small mb-1">Method</label>
+            <input class="form-control form-control-sm" id="sMethod" value="${esc(s.method||'')}" placeholder="Cash / MoMo / Bank">
+          </div>
+          <div class="col-12 col-md-3">
+            <label class="form-label small mb-1">Reference</label>
+            <input class="form-control form-control-sm" id="sRef" value="${esc(s.reference||'')}" placeholder="Txn ID / Voucher">
+          </div>
+          <div class="col-12 col-md-3">
+            <label class="form-label small mb-1">Note</label>
+            <input class="form-control form-control-sm" id="sNote" value="${esc(s.note||'')}" placeholder="Any note">
+          </div>
+
+          <div class="col-12 d-flex gap-2 mt-2">
+            <button class="btn btn-primary btn-sm" id="sSave"><i class="bi bi-save me-1"></i>Save Settlement</button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    const calcNet = () => {
+      const salary = num(tabSettlement.querySelector('#sSalary').value);
+      const comm = num(tabSettlement.querySelector('#sComm').value);
+      const ded = num(tabSettlement.querySelector('#sDed').value);
+      tabSettlement.querySelector('#sNet').value = (salary + comm - ded).toFixed(2);
+    };
+    ['#sSalary','#sComm','#sDed'].forEach(sel => tabSettlement.querySelector(sel).addEventListener('input', calcNet));
+
+    tabSettlement.querySelector('#sSave').addEventListener('click', async () => {
+      calcNet();
+      const payload = {
+        salary_due: tabSettlement.querySelector('#sSalary').value,
+        commission_due: tabSettlement.querySelector('#sComm').value,
+        deductions: tabSettlement.querySelector('#sDed').value,
+        paid: tabSettlement.querySelector('#sPaid').value === 'true',
+        method: tabSettlement.querySelector('#sMethod').value,
+        reference: tabSettlement.querySelector('#sRef').value,
+        note: tabSettlement.querySelector('#sNote').value,
+      };
+
+      try{
+        await api(`{{ url_for('hr.exits_update_settlement', exit_id='__ID__') }}`.replace('__ID__', currentExitId), {
+          method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify(payload)
+        });
+        window.showToast && window.showToast('success', 'Settlement saved.');
+        await openExit(currentExitId, true);
+        await load();
+      }catch(err){
+        console.error(err);
+        window.showToast && window.showToast('danger', err.message || 'Failed');
+      }
+    });
+
+    // Audit
+    const audit = exit.audit || [];
+    tabAudit.innerHTML = `
+      <div class="soft-card p-3">
+        <div class="fw-semibold mb-2">Audit Trail</div>
+        <div class="list-group">
+          ${audit.length ? audit.map(a => `
+            <div class="list-group-item">
+              <div class="fw-semibold">${esc(a.action||'Action')}</div>
+              <div class="small text-muted">${esc(a.by||'HR')} -  ${fmtDT(a.at)}</div>
+              ${a.note ? `<div class="small mt-1">${esc(a.note)}</div>` : ``}
+            </div>
+          `).join('') : `<div class="text-muted small fst-italic">No audit logs.</div>`}
+        </div>
+      </div>
+    `;
+  }
+
+  // ----------------------------
+  // Data
+  // ----------------------------
+  async function loadEmployees(){
+    const d = await api(`{{ url_for('hr.exits_employees_list') }}`);
+    employees = d.employees || [];
+    branches = d.branches || [];
+    renderBranches();
+
+    cEmployee.innerHTML = employees.map(u => {
+      const status = u.employment_status ? ` -  ${u.employment_status}` : '';
+      const active = u.is_active ? '' : ' (inactive)';
+      return `<option value="${u.id}">${esc(u.name)}${u.branch ? ' -- '+esc(u.branch) : ''}${active}${status}</option>`;
+    }).join('');
+
+    cEmployee.dispatchEvent(new Event('change'));
+  }
+
+  cEmployee.addEventListener('change', () => {
+    const u = employees.find(x => x.id === cEmployee.value);
+    cEmpHint.textContent = u ? `${u.role || 'Staff'} -  ${u.branch || '--'} -  Code: ${u.employee_code || '--'}` : '';
+  });
+
+  async function load(){
+    const qs = buildQuery();
+    const d = await api(`{{ url_for('hr.exits_list') }}?${qs}`);
+    setKpis(d.kpis || {});
+    renderRows(d.exits || []);
+  }
+
+  async function openExit(id, silent=false){
+    currentExitId = id;
+    if(!silent) openDrawer();
+    try{
+      const d = await api(`{{ url_for('hr.exits_get', exit_id='__ID__') }}`.replace('__ID__', id));
+      renderExit(d.exit);
+      openDrawer();
+    }catch(err){
+      console.error(err);
+      window.showToast && window.showToast('danger', err.message || 'Failed');
+      closeDrawer();
+    }
+  }
+
+  // Create Exit
+  cCreateBtn.addEventListener('click', async () => {
+    const payload = {
+      employee_id: cEmployee.value,
+      exit_type: cType.value,
+      notice_date: (cNotice.value || '').trim(),
+      last_working_day: (cLastDay.value || '').trim(),
+      reason: (cReason.value || '').trim(),
+    };
+    if(!payload.employee_id){
+      window.showToast && window.showToast('warning', 'Select an employee.');
+      return;
+    }
+
+    cCreateBtn.disabled = true;
+    setSpinner(cSpin, true);
+    try{
+      const d = await api(`{{ url_for('hr.exits_create') }}`, {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify(payload)
+      });
+      window.showToast && window.showToast('success', d.message || 'Exit created');
+
+      cReason.value = '';
+      cNotice.value = '';
+      cLastDay.value = '';
+
+      const modalEl = document.getElementById('exitCreateModal');
+      const modal = bootstrap.Modal.getInstance(modalEl);
+      modal && modal.hide();
+
+      await load();
+      if(d.exit_id) openExit(d.exit_id);
+    }catch(err){
+      console.error(err);
+      window.showToast && window.showToast('danger', err.message || 'Failed');
+    }finally{
+      cCreateBtn.disabled = false;
+      setSpinner(cSpin, false);
+    }
+  });
+
+  // Drawer tabs
+  document.getElementById('dTabs').querySelectorAll('button[data-tab]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.getElementById('dTabs').querySelectorAll('button').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const t = btn.getAttribute('data-tab');
+      [tabOverview, tabClearance, tabTransfers, tabSettlement, tabAudit].forEach(x => x.classList.add('d-none'));
+      if(t === 'overview') tabOverview.classList.remove('d-none');
+      if(t === 'clearance') tabClearance.classList.remove('d-none');
+      if(t === 'transfers') tabTransfers.classList.remove('d-none');
+      if(t === 'settlement') tabSettlement.classList.remove('d-none');
+      if(t === 'audit') tabAudit.classList.remove('d-none');
+    });
+  });
+
+  // Filters
+  fApply.addEventListener('click', (e)=>{ e.preventDefault(); load(); });
+  fReset.addEventListener('click', (e)=>{
+    e.preventDefault();
+    fBranch.value = '';
+    fStatus.value = '';
+    fType.value = '';
+    fQ.value = '';
+    load();
+  });
+  exRefreshBtn.addEventListener('click', ()=>load());
+
+  // Init
+  Promise.resolve()
+    .then(loadEmployees)
+    .then(load)
+    .catch(err => {
+      console.error(err);
+      window.showToast && window.showToast('danger', err.message || 'Failed to initialize exits');
+    });
+})();
+</script>
+
+{% endblock %}

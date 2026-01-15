@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Executive · Agent Targets & Commission</title>
+
+  <!-- Bootstrap -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet"/>
+  <link rel="icon"
+          href="https://imagedelivery.net/h9fmMoa1o2c2P55TcWJGOg/10283f28-b9a0-4100-b254-19a854386800/public"
+          type="image/png">
+
+  <style>
+    :root{
+      --ink:#0f172a; --muted:#64748b; --line:#e2e8f0; --soft:#f6f8fb; --ok:#16a34a; --brand:#0d6efd;
+    }
+    html,body{height:100%}
+    body{background:var(--soft); color:var(--ink)}
+    .card{border-radius:14px; box-shadow:0 8px 24px rgba(2,6,23,.06); border:1px solid #eef2f7}
+    .progress{height:12px; background:#eef2f7}
+    .progress-bar{font-size:.65rem}
+    .agent-pic{width:44px; height:44px; border-radius:50%; object-fit:cover; border:1px solid #e5e7eb}
+    .badge-soft{background:#eef2f7; color:#334155; border:1px solid #e5e7eb}
+    .btn-pill{border-radius:999px}
+    .chip{display:inline-flex; align-items:center; gap:.5rem; padding:.35rem .6rem; border-radius:999px; background:#eef2f7; color:#334155; font-size:.8rem}
+    .sticky-top-8{position:sticky; top:8px; z-index:100}
+    @media (max-width: 575.98px){
+      .filters-grid > * {margin-bottom:.5rem}
+    }
+  </style>
+</head>
+<body>
+    {% include 'executive_sidebar.html' %}
+
+  <div class="container py-4">
+    <div class="d-flex align-items-center justify-content-between mb-3">
+      <h3 class="mb-0">Executive · Agent Targets & Commission</h3>
+      <div class="d-flex gap-2">
+        <a href="{{ url_for('manager_target.manager_targets') }}" class="btn btn-outline-secondary btn-pill">
+          <i class="bi bi-arrow-left"></i> Back
+        </a>
+      </div>
+    </div>
+
+    <!-- Filters + Global Commission -->
+    <div class="row g-3">
+      <!-- Filters -->
+      <div class="col-12 col-xl-8">
+        <div class="card p-3 sticky-top-8">
+          <form method="GET"
+                action="{{ url_for('executive_agent_target.executive_agent_targets_home') }}"
+                class="row gy-2 gx-2 filters-grid align-items-end" id="filtersForm">
+            <div class="col-12 col-md-4">
+              <label class="form-label mb-1">Manager</label>
+              <select class="form-select" name="manager_id" id="managerSelect">
+                <option value="">-- All managers --</option>
+                {% for m in managers %}
+                  <option value="{{ m.manager_id }}" {% if filters.manager_id == m.manager_id %}selected{% endif %}>
+                    {{ m.name }} {% if m.branch %}-- {{ m.branch }}{% endif %}
+                  </option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <div class="col-12 col-md-3">
+              <label class="form-label mb-1">Branch</label>
+              <input type="text" class="form-control" name="branch" id="branchInput"
+                     value="{{ filters.branch or '' }}" placeholder="e.g., Kasoa">
+            </div>
+
+            <div class="col-12 col-md-3">
+              <label class="form-label mb-1">Manager name (search)</label>
+              <input type="text" class="form-control" name="manager_name" id="managerNameInput"
+                     value="{{ filters.manager_name or '' }}" placeholder="Type to filter…">
+            </div>
+
+            <div class="col-12 col-md-2">
+              <button class="btn btn-primary w-100 btn-pill"><i class="bi bi-funnel"></i> Apply</button>
+            </div>
+
+            <!-- Agent picker (auto-updates via JSON helper) -->
+            <div class="col-12 col-md-8">
+              <label class="form-label mb-1">Agent</label>
+              <select name="agent_id" class="form-select" id="agentSelect">
+                <option value="">-- Choose an agent --</option>
+                {% for a in agents %}
+                  <option value="{{ a.agent_id }}" {% if agent_id == a.agent_id %}selected{% endif %}>
+                    {{ a.name }} (Mgr: {{ a.manager_name }}) {% if a.branch %}-- {{ a.branch }}{% endif %}
+                  </option>
+                {% endfor %}
+              </select>
+              <div class="form-text">Pick an agent to view their targets & progress.</div>
+            </div>
+
+            <div class="col-12 col-md-4">
+              <button class="btn btn-outline-primary w-100 btn-pill" id="viewBtn">
+                <i class="bi bi-eye"></i> View Selected Agent
+              </button>
+            </div>
+
+            <!-- Active filters chips -->
+            <div class="col-12">
+              {% set has_any = (filters.manager_id or filters.branch or filters.manager_name) %}
+              {% if has_any %}
+              <div class="d-flex flex-wrap gap-2 mt-2">
+                {% if filters.manager_id %}
+                  <span class="chip"><i class="bi bi-person-badge"></i> Manager set</span>
+                {% endif %}
+                {% if filters.branch %}
+                  <span class="chip"><i class="bi bi-geo"></i> Branch: {{ filters.branch }}</span>
+                {% endif %}
+                {% if filters.manager_name %}
+                  <span class="chip"><i class="bi bi-search"></i> Name: "{{ filters.manager_name }}"</span>
+                {% endif %}
+                <a href="{{ url_for('executive_agent_target.executive_agent_targets_home') }}" class="btn btn-sm btn-light border btn-pill">
+                  <i class="bi bi-x-circle"></i> Clear filters
+                </a>
+              </div>
+              {% endif %}
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Global commission -->
+      <div class="col-12 col-xl-4">
+        <div class="card p-3 h-100">
+          <div class="d-flex align-items-center justify-content-between mb-2">
+            <h5 class="mb-0"><i class="bi bi-percent"></i> Global Commission</h5>
+            <span class="badge badge-soft">Applies to all agents</span>
+          </div>
+          <p class="text-muted small mb-3">
+            Set <strong>one commission %</strong> that applies to all agent targets. You can change it anytime.
+          </p>
+          <form method="POST"
+                action="{{ url_for('executive_agent_target.executive_set_global_commission',
+                                   manager_id=filters.manager_id|default(''),
+                                   branch=filters.branch|default(''),
+                                   manager_name=filters.manager_name|default(''),
+                                   agent_id=agent_id|default('')) }}">
+            {% if csrf_token %}<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">{% endif %}
+            <div class="input-group">
+              <input type="number" name="product_commission_pct" step="0.01" min="0" max="100"
+                     class="form-control"
+                     value="{{ '%.2f'|format(global_commission_pct or 0) }}"
+                     aria-label="Global commission percent">
+              <span class="input-group-text">%</span>
+              <button class="btn btn-success"><i class="bi bi-save2"></i> Save</button>
+            </div>
+            <div class="form-text mt-1">
+              Example: Surplus units × commission% → commission units.
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Agent directory (filtered) -->
+    <div class="card p-3 mt-3">
+      <div class="d-flex align-items-center justify-content-between mb-2">
+        <h5 class="mb-0"><i class="bi bi-people"></i> Agents</h5>
+        <span class="text-muted small">{{ agents|length }} total</span>
+      </div>
+
+      {% if agents and agents|length > 0 %}
+      <div class="row g-3">
+        {% for a in agents %}
+        <div class="col-12 col-sm-6 col-lg-4 col-xxl-3">
+          <div class="border rounded p-3 h-100">
+            <div class="d-flex align-items-center gap-2">
+              <img src="{{ a.image_url or 'https://via.placeholder.com/80' }}" class="agent-pic" alt="">
+              <div>
+                <div class="fw-semibold">{{ a.name }}</div>
+                <div class="small text-muted">
+                  Mgr: {{ a.manager_name }}{% if a.branch %} -  {{ a.branch }}{% endif %}
+                </div>
+              </div>
+            </div>
+            <div class="d-flex align-items-center justify-content-between mt-3">
+              <span class="small text-muted">Commission: <strong>{{ '%.2f'|format(global_commission_pct or 0) }}%</strong></span>
+              <a class="btn btn-sm btn-outline-primary btn-pill"
+                 href="{{ url_for('executive_agent_target.executive_agent_targets_home',
+                                  manager_id=filters.manager_id|default(''),
+                                  branch=filters.branch|default(''),
+                                  manager_name=filters.manager_name|default(''),
+                                  agent_id=a.agent_id) }}">
+                View Targets
+              </a>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+        <div class="alert alert-info mb-0"><i class="bi bi-info-circle"></i> No agents match your filters.</div>
+      {% endif %}
+    </div>
+
+    <!-- Selected Agent header -->
+    {% if selected_agent %}
+    <div class="d-flex align-items-center gap-2 mt-4">
+      <img src="{{ selected_agent.image_url or 'https://via.placeholder.com/80' }}" class="agent-pic" alt="">
+      <div>
+        <div class="fw-semibold">{{ selected_agent.name }}</div>
+        <div class="text-muted small">Agent ID: {{ agent_id }}</div>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Targets for selected agent -->
+    {% if agent_targets and agent_targets|length > 0 %}
+      <div class="row g-3 mt-1">
+        {% for t in agent_targets %}
+        {% set surplus = (t.product_achieved - t.product_quota) if (t.product_achieved and t.product_quota) else 0 %}
+        {% if surplus < 0 %}{% set surplus = 0 %}{% endif %}
+        {% set commission_pct = global_commission_pct or 0 %}
+        {% set commission_units = (surplus * (commission_pct / 100.0)) %}
+
+        <div class="col-12 col-md-6 col-xl-4">
+          <div class="card p-3 h-100">
+            <div class="d-flex align-items-center justify-content-between">
+              <div class="text-muted small">
+                <i class="bi bi-calendar-event me-1"></i>{{ t.duration|capitalize }}
+                <span class="ms-2">{{ t.start_date }} → {{ t.end_date }}</span>
+              </div>
+              <span class="badge text-bg-dark">Overall {{ t.overall }}%</span>
+            </div>
+            <h5 class="mt-2 mb-3">{{ t.title }}</h5>
+
+            <!-- Product -->
+            <p class="d-flex justify-content-between mb-1 fw-semibold small">
+              <span>🛒 Product</span>
+              <span>{{ t.product_achieved }} / {{ t.product_quota }}</span>
+            </p>
+            <div class="progress mb-2">
+              <div class="progress-bar bg-success js-pbar"
+                   role="progressbar"
+                   data-width="{{ t.product_pct|default(0) }}"
+                   title="{{ t.product_pct|default(0) }}%"></div>
+            </div>
+
+            <!-- Cash -->
+            <p class="d-flex justify-content-between mb-1 fw-semibold small">
+              <span>💰 Cash</span>
+              <span>{{ t.cash_achieved }} / {{ '%.2f'|format(t.cash_quota or 0) }}</span>
+            </p>
+            <div class="progress mb-2">
+              <div class="progress-bar bg-primary js-pbar"
+                   role="progressbar"
+                   data-width="{{ t.payment_pct|default(0) }}"
+                   title="{{ t.payment_pct|default(0) }}%"></div>
+            </div>
+
+            <!-- Customers -->
+            <p class="d-flex justify-content-between mb-1 fw-semibold small">
+              <span>👥 Customers</span>
+              <span>{{ t.customer_achieved }} / {{ t.customer_quota }}</span>
+            </p>
+            <div class="progress mb-3">
+              <div class="progress-bar bg-warning text-dark js-pbar"
+                   role="progressbar"
+                   data-width="{{ t.customer_pct|default(0) }}"
+                   title="{{ t.customer_pct|default(0) }}%"></div>
+            </div>
+
+            <!-- Commission on surplus units (global) -->
+            <div class="small">
+              <div>📈 Surplus units: <strong>{{ surplus }}</strong></div>
+              <div>🧮 Commission (%): <strong>{{ '%.2f'|format(commission_pct) }}%</strong></div>
+              <div>💼 Commission (units): <strong>{{ '%.2f'|format(commission_units) }}</strong></div>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    {% elif agent_id %}
+      <div class="alert alert-info mt-3">
+        <i class="bi bi-info-circle"></i> No targets found for this agent.
+      </div>
+    {% endif %}
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    // Progress bars
+    document.addEventListener('DOMContentLoaded', function(){
+      document.querySelectorAll('.js-pbar').forEach(function(el){
+        var v = parseFloat(el.getAttribute('data-width')) || 0;
+        v = Math.min(100, Math.max(0, v));
+        el.style.width = v + '%';
+      });
+    });
+
+    // Debounce helper
+    function debounce(fn, delay){ let t; return (...args)=>{ clearTimeout(t); t=setTimeout(()=>fn(...args), delay); }; }
+
+    // Dynamic agent list refresh using JSON helper
+    const managerSelect = document.getElementById('managerSelect');
+    const branchInput   = document.getElementById('branchInput');
+    const managerName   = document.getElementById('managerNameInput');
+    const agentSelect   = document.getElementById('agentSelect');
+
+    async function refreshAgents(){
+      const params = new URLSearchParams();
+      if (managerSelect.value) params.set('manager_id', managerSelect.value);
+      if (branchInput.value)   params.set('branch', branchInput.value.trim());
+      if (managerName.value)   params.set('manager_name', managerName.value.trim());
+
+      try{
+        const res = await fetch(`{{ url_for('executive_agent_target.executive_agents_for_manager_json') }}?` + params.toString());
+        const data = await res.json();
+        const agents = data.agents || [];
+        const current = agentSelect.value;
+        agentSelect.innerHTML = `<option value="">-- Choose an agent --</option>`;
+        agents.forEach(a=>{
+          const opt = document.createElement('option');
+          opt.value = a.agent_id;
+          opt.textContent = `${a.name} (Mgr: ${a.manager_name || '--'})` + (a.branch ? ` -- ${a.branch}` : '');
+          agentSelect.appendChild(opt);
+        });
+        // keep selection if still available
+        const stillThere = [...agentSelect.options].some(o => o.value === current);
+        if (stillThere) agentSelect.value = current;
+      }catch(err){
+        console.error('Failed to load agents', err);
+      }
+    }
+
+    managerSelect.addEventListener('change', refreshAgents);
+    branchInput.addEventListener('input', debounce(refreshAgents, 350));
+    managerName.addEventListener('input', debounce(refreshAgents, 350));
+
+    // "View Selected Agent" button submits GET with current filters + agent_id
+    document.getElementById('viewBtn').addEventListener('click', function(ev){
+      ev.preventDefault();
+      const form = document.getElementById('filtersForm');
+      form.submit();
+    });
+  </script>
+    {% include 'app_footer.html' %}
+
+</body>
+</html>

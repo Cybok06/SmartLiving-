@@ -1,0 +1,844 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <title>Executive -  Branch Product Pricing</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+
+  <!-- Bootstrap -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <link rel="icon"
+          href="https://imagedelivery.net/h9fmMoa1o2c2P55TcWJGOg/10283f28-b9a0-4100-b254-19a854386800/public"
+          type="image/png">
+
+  <!-- jQuery + Select2 -->
+  <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
+  <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet"/>
+  <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+  <link rel="icon" href="https://res.cloudinary.com/dljpgzbto/image/upload/v1743993646/company-logo_dksb23.jpg" type="image/png">
+
+  <style>
+    :root{
+      --ink:#0b3b52; --muted:#64748b; --ring:#e5e7eb; --soft:#f6f8fb; --brand:#0ea5e9;
+      --ok:#16a34a; --warn:#f59e0b; --bad:#dc2626; --card:#ffffff;
+    }
+    body{ background:#f7fbfe; color:var(--ink); }
+    .card{ border-radius:18px; box-shadow: 0 8px 24px rgba(2,12,27,.06); border:1px solid #eef2ff; }
+    .pill{ padding:.35rem .7rem; border-radius:999px; background:#eef6ff; }
+    .table thead th{ background:#eef6ff; border-bottom:2px solid #dbeafe; }
+    .sticky-top{ top:1rem; }
+    .spinner{ display:none; }
+    .soft{ background:var(--soft); }
+    .kpi{
+      border-radius:14px; border:1px solid #e6eefc; background:#f9fbff;
+      padding:14px 16px; display:flex; align-items:center; gap:12px;
+    }
+    .kpi .icon{
+      width:36px; height:36px; display:flex; align-items:center; justify-content:center;
+      background:#eef6ff; border-radius:10px; font-size:18px; color:#0b6fa1;
+    }
+    .kpi .val{ font-weight:800; font-size:1.25rem; }
+    .badge-band{
+      border-radius:999px; font-weight:700; padding:0.25rem .55rem; font-size:.75rem;
+    }
+    .band-low{ background:#fee2e2; color:#991b1b; }
+    .band-avg{ background:#fff3cd; color:#8a6d3b; }
+    .band-high{ background:#dcfce7; color:#14532d; }
+    .progress{ height:10px; }
+    .progress .low{ background:#ef4444; }
+    .progress .avg{ background:#f59e0b; }
+    .progress .high{ background:#16a34a; }
+    .muted{ color:var(--muted); }
+    .codepill{
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      background:#f3f6ff; border:1px solid #e7edff; padding:.2rem .45rem; border-radius:6px; font-size:.8rem;
+    }
+    .list-unstyled li+li{ border-top:1px dashed #e9efff; }
+    .btn-icon{ display:flex; align-items:center; gap:.5rem; }
+
+    /* Select2 polish (single for product) */
+    .select2-container .select2-selection--single{
+      height: calc(2.5rem + 2px);
+      padding: .375rem .75rem;
+      border: 1px solid #ced4da;
+      border-radius: .375rem;
+    }
+    .select2-container--default .select2-selection--single .select2-selection__rendered{
+      line-height: 1.8rem;
+      color: var(--ink);
+    }
+    .select2-container--default .select2-selection--single .select2-selection__arrow{
+      height: 100%;
+      right: .5rem;
+    }
+    .select2-results__option--highlighted[aria-selected]{
+      background: #eaf2ff;
+      color: #0b6fa1;
+    }
+    .opt-title{ font-weight:600; }
+    .opt-price{ color:#0b6fa1; font-weight:600; margin-left:.25rem; }
+    .opt-sub{ color:var(--muted); font-size:.8rem; }
+
+    /* Multi-branch Select2 (for managerSelect) */
+    .select2-container .select2-selection--multiple{
+      min-height: calc(2.5rem + 2px);
+      border-radius:.375rem;
+      border:1px solid #ced4da;
+    }
+    .select2-container--default .select2-selection--multiple .select2-selection__rendered{
+      padding: .25rem .5rem;
+      display:flex;
+      flex-wrap:wrap;
+      gap:.25rem;
+    }
+    .select2-container--default .select2-selection--multiple .select2-selection__choice{
+      background:#eef6ff;
+      border:1px solid #d0e2ff;
+      color:var(--ink);
+      border-radius:999px;
+      padding:.1rem .5rem;
+      font-size:.8rem;
+    }
+    .select2-container--default .select2-selection--multiple .select2-selection__choice__remove{
+      margin-right:.25rem;
+      color:#0b6fa1;
+    }
+    .small-label{
+      font-size:.8rem;
+      text-transform:uppercase;
+      letter-spacing:.04em;
+      color:var(--muted);
+      font-weight:600;
+    }
+    .scope-label{
+      font-size:.8rem;
+      color:var(--muted);
+    }
+    .scope-badge{
+      font-size:.7rem;
+      text-transform:uppercase;
+      letter-spacing:.06em;
+    }
+  </style>
+</head>
+<body class="py-4">
+  {% include 'executive_sidebar.html' %}
+
+<div class="container">
+  <div class="d-flex align-items-center justify-content-between mb-3">
+    <div class="d-flex align-items-center gap-3">
+      <h2 class="m-0"> -  Branch Product Pricing</h2>
+      <span class="pill">Select Branches → Product</span>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+      <button id="refreshAllBtn" class="btn btn-outline-primary btn-sm btn-icon">
+        <i class="bi bi-arrow-clockwise"></i> Refresh
+      </button>
+    </div>
+  </div>
+
+  <div class="row g-3">
+    <!-- LEFT: Filters & Actions -->
+    <div class="col-lg-4">
+      <div class="card p-3 sticky-top">
+        <h5 class="mb-3"><i class="bi bi-funnel"></i> Filters</h5>
+
+        <!-- Branch (multi) -->
+        <div class="mb-3">
+          <div class="d-flex justify-content-between align-items-center mb-1">
+            <label class="form-label mb-0">Branches (Managers) <span class="text-danger">*</span></label>
+            <div class="d-flex gap-1">
+              <button type="button" id="btnSelectAllManagers" class="btn btn-outline-secondary btn-sm py-0 px-2">
+                <i class="bi bi-check-all"></i> All
+              </button>
+              <button type="button" id="btnClearManagers" class="btn btn-outline-secondary btn-sm py-0 px-2">
+                <i class="bi bi-x-lg"></i> Clear
+              </button>
+            </div>
+          </div>
+          <select id="managerSelect" class="form-select" multiple>
+            {% for m in managers %}
+              <option value="{{ m._id }}">{{ m.branch or "Unknown" }} -- {{ m.name }}</option>
+            {% endfor %}
+          </select>
+          <div class="form-text text-muted">
+            Used to load <span class="codepill">products</span> (from the first selected branch)
+            and aggregate analytics across all selected branches.
+          </div>
+        </div>
+
+        <!-- Product (Select2, single) -->
+        <div class="mb-2">
+          <label class="form-label">Product <span class="text-danger">*</span></label>
+          <select id="productSelect" class="form-select" disabled>
+            <option value="">-- Select branch(es) first --</option>
+          </select>
+        </div>
+        <div id="prodHelp" class="form-text"></div>
+
+        <div class="d-grid gap-2 mt-3 mb-2">
+          <button id="loadBtn" class="btn btn-primary" disabled>
+            <span class="btn-icon"><i class="bi bi-graph-up-arrow"></i> Load analytics</span>
+          </button>
+        </div>
+
+        <hr class="my-4"/>
+
+        <!-- Bulk Update -->
+        <div class="d-flex align-items-center justify-content-between mb-2">
+          <h5 class="mb-0"><i class="bi bi-tags"></i> Bulk Price Update</h5>
+          <span class="badge bg-light text-dark border"><i class="bi bi-intersect"></i> Multi-branch</span>
+        </div>
+        <div class="alert alert-warning small mb-3">
+          <strong>Note:</strong> Updates affect the selected
+          <span class="codepill">branch(es)</span> and the chosen
+          <span class="codepill">product</span>.
+          Totals are recalculated automatically based on your <b>scope</b>:
+          customers, products, or both.
+        </div>
+
+        <!-- Mode & Value -->
+        <div class="row g-2 mt-2">
+          <div class="col-6">
+            <label class="form-label">Mode</label>
+            <select id="mode" class="form-select">
+              <option value="set">Set exact price</option>
+              <option value="percent">Reduce by %</option>
+            </select>
+            <div class="form-text small">
+              <span class="small-label">Set</span> updates to a fixed price,
+              <span class="small-label">Reduce %</span> discounts current prices.
+            </div>
+          </div>
+          <div class="col-6">
+            <label class="form-label">Value</label>
+            <input id="value" type="number" step="0.01" class="form-control" placeholder="e.g., 3900 or 10"/>
+          </div>
+        </div>
+
+        <!-- Scope: customers / products / both -->
+        <div class="mt-3">
+          <label class="form-label mb-1">Apply to</label>
+          <div class="btn-group w-100" role="group" aria-label="Scope">
+            <input type="radio" class="btn-check" name="scope" id="scopeCustomers" value="customers" autocomplete="off" checked>
+            <label class="btn btn-outline-primary" for="scopeCustomers">
+              <i class="bi bi-people"></i> Customers only
+            </label>
+
+            <input type="radio" class="btn-check" name="scope" id="scopeProducts" value="products" autocomplete="off">
+            <label class="btn btn-outline-primary" for="scopeProducts">
+              <i class="bi bi-box-seam"></i> Products only
+            </label>
+
+            <input type="radio" class="btn-check" name="scope" id="scopeBoth" value="both" autocomplete="off">
+            <label class="btn btn-outline-primary" for="scopeBoth">
+              <i class="bi bi-intersect"></i> Both
+            </label>
+          </div>
+          <div class="form-text scope-label mt-1">
+            You can also <b>exclude specific customers</b> from updates using the checkboxes in the table.
+          </div>
+        </div>
+
+        <div class="d-grid gap-2 mt-3">
+          <button id="applyBtn" class="btn btn-success" disabled>
+            <span class="btn-icon"><i class="bi bi-check2-circle"></i> Apply update</span>
+          </button>
+        </div>
+        <div id="opMsg" class="mt-3"></div>
+      </div>
+    </div>
+
+    <!-- RIGHT: Analytics & Logs -->
+    <div class="col-lg-8">
+      <!-- Summary KPIs -->
+      <div class="card p-3 mb-3">
+        <div class="d-flex align-items-center gap-3">
+          <div class="spinner-border spinner" id="spinner" role="status" aria-hidden="true"></div>
+          <h5 class="m-0"><i class="bi bi-speedometer2"></i> Branch & Payments Summary</h5>
+        </div>
+
+        <div id="summary" class="mt-3">
+          <div class="soft p-3 rounded text-muted">Choose branches and a product to view analytics.</div>
+        </div>
+
+        <div id="bandsWrap" class="mt-3" style="display:none;">
+          <div class="row g-3">
+            <div class="col-md-4">
+              <div class="kpi">
+                <div class="icon"><i class="bi bi-people"></i></div>
+                <div>
+                  <div class="muted">Customers</div>
+                  <div class="val" id="kpiCustomers">0</div>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-8">
+              <div class="kpi" style="width:100%;">
+                <div class="icon"><i class="bi bi-bar-chart-steps"></i></div>
+                <div class="w-100">
+                  <div class="d-flex justify-content-between muted mb-1">
+                    <span>Payment Progress Distribution</span>
+                    <span class="small">
+                      <span class="badge-band band-low">Low</span>
+                      <span class="badge-band band-avg">Avg</span>
+                      <span class="badge-band band-high">High</span>
+                    </span>
+                  </div>
+                  <div class="progress">
+                    <div id="barLow"  class="progress-bar low"  role="progressbar" style="width:0%"></div>
+                    <div id="barAvg"  class="progress-bar avg"  role="progressbar" style="width:0%"></div>
+                    <div id="barHigh" class="progress-bar high" role="progressbar" style="width:0%"></div>
+                  </div>
+                  <div class="d-flex justify-content-between small mt-1">
+                    <span id="lblLow"  class="muted">Low: 0</span>
+                    <span id="lblAvg"  class="muted">Avg: 0</span>
+                    <span id="lblHigh" class="muted">High: 0</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Current product meta -->
+          <div class="mt-3">
+            <div class="kpi">
+              <div class="icon"><i class="bi bi-bag"></i></div>
+              <div>
+                <div class="muted">Product</div>
+                <div class="val" id="kpiProductName">--</div>
+              </div>
+              <div class="ms-auto text-end">
+                <div class="muted small">Branch Price</div>
+                <div class="val" id="kpiProductPrice">--</div>
+                <div class="muted small">Cash Price: <span id="kpiCashPrice">--</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Customers table -->
+      <div class="card p-3 mb-3">
+        <div class="d-flex align-items-center justify-content-between">
+          <div>
+            <h5 class="mb-0"><i class="bi bi-people"></i> Customers & Payments (selected branches)</h5>
+            <div class="small text-muted">
+              Tick customers you want to <b>exclude from bulk price updates</b>.
+            </div>
+          </div>
+          <div class="d-flex align-items-center gap-2">
+            <button id="exportBtn" class="btn btn-outline-secondary btn-sm btn-icon">
+              <i class="bi bi-download"></i> Export CSV
+            </button>
+          </div>
+        </div>
+        <div class="table-responsive mt-3">
+          <table class="table table-sm align-middle" id="custTable">
+            <thead>
+              <tr>
+                <th style="width:2.5rem;">
+                  <input type="checkbox" id="chkExclAll" title="Toggle all excludes">
+                </th>
+                <th>#</th>
+                <th>Customer</th>
+                <th>Phone</th>
+                <th>Purchase</th>
+                <th class="text-end">Price</th>
+                <th class="text-end">Qty</th>
+                <th class="text-end">Total</th>
+                <th class="text-end">Paid</th>
+                <th class="text-end">%</</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+          <div id="custEmpty" class="soft p-3 rounded text-center text-muted d-none">No customers match selection.</div>
+        </div>
+        <div id="exclSummary" class="small text-muted mt-1 d-none">
+          <i class="bi bi-shield-slash"></i> <span id="exclCount">0</span> customer(s) will be <b>excluded</b> when applying price updates.
+        </div>
+      </div>
+
+      <!-- Recent price change logs -->
+      <div class="card p-3">
+        <div class="d-flex align-items-center justify-content-between">
+          <h5 class="mb-0"><i class="bi bi-clock-history"></i> Recent Price Changes</h5>
+          <div>
+            <button id="reloadLogsBtn" class="btn btn-outline-primary btn-sm btn-icon">
+              <i class="bi bi-arrow-repeat"></i> Reload
+            </button>
+          </div>
+        </div>
+        <div id="logsWrap" class="mt-3"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const $id = (id) => document.getElementById(id);
+
+function fmtGhs(n){
+  if(n === null || n === undefined || isNaN(n)) return "--";
+  try{
+    return new Intl.NumberFormat('en-GH', {style:'currency', currency:'GHS', maximumFractionDigits:2}).format(Number(n));
+  }catch(_){ return "GHS " + Number(n).toFixed(2); }
+}
+function pct(n){
+  if(n === null || n === undefined || isNaN(n)) return "--";
+  return (Number(n)*100).toFixed(0) + "%";
+}
+function spin(s){ $id("spinner").style.display = s ? "inline-block" : "none"; }
+
+function getSelectedManagers(){
+  return $("#managerSelect").val() || [];
+}
+
+function enableActions(){
+  const managerVals = getSelectedManagers();
+  const hasManagers = managerVals.length > 0;
+  const hasProduct  = !!$id("productSelect").value;
+  const ok = hasManagers && hasProduct;
+  $id("loadBtn").disabled = !ok;
+  $id("applyBtn").disabled = !ok;
+}
+
+let current = { manager_ids: [], manager_id: "", product_id: "", product_name: "" };
+
+/* ---------- Select2 renderers for product ---------- */
+function optionTemplate (data){
+  if (!data.id) return data.text;
+  const name = $(data.element).data('name') ?? data.text;
+  const price = $(data.element).data('price');
+  const cash  = $(data.element).data('cash');
+  const priceHtml = (price !== undefined && price !== '') ? `<span class="opt-price">${fmtGhs(price)}</span>` : '';
+  const cashHtml  = (cash  !== undefined && cash  !== '') ? ` <span class="opt-sub">Cash: ${fmtGhs(cash)}</span>` : '';
+  return $(`<div><span class="opt-title">${name}</span>${priceHtml}${cashHtml}</div>`);
+}
+function selectionTemplate (data){
+  if (!data.id) return data.text;
+  const name = $(data.element).data('name') ?? data.text;
+  const price = $(data.element).data('price');
+  const priceHtml = (price !== undefined && price !== '') ? ` -- ${fmtGhs(price)}` : '';
+  return $(`<span>${name}${priceHtml}</span>`);
+}
+
+/* ---------- Load branch products into Select2 (from first selected branch) ---------- */
+async function loadProductsForBranch(){
+  const mids = getSelectedManagers();
+  const primary = mids[0];
+  const sel = $("#productSelect");
+  $id("prodHelp").textContent = "";
+  $id("productSelect").disabled = true;
+
+  // reset select2
+  sel.empty();
+  sel.append(new Option("-- " + (primary ? "Loading…" : "Select branch(es) first") + " --", "", true, true)).trigger('change');
+
+  if(!primary){ enableActions(); return; }
+
+  try{
+    const url = new URL(location.origin + "/exec/pricing/products");
+    url.searchParams.set("manager_id", primary);
+    const r = await fetch(url, { headers: {"Accept":"application/json"} });
+    const j = await r.json();
+    if(!j.ok) throw new Error(j.error || "Failed to load products");
+
+    const products = j.products || [];
+    sel.empty();
+    if(products.length === 0){
+      sel.append(new Option("-- No products for this branch --", "", true, true)).trigger('change');
+      $id("prodHelp").textContent = "Add products for the selected branch to proceed.";
+      $id("productSelect").disabled = true;
+    }else{
+      sel.append(new Option("-- Select product --", "", true, true));
+      products.forEach(p => {
+        const opt = new Option(p.name, p._id, false, false);
+        $(opt).attr('data-name', p.name);
+        if (p.price !== undefined)     $(opt).attr('data-price', p.price);
+        if (p.cash_price !== undefined)$(opt).attr('data-cash',  p.cash_price);
+        sel.append(opt);
+      });
+      $id("productSelect").disabled = false;
+      $id("prodHelp").textContent = `${products.length} product(s) found for primary branch. Analytics & updates will run across all selected branches.`;
+    }
+    sel.trigger('change.select2');
+  }catch(err){
+    sel.empty().append(new Option("-- Error loading products --", "", true, true)).trigger('change');
+    $id("prodHelp").textContent = err.message;
+    $id("productSelect").disabled = true;
+  }
+  enableActions();
+}
+
+/* ---------- Update exclude summary ---------- */
+function updateExcludeSummary(){
+  const checkboxes = document.querySelectorAll('#custTable tbody .cust-excl');
+  let count = 0;
+  checkboxes.forEach(cb => { if (cb.checked) count++; });
+  const wrap = $id("exclSummary");
+  const span = $id("exclCount");
+  if(!wrap || !span) return;
+  if(count > 0){
+    span.textContent = count;
+    wrap.classList.remove("d-none");
+  }else{
+    wrap.classList.add("d-none");
+    span.textContent = "0";
+  }
+}
+
+/* ---------- Stats loader (multi-branch) ---------- */
+async function loadStats(){
+  const product_id = $id("productSelect").value;
+  const manager_ids = getSelectedManagers();
+
+  if(!product_id || manager_ids.length === 0){
+    alert("Select at least one branch and a product.");
+    return;
+  }
+
+  spin(true);
+  try{
+    const url = new URL(location.origin + "/exec/pricing/stats");
+    url.searchParams.set("product_id", product_id);
+    manager_ids.forEach(id => url.searchParams.append("manager_ids", id));
+
+    const r = await fetch(url, {headers: {"Accept":"application/json"}});
+    const j = await r.json();
+    if(!j.ok){ throw new Error(j.error || "Failed to load"); }
+
+    current.manager_ids = manager_ids;
+    current.manager_id  = manager_ids[0]; // primary for logs
+    current.product_id  = product_id;
+    current.product_name = (j.product && j.product.name)
+      ? j.product.name
+      : ($("#productSelect").find(":selected").data("name") || "");
+
+    const branchesLabel = j.branch || `Multiple branches (${manager_ids.length})`;
+
+    // KPIs & bands
+    $id("summary").innerHTML = `
+      <div class="row g-3">
+        <div class="col-md-4">
+          <div class="kpi">
+            <div class="icon"><i class="bi bi-geo-alt"></i></div>
+            <div>
+              <div class="muted">Branches</div>
+              <div class="val">${branchesLabel}</div>
+              <div class="small muted">${j.manager_name || ""}</div>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-8">
+          <div class="kpi">
+            <div class="icon"><i class="bi bi-bag-check"></i></div>
+            <div class="w-100">
+              <div class="d-flex justify-content-between">
+                <div>
+                  <div class="muted">Product</div>
+                  <div class="val" id="kpiProductName">${(j.product && j.product.name) || "--"}</div>
+                </div>
+                <div class="text-end">
+                  <div class="muted small">Branch Price</div>
+                  <div class="val" id="kpiProductPrice">${fmtGhs(j.product?.price)}</div>
+                  <div class="muted small">Cash Price: <span id="kpiCashPrice">${fmtGhs(j.product?.cash_price)}</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>`;
+    $id("bandsWrap").style.display = "block";
+    const total = Number(j.count || 0);
+    const low  = Number(j.bands?.low || 0);
+    const avg  = Number(j.bands?.avg || 0);
+    const high = Number(j.bands?.high || 0);
+    $id("kpiCustomers").textContent = total;
+    const pctLow  = total ? Math.round((low/total)*100) : 0;
+    const pctAvg  = total ? Math.round((avg/total)*100) : 0;
+    const pctHigh = total ? Math.round((high/total)*100) : 0;
+    $id("barLow").style.width  = pctLow + "%";
+    $id("barAvg").style.width  = pctAvg + "%";
+    $id("barHigh").style.width = pctHigh + "%";
+    $id("lblLow").textContent  = `Low: ${low} (${pctLow}%)`;
+    $id("lblAvg").textContent  = `Avg: ${avg} (${pctAvg}%)`;
+    $id("lblHigh").textContent = `High: ${high} (${pctHigh}%)`;
+
+    // Customers table
+    const tb = $id("custTable").querySelector("tbody");
+    tb.innerHTML = "";
+    let i = 1;
+    let any = false;
+    (j.customers || []).forEach(c => {
+      (c.purchases || []).forEach(p => {
+        any = true;
+        const pr = p.product || {};
+        const paid = Number(c.paid || 0);
+        const totalLine = Number(pr.total ?? c.purchase_total ?? 0);
+        const ratio = (totalLine > 0) ? (paid/totalLine) : 0;
+        const band = c.band || (ratio < .33 ? "low" : (ratio < .66 ? "avg" : "high"));
+        const bandHtml =
+          band === "high" ? `<span class="badge-band band-high">High</span>` :
+          band === "avg"  ? `<span class="badge-band band-avg">Avg</span>`  :
+                            `<span class="badge-band band-low">Low</span>`;
+
+        const tr = document.createElement("tr");
+        tr.dataset.customerId = c._id; // needed for exclude
+        tr.innerHTML = `
+          <td><input type="checkbox" class="form-check-input cust-excl" title="Exclude this customer from updates"></td>
+          <td>${i++}</td>
+          <td>${c.name || ""}</td>
+          <td>${c.phone_number || ""}</td>
+          <td>${pr.name || ""}</td>
+          <td class="text-end">${fmtGhs(pr.price)}</td>
+          <td class="text-end">${pr.quantity ?? 1}</td>
+          <td class="text-end">${fmtGhs(pr.total)}</td>
+          <td class="text-end">${fmtGhs(c.paid)}</td>
+          <td class="text-end">${pct(c.paid_ratio)}</td>
+          <td>${bandHtml}</td>
+        `;
+        tb.appendChild(tr);
+      });
+    });
+    $id("custEmpty").classList.toggle("d-none", !!any);
+
+    // wire exclude checkboxes for this load
+    document.querySelectorAll('#custTable tbody .cust-excl').forEach(cb => {
+      cb.addEventListener('change', updateExcludeSummary);
+    });
+    const master = $id("chkExclAll");
+    if(master){
+      master.checked = false;
+    }
+    updateExcludeSummary();
+
+    // Logs (for primary branch)
+    await loadLogs();
+
+  }catch(err){
+    $id("summary").innerHTML = `<div class="alert alert-danger mb-0"><i class="bi bi-exclamation-triangle"></i> ${err.message}</div>`;
+    $id("bandsWrap").style.display = "none";
+    $id("custTable").querySelector("tbody").innerHTML = "";
+    $id("custEmpty").classList.add("d-none");
+    updateExcludeSummary();
+  }finally{
+    spin(false);
+  }
+}
+
+/* ---------- Logs (using primary branch) ---------- */
+async function loadLogs(){
+  if(!current.product_id || !current.manager_id){
+    $id("logsWrap").innerHTML = "";
+    return;
+  }
+  $id("logsWrap").innerHTML = `<div class="d-flex align-items-center gap-2 text-muted">
+    <div class="spinner-border spinner-border-sm" role="status"></div> Loading logs…
+  </div>`;
+  try{
+    const url = new URL(location.origin + "/exec/pricing/logs");
+    url.searchParams.set("product_id", current.product_id);
+    url.searchParams.set("manager_id", current.manager_id);
+    url.searchParams.set("limit", 20);
+    const r = await fetch(url, { headers:{ "Accept":"application/json" }});
+    const j = await r.json();
+    if(!j.ok) throw new Error(j.error || "Failed to load logs");
+
+    if(!j.logs || j.logs.length === 0){
+      $id("logsWrap").innerHTML = `<div class="soft p-3 rounded text-center text-muted">No recent price changes.</div>`;
+      return;
+    }
+    const items = j.logs.map(l => {
+      const when = l.ts ? new Date(l.ts).toLocaleString() : "";
+      const valueLabel = l.mode === "percent" ? `${l.value}%` : fmtGhs(l.value);
+      const mCust = (l.matched_customers ?? l.matched) ?? 0;
+      const modCust = (l.modified_customers ?? l.modified) ?? 0;
+      const mProd = l.matched_products ?? 0;
+      const modProd = l.modified_products ?? 0;
+      const scope = l.scope || "customers";
+      const scopeBadgeClass =
+        scope === "both" ? "bg-primary text-light" :
+        scope === "products" ? "bg-info text-dark" :
+        "bg-success text-light";
+
+      const metaParts = [];
+      if(mCust || modCust) metaParts.push(`Customers: ${modCust}/${mCust}`);
+      if(mProd || modProd) metaParts.push(`Products: ${modProd}/${mProd}`);
+      const meta = metaParts.join(" · ") || `${l.matched ?? 0} matched · ${l.modified ?? 0} modified`;
+
+      return `<li class="py-2 d-flex align-items-center gap-3">
+        <div class="icon"><i class="bi bi-pencil-square text-primary"></i></div>
+        <div class="flex-grow-1">
+          <div class="d-flex justify-content-between align-items-center">
+            <div class="fw-semibold">
+              ${l.product_name || "Product"} -  ${l.mode}
+            </div>
+            <span class="badge scope-badge ${scopeBadgeClass}">${scope}</span>
+          </div>
+          <div class="small muted">${when} -  ${meta} -  value: <span class="codepill">${valueLabel}</span></div>
+        </div>
+      </li>`;
+    }).join("");
+    $id("logsWrap").innerHTML = `<ul class="list-unstyled m-0">${items}</ul>`;
+  }catch(err){
+    $id("logsWrap").innerHTML = `<div class="text-danger"><i class="bi bi-x-circle"></i> ${err.message}</div>`;
+  }
+}
+
+/* ---------- Export CSV ---------- */
+function exportCsv(){
+  const rows = [["Excluded", "#", "Customer", "Phone", "Purchase", "Price", "Qty", "Total", "Paid", "Percent", "Band"]];
+  const tb = $id("custTable").querySelector("tbody");
+  tb.querySelectorAll("tr").forEach(tr => {
+    const tds = Array.from(tr.querySelectorAll("td"));
+    const isExcluded = tr.querySelector('.cust-excl')?.checked ? "YES" : "NO";
+    const textCells = tds.slice(1).map(td => td.innerText.trim()); // skip checkbox
+    rows.push([isExcluded, ...textCells]);
+  });
+  const csv = rows.map(r => r.map(v => `"${(v || "").replace(/"/g, '""')}"`).join(",")).join("\n");
+  const blob = new Blob([csv], {type:"text/csv;charset=utf-8;"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `branch_product_payments_${Date.now()}.csv`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+/* ---------- Wire events ---------- */
+$("#managerSelect").on("change", () => {
+  loadProductsForBranch();
+});
+$("#productSelect").on("change", enableActions);
+$id("loadBtn").addEventListener("click", loadStats);
+$id("refreshAllBtn").addEventListener("click", async () => {
+  await loadProductsForBranch();
+  enableActions();
+  if($id("productSelect").value) await loadStats();
+});
+$id("reloadLogsBtn").addEventListener("click", loadLogs);
+$id("exportBtn").addEventListener("click", exportCsv);
+
+/* Master exclude toggle */
+$id("chkExclAll").addEventListener("change", (e) => {
+  const checked = e.target.checked;
+  document.querySelectorAll('#custTable tbody .cust-excl').forEach(cb => {
+    cb.checked = checked;
+  });
+  updateExcludeSummary();
+});
+
+/* ---------- Apply bulk update (uses selected branches + scope + exclusions) ---------- */
+$id("applyBtn").addEventListener("click", async () => {
+  const product_id = $id("productSelect").value;
+  const manager_ids = getSelectedManagers();
+  const mode = $id("mode").value;
+  const value = $id("value").value;
+  const scope = (document.querySelector('input[name="scope"]:checked') || {}).value || "customers";
+
+  if(!product_id || manager_ids.length === 0){
+    alert("Select at least one branch and a product.");
+    return;
+  }
+  if(!value || isNaN(value)){
+    alert("Enter a numeric value.");
+    return;
+  }
+
+  // Build exclude list from checked rows
+  const excludedIds = [];
+  document.querySelectorAll('#custTable tbody tr').forEach(tr => {
+    const cb = tr.querySelector('.cust-excl');
+    if(cb && cb.checked){
+      const cid = tr.dataset.customerId;
+      if(cid) excludedIds.push(cid);
+    }
+  });
+
+  const payload = {
+    product_id,
+    mode,
+    value: Number(value),
+    manager_ids: manager_ids,
+    scope: scope
+  };
+  if(excludedIds.length > 0){
+    payload.exclude_customer_ids = excludedIds;
+  }
+
+  $id("applyBtn").disabled = true;
+  $id("opMsg").innerHTML = `<div class="text-muted">
+    <div class="spinner-border spinner-border-sm me-2" role="status"></div>Applying update across selected branch(es)…
+  </div>`;
+  try{
+    const r = await fetch("/exec/pricing/update", {
+      method: "POST",
+      headers: {"Content-Type":"application/json","Accept":"application/json"},
+      body: JSON.stringify(payload)
+    });
+    const j = await r.json();
+    if(!j.ok) throw new Error(j.error || "Update failed");
+
+    const scopeLabel = j.scope || scope;
+    const custMatched = j.matched_customers ?? j.matched ?? 0;
+    const custModified = j.modified_customers ?? j.modified ?? 0;
+    const prodMatched = j.matched_products ?? 0;
+    const prodModified = j.modified_products ?? 0;
+
+    let lines = [];
+    if(scopeLabel === "customers" || scopeLabel === "both"){
+      lines.push(`Customers: <strong>${custModified}</strong> / ${custMatched}`);
+    }
+    if(scopeLabel === "products" || scopeLabel === "both"){
+      lines.push(`Products: <strong>${prodModified}</strong> / ${prodMatched}`);
+    }
+    const detail = lines.join(" -  ") || `Updated ${j.modified} / ${j.matched} records.`;
+
+    $id("opMsg").innerHTML = `<div class="alert alert-success mb-0">
+      <i class="bi bi-check2-circle"></i> Bulk update completed. ${detail}
+    </div>`;
+    await loadStats(); // refresh logs + table + KPIs for current selection
+  }catch(err){
+    $id("opMsg").innerHTML = `<div class="alert alert-danger mb-0">
+      <i class="bi bi-exclamation-octagon"></i> ${err.message}
+    </div>`;
+  }finally{
+    $id("applyBtn").disabled = false;
+  }
+});
+
+/* ---------- Init Select2 (once) ---------- */
+$(document).ready(function(){
+  // Product select (single)
+  $("#productSelect").select2({
+    width: "100%",
+    placeholder: "-- Select product --",
+    templateResult: optionTemplate,
+    templateSelection: selectionTemplate,
+    matcher: function(params, data){
+      // Custom matcher to search name and price text
+      if ($.trim(params.term) === '') { return data; }
+      const term = params.term.toLowerCase();
+      const name = ($(data.element).data('name') || data.text || '').toString().toLowerCase();
+      const price = String($(data.element).data('price') || '').toLowerCase();
+      return (name.includes(term) || price.includes(term)) ? data : null;
+    }
+  });
+
+  // ManagerSelect as multi
+  $("#managerSelect").select2({
+    width: "100%",
+    placeholder: "Select one or more branches",
+    closeOnSelect: false
+  });
+
+  enableActions();
+});
+</script>
+  {% include 'app_footer.html' %}
+
+</body>
+</html>

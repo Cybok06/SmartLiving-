@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Transfer Agent</title>
+  <link rel="icon" href="https://res.cloudinary.com/dljpgzbto/image/upload/v1743993646/company-logo_dksb23.jpg" type="image/png"/>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"/>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet"/>
+  <style>
+    :root{
+      --ink:#0f172a;
+      --muted:#64748b;
+      --panel:#ffffff;
+      --edge:#e2e8f0;
+      --soft:#f1f5f9;
+      --accent:#2563eb;
+    }
+    body{
+      font-family:"Segoe UI", system-ui, -apple-system, sans-serif;
+      background:#f5f6fb;
+      color:var(--ink);
+      min-height:100vh;
+    }
+    .page-shell{ max-width: 1100px; margin: 0 auto; padding: 24px 16px 40px; }
+    .header{
+      background:linear-gradient(120deg,#0f172a,#1e3a8a);
+      color:#fff;
+      border-radius:18px;
+      padding:1.2rem 1.4rem;
+      box-shadow:0 16px 30px rgba(15,23,42,.18);
+      margin-bottom:1.25rem;
+    }
+    .header h1{ font-size:1.35rem; margin:0; font-weight:700; }
+    .panel{
+      background:var(--panel);
+      border:1px solid var(--edge);
+      border-radius:16px;
+      padding:1rem 1.1rem;
+      box-shadow:0 10px 24px rgba(15,23,42,.08);
+    }
+    .search-bar{
+      display:flex;
+      flex-wrap:wrap;
+      gap:.75rem;
+      align-items:center;
+      justify-content:space-between;
+      margin-bottom:1rem;
+    }
+    .avatar{
+      width:38px;
+      height:38px;
+      border-radius:50%;
+      object-fit:cover;
+      border:1px solid #e2e8f0;
+    }
+    .status-pill{
+      padding:.2rem .6rem;
+      border-radius:999px;
+      font-size:.75rem;
+      font-weight:600;
+    }
+    .status-active{ background:#dcfce7; color:#166534; }
+    .status-not-active{ background:#fee2e2; color:#b91c1c; }
+    .shimmer{
+      background:linear-gradient(90deg,#e9eef7 25%,#f8fafc 37%,#e9eef7 63%);
+      background-size:400% 100%;
+      animation:shimmer 1.2s ease infinite;
+      border-radius:8px;
+      height:14px;
+    }
+    .skeleton-row{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      padding:.7rem 0;
+      border-bottom:1px solid #eef2f7;
+    }
+    .skeleton-avatar{
+      width:38px;
+      height:38px;
+      border-radius:50%;
+      background:linear-gradient(90deg,#e9eef7 25%,#f8fafc 37%,#e9eef7 63%);
+      background-size:400% 100%;
+      animation:shimmer 1.2s ease infinite;
+    }
+    @keyframes shimmer{
+      0%{ background-position:100% 0; }
+      100%{ background-position:0 0; }
+    }
+  </style>
+</head>
+<body>
+  {% include 'admin_sidebar.html' %}
+
+  <div class="page-shell">
+    <div class="header d-flex align-items-center justify-content-between">
+      <div>
+        <div class="small text-white-50">Admin</div>
+        <h1>Transfer Agent</h1>
+      </div>
+      <a class="btn btn-light btn-sm" href="{{ back_url }}">
+        <i class="bi bi-arrow-left"></i> Back
+      </a>
+    </div>
+
+    <div class="panel mb-3">
+      <div class="search-bar">
+        <div class="d-flex flex-wrap gap-2">
+          <input id="searchName" class="form-control" style="min-width:220px;" placeholder="Search agent name">
+          <input id="searchPhone" class="form-control" style="min-width:220px;" placeholder="Search agent phone">
+        </div>
+        <button class="btn btn-primary" id="searchBtn">
+          <i class="bi bi-search"></i> Search
+        </button>
+      </div>
+
+      <div id="alertBox" class="alert d-none"></div>
+
+      <div class="table-responsive">
+        <table class="table align-middle mb-0">
+          <thead class="text-muted small">
+            <tr>
+              <th>Agent</th>
+              <th>Phone</th>
+              <th>Branch</th>
+              <th>Status</th>
+              <th class="text-end">Action</th>
+            </tr>
+          </thead>
+          <tbody id="resultsBody"></tbody>
+        </table>
+      </div>
+
+      <div id="skeletonWrap" class="d-none">
+        {% for _ in range(6) %}
+          <div class="skeleton-row">
+            <div class="skeleton-avatar"></div>
+            <div class="flex-grow-1">
+              <div class="shimmer" style="width:40%;"></div>
+              <div class="shimmer mt-2" style="width:30%;"></div>
+            </div>
+            <div class="shimmer" style="width:80px;"></div>
+          </div>
+        {% endfor %}
+      </div>
+
+      <div id="emptyState" class="text-center text-muted py-4 d-none">No agents found.</div>
+
+      <nav class="mt-3">
+        <ul class="pagination justify-content-center mb-0" id="pager"></ul>
+      </nav>
+    </div>
+
+    <div class="panel">
+      <div class="fw-semibold mb-2">Transfer Panel</div>
+      <div id="selectedAgent" class="text-muted small">No agent selected.</div>
+      <div class="row g-3 mt-2">
+        <div class="col-md-6">
+          <label class="form-label fw-semibold">New Manager/Branch</label>
+          <select id="managerSelect" class="form-select">
+            <option value="">-- Select Manager --</option>
+            {% for manager in managers %}
+              <option value="{{ manager._id }}" data-branch="{{ manager.branch }}">
+                {{ manager.username or manager.name }} ({{ manager.branch }})
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-6 d-flex align-items-end">
+          <button class="btn btn-primary w-100" id="transferBtn" disabled>
+            <span class="spinner-border spinner-border-sm me-2 d-none" id="transferSpinner" role="status"></span>
+            Transfer Agent
+          </button>
+        </div>
+      </div>
+      <div class="small text-muted mt-2">
+        This updates the agent's manager_id and branch.
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    const defaultAvatar = "https://imagedelivery.net/h9fmMoa1o2c2P55TcWJGOg/f1b8f81c-1aac-4580-6b1c-869ffafcb400/public";
+    const searchBtn = document.getElementById('searchBtn');
+    const searchName = document.getElementById('searchName');
+    const searchPhone = document.getElementById('searchPhone');
+    const resultsBody = document.getElementById('resultsBody');
+    const skeletonWrap = document.getElementById('skeletonWrap');
+    const emptyState = document.getElementById('emptyState');
+    const pager = document.getElementById('pager');
+    const alertBox = document.getElementById('alertBox');
+    const selectedAgent = document.getElementById('selectedAgent');
+    const managerSelect = document.getElementById('managerSelect');
+    const transferBtn = document.getElementById('transferBtn');
+    const transferSpinner = document.getElementById('transferSpinner');
+
+    let selectedAgentId = null;
+    let currentPage = 1;
+    let totalPages = 1;
+
+    function showAlert(type, message){
+      alertBox.className = `alert alert-${type}`;
+      alertBox.textContent = message;
+      alertBox.classList.remove('d-none');
+      setTimeout(()=> alertBox.classList.add('d-none'), 3500);
+    }
+
+    function setLoading(isLoading){
+      if (isLoading){
+        skeletonWrap.classList.remove('d-none');
+        resultsBody.innerHTML = '';
+        emptyState.classList.add('d-none');
+        pager.innerHTML = '';
+      } else {
+        skeletonWrap.classList.add('d-none');
+      }
+    }
+
+    async function fetchAgents(page = 1){
+      setLoading(true);
+      currentPage = page;
+      const params = new URLSearchParams({
+        name: searchName.value.trim(),
+        phone: searchPhone.value.trim(),
+        page: String(page)
+      });
+      try{
+        const res = await fetch(`/transfer/search_agents?${params.toString()}`);
+        const data = await res.json();
+        if (!data.ok) throw new Error(data.message || 'Failed to load agents');
+        renderResults(data.results || []);
+        renderPager(data.page, data.total_pages);
+      }catch(err){
+        showAlert('danger', err.message || 'Failed to load agents');
+        setLoading(false);
+      }
+    }
+
+    function renderResults(list){
+      resultsBody.innerHTML = '';
+      if (!list.length){
+        emptyState.classList.remove('d-none');
+        setLoading(false);
+        return;
+      }
+      emptyState.classList.add('d-none');
+      list.forEach(a => {
+        const isActive = (a.status || '').toLowerCase() === 'active';
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>
+            <div class="d-flex align-items-center gap-2">
+              <img class="avatar" src="${a.image_url || defaultAvatar}" onerror="this.onerror=null;this.src='${defaultAvatar}';" alt="">
+              <div>
+                <div class="fw-semibold">${a.name || '-'}</div>
+                <div class="text-muted small">${a.email || ''}</div>
+              </div>
+            </div>
+          </td>
+          <td>${a.phone || '-'}</td>
+          <td>${a.branch || '-'}</td>
+          <td>
+            <span class="status-pill ${isActive ? 'status-active' : 'status-not-active'}">
+              ${a.status || 'Not Active'}
+            </span>
+          </td>
+          <td class="text-end">
+            <button class="btn btn-outline-primary btn-sm select-btn">Select</button>
+          </td>
+        `;
+        tr.querySelector('.select-btn').addEventListener('click', () => {
+          selectedAgentId = a._id;
+          selectedAgent.textContent = `${a.name || '-'} · ${a.phone || '-'} · ${a.branch || '-'}`;
+          updateTransferButton();
+          managerSelect.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        });
+        resultsBody.appendChild(tr);
+      });
+      setLoading(false);
+    }
+
+    function renderPager(page, pages){
+      totalPages = pages || 1;
+      pager.innerHTML = '';
+      const makeItem = (label, target, disabled, active) => {
+        const li = document.createElement('li');
+        li.className = `page-item ${disabled ? 'disabled' : ''} ${active ? 'active' : ''}`;
+        const a = document.createElement('a');
+        a.className = 'page-link';
+        a.href = '#';
+        a.textContent = label;
+        if (!disabled){
+          a.addEventListener('click', (e)=>{ e.preventDefault(); fetchAgents(target); });
+        }
+        li.appendChild(a);
+        return li;
+      };
+      pager.appendChild(makeItem('Prev', Math.max(1, page - 1), page <= 1));
+      const start = Math.max(1, page - 2);
+      const end = Math.min(totalPages, page + 2);
+      for (let p = start; p <= end; p += 1){
+        pager.appendChild(makeItem(String(p), p, false, p === page));
+      }
+      pager.appendChild(makeItem('Next', Math.min(totalPages, page + 1), page >= totalPages));
+    }
+
+    function updateTransferButton(){
+      transferBtn.disabled = !(selectedAgentId && managerSelect.value);
+    }
+
+    managerSelect.addEventListener('change', updateTransferButton);
+
+    function searchNow(){
+      fetchAgents(1);
+    }
+
+    searchBtn.addEventListener('click', (e)=>{
+      e.preventDefault();
+      searchNow();
+    });
+    [searchName, searchPhone].forEach(inp => {
+      inp.addEventListener('keydown', (e)=>{
+        if (e.key === 'Enter'){
+          e.preventDefault();
+          searchNow();
+        }
+      });
+    });
+
+    let transferBusy = false;
+    transferBtn.addEventListener('click', async ()=>{
+      if (transferBusy || !selectedAgentId || !managerSelect.value) return;
+      transferBusy = true;
+      transferBtn.disabled = true;
+      transferSpinner.classList.remove('d-none');
+      try{
+        const res = await fetch('/transfer/submit', {
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ agent_id: selectedAgentId, new_manager_id: managerSelect.value })
+        });
+        const data = await res.json();
+        if (!data.ok) throw new Error(data.message || 'Transfer failed');
+        showAlert('success', data.message || 'Transferred');
+        selectedAgentId = null;
+        selectedAgent.textContent = 'No agent selected.';
+        managerSelect.value = '';
+        updateTransferButton();
+        fetchAgents(currentPage);
+      }catch(err){
+        showAlert('danger', err.message || 'Transfer failed');
+        updateTransferButton();
+      }finally{
+        transferBusy = false;
+        transferSpinner.classList.add('d-none');
+      }
+    });
+
+    fetchAgents(1);
+  </script>
+
+  {% include 'app_footer.html' %}
+</body>
+</html>

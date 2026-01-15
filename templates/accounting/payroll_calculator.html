@@ -1,0 +1,867 @@
+<!DOCTYPE html>
+<html class="light" lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Payroll Calculator - TRUEtype Services</title>
+
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <link rel="icon" href="https://res.cloudinary.com/dljpgzbto/image/upload/v1743993646/company-logo_dksb23.jpg" type="image/png">
+
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+
+  <script>
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "primary": "#16a34a",
+            "background-light": "#f9fafb",
+            "background-dark": "#111827",
+            "navy": "#0f172a",
+            "emerald": "#16a34a",
+            "light-gray": "#f9fafb",
+            "medium-gray": "#e5e7eb",
+            "dark-gray": "#111827",
+          },
+          fontFamily: {
+            "display": ["Inter", "sans-serif"]
+          },
+          borderRadius: {
+            "DEFAULT": "0.5rem",
+            "lg": "1rem",
+            "xl": "1.125rem",
+            "full": "9999px"
+          },
+          boxShadow: {
+            'soft': '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
+          }
+        },
+      },
+    }
+  </script>
+  <style>
+    .material-symbols-outlined {
+      font-variation-settings:
+      'FILL' 0,
+      'wght' 400,
+      'GRAD' 0,
+      'opsz' 24
+    }
+
+    /* PRINT: only export the table + totals, nothing else */
+    @media print {
+      body * {
+        visibility: hidden !important;
+      }
+      #payrollTableSection, #payrollTableSection * {
+        visibility: visible !important;
+      }
+      #payrollTableSection {
+        position: absolute;
+        inset: 0;
+        margin: 0;
+        padding: 0;
+        border: none;
+        box-shadow: none;
+      }
+      #payrollTableSection table {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+
+<body class="bg-background-light dark:bg-background-dark font-display text-dark-gray dark:text-light-gray">
+  {% include 'accounting/sidebar.html' %}
+
+  <main class="min-h-screen p-4 sm:p-6 lg:p-10">
+    <div class="mx-auto max-w-7xl">
+      <!-- Heading -->
+      <header class="flex flex-col sm:flex-row flex-wrap items-start justify-between gap-4 mb-6">
+        <div>
+          <h1 class="text-navy dark:text-white text-3xl sm:text-4xl font-extrabold tracking-tight">
+            Payroll Calculator
+          </h1>
+          <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
+            Manually enter staff payroll and auto-calculate net pay, employer cost and statutory tiers.
+          </p>
+        </div>
+
+        <!-- Period selector -->
+        <div class="flex flex-col items-stretch sm:items-end gap-2" id="toolbar">
+          <label class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+            Payroll Period
+          </label>
+          <div class="inline-flex items-center gap-2 rounded-xl border border-medium-gray dark:border-dark-gray bg-white dark:bg-dark-gray px-3 py-2 shadow-soft">
+            <span class="material-symbols-outlined text-base text-navy dark:text-white">calendar_month</span>
+            <input
+              id="payPeriod"
+              type="month"
+              value="{{ default_period or '' }}"
+              class="border-0 bg-transparent text-sm text-navy dark:text-white focus:ring-0 focus:outline-none"
+            />
+          </div>
+          <p id="periodStatus" class="text-[11px] text-gray-500 dark:text-gray-400 mt-1"></p>
+        </div>
+      </header>
+
+      <div class="space-y-6">
+        <!-- Action Bar -->
+        <section id="actions" class="bg-white dark:bg-dark-gray p-4 sm:p-6 rounded-xl shadow-soft">
+          <div class="flex flex-col gap-4">
+            <div class="flex flex-col sm:flex-row flex-wrap items-center justify-between gap-4">
+              <div class="flex flex-wrap gap-3 w-full sm:w-auto">
+                <button
+                  id="btnAddRow"
+                  type="button"
+                  class="flex items-center gap-2 min-w-[120px] justify-center rounded-xl h-10 px-4 bg-emerald text-white text-sm font-bold shadow-sm hover:bg-emerald/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald"
+                >
+                  <span class="material-symbols-outlined text-base">person_add</span>
+                  <span class="truncate">Add Employee</span>
+                </button>
+
+                <button
+                  id="btnRecalc"
+                  type="button"
+                  class="flex items-center gap-2 min-w-[120px] justify-center rounded-xl h-10 px-4 bg-navy text-white text-sm font-bold shadow-sm hover:bg-navy/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-navy"
+                >
+                  <span class="material-symbols-outlined text-base">calculate</span>
+                  <span class="truncate">Recalculate</span>
+                </button>
+
+                <button
+                  id="btnClear"
+                  type="button"
+                  class="flex items-center gap-2 min-w-[100px] justify-center rounded-xl h-10 px-4 bg-gray-100 dark:bg-background-dark text-dark-gray dark:text-light-gray text-sm font-semibold hover:bg-gray-200 dark:hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400"
+                >
+                  <span class="material-symbols-outlined text-base">delete_sweep</span>
+                  <span class="truncate">Clear All</span>
+                </button>
+              </div>
+
+              <div class="flex flex-wrap gap-3 w-full sm:w-auto justify-start sm:justify-end">
+                <button
+                  id="btnSavePayroll"
+                  type="button"
+                  class="flex items-center gap-2 min-w-[140px] justify-center rounded-xl h-10 px-4 bg-emerald text-white text-sm font-bold shadow-sm hover:bg-emerald/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald"
+                >
+                  <span class="material-symbols-outlined text-base">save</span>
+                  <span class="truncate">Save Payroll</span>
+                </button>
+
+                <button
+                  id="btnExportExcel"
+                  type="button"
+                  class="flex items-center gap-2 min-w-[130px] justify-center rounded-xl h-10 px-4 text-navy dark:text-white border-2 border-navy dark:border-medium-gray text-sm font-bold hover:bg-navy/5 dark:hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-navy dark:focus:ring-white"
+                >
+                  <span class="material-symbols-outlined text-base">table_view</span>
+                  <span class="truncate">Export to Excel</span>
+                </button>
+
+                <button
+                  id="btnExportPdf"
+                  type="button"
+                  class="flex items-center gap-2 min-w-[130px] justify-center rounded-xl h-10 px-4 text-navy dark:text-white border-2 border-navy dark:border-medium-gray text-sm font-bold hover:bg-navy/5 dark:hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-navy dark:focus:ring-white"
+                >
+                  <span class="material-symbols-outlined text-base">picture_as_pdf</span>
+                  <span class="truncate">Export to PDF</span>
+                </button>
+              </div>
+            </div>
+
+            <p class="text-xs text-gray-500 dark:text-gray-400">
+              Note: Saving is monthly. Each payroll period (e.g. 2025-10) is stored as one sheet.
+            </p>
+          </div>
+        </section>
+
+        <!-- Table (this is the only part printed for PDF) -->
+        <section id="payrollTableSection" class="overflow-hidden rounded-xl shadow-soft border border-medium-gray dark:border-dark-gray bg-white dark:bg-dark-gray">
+          <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-medium-gray dark:divide-dark-gray">
+              <thead class="bg-light-gray dark:bg-dark-gray/80 sticky top-0 z-10">
+                <tr>
+                  <th class="px-4 py-3 text-left text-xs font-bold text-navy dark:text-white uppercase tracking-wider whitespace-nowrap">Employee</th>
+                  <th class="px-4 py-3 text-right text-xs font-bold text-navy dark:text-white uppercase tracking-wider whitespace-nowrap">Basic Salary</th>
+                  <th class="px-4 py-3 text-right text-xs font-bold text-navy dark:text-white uppercase tracking-wider whitespace-nowrap">Total Allowances</th>
+                  <th class="px-4 py-3 text-right text-xs font-bold text-navy dark:text-white uppercase tracking-wider whitespace-nowrap">Gross</th>
+                  <th class="px-4 py-3 text-right text-xs font-bold text-navy dark:text-white uppercase tracking-wider whitespace-nowrap">SSF 5.5%</th>
+                  <th class="px-4 py-3 text-right text-xs font-bold text-navy dark:text-white uppercase tracking-wider whitespace-nowrap">Taxable Income</th>
+                  <th class="px-4 py-3 text-right text-xs font-bold text-navy dark:text-white uppercase tracking-wider whitespace-nowrap">PAYE</th>
+                  <th class="px-4 py-3 text-right text-xs font-bold text-navy dark:text-white uppercase tracking-wider whitespace-nowrap">Net Pay</th>
+                  <th class="px-4 py-3 text-right text-xs font-bold text-navy dark:text-white uppercase tracking-wider whitespace-nowrap">Employer 13%</th>
+                  <th class="px-4 py-3 text-right text-xs font-bold text-navy dark:text-white uppercase tracking-wider whitespace-nowrap">Total Staff Cost</th>
+                  <th class="px-4 py-3 text-right text-xs font-bold text-navy dark:text-white uppercase tracking-wider whitespace-nowrap">Tier 1 (13.5%)</th>
+                  <th class="px-4 py-3 text-right text-xs font-bold text-navy dark:text-white uppercase tracking-wider whitespace-nowrap">Tier 2 (5%)</th>
+                  <th class="px-2 py-3"></th>
+                </tr>
+              </thead>
+              <tbody id="payrollBody" class="divide-y divide-medium-gray dark:divide-dark-gray">
+                <!-- Rows injected by JS -->
+              </tbody>
+              <tfoot class="bg-light-gray dark:bg-dark-gray/80 sticky bottom-0">
+                <tr class="border-t-2 border-medium-gray dark:border-dark-gray">
+                  <td class="px-4 py-3 text-sm font-extrabold text-navy dark:text-white whitespace-nowrap">
+                    TOTALS
+                  </td>
+                  <td class="px-4 py-3 text-sm font-extrabold text-navy dark:text-white text-right whitespace-nowrap" id="totBasic">0.00</td>
+                  <td class="px-4 py-3 text-sm font-extrabold text-navy dark:text-white text-right whitespace-nowrap" id="totAllowances">0.00</td>
+                  <td class="px-4 py-3 text-sm font-extrabold text-navy dark:text-white text-right whitespace-nowrap" id="totGross">0.00</td>
+                  <td class="px-4 py-3 text-sm font-extrabold text-navy dark:text-white text-right whitespace-nowrap" id="totSSF">0.00</td>
+                  <td class="px-4 py-3 text-sm font-extrabold text-navy dark:text-white text-right whitespace-nowrap" id="totTaxable">0.00</td>
+                  <td class="px-4 py-3 text-sm font-extrabold text-navy dark:text-white text-right whitespace-nowrap" id="totPAYE">0.00</td>
+                  <td class="px-4 py-3 text-sm font-extrabold text-emerald text-right whitespace-nowrap" id="totNet">0.00</td>
+                  <td class="px-4 py-3 text-sm font-extrabold text-navy dark:text-white text-right whitespace-nowrap" id="totEmployer13">0.00</td>
+                  <td class="px-4 py-3 text-sm font-extrabold text-navy dark:text-white text-right whitespace-nowrap" id="totStaffCost">0.00</td>
+                  <td class="px-4 py-3 text-sm font-extrabold text-navy dark:text-white text-right whitespace-nowrap" id="totTier1">0.00</td>
+                  <td class="px-4 py-3 text-sm font-extrabold text-navy dark:text-white text-right whitespace-nowrap" id="totTier2">0.00</td>
+                  <td></td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+          <!-- Optional bottom add button for long lists -->
+          <div class="p-3 flex justify-end">
+            <button
+              id="btnAddRowBottom"
+              type="button"
+              class="inline-flex items-center gap-2 rounded-full border border-medium-gray dark:border-dark-gray px-4 py-1.5 text-xs font-semibold text-navy dark:text-light-gray hover:bg-light-gray/70 dark:hover:bg-dark-gray/70"
+            >
+              <span class="material-symbols-outlined text-sm">add</span>
+              <span>Add Employee Row</span>
+            </button>
+          </div>
+        </section>
+
+        <!-- Signature Section with inputs -->
+        <section class="bg-white dark:bg-dark-gray p-6 sm:p-8 rounded-xl shadow-soft">
+          <h2 class="text-sm font-semibold text-navy dark:text-white mb-4">
+            Sign-off
+          </h2>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-8 sm:gap-16 pt-2">
+            <div class="flex flex-col">
+              <input
+                id="preparedBy"
+                type="text"
+                placeholder="Name / Signature"
+                class="mb-2 w-full rounded-xl border border-medium-gray dark:border-light-gray/40 bg-transparent px-3 py-2 text-sm text-navy dark:text-white focus:ring-emerald focus:border-emerald"
+              />
+              <div class="flex-grow border-b border-dashed border-dark-gray/50 dark:border-light-gray/50 mb-2"></div>
+              <p class="text-sm font-semibold text-navy dark:text-white text-center">Prepared By</p>
+            </div>
+            <div class="flex flex-col">
+              <input
+                id="checkedBy"
+                type="text"
+                placeholder="Name / Signature"
+                class="mb-2 w-full rounded-xl border border-medium-gray dark:border-light-gray/40 bg-transparent px-3 py-2 text-sm text-navy dark:text-white focus:ring-emerald focus:border-emerald"
+              />
+              <div class="flex-grow border-b border-dashed border-dark-gray/50 dark:border-light-gray/50 mb-2"></div>
+              <p class="text-sm font-semibold text-navy dark:text-white text-center">Checked By</p>
+            </div>
+            <div class="flex flex-col">
+              <input
+                id="approvedBy"
+                type="text"
+                placeholder="Name / Signature"
+                class="mb-2 w-full rounded-xl border border-medium-gray dark:border-light-gray/40 bg-transparent px-3 py-2 text-sm text-navy dark:text-white focus:ring-emerald focus:border-emerald"
+              />
+              <div class="flex-grow border-b border-dashed border-dark-gray/50 dark:border-light-gray/50 mb-2"></div>
+              <p class="text-sm font-semibold text-navy dark:text-white text-center">Approved By</p>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <!-- Hidden form for CSV export -->
+    <form id="exportForm" method="POST" action="{{ url_for('acc_payroll_calc.payroll_export_csv') }}" class="hidden">
+      <input type="hidden" name="payload" id="exportPayload" />
+    </form>
+  </main>
+
+  <!-- Template row -->
+  <template id="rowTemplate">
+    <tr class="dark:hover:bg-white/5">
+      <td class="px-4 py-2">
+        <input
+          type="text"
+          class="w-full rounded-lg border border-medium-gray dark:border-dark-gray bg-white dark:bg-background-dark px-2 py-1 text-sm text-navy dark:text-white focus:ring-emerald focus:border-emerald"
+          placeholder="Employee name"
+          data-field="employee"
+        />
+      </td>
+      <td class="px-4 py-2 text-right">
+        <input
+          type="number"
+          step="0.01"
+          class="w-full rounded-lg border border-yellow-300 bg-yellow-50 dark:bg-yellow-900/40 dark:border-yellow-700 px-2 py-1 text-sm text-right text-dark-gray dark:text-light-gray focus:ring-emerald focus:border-emerald"
+          placeholder="0.00"
+          data-field="basic"
+        />
+      </td>
+      <td class="px-4 py-2 text-right">
+        <input
+          type="number"
+          step="0.01"
+          class="w-full rounded-lg border border-medium-gray dark:border-dark-gray bg-white dark:bg-background-dark px-2 py-1 text-sm text-right text-dark-gray dark:text-light-gray focus:ring-emerald focus:border-emerald"
+          placeholder="0.00"
+          data-field="allowances"
+        />
+      </td>
+      <td class="px-4 py-2 text-right">
+        <span class="text-sm text-dark-gray dark:text-light-gray" data-field="gross">0.00</span>
+      </td>
+      <td class="px-4 py-2 text-right">
+        <span class="text-sm text-dark-gray dark:text-light-gray" data-field="ssf_employee">0.00</span>
+      </td>
+      <td class="px-4 py-2 text-right">
+        <span class="text-sm text-dark-gray dark:text-light-gray" data-field="taxable">0.00</span>
+      </td>
+      <td class="px-4 py-2 text-right">
+        <input
+          type="number"
+          step="0.01"
+          class="w-full rounded-lg border border-medium-gray dark:border-dark-gray bg-white dark:bg-background-dark px-2 py-1 text-sm text-right text-dark-gray dark:text-light-gray focus:ring-emerald focus:border-emerald"
+          placeholder="0.00"
+          data-field="paye"
+        />
+      </td>
+      <td class="px-4 py-2 text-right">
+        <span class="text-sm font-semibold text-emerald dark:text-emerald" data-field="net">0.00</span>
+      </td>
+      <td class="px-4 py-2 text-right">
+        <span class="text-sm text-dark-gray dark:text-light-gray" data-field="employer_13">0.00</span>
+      </td>
+      <td class="px-4 py-2 text-right">
+        <span class="text-sm text-dark-gray dark:text-light-gray" data-field="total_cost">0.00</span>
+      </td>
+      <td class="px-4 py-2 text-right">
+        <span class="text-sm text-dark-gray dark:text-light-gray" data-field="tier1">0.00</span>
+      </td>
+      <td class="px-4 py-2 text-right">
+        <span class="text-sm text-dark-gray dark:text-light-gray" data-field="tier2">0.00</span>
+      </td>
+      <td class="px-2 py-2 text-center">
+        <button
+          type="button"
+          class="inline-flex items-center justify-center rounded-full bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-300 p-1.5 hover:bg-red-100 dark:hover:bg-red-800"
+          data-action="remove-row"
+        >
+          <span class="material-symbols-outlined text-sm">close</span>
+        </button>
+      </td>
+    </tr>
+  </template>
+
+  <!-- Hidden data for initial payroll -->
+  <div id="initialPayrollData"
+       data-json='{{ (payroll_data or {})|tojson|safe }}'
+       style="display:none;"></div>
+
+  <script>
+    (function(){
+      // ---- read initial payroll JSON safely ----
+      var initialPayroll = {};
+      var dataEl = document.getElementById("initialPayrollData");
+      if (dataEl) {
+        var raw = dataEl.getAttribute("data-json") || "{}";
+        try {
+          initialPayroll = JSON.parse(raw);
+        } catch (e) {
+          console.error("Failed to parse initial payroll JSON", e);
+          initialPayroll = {};
+        }
+      }
+
+      var SSF_EMP_RATE = 0.055;   // 5.5% employee
+      var SSF_EMPL_RATE = 0.13;   // 13% employer
+      var TIER1_RATE   = 0.135;   // 13.5%
+      var TIER2_RATE   = 0.05;    // 5%
+
+      var bodyEl = document.getElementById('payrollBody');
+      var rowTpl = document.getElementById('rowTemplate');
+      var periodEl = document.getElementById('payPeriod');
+      var periodStatusEl = document.getElementById('periodStatus');
+
+      var btnAddRow = document.getElementById('btnAddRow');
+      var btnAddRowBottom = document.getElementById('btnAddRowBottom');
+      var btnRecalc = document.getElementById('btnRecalc');
+      var btnClear  = document.getElementById('btnClear');
+      var btnSave   = document.getElementById('btnSavePayroll');
+      var btnExportExcel = document.getElementById('btnExportExcel');
+      var btnExportPdf   = document.getElementById('btnExportPdf');
+
+      var totBasicEl       = document.getElementById('totBasic');
+      var totAllowancesEl  = document.getElementById('totAllowances');
+      var totGrossEl       = document.getElementById('totGross');
+      var totSSFEl         = document.getElementById('totSSF');
+      var totTaxableEl     = document.getElementById('totTaxable');
+      var totPAYEEl        = document.getElementById('totPAYE');
+      var totNetEl         = document.getElementById('totNet');
+      var totEmployer13El  = document.getElementById('totEmployer13');
+      var totStaffCostEl   = document.getElementById('totStaffCost');
+      var totTier1El       = document.getElementById('totTier1');
+      var totTier2El       = document.getElementById('totTier2');
+
+      var exportForm   = document.getElementById('exportForm');
+      var exportPayload = document.getElementById('exportPayload');
+
+      var preparedByEl = document.getElementById('preparedBy');
+      var checkedByEl  = document.getElementById('checkedBy');
+      var approvedByEl = document.getElementById('approvedBy');
+
+      function setStatus(msg) {
+        if (periodStatusEl) {
+          periodStatusEl.textContent = msg || "";
+        }
+      }
+
+      function addRow() {
+        if (!rowTpl || !bodyEl) return;
+        var clone = document.importNode(rowTpl.content, true);
+        bodyEl.appendChild(clone);
+      }
+
+      function parseNum(v) {
+        if (v === null || v === undefined || v === "") return 0;
+        var n = parseFloat(v);
+        if (isNaN(n)) return 0;
+        return n;
+      }
+
+      function format(n) {
+        return n.toFixed(2);
+      }
+
+      function recalc() {
+        if (!bodyEl) return;
+
+        var totBasic = 0;
+        var totAllowances = 0;
+        var totGross = 0;
+        var totSSF = 0;
+        var totTaxable = 0;
+        var totPAYE = 0;
+        var totNet = 0;
+        var totEmployer13 = 0;
+        var totStaffCost = 0;
+        var totTier1 = 0;
+        var totTier2 = 0;
+
+        var rows = bodyEl.querySelectorAll('tr');
+        for (var i = 0; i < rows.length; i++) {
+          var row = rows[i];
+          var getInput = function(field) {
+            return row.querySelector('[data-field="' + field + '"]');
+          };
+
+          var employeeInput  = getInput('employee');
+          var basicInput     = getInput('basic');
+          var allowInput     = getInput('allowances');
+          var payeInput      = getInput('paye');
+
+          var grossSpan      = getInput('gross');
+          var ssfSpan        = getInput('ssf_employee');
+          var taxableSpan    = getInput('taxable');
+          var netSpan        = getInput('net');
+          var empl13Span     = getInput('employer_13');
+          var totalCostSpan  = getInput('total_cost');
+          var tier1Span      = getInput('tier1');
+          var tier2Span      = getInput('tier2');
+
+          var basic = basicInput ? parseNum(basicInput.value) : 0;
+          var allowances = allowInput ? parseNum(allowInput.value) : 0;
+          var paye = payeInput ? parseNum(payeInput.value) : 0;
+
+          var hasEmployee = employeeInput && employeeInput.value && employeeInput.value.trim() !== "";
+          if (!hasEmployee && basic === 0 && allowances === 0 && paye === 0) {
+            if (grossSpan)      grossSpan.textContent = '0.00';
+            if (ssfSpan)        ssfSpan.textContent = '0.00';
+            if (taxableSpan)    taxableSpan.textContent = '0.00';
+            if (netSpan)        netSpan.textContent = '0.00';
+            if (empl13Span)     empl13Span.textContent = '0.00';
+            if (totalCostSpan)  totalCostSpan.textContent = '0.00';
+            if (tier1Span)      tier1Span.textContent = '0.00';
+            if (tier2Span)      tier2Span.textContent = '0.00';
+            continue;
+          }
+
+          var gross = basic + allowances;
+          var ssf_employee = basic * SSF_EMP_RATE;
+          var taxable = gross - ssf_employee;
+          var net = gross - ssf_employee - paye;
+          var employer_13 = basic * SSF_EMPL_RATE;
+          var tier1 = basic * TIER1_RATE;
+          var tier2 = basic * TIER2_RATE;
+          var total_cost = net + employer_13;
+
+          if (grossSpan)      grossSpan.textContent     = format(gross);
+          if (ssfSpan)        ssfSpan.textContent       = format(ssf_employee);
+          if (taxableSpan)    taxableSpan.textContent   = format(taxable);
+          if (netSpan)        netSpan.textContent       = format(net);
+          if (empl13Span)     empl13Span.textContent    = format(employer_13);
+          if (totalCostSpan)  totalCostSpan.textContent = format(total_cost);
+          if (tier1Span)      tier1Span.textContent     = format(tier1);
+          if (tier2Span)      tier2Span.textContent     = format(tier2);
+
+          totBasic       += basic;
+          totAllowances  += allowances;
+          totGross       += gross;
+          totSSF         += ssf_employee;
+          totTaxable     += taxable;
+          totPAYE        += paye;
+          totNet         += net;
+          totEmployer13  += employer_13;
+          totStaffCost   += total_cost;
+          totTier1       += tier1;
+          totTier2       += tier2;
+        }
+
+        if (totBasicEl)      totBasicEl.textContent      = format(totBasic);
+        if (totAllowancesEl) totAllowancesEl.textContent = format(totAllowances);
+        if (totGrossEl)      totGrossEl.textContent      = format(totGross);
+        if (totSSFEl)        totSSFEl.textContent        = format(totSSF);
+        if (totTaxableEl)    totTaxableEl.textContent    = format(totTaxable);
+        if (totPAYEEl)       totPAYEEl.textContent       = format(totPAYE);
+        if (totNetEl)        totNetEl.textContent        = format(totNet);
+        if (totEmployer13El) totEmployer13El.textContent = format(totEmployer13);
+        if (totStaffCostEl)  totStaffCostEl.textContent  = format(totStaffCost);
+        if (totTier1El)      totTier1El.textContent      = format(totTier1);
+        if (totTier2El)      totTier2El.textContent      = format(totTier2);
+      }
+
+      function clearAll() {
+        if (!bodyEl) return;
+        bodyEl.innerHTML = '';
+        addRow();
+        recalc();
+      }
+
+      function resetSignatories() {
+        if (preparedByEl) preparedByEl.value = "";
+        if (checkedByEl)  checkedByEl.value  = "";
+        if (approvedByEl) approvedByEl.value = "";
+      }
+
+      function collectSignatories() {
+        return {
+          prepared_by: preparedByEl ? (preparedByEl.value || "") : "",
+          checked_by:  checkedByEl  ? (checkedByEl.value  || "") : "",
+          approved_by: approvedByEl ? (approvedByEl.value || "") : "",
+        };
+      }
+
+      function collectData() {
+        var staff = [];
+        if (!bodyEl) return { period: "", staff: [], totals: {}, signatories: {} };
+
+        var rows = bodyEl.querySelectorAll('tr');
+        for (var i = 0; i < rows.length; i++) {
+          var row = rows[i];
+          var getEl = function(field) {
+            return row.querySelector('[data-field="' + field + '"]');
+          };
+
+          var employeeInput = getEl('employee');
+          var basicInput = getEl('basic');
+          var allowInput = getEl('allowances');
+          var payeInput  = getEl('paye');
+
+          var grossSpan      = getEl('gross');
+          var ssfSpan        = getEl('ssf_employee');
+          var taxableSpan    = getEl('taxable');
+          var netSpan        = getEl('net');
+          var empl13Span     = getEl('employer_13');
+          var totalCostSpan  = getEl('total_cost');
+          var tier1Span      = getEl('tier1');
+          var tier2Span      = getEl('tier2');
+
+          var employee = employeeInput ? (employeeInput.value || "") : "";
+          var basic = basicInput ? parseNum(basicInput.value) : 0;
+          var allowances = allowInput ? parseNum(allowInput.value) : 0;
+          var paye = payeInput ? parseNum(payeInput.value) : 0;
+
+          var hasEmployee = employee && employee.trim() !== "";
+          if (!hasEmployee && basic === 0 && allowances === 0 && paye === 0) {
+            continue;
+          }
+
+          var gross = grossSpan ? parseNum(grossSpan.textContent) : 0;
+          var ssf_employee = ssfSpan ? parseNum(ssfSpan.textContent) : 0;
+          var taxable = taxableSpan ? parseNum(taxableSpan.textContent) : 0;
+          var net = netSpan ? parseNum(netSpan.textContent) : 0;
+          var employer_13 = empl13Span ? parseNum(empl13Span.textContent) : 0;
+          var total_cost = totalCostSpan ? parseNum(totalCostSpan.textContent) : 0;
+          var tier1 = tier1Span ? parseNum(tier1Span.textContent) : 0;
+          var tier2 = tier2Span ? parseNum(tier2Span.textContent) : 0;
+
+          staff.push({
+            employee: employee,
+            basic: basic,
+            allowances: allowances,
+            gross: gross,
+            ssf_employee: ssf_employee,
+            taxable: taxable,
+            paye: paye,
+            net: net,
+            employer_13: employer_13,
+            total_cost: total_cost,
+            tier1: tier1,
+            tier2: tier2
+          });
+        }
+
+        var totals = {
+          basic:       totBasicEl ? parseNum(totBasicEl.textContent)      : 0,
+          allowances:  totAllowancesEl ? parseNum(totAllowancesEl.textContent) : 0,
+          gross:       totGrossEl ? parseNum(totGrossEl.textContent)      : 0,
+          ssf_employee:totSSFEl ? parseNum(totSSFEl.textContent)          : 0,
+          taxable:     totTaxableEl ? parseNum(totTaxableEl.textContent)  : 0,
+          paye:        totPAYEEl ? parseNum(totPAYEEl.textContent)        : 0,
+          net:         totNetEl ? parseNum(totNetEl.textContent)          : 0,
+          employer_13: totEmployer13El ? parseNum(totEmployer13El.textContent) : 0,
+          total_cost:  totStaffCostEl ? parseNum(totStaffCostEl.textContent)   : 0,
+          tier1:       totTier1El ? parseNum(totTier1El.textContent)      : 0,
+          tier2:       totTier2El ? parseNum(totTier2El.textContent)      : 0
+        };
+
+        var signatories = collectSignatories();
+
+        return {
+          period: periodEl ? (periodEl.value || "") : "",
+          staff: staff,
+          totals: totals,
+          signatories: signatories
+        };
+      }
+
+      function populateFromData(data) {
+        var doc = data || {};
+        if (!bodyEl) return;
+
+        if (!doc.staff || !doc.staff.length) {
+          clearAll();
+          resetSignatories();
+          setStatus("No saved payroll for this period yet.");
+          return;
+        }
+
+        bodyEl.innerHTML = '';
+        for (var i = 0; i < doc.staff.length; i++) {
+          var rowData = doc.staff[i];
+          addRow();
+          var tr = bodyEl.lastElementChild;
+          if (!tr) continue;
+
+          var setField = function(field, val, isInput) {
+            var el = tr.querySelector('[data-field="' + field + '"]');
+            if (!el) return;
+            if (isInput) {
+              el.value = (val === null || val === undefined) ? "" : val;
+            } else {
+              var numVal = (typeof val === "number") ? val : parseNum(val);
+              el.textContent = format(numVal);
+            }
+          };
+
+          setField('employee', rowData.employee || "", true);
+          setField('basic', rowData.basic || 0, true);
+          setField('allowances', rowData.allowances || 0, true);
+          setField('paye', rowData.paye || 0, true);
+
+          setField('gross', rowData.gross || 0, false);
+          setField('ssf_employee', rowData.ssf_employee || 0, false);
+          setField('taxable', rowData.taxable || 0, false);
+          setField('net', rowData.net || 0, false);
+          setField('employer_13', rowData.employer_13 || 0, false);
+          setField('total_cost', rowData.total_cost || 0, false);
+          setField('tier1', rowData.tier1 || 0, false);
+          setField('tier2', rowData.tier2 || 0, false);
+        }
+
+        if (doc.signatories) {
+          if (preparedByEl) preparedByEl.value = doc.signatories.prepared_by || "";
+          if (checkedByEl)  checkedByEl.value  = doc.signatories.checked_by || "";
+          if (approvedByEl) approvedByEl.value = doc.signatories.approved_by || "";
+        } else {
+          resetSignatories();
+        }
+
+        if (doc.period && periodEl) {
+          periodEl.value = doc.period;
+        }
+
+        setStatus("Loaded saved payroll for this period.");
+        recalc();
+      }
+
+      function loadPeriod(period) {
+        if (!period) return;
+        setStatus("Loading payroll for " + period + "...");
+        var url = "{{ url_for('acc_payroll_calc.payroll_load') }}?period=" + encodeURIComponent(period);
+
+        fetch(url, { method: "GET" })
+          .then(function(resp) {
+            return resp.json().then(function(j) {
+              return { ok: resp.ok, json: j };
+            }).catch(function() {
+              return { ok: resp.ok, json: {} };
+            });
+          })
+          .then(function(result) {
+            if (!result.ok || !result.json.ok) {
+              clearAll();
+              resetSignatories();
+              setStatus(result.json.message || "No saved payroll. Start fresh for this period.");
+              return;
+            }
+            if (result.json.data) {
+              populateFromData(result.json.data);
+            } else {
+              clearAll();
+              resetSignatories();
+              setStatus("No saved payroll. Start fresh for this period.");
+            }
+          })
+          .catch(function(err) {
+            console.error(err);
+            clearAll();
+            resetSignatories();
+            setStatus("Error loading payroll. Start fresh for this period.");
+          });
+      }
+
+      // ---- events ----
+      if (btnAddRow) {
+        btnAddRow.addEventListener('click', addRow);
+      }
+      if (btnAddRowBottom) {
+        btnAddRowBottom.addEventListener('click', addRow);
+      }
+
+      if (btnRecalc) {
+        btnRecalc.addEventListener('click', recalc);
+      }
+
+      if (btnClear) {
+        btnClear.addEventListener('click', function() {
+          if (confirm("Clear all rows?")) {
+            clearAll();
+            resetSignatories();
+            setStatus("Cleared current sheet.");
+          }
+        });
+      }
+
+      if (periodEl) {
+        periodEl.addEventListener('change', function() {
+          var p = periodEl.value || "";
+          if (!p) return;
+          loadPeriod(p);
+        });
+      }
+
+      // Delegate remove row buttons
+      if (bodyEl) {
+        bodyEl.addEventListener('click', function(e) {
+          var btn = e.target.closest && e.target.closest('[data-action="remove-row"]');
+          if (!btn) return;
+          var tr = btn.closest('tr');
+          if (tr && tr.parentNode) {
+            tr.parentNode.removeChild(tr);
+            recalc();
+          }
+        });
+
+        // Auto recalc on number input blur
+        bodyEl.addEventListener('blur', function(e) {
+          if (!e.target || !e.target.matches) return;
+          if (e.target.matches('input[data-field="basic"], input[data-field="allowances"], input[data-field="paye"]')) {
+            recalc();
+          }
+        }, true);
+      }
+
+      if (btnExportExcel) {
+        btnExportExcel.addEventListener('click', function() {
+          recalc();
+          var data = collectData();
+          if (!data.staff.length) {
+            alert("No payroll data to export.");
+            return;
+          }
+          if (!exportPayload || !exportForm) return;
+          exportPayload.value = JSON.stringify(data);
+          exportForm.submit();
+        });
+      }
+
+      if (btnExportPdf) {
+        btnExportPdf.addEventListener('click', function() {
+          recalc();
+          window.print();  // only table section is printed due to @media print
+        });
+      }
+
+      if (btnSave) {
+        btnSave.addEventListener('click', function() {
+          recalc();
+          var data = collectData();
+          if (!data.period) {
+            alert("Please select a payroll period (month) before saving.");
+            return;
+          }
+          if (!data.staff.length) {
+            alert("No payroll rows to save.");
+            return;
+          }
+
+          btnSave.disabled = true;
+          btnSave.classList.add('opacity-70');
+
+          fetch("{{ url_for('acc_payroll_calc.payroll_save') }}", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(data)
+          })
+          .then(function(resp) {
+            return resp.json().then(function(json) {
+              return { ok: resp.ok, json: json };
+            }).catch(function() {
+              return { ok: resp.ok, json: {} };
+            });
+          })
+          .then(function(result) {
+            if (!result.ok || !result.json.ok) {
+              alert(result.json.message || "Failed to save payroll.");
+            } else {
+              alert("Payroll saved successfully for " + data.period + ".");
+              setStatus("Saved payroll for " + data.period + ".");
+            }
+          })
+          .catch(function(err) {
+            console.error(err);
+            alert("An error occurred while saving payroll.");
+          })
+          .finally(function() {
+            btnSave.disabled = false;
+            btnSave.classList.remove('opacity-70');
+          });
+        });
+      }
+
+      // Init
+      if (initialPayroll && initialPayroll.staff && initialPayroll.staff.length) {
+        populateFromData(initialPayroll);
+      } else {
+        clearAll();
+        setStatus("No saved payroll for this period yet.");
+      }
+    })();
+  </script>
+</body>
+</html>

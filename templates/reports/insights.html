@@ -1,0 +1,1091 @@
+<!DOCTYPE html>
+<html class="light" lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Insights Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            "navy": "#0f172a",
+            "emerald": "#16a34a",
+            "amber": "#f59e0b",
+            "sky": "#0284c7",
+            "bg-soft": "#f5f7fb"
+          },
+          fontFamily: {
+            "display": ["Inter", "sans-serif"]
+          },
+          boxShadow: {
+            "soft": "0 10px 30px rgba(15, 23, 42, 0.08)"
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    html { scroll-behavior: smooth; }
+
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;
+    }
+
+    .page-loader {
+      position: fixed;
+      inset: 0;
+      background: #f5f7fb;
+      z-index: 2000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.7s ease, opacity 0.7s ease;
+    }
+    .page-loader__swipe {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(120deg, rgba(2,132,199,0.16), rgba(245,158,11,0.18));
+      transform: translateX(0);
+      transition: transform 0.7s ease;
+    }
+    .page-loader__content {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      color: #0f172a;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      font-size: 0.7rem;
+    }
+    .loader-ring {
+      width: 36px;
+      height: 36px;
+      border-radius: 999px;
+      border: 3px solid rgba(15, 23, 42, 0.15);
+      border-top-color: #16a34a;
+      animation: spin 0.9s linear infinite;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    .page-loader--hide {
+      opacity: 0;
+      transform: translateX(100%);
+      pointer-events: none;
+    }
+    .page-loader--hide .page-loader__swipe {
+      transform: translateX(100%);
+    }
+    @media (prefers-color-scheme: dark) {
+      .page-loader { background: #0b1220; }
+      .page-loader__content { color: #e2e8f0; }
+      .loader-ring { border-color: rgba(226, 232, 240, 0.18); border-top-color: #16a34a; }
+    }
+    @media print {
+      .page-loader { display: none !important; }
+    }
+
+    .section-nav {
+      position: sticky;
+      top: 0.5rem;
+      z-index: 40;
+      background: rgba(245, 247, 251, 0.9);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(226, 232, 240, 0.8);
+      border-radius: 999px;
+      padding: 0.4rem;
+      box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
+    }
+    .section-nav::-webkit-scrollbar { height: 6px; }
+    .section-nav::-webkit-scrollbar-thumb { background: rgba(148, 163, 184, 0.4); border-radius: 999px; }
+
+    .section-pill {
+      border-radius: 999px;
+      padding: 0.45rem 0.9rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: #334155;
+      background: #ffffff;
+      border: 1px solid rgba(226, 232, 240, 0.9);
+      transition: all 0.2s ease;
+      white-space: nowrap;
+    }
+    .section-pill:hover {
+      color: #0f172a;
+      border-color: rgba(148, 163, 184, 0.8);
+      box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
+    }
+    .section-pill.active {
+      background: #0f172a;
+      color: #ffffff;
+      border-color: #0f172a;
+      box-shadow: 0 12px 24px rgba(15, 23, 42, 0.2);
+    }
+
+    .section-anchor {
+      scroll-margin-top: 120px;
+    }
+
+    .chart-card canvas {
+      width: 100% !important;
+      height: 320px !important;
+    }
+    .chart-empty {
+      text-align: center;
+      font-size: 0.85rem;
+      color: #64748b;
+      padding: 2.5rem 0;
+    }
+  </style>
+</head>
+
+<body class="bg-bg-soft font-display text-slate-900">
+  <div id="pageLoader" class="page-loader">
+    <div class="page-loader__swipe"></div>
+    <div class="page-loader__content">
+      <div class="loader-ring" role="status" aria-hidden="true"></div>
+      <div>Loading</div>
+    </div>
+  </div>
+
+  <main class="min-h-screen px-4 py-6 sm:px-6 lg:px-10">
+    <div class="mx-auto max-w-7xl space-y-6">
+      <header class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div>
+          <h1 class="text-3xl font-extrabold text-navy sm:text-4xl flex items-center gap-2">
+            <span class="material-symbols-outlined text-emerald text-3xl">analytics</span>
+            <span>Profit, Liability &amp; Stock Insights</span>
+          </h1>
+          <p class="mt-1 text-sm text-slate-600">
+            Real-time management view across branches, agents, and inventory exposure.
+          </p>
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+          {% if identity.dashboard_endpoint %}
+          <a href="{{ url_for(identity.dashboard_endpoint) }}"
+             class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 shadow-soft hover:bg-slate-50">
+            <span class="material-symbols-outlined text-sm">arrow_back</span>
+            <span>Back to Dashboard</span>
+          </a>
+          {% endif %}
+          <a href="{{ url_for('login.logout') }}"
+             class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 shadow-soft hover:bg-slate-50">
+            <span class="material-symbols-outlined text-sm">logout</span>
+            <span>Logout</span>
+          </a>
+        </div>
+      </header>
+
+      <section class="rounded-2xl border border-slate-200 bg-white p-4 shadow-soft">
+        <div class="grid grid-cols-1 gap-4 lg:grid-cols-12">
+          {% if can_pick_manager %}
+          <div class="lg:col-span-3">
+            <label class="text-xs font-semibold uppercase tracking-wide text-slate-500">Manager</label>
+            <select id="managerFilter" class="mt-1 w-full rounded-xl border-slate-200 text-sm">
+              <option value="">All managers</option>
+              {% for m in managers %}
+                <option value="{{ m.id }}" {% if m.id == manager_id %}selected{% endif %}>
+                  {{ m.name }}{% if m.branch %} - {{ m.branch }}{% endif %}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+          {% else %}
+            <input type="hidden" id="managerFilter" value="{{ manager_id }}">
+          {% endif %}
+
+          <div class="lg:col-span-3">
+            <label class="text-xs font-semibold uppercase tracking-wide text-slate-500">Branch</label>
+            <select id="branchFilter" class="mt-1 w-full rounded-xl border-slate-200 text-sm">
+              <option value="">All branches</option>
+              {% for b in branches %}
+                <option value="{{ b }}">{{ b }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="lg:col-span-3">
+            <label class="text-xs font-semibold uppercase tracking-wide text-slate-500">Agent</label>
+            <select id="agentFilter" class="mt-1 w-full rounded-xl border-slate-200 text-sm">
+              <option value="">All agents</option>
+              {% for a in agents %}
+                <option value="{{ a.id }}">{{ a.name }}{% if a.branch %} - {{ a.branch }}{% endif %}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="lg:col-span-3">
+            <label class="text-xs font-semibold uppercase tracking-wide text-slate-500">Date Range</label>
+            <select id="rangeFilter" class="mt-1 w-full rounded-xl border-slate-200 text-sm">
+              <option value="7">Last 7 days</option>
+              <option value="30" selected>Last 30 days</option>
+              <option value="90">Last 90 days</option>
+              <option value="custom">Custom</option>
+            </select>
+          </div>
+        </div>
+
+        <div id="customDates" class="mt-4 hidden grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div>
+            <label class="text-xs font-semibold uppercase tracking-wide text-slate-500">Start Date</label>
+            <input id="startDate" type="date" value="{{ default_start }}" class="mt-1 w-full rounded-xl border-slate-200 text-sm">
+          </div>
+          <div>
+            <label class="text-xs font-semibold uppercase tracking-wide text-slate-500">End Date</label>
+            <input id="endDate" type="date" value="{{ default_end }}" class="mt-1 w-full rounded-xl border-slate-200 text-sm">
+          </div>
+          <div class="flex items-end">
+            <button id="applyFilters"
+                    class="w-full rounded-xl bg-emerald px-4 py-2 text-xs font-semibold text-white hover:bg-emerald-600">
+              Apply Filters
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <div id="sectionNav" class="section-nav flex gap-2 overflow-x-auto px-2 py-2">
+        <button class="section-pill active" data-target="sec-overview">Overview</button>
+        <button class="section-pill" data-target="sec-branch-profit">Branch Profit</button>
+        <button class="section-pill" data-target="sec-branch-liability">Branch Liability</button>
+        <button class="section-pill" data-target="sec-agent-profit">Agent Profit</button>
+        <button class="section-pill" data-target="sec-agent-liability">Agent Liability</button>
+        <button class="section-pill" data-target="sec-tables">Tables</button>
+        <button class="section-pill" data-target="sec-customers">Customers</button>
+        <button class="section-pill" data-target="sec-stock">Stock Cost</button>
+      </div>
+
+      <section id="sec-overview" class="section-anchor space-y-4">
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-soft">
+            <div class="flex items-center justify-between">
+              <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Total Profit</p>
+              <span class="material-symbols-outlined text-emerald">trending_up</span>
+            </div>
+            <p class="mt-2 text-2xl font-extrabold text-navy">
+              GHS <span id="profitTotal" class="js-money" data-value="0">0</span>
+            </p>
+            <p id="rangeLabel" class="mt-1 text-xs text-slate-500">Last 30 days</p>
+          </div>
+
+          <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-soft">
+            <div class="flex items-center justify-between">
+              <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Total Liability</p>
+              <span class="material-symbols-outlined text-amber">warning</span>
+            </div>
+            <p class="mt-2 text-2xl font-extrabold text-navy">
+              GHS <span id="liabilityTotal" class="js-money" data-value="0">0</span>
+            </p>
+            <p class="mt-1 text-xs text-slate-500">
+              <span id="liabilityCount" class="js-number" data-value="0">0</span> ongoing accounts
+            </p>
+          </div>
+
+          <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-soft">
+            <div class="flex items-center justify-between">
+              <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Stock Cost Value</p>
+              <span class="material-symbols-outlined text-sky">inventory_2</span>
+            </div>
+            <p class="mt-2 text-2xl font-extrabold text-navy">
+              GHS <span id="stockCostTotal" class="js-money" data-value="0">0</span>
+            </p>
+            <p class="mt-1 text-xs text-slate-500">Current inventory cost exposure</p>
+          </div>
+
+          <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-soft">
+            <div class="flex items-center justify-between">
+              <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Active Filters</p>
+              <span class="material-symbols-outlined text-slate-400">tune</span>
+            </div>
+            <p class="mt-2 text-sm font-semibold text-slate-700" id="filterSummary">All managers - All branches - All agents</p>
+            <p class="mt-1 text-xs text-slate-500">Adjust filters to narrow results</p>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 gap-4 xl:grid-cols-3">
+          <div class="chart-card rounded-2xl border border-slate-200 bg-white p-4 shadow-soft">
+            <h2 class="text-xs font-semibold uppercase tracking-wide text-slate-500">Profit Share by Branch</h2>
+            <canvas id="profitShareChart"></canvas>
+            <div id="profitShareEmpty" class="chart-empty d-none">No profit data for selected filters.</div>
+          </div>
+          <div class="chart-card rounded-2xl border border-slate-200 bg-white p-4 shadow-soft">
+            <h2 class="text-xs font-semibold uppercase tracking-wide text-slate-500">Liability Share by Branch</h2>
+            <canvas id="liabilityShareChart"></canvas>
+            <div id="liabilityShareEmpty" class="chart-empty d-none">No liability data for selected filters.</div>
+          </div>
+          <div class="chart-card rounded-2xl border border-slate-200 bg-white p-4 shadow-soft">
+            <h2 class="text-xs font-semibold uppercase tracking-wide text-slate-500">Profit vs Liability (Branch)</h2>
+            <canvas id="profitLiabilityStackChart"></canvas>
+            <div id="profitLiabilityStackEmpty" class="chart-empty d-none">No branch data to compare.</div>
+          </div>
+        </div>
+
+        <div class="chart-card rounded-2xl border border-slate-200 bg-white p-4 shadow-soft">
+          <div class="flex items-center justify-between">
+            <div>
+              <h2 class="text-xs font-semibold uppercase tracking-wide text-slate-500">Trend over Time</h2>
+              <p class="mt-1 text-xs text-slate-400">Daily profit and collections in the selected range.</p>
+            </div>
+          </div>
+          <canvas id="trendChart"></canvas>
+          <div id="trendEmpty" class="chart-empty d-none">No trend data for the selected range.</div>
+        </div>
+      </section>
+
+      <section id="sec-branch-profit" class="section-anchor space-y-4">
+        <div class="chart-card rounded-2xl border border-slate-200 bg-white p-4 shadow-soft">
+          <h2 class="text-xs font-semibold uppercase tracking-wide text-slate-500">Branch Profit</h2>
+          <canvas id="branchProfitChart"></canvas>
+          <div id="branchProfitEmpty" class="chart-empty d-none">No branch profit data.</div>
+        </div>
+      </section>
+
+      <section id="sec-branch-liability" class="section-anchor space-y-4">
+        <div class="chart-card rounded-2xl border border-slate-200 bg-white p-4 shadow-soft">
+          <h2 class="text-xs font-semibold uppercase tracking-wide text-slate-500">Branch Liability</h2>
+          <canvas id="branchLiabilityChart"></canvas>
+          <div id="branchLiabilityEmpty" class="chart-empty d-none">No branch liability data.</div>
+        </div>
+      </section>
+
+      <div id="sec-agent-profit" class="section-anchor h-px" aria-hidden="true"></div>
+      <div id="sec-agent-liability" class="section-anchor h-px" aria-hidden="true"></div>
+      <section id="agentChartsWrap" class="space-y-4">
+        <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-soft">
+          <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 class="text-xs font-semibold uppercase tracking-wide text-slate-500">Agent Performance (Branch)</h2>
+              <p id="agentChartLabel" class="mt-1 text-xs text-slate-400">Select a branch to see agent breakdowns.</p>
+            </div>
+            <div class="flex gap-2">
+              <button id="agentProfitTab" class="section-pill active" type="button">Profit</button>
+              <button id="agentLiabilityTab" class="section-pill" type="button">Liability</button>
+            </div>
+          </div>
+          <canvas id="agentChart"></canvas>
+          <div id="agentChartEmpty" class="chart-empty d-none">No agent data for the selected branch.</div>
+        </div>
+
+        <div id="agentFocusCard" class="rounded-2xl border border-slate-200 bg-white p-4 shadow-soft d-none">
+          <h2 class="text-xs font-semibold uppercase tracking-wide text-slate-500">Selected Agent Snapshot</h2>
+          <div class="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <div class="rounded-xl border border-slate-100 bg-slate-50 p-3">
+              <p class="text-xs uppercase tracking-wide text-slate-500">Agent</p>
+              <p id="agentFocusName" class="mt-1 text-sm font-semibold text-slate-700">-</p>
+            </div>
+            <div class="rounded-xl border border-slate-100 bg-slate-50 p-3">
+              <p class="text-xs uppercase tracking-wide text-slate-500">Profit</p>
+              <p class="mt-1 text-sm font-semibold text-slate-700">GHS <span id="agentFocusProfit" class="js-money" data-value="0">0</span></p>
+            </div>
+            <div class="rounded-xl border border-slate-100 bg-slate-50 p-3">
+              <p class="text-xs uppercase tracking-wide text-slate-500">Liability</p>
+              <p class="mt-1 text-sm font-semibold text-slate-700">GHS <span id="agentFocusLiability" class="js-money" data-value="0">0</span></p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="sec-tables" class="section-anchor space-y-4">
+        <div class="grid grid-cols-1 gap-4 xl:grid-cols-2">
+          <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-soft">
+            <h2 class="text-xs font-semibold uppercase tracking-wide text-slate-500">Profit by Branch</h2>
+            <div class="mt-3 overflow-x-auto">
+              <table class="w-full text-sm">
+                <thead class="text-left text-xs uppercase tracking-wide text-slate-500">
+                  <tr>
+                    <th class="py-2">Branch</th>
+                    <th class="py-2 text-right">Profit</th>
+                  </tr>
+                </thead>
+                <tbody id="profitByBranch"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-soft">
+            <h2 class="text-xs font-semibold uppercase tracking-wide text-slate-500">Profit by Agent</h2>
+            <div class="mt-3 overflow-x-auto">
+              <table class="w-full text-sm">
+                <thead class="text-left text-xs uppercase tracking-wide text-slate-500">
+                  <tr>
+                    <th class="py-2">Agent</th>
+                    <th class="py-2 text-right">Profit</th>
+                  </tr>
+                </thead>
+                <tbody id="profitByAgent"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 gap-4 xl:grid-cols-2">
+          <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-soft">
+            <h2 class="text-xs font-semibold uppercase tracking-wide text-slate-500">Liability by Branch</h2>
+            <div class="mt-3 overflow-x-auto">
+              <table class="w-full text-sm">
+                <thead class="text-left text-xs uppercase tracking-wide text-slate-500">
+                  <tr>
+                    <th class="py-2">Branch</th>
+                    <th class="py-2 text-right">Liability</th>
+                  </tr>
+                </thead>
+                <tbody id="liabilityByBranch"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-soft">
+            <h2 class="text-xs font-semibold uppercase tracking-wide text-slate-500">Liability by Agent</h2>
+            <div class="mt-3 overflow-x-auto">
+              <table class="w-full text-sm">
+                <thead class="text-left text-xs uppercase tracking-wide text-slate-500">
+                  <tr>
+                    <th class="py-2">Agent</th>
+                    <th class="py-2 text-right">Liability</th>
+                  </tr>
+                </thead>
+                <tbody id="liabilityByAgent"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="sec-customers" class="section-anchor space-y-4">
+        <div class="grid grid-cols-1 gap-4 xl:grid-cols-2">
+          <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-soft">
+            <h2 class="text-xs font-semibold uppercase tracking-wide text-slate-500">Top Owing Customers</h2>
+            <div class="mt-3 overflow-x-auto">
+              <table class="w-full text-sm">
+                <thead class="text-left text-xs uppercase tracking-wide text-slate-500">
+                  <tr>
+                    <th class="py-2">Customer</th>
+                    <th class="py-2">Agent</th>
+                    <th class="py-2 text-right">Outstanding</th>
+                  </tr>
+                </thead>
+                <tbody id="topOwing"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-soft">
+            <h2 class="text-xs font-semibold uppercase tracking-wide text-slate-500">Top Paying (Range)</h2>
+            <div class="mt-3 overflow-x-auto">
+              <table class="w-full text-sm">
+                <thead class="text-left text-xs uppercase tracking-wide text-slate-500">
+                  <tr>
+                    <th class="py-2">Customer</th>
+                    <th class="py-2">Agent</th>
+                    <th class="py-2 text-right">Payments</th>
+                  </tr>
+                </thead>
+                <tbody id="topPaying"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-soft">
+          <h2 class="text-xs font-semibold uppercase tracking-wide text-slate-500">Dormant Customers (14+ days)</h2>
+          <div class="mt-3 overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead class="text-left text-xs uppercase tracking-wide text-slate-500">
+                <tr>
+                  <th class="py-2">Customer</th>
+                  <th class="py-2">Agent</th>
+                  <th class="py-2">Last Payment</th>
+                  <th class="py-2 text-right">Outstanding</th>
+                </tr>
+              </thead>
+              <tbody id="dormantCustomers"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section id="sec-stock" class="section-anchor space-y-4">
+        <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-soft">
+          <h2 class="text-xs font-semibold uppercase tracking-wide text-slate-500">Stock Cost Summary</h2>
+          <p class="mt-2 text-sm text-slate-500">The total cost exposure across active inventory items.</p>
+          <div class="mt-3 rounded-xl border border-slate-100 bg-slate-50 p-4">
+            <p class="text-xs uppercase tracking-wide text-slate-500">Current Stock Cost</p>
+            <p class="mt-1 text-xl font-semibold text-navy">GHS <span id="stockCostTotalInline" class="js-money" data-value="0">0</span></p>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script src="{{ url_for('static', filename='js/ui-utils.js') }}"></script>
+  <script>
+    (function(){
+      var loader = document.getElementById("pageLoader");
+      function hideLoader() {
+        if (!loader) return;
+        loader.classList.add("page-loader--hide");
+      }
+      function showLoader() {
+        if (!loader) return;
+        loader.classList.remove("page-loader--hide");
+      }
+      window.hidePageLoader = hideLoader;
+      window.showPageLoader = showLoader;
+      showLoader();
+    })();
+
+    (function(){
+      var managerFilter = document.getElementById("managerFilter");
+      var branchFilter = document.getElementById("branchFilter");
+      var agentFilter = document.getElementById("agentFilter");
+      var rangeFilter = document.getElementById("rangeFilter");
+      var startDate = document.getElementById("startDate");
+      var endDate = document.getElementById("endDate");
+      var customDates = document.getElementById("customDates");
+      var applyFilters = document.getElementById("applyFilters");
+      var rangeLabel = document.getElementById("rangeLabel");
+      var filterSummary = document.getElementById("filterSummary");
+
+      var sectionNav = document.getElementById("sectionNav");
+      var sectionPills = sectionNav ? sectionNav.querySelectorAll(".section-pill") : [];
+      var sectionIds = [
+        "sec-overview",
+        "sec-branch-profit",
+        "sec-branch-liability",
+        "sec-agent-profit",
+        "sec-agent-liability",
+        "sec-tables",
+        "sec-customers",
+        "sec-stock"
+      ];
+
+      var agentChartWrap = document.getElementById("agentChartsWrap");
+      var agentProfitTab = document.getElementById("agentProfitTab");
+      var agentLiabilityTab = document.getElementById("agentLiabilityTab");
+      var agentChartLabel = document.getElementById("agentChartLabel");
+      var agentFocusCard = document.getElementById("agentFocusCard");
+      var agentFocusName = document.getElementById("agentFocusName");
+      var agentFocusProfit = document.getElementById("agentFocusProfit");
+      var agentFocusLiability = document.getElementById("agentFocusLiability");
+      var stockCostInline = document.getElementById("stockCostTotalInline");
+
+      var fmt = new Intl.NumberFormat("en-US");
+      function moneyValue(value) {
+        var n = Number(value || 0);
+        return fmt.format(n);
+      }
+
+      function isoDate(d) {
+        return d.toISOString().slice(0, 10);
+      }
+
+      function setPresetRange(days) {
+        var now = new Date();
+        var start = new Date();
+        start.setDate(now.getDate() - days);
+        if (startDate) startDate.value = isoDate(start);
+        if (endDate) endDate.value = isoDate(now);
+      }
+
+      function buildQuery() {
+        var params = new URLSearchParams();
+        if (managerFilter && managerFilter.value) params.set("manager_id", managerFilter.value);
+        if (branchFilter && branchFilter.value) params.set("branch", branchFilter.value);
+        if (agentFilter && agentFilter.value) params.set("agent", agentFilter.value);
+
+        var rangeVal = rangeFilter ? rangeFilter.value : "30";
+        if (rangeVal && rangeVal !== "custom") {
+          params.set("range", rangeVal);
+        } else {
+          params.set("range", "custom");
+          if (startDate && startDate.value) params.set("start", startDate.value);
+          if (endDate && endDate.value) params.set("end", endDate.value);
+        }
+        return params.toString();
+      }
+
+      function updateFilterSummary() {
+        var managerText = managerFilter && managerFilter.value ? managerFilter.options[managerFilter.selectedIndex].text : "All managers";
+        var branchText = branchFilter && branchFilter.value ? branchFilter.value : "All branches";
+        var agentText = agentFilter && agentFilter.value ? agentFilter.options[agentFilter.selectedIndex].text : "All agents";
+        if (filterSummary) {
+          filterSummary.textContent = managerText + " - " + branchText + " - " + agentText;
+        }
+      }
+
+      function setFiltersDisabled(isDisabled) {
+        var controls = [managerFilter, branchFilter, agentFilter, rangeFilter, startDate, endDate, applyFilters];
+        controls.forEach(function(ctrl){
+          if (ctrl) ctrl.disabled = !!isDisabled;
+        });
+      }
+
+      function renderSimpleTable(bodyId, rows, emptyLabel) {
+        var tbody = document.getElementById(bodyId);
+        if (!tbody) return;
+        tbody.innerHTML = "";
+        if (!rows || !rows.length) {
+          var tr = document.createElement("tr");
+          tr.innerHTML = '<td class="py-3 text-sm text-slate-400" colspan="4">' + (emptyLabel || "No data yet.") + '</td>';
+          tbody.appendChild(tr);
+          return;
+        }
+        rows.forEach(function(row){
+          var tr = document.createElement("tr");
+          tr.className = "border-t border-slate-100";
+          tr.innerHTML = row;
+          tbody.appendChild(tr);
+        });
+      }
+
+      function formatCells(scope) {
+        if (window.formatAllNumbers) {
+          window.formatAllNumbers(scope || document);
+        }
+      }
+
+      function updateAgentOptions(agents) {
+        if (!agentFilter) return;
+        var current = agentFilter.value;
+        agentFilter.innerHTML = '<option value="">All agents</option>';
+        (agents || []).forEach(function(agent){
+          var opt = document.createElement("option");
+          opt.value = agent.id;
+          opt.textContent = agent.name + (agent.branch ? " - " + agent.branch : "");
+          agentFilter.appendChild(opt);
+        });
+        if (current) {
+          agentFilter.value = current;
+        }
+      }
+
+      function toggleEmpty(id, show) {
+        var el = document.getElementById(id);
+        if (el) el.classList.toggle("d-none", !show);
+      }
+
+      function updateActivePill(targetId) {
+        sectionPills.forEach(function(btn){
+          btn.classList.toggle("active", btn.getAttribute("data-target") === targetId);
+        });
+      }
+
+      function bindSectionNav() {
+        if (!sectionPills || !sectionPills.length) return;
+        sectionPills.forEach(function(btn){
+          btn.addEventListener("click", function(){
+            var target = btn.getAttribute("data-target");
+            var el = target ? document.getElementById(target) : null;
+            if (el) {
+              el.scrollIntoView({ behavior: "smooth", block: "start" });
+              updateActivePill(target);
+            }
+          });
+        });
+
+        var observer = new IntersectionObserver(function(entries){
+          entries.forEach(function(entry){
+            if (entry.isIntersecting) {
+              updateActivePill(entry.target.id);
+            }
+          });
+        }, { threshold: 0.4 });
+
+        sectionIds.forEach(function(id){
+          var el = document.getElementById(id);
+          if (el) observer.observe(el);
+        });
+      }
+
+      var charts = {};
+      var agentMode = "profit";
+      var currentPayload = null;
+
+      function createBarChart(ctx, label, color) {
+        return new Chart(ctx, {
+          type: "bar",
+          data: { labels: [], datasets: [{ label: label, data: [], backgroundColor: color, borderRadius: 10 }] },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                callbacks: {
+                  label: function(context){ return "GHS " + moneyValue(context.parsed.y || 0); }
+                }
+              }
+            },
+            scales: {
+              x: { ticks: { color: "#475569" }, grid: { display: false } },
+              y: { ticks: { color: "#475569", callback: function(val){ return moneyValue(val); } }, grid: { color: "rgba(148,163,184,0.15)" } }
+            }
+          }
+        });
+      }
+
+      function createLineChart(ctx) {
+        return new Chart(ctx, {
+          type: "line",
+          data: {
+            labels: [],
+            datasets: [
+              { label: "Profit", data: [], borderColor: "#16a34a", backgroundColor: "rgba(22,163,74,0.18)", tension: 0.35, fill: true, pointRadius: 3 },
+              { label: "Collections", data: [], borderColor: "#0284c7", backgroundColor: "rgba(2,132,199,0.12)", tension: 0.35, fill: true, pointRadius: 3 }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: true },
+              tooltip: {
+                callbacks: {
+                  label: function(context){ return context.dataset.label + ": GHS " + moneyValue(context.parsed.y || 0); }
+                }
+              }
+            },
+            scales: {
+              x: { ticks: { color: "#475569" }, grid: { display: false } },
+              y: { ticks: { color: "#475569", callback: function(val){ return moneyValue(val); } }, grid: { color: "rgba(148,163,184,0.15)" } }
+            }
+          }
+        });
+      }
+
+      function createDonutChart(ctx) {
+        return new Chart(ctx, {
+          type: "doughnut",
+          data: { labels: [], datasets: [{ data: [], backgroundColor: ["#0f172a", "#0284c7", "#f59e0b", "#16a34a", "#64748b", "#cbd5f5"] }] },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { position: "bottom" },
+              tooltip: {
+                callbacks: {
+                  label: function(context){ return context.label + ": GHS " + moneyValue(context.parsed || 0); }
+                }
+              }
+            },
+            cutout: "65%"
+          }
+        });
+      }
+
+      function createStackChart(ctx) {
+        return new Chart(ctx, {
+          type: "bar",
+          data: {
+            labels: [],
+            datasets: [
+              { label: "Profit", data: [], backgroundColor: "rgba(22,163,74,0.7)", borderRadius: 8 },
+              { label: "Liability", data: [], backgroundColor: "rgba(245,158,11,0.7)", borderRadius: 8 }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { position: "bottom" },
+              tooltip: {
+                callbacks: {
+                  label: function(context){ return context.dataset.label + ": GHS " + moneyValue(context.parsed.y || 0); }
+                }
+              }
+            },
+            scales: {
+              x: { stacked: true, ticks: { color: "#475569" }, grid: { display: false } },
+              y: { stacked: true, ticks: { color: "#475569", callback: function(val){ return moneyValue(val); } }, grid: { color: "rgba(148,163,184,0.15)" } }
+            }
+          }
+        });
+      }
+
+      function initCharts() {
+        if (charts.branchProfit || !window.Chart) return;
+        var branchProfitCtx = document.getElementById("branchProfitChart");
+        var branchLiabilityCtx = document.getElementById("branchLiabilityChart");
+        var agentChartCtx = document.getElementById("agentChart");
+        var trendCtx = document.getElementById("trendChart");
+        var profitShareCtx = document.getElementById("profitShareChart");
+        var liabilityShareCtx = document.getElementById("liabilityShareChart");
+        var stackCtx = document.getElementById("profitLiabilityStackChart");
+
+        if (branchProfitCtx) charts.branchProfit = createBarChart(branchProfitCtx, "Profit", "rgba(22,163,74,0.7)");
+        if (branchLiabilityCtx) charts.branchLiability = createBarChart(branchLiabilityCtx, "Liability", "rgba(245,158,11,0.7)");
+        if (agentChartCtx) charts.agent = createBarChart(agentChartCtx, "Agent", "rgba(2,132,199,0.7)");
+        if (trendCtx) charts.trend = createLineChart(trendCtx);
+        if (profitShareCtx) charts.profitShare = createDonutChart(profitShareCtx);
+        if (liabilityShareCtx) charts.liabilityShare = createDonutChart(liabilityShareCtx);
+        if (stackCtx) charts.stack = createStackChart(stackCtx);
+      }
+
+      function updateBar(chart, labels, data) {
+        if (!chart) return;
+        chart.data.labels = labels;
+        chart.data.datasets[0].data = data;
+        chart.update();
+      }
+
+      function updateDonut(chart, labels, data) {
+        if (!chart) return;
+        chart.data.labels = labels;
+        chart.data.datasets[0].data = data;
+        chart.update();
+      }
+
+      function updateTrend(chart, labels, profit, liability) {
+        if (!chart) return;
+        chart.data.labels = labels;
+        chart.data.datasets[0].data = profit;
+        chart.data.datasets[1].data = liability;
+        chart.update();
+      }
+
+      function updateStack(chart, labels, profit, liability) {
+        if (!chart) return;
+        chart.data.labels = labels;
+        chart.data.datasets[0].data = profit;
+        chart.data.datasets[1].data = liability;
+        chart.update();
+      }
+
+      function getTopShare(rows) {
+        if (!rows || !rows.length) return { labels: [], values: [] };
+        var sorted = rows.slice().sort(function(a, b){ return (b.value || 0) - (a.value || 0); });
+        var top = sorted.slice(0, 5);
+        var rest = sorted.slice(5);
+        var restTotal = rest.reduce(function(sum, r){ return sum + (r.value || 0); }, 0);
+        var labels = top.map(function(r){ return r.label; });
+        var values = top.map(function(r){ return r.value; });
+        if (restTotal > 0) {
+          labels.push("Others");
+          values.push(restTotal);
+        }
+        return { labels: labels, values: values };
+      }
+
+      function updateAgentChart() {
+        if (!currentPayload || !currentPayload.charts) return;
+        var list = agentMode === "profit" ? currentPayload.charts.profit_by_agent : currentPayload.charts.liability_by_agent;
+        var labels = (list || []).map(function(r){ return r.label; });
+        var values = (list || []).map(function(r){ return r.value; });
+        if (charts.agent) {
+          charts.agent.data.datasets[0].label = agentMode === "profit" ? "Profit" : "Liability";
+          charts.agent.data.datasets[0].backgroundColor = agentMode === "profit" ? "rgba(22,163,74,0.7)" : "rgba(245,158,11,0.7)";
+          updateBar(charts.agent, labels, values);
+        }
+        toggleEmpty("agentChartEmpty", !values.length);
+      }
+
+      function applyData(payload) {
+        currentPayload = payload;
+        var summary = payload.summary || {};
+        var tables = payload.tables || {};
+        var chartsData = payload.charts || {};
+
+        var profitTotal = document.getElementById("profitTotal");
+        var liabilityTotal = document.getElementById("liabilityTotal");
+        var liabilityCount = document.getElementById("liabilityCount");
+        var stockCostTotal = document.getElementById("stockCostTotal");
+
+        if (profitTotal) profitTotal.setAttribute("data-value", summary.profit_total || 0);
+        if (liabilityTotal) liabilityTotal.setAttribute("data-value", summary.liability_total || 0);
+        if (liabilityCount) liabilityCount.setAttribute("data-value", summary.liability_count || 0);
+        if (stockCostTotal) stockCostTotal.setAttribute("data-value", summary.stock_cost_total || 0);
+        if (stockCostInline) stockCostInline.setAttribute("data-value", summary.stock_cost_total || 0);
+
+        if (rangeLabel && payload.range) {
+          rangeLabel.textContent = payload.range.label || "Range";
+        }
+
+        renderSimpleTable("profitByBranch", (tables.profit_by_branch || []).map(function(r){
+          return '<td class="py-2 font-medium">' + r.label + '</td>' +
+                 '<td class="py-2 text-right text-slate-700">GHS <span class="js-money" data-value="' + r.value + '"></span></td>';
+        }), "No profit data.");
+
+        renderSimpleTable("profitByAgent", (tables.profit_by_agent || []).map(function(r){
+          return '<td class="py-2 font-medium">' + r.label + '</td>' +
+                 '<td class="py-2 text-right text-slate-700">GHS <span class="js-money" data-value="' + r.value + '"></span></td>';
+        }), "No agent data.");
+
+        renderSimpleTable("liabilityByBranch", (tables.liability_by_branch || []).map(function(r){
+          return '<td class="py-2 font-medium">' + r.label + '</td>' +
+                 '<td class="py-2 text-right text-slate-700">GHS <span class="js-money" data-value="' + r.value + '"></span></td>';
+        }), "No liability data.");
+
+        renderSimpleTable("liabilityByAgent", (tables.liability_by_agent || []).map(function(r){
+          return '<td class="py-2 font-medium">' + r.label + '</td>' +
+                 '<td class="py-2 text-right text-slate-700">GHS <span class="js-money" data-value="' + r.value + '"></span></td>';
+        }), "No liability data.");
+
+        renderSimpleTable("topOwing", (tables.top_owing || []).map(function(r){
+          return '<td class="py-2">' + r.name + '<div class="text-xs text-slate-400">' + (r.phone || '') + '</div></td>' +
+                 '<td class="py-2 text-sm">' + r.agent + '<div class="text-xs text-slate-400">' + r.branch + '</div></td>' +
+                 '<td class="py-2 text-right">GHS <span class="js-money" data-value="' + r.amount + '"></span></td>';
+        }), "No outstanding accounts.");
+
+        renderSimpleTable("topPaying", (tables.top_paying || []).map(function(r){
+          return '<td class="py-2">' + r.name + '<div class="text-xs text-slate-400">' + (r.phone || '') + '</div></td>' +
+                 '<td class="py-2 text-sm">' + r.agent + '<div class="text-xs text-slate-400">' + r.branch + '</div></td>' +
+                 '<td class="py-2 text-right">GHS <span class="js-money" data-value="' + r.amount + '"></span></td>';
+        }), "No payments in range.");
+
+        renderSimpleTable("dormantCustomers", (tables.dormant_customers || []).map(function(r){
+          return '<td class="py-2">' + r.name + '<div class="text-xs text-slate-400">' + (r.phone || '') + '</div></td>' +
+                 '<td class="py-2 text-sm">' + r.agent + '<div class="text-xs text-slate-400">' + r.branch + '</div></td>' +
+                 '<td class="py-2 text-sm text-slate-500">' + r.last_payment + '</td>' +
+                 '<td class="py-2 text-right">GHS <span class="js-money" data-value="' + r.amount + '"></span></td>';
+        }), "No dormant customers.");
+
+        if (payload.filters && payload.filters.agents) {
+          updateAgentOptions(payload.filters.agents);
+        }
+
+        initCharts();
+
+        var branchProfitRows = chartsData.profit_by_branch || [];
+        var branchLiabilityRows = chartsData.liability_by_branch || [];
+        var profitLabels = branchProfitRows.map(function(r){ return r.label; });
+        var profitValues = branchProfitRows.map(function(r){ return r.value; });
+        var liabilityLabels = branchLiabilityRows.map(function(r){ return r.label; });
+        var liabilityValues = branchLiabilityRows.map(function(r){ return r.value; });
+
+        updateBar(charts.branchProfit, profitLabels, profitValues);
+        updateBar(charts.branchLiability, liabilityLabels, liabilityValues);
+
+        toggleEmpty("branchProfitEmpty", !profitValues.length);
+        toggleEmpty("branchLiabilityEmpty", !liabilityValues.length);
+
+        var profitShare = getTopShare(branchProfitRows);
+        updateDonut(charts.profitShare, profitShare.labels, profitShare.values);
+        toggleEmpty("profitShareEmpty", !profitShare.values.length);
+
+        var liabilityShare = getTopShare(branchLiabilityRows);
+        updateDonut(charts.liabilityShare, liabilityShare.labels, liabilityShare.values);
+        toggleEmpty("liabilityShareEmpty", !liabilityShare.values.length);
+
+        var stackLabels = Array.from(new Set(profitLabels.concat(liabilityLabels)));
+        var stackProfit = stackLabels.map(function(label){
+          var row = branchProfitRows.find(function(r){ return r.label === label; });
+          return row ? row.value : 0;
+        });
+        var stackLiability = stackLabels.map(function(label){
+          var row = branchLiabilityRows.find(function(r){ return r.label === label; });
+          return row ? row.value : 0;
+        });
+        updateStack(charts.stack, stackLabels, stackProfit, stackLiability);
+        toggleEmpty("profitLiabilityStackEmpty", !stackLabels.length);
+
+        updateTrend(charts.trend, chartsData.trend_labels || [], chartsData.profit_trend || [], chartsData.liability_trend || []);
+        toggleEmpty("trendEmpty", !(chartsData.trend_labels || []).length);
+
+        var branchSelected = payload.meta && payload.meta.branch_selected;
+        if (agentChartWrap) {
+          agentChartWrap.classList.toggle("opacity-60", !branchSelected);
+        }
+        if (agentChartLabel) {
+          agentChartLabel.textContent = branchSelected ? "Agent breakdown for selected branch." : "Select a branch to see agent breakdowns.";
+        }
+        if (!branchSelected) {
+          if (charts.agent) {
+            updateBar(charts.agent, [], []);
+          }
+          toggleEmpty("agentChartEmpty", true);
+        } else {
+          updateAgentChart();
+        }
+
+        if (agentFocusCard && payload.meta && payload.meta.agent_selected) {
+          agentFocusCard.classList.remove("d-none");
+          if (agentFocusName) agentFocusName.textContent = payload.agent_focus && payload.agent_focus.name ? payload.agent_focus.name : "Agent";
+          if (agentFocusProfit) agentFocusProfit.setAttribute("data-value", summary.profit_total || 0);
+          if (agentFocusLiability) agentFocusLiability.setAttribute("data-value", summary.liability_total || 0);
+        } else if (agentFocusCard) {
+          agentFocusCard.classList.add("d-none");
+        }
+
+        formatCells(document.body);
+      }
+
+      function fetchData() {
+        if (window.showPageLoader) window.showPageLoader();
+        setFiltersDisabled(true);
+        updateFilterSummary();
+        var url = "/reports/insights/data?" + buildQuery();
+        fetch(url, { headers: { "X-Requested-With": "XMLHttpRequest" } })
+          .then(function(res){ return res.json(); })
+          .then(function(payload){
+            if (!payload || !payload.ok) {
+              throw new Error(payload && payload.message ? payload.message : "Failed to load data");
+            }
+            applyData(payload);
+          })
+          .catch(function(err){
+            console.error(err);
+          })
+          .finally(function(){
+            setTimeout(function(){
+              if (window.hidePageLoader) window.hidePageLoader();
+              setFiltersDisabled(false);
+            }, 250);
+          });
+      }
+
+      if (rangeFilter) {
+        rangeFilter.addEventListener("change", function(){
+          if (rangeFilter.value === "custom") {
+            customDates.classList.remove("hidden");
+          } else {
+            customDates.classList.add("hidden");
+            setPresetRange(parseInt(rangeFilter.value || "30", 10));
+            fetchData();
+          }
+        });
+      }
+
+      if (managerFilter) managerFilter.addEventListener("change", fetchData);
+      if (branchFilter) branchFilter.addEventListener("change", function(){
+        if (agentFilter) agentFilter.value = "";
+        fetchData();
+      });
+      if (agentFilter) agentFilter.addEventListener("change", fetchData);
+      if (applyFilters) applyFilters.addEventListener("click", fetchData);
+
+      if (agentProfitTab) {
+        agentProfitTab.addEventListener("click", function(){
+          agentMode = "profit";
+          agentProfitTab.classList.add("active");
+          agentLiabilityTab && agentLiabilityTab.classList.remove("active");
+          updateAgentChart();
+        });
+      }
+      if (agentLiabilityTab) {
+        agentLiabilityTab.addEventListener("click", function(){
+          agentMode = "liability";
+          agentLiabilityTab.classList.add("active");
+          agentProfitTab && agentProfitTab.classList.remove("active");
+          updateAgentChart();
+        });
+      }
+
+      bindSectionNav();
+      setPresetRange(30);
+      fetchData();
+    })();
+  </script>
+</body>
+</html>

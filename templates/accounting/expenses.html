@@ -1,0 +1,870 @@
+<!DOCTYPE html>
+<html class="light" lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Expense Tracker - TRUEtype Services</title>
+
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+  <link rel="icon" href="https://res.cloudinary.com/dljpgzbto/image/upload/v1743993646/company-logo_dksb23.jpg" type="image/png">
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <script>
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "primary": "#16a34a",
+            "background-light": "#f9fafb",
+            "background-dark": "#111827",
+            "navy": "#0f172a",
+            "emerald": "#16a34a",
+            "light-gray": "#f9fafb",
+            "medium-gray": "#e5e7eb",
+            "dark-gray": "#111827",
+          },
+          fontFamily: {
+            "display": ["Inter", "sans-serif"]
+          },
+          borderRadius: {
+            "DEFAULT": "0.5rem",
+            "lg": "1rem",
+            "xl": "1.125rem",
+            "full": "9999px"
+          },
+          boxShadow: {
+            'soft': '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
+          }
+        },
+      },
+    }
+  </script>
+  <style>
+    .material-symbols-outlined {
+      font-variation-settings:
+        'FILL' 0,
+        'wght' 400,
+        'GRAD' 0,
+        'opsz' 24
+    }
+
+    @media print {
+      /* When printing, only show the table + chart area */
+      body * {
+        visibility: hidden !important;
+      }
+      #expensesPrintArea, #expensesPrintArea * {
+        visibility: visible !important;
+      }
+      #expensesPrintArea {
+        position: absolute;
+        inset: 0;
+        margin: 0;
+        padding: 0;
+        border: none;
+        box-shadow: none;
+      }
+    }
+
+    /* Small pill to highlight manager entries in the table */
+    .badge-manager-entry {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      border-radius: 9999px;
+      padding: 0.1rem 0.55rem;
+      font-size: 0.7rem;
+      font-weight: 600;
+      background-color: rgba(37, 99, 235, 0.08);
+      color: #1d4ed8;
+    }
+  </style>
+</head>
+
+<body class="bg-background-light dark:bg-background-dark font-display text-dark-gray dark:text-light-gray">
+  {% include 'accounting/sidebar.html' %}
+
+  <!-- URLs for JS -->
+  <script>
+    window.EXPENSE_URLS = {
+      list: "{{ url_for('acc_expenses.expenses_list') }}",
+      create: "{{ url_for('acc_expenses.create_expense') }}"
+    };
+  </script>
+
+  <!-- Initial data from server -->
+  <script id="initialExpenseData" type="application/json">
+    {{ (initial_data or {})|tojson|safe }}
+  </script>
+  <script id="initialCategories" type="application/json">
+    {{ (categories or [])|tojson|safe }}
+  </script>
+
+  <main class="min-h-screen p-4 sm:p-6 lg:p-10">
+    <div class="mx-auto max-w-7xl space-y-6">
+
+      <!-- Heading -->
+      <header class="flex flex-col sm:flex-row flex-wrap items-start justify-between gap-4">
+        <div class="space-y-1">
+          <h1 class="text-navy dark:text-white text-3xl sm:text-4xl font-extrabold tracking-tight">
+            Expense Tracker
+          </h1>
+          <p class="text-sm text-gray-600 dark:text-gray-400">
+            Capture all business expenses, including
+            <span class="font-semibold text-emerald">approved branch / manager expenses</span>,
+            analyze by category and period, and stay in control of your costs.
+          </p>
+          <div class="inline-flex items-center gap-2 mt-1 rounded-full bg-white/70 dark:bg-dark-gray/70 px-3 py-1 border border-medium-gray/60 dark:border-dark-gray/60">
+            <span class="material-symbols-outlined text-[16px] text-emerald">info</span>
+            <span class="text-[11px] text-gray-600 dark:text-gray-300">
+              Source: Accounting entries + Approved Manager Expenses
+            </span>
+          </div>
+        </div>
+
+        <!-- Date range & quick filters -->
+        <div class="flex flex-col items-stretch sm:items-end gap-3">
+          <div class="flex gap-2">
+            <div class="flex flex-col">
+              <label for="filterStart" class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                From
+              </label>
+              <input
+                id="filterStart"
+                type="date"
+                value="{{ default_start or '' }}"
+                class="mt-1 rounded-lg border border-medium-gray dark:border-dark-gray bg-white dark:bg-dark-gray px-3 py-2 text-xs sm:text-sm text-navy dark:text-white focus:ring-emerald focus:border-emerald"
+              />
+            </div>
+            <div class="flex flex-col">
+              <label for="filterEnd" class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                To
+              </label>
+              <input
+                id="filterEnd"
+                type="date"
+                value="{{ default_end or '' }}"
+                class="mt-1 rounded-lg border border-medium-gray dark:border-dark-gray bg-white dark:bg-dark-gray px-3 py-2 text-xs sm:text-sm text-navy dark:text-white focus:ring-emerald focus:border-emerald"
+              />
+            </div>
+          </div>
+          <div class="flex flex-wrap gap-2 justify-end">
+            <button
+              type="button"
+              class="px-3 py-1.5 rounded-full text-[11px] font-semibold border border-medium-gray dark:border-dark-gray text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"
+              data-range="today"
+            >Today</button>
+            <button
+              type="button"
+              class="px-3 py-1.5 rounded-full text-[11px] font-semibold border border-medium-gray dark:border-dark-gray text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"
+              data-range="month"
+            >This Month</button>
+            <button
+              type="button"
+              class="px-3 py-1.5 rounded-full text-[11px] font-semibold border border-medium-gray dark:border-dark-gray text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"
+              data-range="year"
+            >This Year</button>
+            <button
+              type="button"
+              class="px-3 py-1.5 rounded-full text-[11px] font-semibold border border-medium-gray dark:border-dark-gray text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"
+              data-range="all"
+            >All Time</button>
+          </div>
+          <p id="filterStatus" class="text-[11px] text-gray-500 dark:text-gray-400"></p>
+        </div>
+      </header>
+
+      <!-- Add Expense -->
+      <section class="bg-white dark:bg-dark-gray p-4 sm:p-6 rounded-xl shadow-soft">
+        <div class="flex items-center justify-between gap-3 mb-4">
+          <h2 class="text-sm font-semibold text-navy dark:text-white uppercase tracking-wide">
+            Add Expense
+          </h2>
+          <span class="inline-flex items-center gap-1 text-[11px] text-gray-500 dark:text-gray-400">
+            <span class="material-symbols-outlined text-xs">info</span>
+            Quick entry for accounting-side expenses (not manager requests).
+          </span>
+        </div>
+
+        <form id="expenseForm" class="grid grid-cols-1 md:grid-cols-5 lg:grid-cols-6 gap-3">
+          <div class="flex flex-col">
+            <label class="text-xs font-medium text-gray-500 dark:text-gray-400">Date</label>
+            <input
+              type="date"
+              id="expDate"
+              name="date"
+              value="{{ default_end or '' }}"
+              class="mt-1 rounded-lg border border-medium-gray dark:border-dark-gray bg-white dark:bg-dark-gray px-3 py-2 text-xs sm:text-sm text-navy dark:text-white focus:ring-emerald focus:border-emerald"
+              required
+            />
+          </div>
+
+          <div class="flex flex-col">
+            <label class="text-xs font-medium text-gray-500 dark:text-gray-400">Amount (GHS)</label>
+            <input
+              type="number"
+              step="0.01"
+              min="0"
+              id="expAmount"
+              name="amount"
+              placeholder="0.00"
+              class="mt-1 rounded-lg border border-yellow-300 bg-yellow-50 dark:bg-yellow-900/40 dark:border-yellow-700 px-3 py-2 text-xs sm:text-sm text-right text-dark-gray dark:text-light-gray focus:ring-emerald focus:border-emerald"
+              required
+            />
+          </div>
+
+          <div class="flex flex-col">
+            <label class="text-xs font-medium text-gray-500 dark:text-gray-400">Category</label>
+            <input
+              list="categoryOptions"
+              id="expCategory"
+              name="category"
+              placeholder="e.g. Fuel, Rent, Salaries"
+              class="mt-1 rounded-lg border border-medium-gray dark:border-dark-gray bg-white dark:bg-dark-gray px-3 py-2 text-xs sm:text-sm text-navy dark:text-white focus:ring-emerald focus:border-emerald"
+              required
+            />
+            <datalist id="categoryOptions">
+              <!-- Options injected by JS -->
+            </datalist>
+          </div>
+
+          <div class="flex flex-col">
+            <label class="text-xs font-medium text-gray-500 dark:text-gray-400">Payment Method</label>
+            <select
+              id="expMethod"
+              name="payment_method"
+              class="mt-1 rounded-lg border border-medium-gray dark:border-dark-gray bg-white dark:bg-dark-gray px-3 py-2 text-xs sm:text-sm text-navy dark:text-white focus:ring-emerald focus:border-emerald"
+            >
+              <option value="">Select</option>
+              <option value="Cash">Cash</option>
+              <option value="Bank Transfer">Bank Transfer</option>
+              <option value="Momo">Momo</option>
+              <option value="Card">Card</option>
+              <option value="Cheque">Cheque</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+
+          <div class="flex flex-col md:col-span-2 lg:col-span-2">
+            <label class="text-xs font-medium text-gray-500 dark:text-gray-400">Description / Reference</label>
+            <input
+              type="text"
+              id="expDescription"
+              name="description"
+              placeholder="Short note, supplier name or reference"
+              class="mt-1 rounded-lg border border-medium-gray dark:border-dark-gray bg-white dark:bg-dark-gray px-3 py-2 text-xs sm:text-sm text-navy dark:text-white focus:ring-emerald focus:border-emerald"
+            />
+          </div>
+
+          <div class="flex items-end">
+            <button
+              type="submit"
+              id="btnCreateExpense"
+              class="w-full inline-flex items-center justify-center gap-2 rounded-xl h-10 px-4 bg-emerald text-white text-xs sm:text-sm font-bold shadow-sm hover:bg-emerald/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald"
+            >
+              <span class="material-symbols-outlined text-base">add</span>
+              <span>Add Expense</span>
+            </button>
+          </div>
+        </form>
+      </section>
+
+      <!-- Filters + Summary + Chart + Table (print area) -->
+      <section id="expensesPrintArea" class="space-y-4">
+
+        <!-- Filters row -->
+        <div class="bg-white dark:bg-dark-gray p-4 sm:p-5 rounded-xl shadow-soft">
+          <div class="flex flex-col gap-4">
+            <div class="flex flex-col sm:flex-row sm:items-end gap-3">
+              <div class="flex flex-col sm:min-w-[180px]">
+                <label class="text-xs font-medium text-gray-500 dark:text-gray-400">Filter by Category</label>
+                <select
+                  id="filterCategory"
+                  class="mt-1 rounded-lg border border-medium-gray dark:border-dark-gray bg-white dark:bg-dark-gray px-3 py-2 text-xs sm:text-sm text-navy dark:text-white focus:ring-emerald focus:border-emerald"
+                >
+                  <option value="">All Categories</option>
+                  <!-- options injected by JS -->
+                </select>
+              </div>
+
+              <div class="flex flex-col sm:flex-row gap-3 flex-1">
+                <div class="flex flex-col flex-1">
+                  <label class="text-xs font-medium text-gray-500 dark:text-gray-400">
+                    Search (description / ref)
+                  </label>
+                  <input
+                    type="text"
+                    id="filterSearch"
+                    placeholder="e.g. Fuel, supplier, invoice number..."
+                    class="mt-1 rounded-lg border border-medium-gray dark:border-dark-gray bg-white dark:bg-dark-gray px-3 py-2 text-xs sm:text-sm text-navy dark:text-white focus:ring-emerald focus:border-emerald"
+                  />
+                </div>
+
+                <div class="flex gap-3">
+                  <div class="flex flex-col">
+                    <label class="text-xs font-medium text-gray-500 dark:text-gray-400">Min Amount</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      id="filterMin"
+                      placeholder="0.00"
+                      class="mt-1 w-full rounded-lg border border-medium-gray dark:border-dark-gray bg-white dark:bg-dark-gray px-3 py-2 text-xs sm:text-sm text-right text-navy dark:text-white focus:ring-emerald focus:border-emerald"
+                    />
+                  </div>
+                  <div class="flex flex-col">
+                    <label class="text-xs font-medium text-gray-500 dark:text-gray-400">Max Amount</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      id="filterMax"
+                      placeholder="0.00"
+                      class="mt-1 w-full rounded-lg border border-medium-gray dark:border-dark-gray bg-white dark:bg-dark-gray px-3 py-2 text-xs sm:text-sm text-right text-navy dark:text-white focus:ring-emerald focus:border-emerald"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div class="flex items-end">
+                <button
+                  id="btnApplyFilters"
+                  type="button"
+                  class="inline-flex items-center justify-center gap-2 rounded-xl h-10 px-4 bg-navy text-white text-xs sm:text-sm font-bold shadow-sm hover:bg-navy/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-navy"
+                >
+                  <span class="material-symbols-outlined text-base">tune</span>
+                  <span>Apply Filters</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Summary cards + Chart -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <!-- Summary cards -->
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 lg:col-span-2">
+            <div class="bg-white dark:bg-dark-gray rounded-xl shadow-soft p-4 flex flex-col justify-between">
+              <div class="flex items-center justify-between">
+                <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                  Total Expenses
+                </p>
+                <span class="material-symbols-outlined text-emerald text-lg">stacked_line_chart</span>
+              </div>
+              <p id="summaryTotal" class="mt-2 text-2xl font-extrabold text-navy dark:text-white">
+                GHS 0.00
+              </p>
+              <p class="text-[11px] text-gray-500 dark:text-gray-400 mt-1">
+                Across all categories and sources in the selected period.
+              </p>
+            </div>
+
+            <div class="bg-white dark:bg-dark-gray rounded-xl shadow-soft p-4 flex flex-col justify-between">
+              <div class="flex items-center justify-between">
+                <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                  Number of Expenses
+                </p>
+                <span class="material-symbols-outlined text-navy dark:text-white text-lg">list_alt</span>
+              </div>
+              <p id="summaryCount" class="mt-2 text-2xl font-extrabold text-navy dark:text-white">
+                0
+              </p>
+              <p class="text-[11px] text-gray-500 dark:text-gray-400 mt-1">
+                Transactions logged in this combined view.
+              </p>
+            </div>
+
+            <div class="bg-white dark:bg-dark-gray rounded-xl shadow-soft p-4 flex flex-col justify-between">
+              <div class="flex items-center justify-between">
+                <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                  Top Category
+                </p>
+                <span class="material-symbols-outlined text-orange-500 text-lg">local_fire_department</span>
+              </div>
+              <p id="summaryTopCategory" class="mt-2 text-base font-semibold text-navy dark:text-white">
+                -
+              </p>
+              <p class="text-[11px] text-gray-500 dark:text-gray-400 mt-1">
+                Highest spend category in the selected period.
+              </p>
+            </div>
+          </div>
+
+          <!-- Category Chart -->
+          <div class="bg-white dark:bg-dark-gray rounded-xl shadow-soft p-4 flex flex-col">
+            <div class="flex items-center justify-between mb-2">
+              <h3 class="text-xs font-semibold text-navy dark:text-white uppercase tracking-wide">
+                Category Breakdown
+              </h3>
+            </div>
+            <div class="flex-1 flex items-center justify-center">
+              <canvas id="categoryChart" class="max-h-64"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- Table -->
+        <div class="overflow-hidden rounded-xl shadow-soft border border-medium-gray dark:border-dark-gray bg-white dark:bg-dark-gray">
+          <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-medium-gray dark:divide-dark-gray">
+              <thead class="bg-light-gray dark:bg-dark-gray/80">
+                <tr>
+                  <th class="px-4 py-3 text-left text-xs font-bold text-navy dark:text-white uppercase tracking-wider whitespace-nowrap">Date</th>
+                  <th class="px-4 py-3 text-left text-xs font-bold text-navy dark:text-white uppercase tracking-wider whitespace-nowrap">Category</th>
+                  <th class="px-4 py-3 text-left text-xs font-bold text-navy dark:text-white uppercase tracking-wider whitespace-nowrap">Description / Reference</th>
+                  <th class="px-4 py-3 text-left text-xs font-bold text-navy dark:text-white uppercase tracking-wider whitespace-nowrap">Method / Source</th>
+                  <th class="px-4 py-3 text-right text-xs font-bold text-navy dark:text-white uppercase tracking-wider whitespace-nowrap">Amount (GHS)</th>
+                </tr>
+              </thead>
+              <tbody id="expensesBody" class="divide-y divide-medium-gray dark:divide-dark-gray">
+                <!-- rows via JS -->
+              </tbody>
+            </table>
+          </div>
+          <div class="px-4 py-2 flex items-center justify-between text-[11px] text-gray-500 dark:text-gray-400">
+            <span id="expensesFooterSummary">0 expenses shown.</span>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    (function(){
+      // ------------- helpers -------------
+      function parseJSONScript(id) {
+        var el = document.getElementById(id);
+        if (!el) return {};
+        var txt = el.textContent || el.innerText || "{}";
+        try { return JSON.parse(txt); } catch(e) {
+          console.error("Failed to parse JSON for", id, e);
+          return {};
+        }
+      }
+
+      function fmtMoney(n) {
+        var num = Number(n) || 0;
+        return num.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+      }
+
+      function todayISO() {
+        var d = new Date();
+        var m = String(d.getMonth() + 1).padStart(2, "0");
+        var day = String(d.getDate()).padStart(2, "0");
+        return d.getFullYear() + "-" + m + "-" + day;
+      }
+
+      // ------------- DOM refs -------------
+      var filterStartEl = document.getElementById("filterStart");
+      var filterEndEl   = document.getElementById("filterEnd");
+      var filterStatusEl = document.getElementById("filterStatus");
+      var filterCategoryEl = document.getElementById("filterCategory");
+      var filterSearchEl = document.getElementById("filterSearch");
+      var filterMinEl = document.getElementById("filterMin");
+      var filterMaxEl = document.getElementById("filterMax");
+      var btnApplyFilters = document.getElementById("btnApplyFilters");
+
+      var expensesBodyEl = document.getElementById("expensesBody");
+      var expensesFooterEl = document.getElementById("expensesFooterSummary");
+
+      var summaryTotalEl = document.getElementById("summaryTotal");
+      var summaryCountEl = document.getElementById("summaryCount");
+      var summaryTopCategoryEl = document.getElementById("summaryTopCategory");
+
+      var categoryOptionsEl = document.getElementById("categoryOptions");
+      var expDateEl = document.getElementById("expDate");
+      var expAmountEl = document.getElementById("expAmount");
+      var expCategoryEl = document.getElementById("expCategory");
+      var expMethodEl = document.getElementById("expMethod");
+      var expDescriptionEl = document.getElementById("expDescription");
+      var expenseFormEl = document.getElementById("expenseForm");
+      var btnCreateExpense = document.getElementById("btnCreateExpense");
+
+      var chartCanvas = document.getElementById("categoryChart");
+      var categoryChart = null;
+
+      var initialData = parseJSONScript("initialExpenseData") || {};
+      var initialCategories = parseJSONScript("initialCategories") || [];
+
+      var urls = window.EXPENSE_URLS || {};
+
+      // ------------- Category options -------------
+      var currentData = null;
+
+      function renderCategoryOptions(extraCategory) {
+        var set = {};
+        (initialCategories || []).forEach(function(c){ if (c) set[c] = true; });
+        if (extraCategory) set[extraCategory] = true;
+
+        // also merge from last loaded data
+        if (currentData && currentData.category_totals) {
+          currentData.category_totals.forEach(function(ct){
+            if (ct.category) set[ct.category] = true;
+          });
+        }
+
+        var arr = Object.keys(set).sort(function(a,b){ return a.localeCompare(b); });
+
+        if (categoryOptionsEl) {
+          categoryOptionsEl.innerHTML = "";
+          arr.forEach(function(c){
+            var opt = document.createElement("option");
+            opt.value = c;
+            categoryOptionsEl.appendChild(opt);
+          });
+        }
+        if (filterCategoryEl) {
+          var currentVal = filterCategoryEl.value || "";
+          filterCategoryEl.innerHTML = "";
+          var optAll = document.createElement("option");
+          optAll.value = "";
+          optAll.textContent = "All Categories";
+          filterCategoryEl.appendChild(optAll);
+          arr.forEach(function(c){
+            var opt = document.createElement("option");
+            opt.value = c;
+            opt.textContent = c;
+            filterCategoryEl.appendChild(opt);
+          });
+          // restore previous selected if still exists
+          var hasCurrent = !currentVal || arr.indexOf(currentVal) !== -1;
+          if (hasCurrent) {
+            filterCategoryEl.value = currentVal;
+          }
+        }
+      }
+
+      // ------------- Chart -------------
+      function buildChart() {
+        if (!chartCanvas) return;
+        var ctx = chartCanvas.getContext("2d");
+        categoryChart = new Chart(ctx, {
+          type: "doughnut",
+          data: {
+            labels: [],
+            datasets: [{
+              data: [],
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                position: "bottom",
+                labels: { font: { size: 10 } }
+              },
+              tooltip: {
+                callbacks: {
+                  label: function(ctx) {
+                    var lbl = ctx.label || "Category";
+                    var v = ctx.parsed || 0;
+                    return lbl + ": GHS " + fmtMoney(v);
+                  }
+                }
+              }
+            },
+            cutout: "55%"
+          }
+        });
+      }
+
+      function updateChart(catTotals) {
+        if (!categoryChart) return;
+        var labels = [];
+        var data = [];
+        (catTotals || []).forEach(function(ct){
+          labels.push(ct.category || "Uncategorized");
+          data.push(Number(ct.total) || 0);
+        });
+        categoryChart.data.labels = labels;
+        categoryChart.data.datasets[0].data = data;
+        categoryChart.update();
+      }
+
+      // ------------- Rendering -------------
+      function renderExpenses(data) {
+        currentData = data || { expenses: [], totals: {}, category_totals: [] };
+        var rows = currentData.expenses || [];
+        var totals = currentData.totals || {};
+        var catTotals = currentData.category_totals || [];
+
+        // table
+        if (expensesBodyEl) {
+          expensesBodyEl.innerHTML = "";
+          if (!rows.length) {
+            var tr = document.createElement("tr");
+            var td = document.createElement("td");
+            td.colSpan = 5;
+            td.className = "px-4 py-4 text-center text-xs text-gray-500 dark:text-gray-400";
+            td.textContent = "No expenses found for this filter.";
+            tr.appendChild(td);
+            expensesBodyEl.appendChild(tr);
+          } else {
+            rows.forEach(function(r){
+              var tr = document.createElement("tr");
+              tr.className = "hover:bg-light-gray/40 dark:hover:bg-white/5";
+
+              var tdDate = document.createElement("td");
+              tdDate.className = "px-4 py-2 text-xs sm:text-sm text-navy dark:text-white whitespace-nowrap";
+              tdDate.textContent = r.date || "";
+              tr.appendChild(tdDate);
+
+              var tdCat = document.createElement("td");
+              tdCat.className = "px-4 py-2 text-xs sm:text-sm text-gray-800 dark:text-gray-100 whitespace-nowrap";
+              tdCat.textContent = r.category || "Uncategorized";
+              tr.appendChild(tdCat);
+
+              var tdDesc = document.createElement("td");
+              tdDesc.className = "px-4 py-2 text-xs sm:text-sm text-gray-600 dark:text-gray-300";
+              tdDesc.textContent = r.description || "";
+              tr.appendChild(tdDesc);
+
+              var tdMethod = document.createElement("td");
+              tdMethod.className = "px-4 py-2 text-xs sm:text-sm text-gray-600 dark:text-gray-300 whitespace-nowrap";
+
+              // If this is a manager entry (from manager_expenses), backend sets payment_method="Manager Entry"
+              if (r.payment_method === "Manager Entry") {
+                var badge = document.createElement("span");
+                badge.className = "badge-manager-entry";
+                badge.innerHTML = '<span class="material-symbols-outlined text-[14px]">account_tree</span>Manager Entry';
+                tdMethod.appendChild(badge);
+              } else {
+                tdMethod.textContent = r.payment_method || "";
+              }
+
+              tr.appendChild(tdMethod);
+
+              var tdAmt = document.createElement("td");
+              tdAmt.className = "px-4 py-2 text-xs sm:text-sm text-right font-semibold text-navy dark:text-white whitespace-nowrap";
+              tdAmt.textContent = fmtMoney(r.amount || 0);
+              tr.appendChild(tdAmt);
+
+              expensesBodyEl.appendChild(tr);
+            });
+          }
+        }
+
+        // footer summary
+        if (expensesFooterEl) {
+          expensesFooterEl.textContent = (rows.length || 0) + " expense(s) shown.";
+        }
+
+        // summary cards
+        var totalAmt = Number(totals.total_amount || 0);
+        var count = Number(totals.count || rows.length || 0);
+        var topCat = "-";
+        if (catTotals.length) {
+          topCat = (catTotals[0].category || "Uncategorized") +
+            " (GHS " + fmtMoney(catTotals[0].total || 0) + ")";
+        }
+
+        if (summaryTotalEl) summaryTotalEl.textContent = "GHS " + fmtMoney(totalAmt);
+        if (summaryCountEl) summaryCountEl.textContent = String(count);
+        if (summaryTopCategoryEl) summaryTopCategoryEl.textContent = topCat;
+
+        // chart
+        updateChart(catTotals);
+
+        // refresh category options (so new categories appear)
+        renderCategoryOptions();
+      }
+
+      function setFilterStatus(msg) {
+        if (filterStatusEl) filterStatusEl.textContent = msg || "";
+      }
+
+      // ------------- Filters & loading -------------
+      function getFilterParams() {
+        var params = {};
+        if (filterStartEl && filterStartEl.value) params.start = filterStartEl.value;
+        if (filterEndEl && filterEndEl.value) params.end = filterEndEl.value;
+        if (filterCategoryEl && filterCategoryEl.value) params.category = filterCategoryEl.value;
+        if (filterSearchEl && filterSearchEl.value) params.search = filterSearchEl.value;
+        if (filterMinEl && filterMinEl.value) params.min = filterMinEl.value;
+        if (filterMaxEl && filterMaxEl.value) params.max = filterMaxEl.value;
+        return params;
+      }
+
+      function buildQuery(params) {
+        var parts = [];
+        for (var k in params) {
+          if (!params.hasOwnProperty(k)) continue;
+          if (params[k] === null || params[k] === undefined || params[k] === "") continue;
+          parts.push(encodeURIComponent(k) + "=" + encodeURIComponent(params[k]));
+        }
+        return parts.join("&");
+      }
+
+      function reloadExpenses() {
+        if (!urls.list) return;
+        var params = getFilterParams();
+        var qs = buildQuery(params);
+        var fullUrl = urls.list + (qs ? ("?" + qs) : "");
+        setFilterStatus("Loading expenses...");
+        fetch(fullUrl, { method: "GET" })
+          .then(function(resp){
+            return resp.json().then(function(j){
+              return { ok: resp.ok, json: j };
+            }).catch(function(){
+              return { ok: resp.ok, json: {} };
+            });
+          })
+          .then(function(result){
+            if (!result.ok || !result.json.ok) {
+              setFilterStatus(result.json.message || "Failed to load expenses.");
+              renderExpenses({ expenses: [], totals: {}, category_totals: [] });
+              return;
+            }
+            renderExpenses(result.json.data || {});
+            setFilterStatus("Showing expenses for selected filters.");
+          })
+          .catch(function(err){
+            console.error(err);
+            setFilterStatus("Error loading expenses.");
+            renderExpenses({ expenses: [], totals: {}, category_totals: [] });
+          });
+      }
+
+      function applyQuickRange(mode) {
+        var today = todayISO();
+        var d = new Date();
+        if (mode === "today") {
+          if (filterStartEl) filterStartEl.value = today;
+          if (filterEndEl) filterEndEl.value = today;
+        } else if (mode === "month") {
+          var start = new Date(d.getFullYear(), d.getMonth(), 1);
+          var sm = String(start.getMonth() + 1).padStart(2, "0");
+          var sd = String(start.getDate()).padStart(2, "0");
+          var startISO = start.getFullYear() + "-" + sm + "-" + sd;
+          if (filterStartEl) filterStartEl.value = startISO;
+          if (filterEndEl) filterEndEl.value = today;
+        } else if (mode === "year") {
+          var ystartISO = d.getFullYear() + "-01-01";
+          if (filterStartEl) filterStartEl.value = ystartISO;
+          if (filterEndEl) filterEndEl.value = today;
+        } else if (mode === "all") {
+          if (filterStartEl) filterStartEl.value = "";
+          if (filterEndEl) filterEndEl.value = "";
+        }
+        reloadExpenses();
+      }
+
+      // ------------- Create expense -------------
+      function clearExpenseForm() {
+        if (expAmountEl) expAmountEl.value = "";
+        if (expCategoryEl) expCategoryEl.value = "";
+        if (expMethodEl) expMethodEl.value = "";
+        if (expDescriptionEl) expDescriptionEl.value = "";
+        if (expDateEl && !expDateEl.value) {
+          expDateEl.value = todayISO();
+        }
+      }
+
+      function handleCreateExpense(e) {
+        e.preventDefault();
+        if (!urls.create) return;
+
+        var payload = {
+          date: expDateEl ? (expDateEl.value || "") : "",
+          amount: expAmountEl ? expAmountEl.value : "",
+          category: expCategoryEl ? expCategoryEl.value : "",
+          payment_method: expMethodEl ? expMethodEl.value : "",
+          description: expDescriptionEl ? expDescriptionEl.value : ""
+        };
+
+        if (!payload.date || !payload.amount || !payload.category) {
+          alert("Please fill date, amount and category.");
+          return;
+        }
+
+        if (btnCreateExpense) {
+          btnCreateExpense.disabled = true;
+          btnCreateExpense.classList.add("opacity-70");
+        }
+
+        fetch(urls.create, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        })
+        .then(function(resp){
+          return resp.json().then(function(j){
+            return { ok: resp.ok, json: j };
+          }).catch(function(){
+            return { ok: resp.ok, json: {} };
+          });
+        })
+        .then(function(result){
+          if (!result.ok || !result.json.ok) {
+            alert(result.json.message || "Failed to create expense.");
+            return;
+          }
+          // update category list with new category
+          if (payload.category) {
+            renderCategoryOptions(payload.category);
+          }
+          clearExpenseForm();
+          reloadExpenses();
+        })
+        .catch(function(err){
+          console.error(err);
+          alert("An error occurred while creating expense.");
+        })
+        .finally(function(){
+          if (btnCreateExpense) {
+            btnCreateExpense.disabled = false;
+            btnCreateExpense.classList.remove("opacity-70");
+          }
+        });
+      }
+
+      // ------------- Events -------------
+      // Quick range buttons
+      var rangeButtons = document.querySelectorAll("[data-range]");
+      rangeButtons.forEach(function(btn){
+        btn.addEventListener("click", function(){
+          var mode = btn.getAttribute("data-range");
+          if (!mode) return;
+          applyQuickRange(mode);
+        });
+      });
+
+      if (btnApplyFilters) {
+        btnApplyFilters.addEventListener("click", reloadExpenses);
+      }
+
+      // Basic auto reload when date range changes
+      if (filterStartEl) filterStartEl.addEventListener("change", reloadExpenses);
+      if (filterEndEl) filterEndEl.addEventListener("change", reloadExpenses);
+      if (filterCategoryEl) filterCategoryEl.addEventListener("change", reloadExpenses);
+
+      // Create expense
+      if (expenseFormEl) {
+        expenseFormEl.addEventListener("submit", handleCreateExpense);
+      }
+
+      // ------------- Init -------------
+      // default date for add form
+      if (expDateEl && !expDateEl.value) {
+        expDateEl.value = todayISO();
+      }
+
+      // build chart instance
+      buildChart();
+
+      // Initial render from server data
+      if (initialData && initialData.expenses) {
+        renderCategoryOptions();
+        renderExpenses(initialData);
+        setFilterStatus("Showing this month's combined expenses by default.");
+      } else {
+        renderCategoryOptions();
+        reloadExpenses();
+      }
+    })();
+  </script>
+</body>
+</html>

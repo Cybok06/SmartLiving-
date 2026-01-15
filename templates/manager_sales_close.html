@@ -1,0 +1,924 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <title>Manager -- Sales Close</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"/>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet"/>
+    <link rel="icon" href="https://res.cloudinary.com/dljpgzbto/image/upload/v1743993646/company-logo_dksb23.jpg" type="image/png"/>
+
+  <style>
+    :root{
+      --ink:#0f172a; --muted:#64748b; --soft:#f6f8fb; --brand:#0d6efd;
+      --ok:#16a34a; --ok-bg:#e7f8ec; --danger:#b91c1c; --danger-bg:#fdecec;
+    }
+    body{
+      background:var(--soft);
+      color:var(--ink);
+      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;
+    }
+    .page-wrap{
+      max-width:1200px;
+      margin:40px auto;
+      padding:0 16px;
+      opacity:0;
+      transform:translateY(16px);
+      transition:opacity .5s ease, transform .5s ease;
+    }
+    body.loading-state .page-wrap{
+      opacity:1;
+      transform:none;
+      transition:none;
+    }
+    body.page-ready .page-wrap{
+      opacity:1;
+      transform:translateY(0);
+    }
+
+    .card-summary .icon{
+      width:46px;height:46px;border-radius:12px;
+      display:flex;align-items:center;justify-content:center;
+      margin-right:12px;flex:0 0 auto;font-size:1.25rem
+    }
+    .stat{ font-weight:800; font-size:1.5rem; line-height:1; letter-spacing:.2px }
+    .substat{ font-size:.8rem; color:var(--muted) }
+    .muted{ color:var(--muted) }
+
+    .stat-close{ color:var(--ok) }
+    .card-close .icon{ background:var(--ok-bg); color:var(--ok) }
+
+    .stat-unclose{ color:var(--danger) }
+    .card-unclose .icon{ background:var(--danger-bg); color:var(--danger) }
+
+    .agent-card .amt{ font-size:1.7rem; font-weight:800; letter-spacing:.3px }
+    .agent-card .meta{ font-size:.9rem; color:var(--muted) }
+
+    .search-wrap .form-control{ border-radius:10px }
+
+    .spinner {
+      display:inline-block;
+      width:1rem; height:1rem;
+      border:.2rem solid rgba(255,255,255,.35);
+      border-top-color:#fff;
+      border-radius:50%;
+      animation:spin .8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    @media (max-width: 575.98px){
+      .stat{ font-size:1.35rem }
+      .page-wrap{ margin:20px auto; }
+    }
+
+    /* History tables */
+    #historyTable thead th,
+    #managerHistoryTable thead th{
+      position:sticky;
+      top:0;
+      background:#fff;
+      z-index:2
+    }
+
+    .btn-ghost{
+      border-radius:999px;
+      border:1px solid rgba(15,23,42,.06);
+      background:#fff;
+      font-size:.8rem;
+      padding:.3rem .7rem;
+    }
+    .btn-ghost i{
+      font-size:.9rem;
+    }
+
+    /* Skeletons */
+    @keyframes shimmer { 0%{background-position:200% 0;} 100%{background-position:-200% 0;} }
+    body.loading-state .skeleton-text,
+    .skeleton-block{
+      color:transparent;
+      background:linear-gradient(90deg,#e8edf3 0%, #f6f8fb 50%, #e8edf3 100%);
+      background-size:200% 100%;
+      border-radius:6px;
+      animation:shimmer 1.2s ease-in-out infinite;
+    }
+    body.loading-state .skeleton-text{
+      display:inline-block;
+      min-width:90px;
+    }
+    body.loading-state .skeleton-text.skel-lg{ min-width:140px; }
+    body.loading-state .skeleton-text.skel-sm{ min-width:70px; }
+
+    #agentsGrid.agents-hidden{ display:none; }
+    .agent-skeleton .skeleton-block{ height:12px; margin:6px 0; }
+    .agent-skeleton .skeleton-amt{ height:22px; width:140px; }
+  </style>
+</head>
+<body class="loading-state">
+
+  {% include 'manager_sidebar.html' %}
+
+<div class="page-wrap">
+  <div class="d-flex flex-column flex-sm-row align-items-sm-center justify-content-between mb-3 gap-2">
+    <div>
+      <h3 class="m-0">Manager -- Sales Close</h3>
+      <div class="muted small mt-1">
+        Welcome, <span class="fw-semibold" id="managerName">{{ manager_name }}</span>
+        <span class="d-none d-sm-inline">· Today (for withdrawals only): <span class="fw-semibold" id="todayText">{{ today }}</span></span>
+      </div>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+      <button class="btn btn-ghost d-flex align-items-center gap-1" id="btnManagerHistory">
+        <i class="bi bi-clock-history"></i>
+        <span>My Withdrawals (Admin / Exec)</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Row 1: Gross by period -->
+  <div class="row g-3 mb-3">
+    <!-- Today Gross -->
+    <div class="col-12 col-md-6 col-xl-3">
+      <div class="card shadow-sm h-100 card-summary">
+        <div class="card-body d-flex align-items-center">
+          <div class="icon bg-light"><i class="bi bi-calendar-day"></i></div>
+          <div>
+            <div class="muted">Today Gross</div>
+            <div class="stat skeleton-text skel-lg" id="grossToday">GHS 0.00</div>
+            <div class="substat">
+              Sales: <span id="colToday" class="skeleton-text skel-sm">GHS 0.00</span> ·
+              Exp: <span id="expToday" class="skeleton-text skel-sm">GHS 0.00</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Week Gross -->
+    <div class="col-12 col-md-6 col-xl-3">
+      <div class="card shadow-sm h-100 card-summary">
+        <div class="card-body d-flex align-items-center">
+          <div class="icon bg-light"><i class="bi bi-calendar-week"></i></div>
+          <div>
+            <div class="muted">This Week Gross</div>
+            <div class="stat skeleton-text skel-lg" id="grossWeek">GHS 0.00</div>
+            <div class="substat">
+              Sales: <span id="colWeek" class="skeleton-text skel-sm">GHS 0.00</span> ·
+              Exp: <span id="expWeek" class="skeleton-text skel-sm">GHS 0.00</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Month Gross -->
+    <div class="col-12 col-md-6 col-xl-3">
+      <div class="card shadow-sm h-100 card-summary">
+        <div class="card-body d-flex align-items-center">
+          <div class="icon bg-light"><i class="bi bi-calendar3"></i></div>
+          <div>
+            <div class="muted">This Month Gross</div>
+            <div class="stat skeleton-text skel-lg" id="grossMonth">GHS 0.00</div>
+            <div class="substat">
+              Sales: <span id="colMonth" class="skeleton-text skel-sm">GHS 0.00</span> ·
+              Exp: <span id="expMonth" class="skeleton-text skel-sm">GHS 0.00</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Total Gross -->
+    <div class="col-12 col-md-6 col-xl-3">
+      <div class="card shadow-sm h-100 card-summary card-close">
+        <div class="card-body d-flex align-items-center">
+          <div class="icon"><i class="bi bi-graph-up-arrow"></i></div>
+          <div>
+            <div class="muted">All Time Gross</div>
+            <div class="stat stat-close skeleton-text skel-lg" id="grossTotal">GHS 0.00</div>
+            <div class="substat">
+              Sales: <span id="colTotal" class="skeleton-text skel-sm">GHS 0.00</span> ·
+              Exp: <span id="expTotal" class="skeleton-text skel-sm">GHS 0.00</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Row 2: Available manager close + Unclose agents -->
+  <div class="row g-3 mb-3">
+    <div class="col-12 col-lg-6">
+      <div class="card shadow-sm h-100 card-summary card-close">
+        <div class="card-body d-flex align-items-center">
+          <div class="icon"><i class="bi bi-bank2"></i></div>
+          <div>
+            <div class="muted">Available Manager Close</div>
+            <div class="stat stat-close skeleton-text skel-lg" id="closeAvailableTotal">GHS 0.00</div>
+            <div class="substat">
+              Sum of <strong>total_amount</strong> in your own close docs (all dates) -- money not yet withdrawn upwards.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12 col-lg-6">
+      <div class="card shadow-sm h-100 card-summary card-unclose">
+        <div class="card-body d-flex align-items-center">
+          <div class="icon"><i class="bi bi-exclamation-octagon"></i></div>
+          <div>
+            <div class="muted">Unclose Total (Agents)</div>
+            <div class="stat stat-unclose skeleton-text skel-lg" id="uncloseTotal">GHS 0.00</div>
+            <div class="substat">
+              Sum of all agents' current balances (all dates) not yet withdrawn into your manager account.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Alerts -->
+  <div id="alertHost"></div>
+
+  <!-- Agents toolbar -->
+  <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-2 gap-2">
+    <div class="fw-bold">Agents -- Highest Balances First</div>
+    <div class="d-flex flex-wrap gap-2 align-items-center">
+      <div class="search-wrap" style="max-width: 260px;">
+        <input type="search" id="agentSearch" class="form-control form-control-sm" placeholder="Search agents..." disabled>
+      </div>
+      <button class="btn btn-outline-primary btn-sm" id="btnLoadAgents">View Agents Accounts</button>
+      <button class="btn btn-outline-secondary btn-sm d-none" id="btnHideAgents">Hide Agents</button>
+    </div>
+  </div>
+
+  <!-- Agent cards grid -->
+  <div class="row g-3 agents-hidden" id="agentsGrid"></div>
+</div>
+
+<!-- Withdraw Modal -->
+<div class="modal fade" id="withdrawModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0">
+      <div class="modal-header">
+        <h5 class="modal-title">Withdraw from <span id="mAgentName">Agent</span></h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form id="withdrawForm">
+        <div class="modal-body">
+          <input type="hidden" name="agent_id" id="mAgentId">
+          <div class="row g-3">
+            <div class="col-12">
+              <div class="small text-muted">Phone</div>
+              <div class="fw-semibold" id="mAgentPhone">--</div>
+            </div>
+            <div class="col-12">
+              <div class="small text-muted">Available</div>
+              <div class="fw-bold">GHS <span id="mAgentAvail">0.00</span></div>
+            </div>
+            <div class="col-12">
+              <label class="form-label">Amount (GHS)</label>
+              <div class="input-group">
+                <input type="number" name="amount" id="mAmount" class="form-control" step="0.01" min="0.01" required>
+                <button class="btn btn-outline-secondary" type="button" id="mMaxBtn">Max</button>
+              </div>
+              <div class="form-text">This credits your manager account and debits the agent's account.</div>
+            </div>
+            <div class="col-12">
+              <label class="form-label">Note (optional)</label>
+              <input type="text" name="note" id="mNote" class="form-control" placeholder="e.g., Collection">
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <div class="me-auto small text-muted">Withdrawal will post into today's manager ledger.</div>
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" id="mSubmitBtn" class="btn btn-primary">
+            <span class="label">Withdraw</span>
+            <span class="spinner ms-2" style="display:none;"></span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Agent History Modal -->
+<div class="modal fade" id="historyModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content border-0">
+      <div class="modal-header">
+        <h5 class="modal-title">Withdrawal History -- <span id="hAgentName">Agent</span></h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div id="historyEmpty" class="text-center text-muted" style="display:none;">No withdrawals yet.</div>
+        <div class="table-responsive" id="historyWrap" style="max-height:420px; overflow:auto; display:none;">
+          <table class="table table-sm align-middle" id="historyTable">
+            <thead>
+              <tr>
+                <th style="min-width:120px">Date</th>
+                <th style="min-width:100px">Time</th>
+                <th style="min-width:140px">Amount (GHS)</th>
+                <th style="min-width:220px">Note</th>
+                <th style="min-width:180px">By</th>
+              </tr>
+            </thead>
+            <tbody id="historyTbody"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <div class="small text-muted" id="historyCount">0 records</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Manager Withdrawals History Modal -->
+<div class="modal fade" id="managerHistoryModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content border-0">
+      <div class="modal-header">
+        <h5 class="modal-title">
+          Withdrawals from Manager Close -- <span class="fw-semibold">{{ manager_name }}</span>
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p class="small text-muted mb-2">
+          These are withdrawals done from your close account by <strong>Admins</strong> or <strong>Executives</strong>.
+        </p>
+        <div id="managerHistoryEmpty" class="text-center text-muted" style="display:none;">No withdrawals yet.</div>
+        <div class="table-responsive" id="managerHistoryWrap" style="max-height:420px; overflow:auto; display:none;">
+          <table class="table table-sm align-middle" id="managerHistoryTable">
+            <thead>
+              <tr>
+                <th style="min-width:120px">Date</th>
+                <th style="min-width:100px">Time</th>
+                <th style="min-width:140px">Amount (GHS)</th>
+                <th style="min-width:220px">Note</th>
+                <th style="min-width:200px">By (Role)</th>
+              </tr>
+            </thead>
+            <tbody id="managerHistoryTbody"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <div class="small text-muted" id="managerHistoryCount">0 records</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+(function(){
+  const alertHost   = document.getElementById('alertHost');
+  const agentsGrid  = document.getElementById('agentsGrid');
+  const searchInput = document.getElementById('agentSearch');
+  const btnLoadAgents = document.getElementById('btnLoadAgents');
+  const btnHideAgents = document.getElementById('btnHideAgents');
+  const managerNameEl = document.getElementById('managerName');
+  const todayTextEl   = document.getElementById('todayText');
+
+  const withdrawModalEl = document.getElementById('withdrawModal');
+  const withdrawModal   = new bootstrap.Modal(withdrawModalEl);
+
+  const mAgentName = document.getElementById('mAgentName');
+  const mAgentPhone= document.getElementById('mAgentPhone');
+  const mAgentAvail= document.getElementById('mAgentAvail');
+  const mAgentId   = document.getElementById('mAgentId');
+  const mAmount    = document.getElementById('mAmount');
+  const mMaxBtn    = document.getElementById('mMaxBtn');
+  const mNote      = document.getElementById('mNote');
+  const mSubmitBtn = document.getElementById('mSubmitBtn');
+  const mLabel     = mSubmitBtn.querySelector('.label');
+  const mSpin      = mSubmitBtn.querySelector('.spinner');
+
+  const uncloseTotalEl        = document.getElementById('uncloseTotal');
+  const closeAvailableTotalEl = document.getElementById('closeAvailableTotal');
+
+  const grossTotalEl = document.getElementById('grossTotal');
+  const grossMonthEl = document.getElementById('grossMonth');
+  const grossWeekEl  = document.getElementById('grossWeek');
+  const grossTodayEl = document.getElementById('grossToday');
+
+  const colTotalEl = document.getElementById('colTotal');
+  const colMonthEl = document.getElementById('colMonth');
+  const colWeekEl  = document.getElementById('colWeek');
+  const colTodayEl = document.getElementById('colToday');
+
+  const expTotalEl = document.getElementById('expTotal');
+  const expMonthEl = document.getElementById('expMonth');
+  const expWeekEl  = document.getElementById('expWeek');
+  const expTodayEl = document.getElementById('expToday');
+
+  // Agent history modal
+  const historyModalEl = document.getElementById('historyModal');
+  const historyModal   = new bootstrap.Modal(historyModalEl);
+  const hAgentName     = document.getElementById('hAgentName');
+  const historyTbody   = document.getElementById('historyTbody');
+  const historyWrap    = document.getElementById('historyWrap');
+  const historyEmpty   = document.getElementById('historyEmpty');
+  const historyCount   = document.getElementById('historyCount');
+
+  // Manager withdrawals history modal
+  const btnManagerHistory      = document.getElementById('btnManagerHistory');
+  const managerHistoryModalEl  = document.getElementById('managerHistoryModal');
+  const managerHistoryModal    = new bootstrap.Modal(managerHistoryModalEl);
+  const managerHistoryTbody    = document.getElementById('managerHistoryTbody');
+  const managerHistoryWrap     = document.getElementById('managerHistoryWrap');
+  const managerHistoryEmpty    = document.getElementById('managerHistoryEmpty');
+  const managerHistoryCount    = document.getElementById('managerHistoryCount');
+
+  let agentsLoaded = false;
+
+  function showAlert(kind, message){
+    const wrap = document.createElement('div');
+    wrap.className = `alert alert-${kind} alert-dismissible fade show`;
+    wrap.role = 'alert';
+    wrap.innerHTML = `${message}<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>`;
+    alertHost.innerHTML = '';
+    alertHost.appendChild(wrap);
+    setTimeout(()=>{ try{ bootstrap.Alert.getOrCreateInstance(wrap).close(); }catch(e){} }, 5000);
+  }
+
+  function setLoading(on){
+    mSubmitBtn.disabled = !!on;
+    mSpin.style.display = on ? 'inline-block' : 'none';
+    mLabel.textContent  = on ? 'Processing...' : 'Withdraw';
+  }
+
+  function parseMoney(value){
+    if(typeof value === 'number') return value;
+    const raw = String(value || '0').replace(/,/g, '');
+    const cleaned = raw.replace(/[^\d.-]/g, '');
+    const num = parseFloat(cleaned);
+    return isNaN(num) ? 0 : num;
+  }
+
+  function formatMoney(value){
+    return Number(value || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  function animateCount(el, value, duration=800, prefix=''){
+    if(!el) return;
+    const end = parseMoney(value);
+    const start = 0;
+    const startTime = performance.now();
+    const easeOutCubic = (t)=> 1 - Math.pow(1 - t, 3);
+
+    function tick(now){
+      const p = Math.min((now - startTime) / duration, 1);
+      const eased = easeOutCubic(p);
+      const current = start + (end - start) * eased;
+      el.textContent = prefix + formatMoney(current);
+      if(p < 1) requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+  }
+
+  function setMoney(el, value, animate=true){
+    if(!el) return;
+    if(animate){
+      animateCount(el, value, 800, 'GHS ');
+      return;
+    }
+    const num = parseMoney(value);
+    el.textContent = 'GHS ' + formatMoney(num);
+  }
+
+  // Search/filter
+  searchInput?.addEventListener('input', ()=>{
+    if(!agentsLoaded) return;
+    const q = searchInput.value.trim().toLowerCase();
+    const cols = agentsGrid.querySelectorAll('.agent-col');
+    cols.forEach(col=>{
+      const name = col.dataset.name || '';
+      const phone = col.dataset.phone || '';
+      col.style.display = (name.includes(q) || phone.includes(q)) ? '' : 'none';
+    });
+  });
+
+  // Reorder cards by available (desc)
+  function resortGrid(){
+    const cols = Array.from(agentsGrid.querySelectorAll('.agent-col'));
+    cols.sort((a,b)=> (parseFloat(b.dataset.available || '0') - parseFloat(a.dataset.available || '0')));
+    cols.forEach(c => agentsGrid.appendChild(c));
+  }
+
+  function renderAgentSkeletons(count=6){
+    agentsGrid.innerHTML = '';
+    const frag = document.createDocumentFragment();
+    for(let i=0; i<count; i++){
+      const col = document.createElement('div');
+      col.className = 'col-12 col-md-6 col-lg-4';
+      col.innerHTML = `
+        <div class="card shadow-sm h-100 agent-skeleton">
+          <div class="card-body">
+            <div class="skeleton-block" style="width:140px"></div>
+            <div class="skeleton-block" style="width:100px"></div>
+            <div class="skeleton-block skeleton-amt"></div>
+            <div class="d-flex gap-2 mt-3">
+              <div class="skeleton-block" style="width:90px;height:28px;"></div>
+              <div class="skeleton-block" style="width:80px;height:28px;"></div>
+            </div>
+          </div>
+        </div>
+      `;
+      frag.appendChild(col);
+    }
+    agentsGrid.appendChild(frag);
+  }
+
+  function renderAgents(agents){
+    agentsGrid.innerHTML = '';
+    if(!agents || agents.length === 0){
+      agentsGrid.innerHTML = '<div class="col-12"><div class="alert alert-info">No agents found under your account.</div></div>';
+      return;
+    }
+
+    const frag = document.createDocumentFragment();
+    agents.forEach(a=>{
+      const col = document.createElement('div');
+      col.className = 'col-12 col-md-6 col-lg-4 agent-col';
+      const name = a.name || 'Agent';
+      const phone = a.phone || '';
+      const availableNum = parseMoney(a.available_num);
+      col.dataset.name = String(name).toLowerCase();
+      col.dataset.phone = String(phone).toLowerCase();
+      col.dataset.available = String(availableNum);
+      col.innerHTML = `
+        <div class="card agent-card shadow-sm h-100" data-agent-id="${a._id}">
+          <div class="card-body d-flex flex-column">
+            <div class="d-flex justify-content-between align-items-start">
+              <div>
+                <div class="fw-semibold">${name}</div>
+                <div class="meta">${phone || '--'}</div>
+              </div>
+              <span class="badge bg-light text-dark">All dates</span>
+            </div>
+
+            <div class="mt-3 muted">Available</div>
+            <div class="amt" id="bal-${a._id}">GHS ${a.available}</div>
+
+            <div class="mt-auto d-flex gap-2">
+              <button class="btn btn-outline-primary btn-sm withdraw-btn"
+                      data-agent-id="${a._id}"
+                      data-agent-name="${name.replace(/"/g,'&quot;')}"
+                      data-agent-phone="${(phone || '').replace(/"/g,'&quot;')}"
+                      data-available="${a.available}">
+                <i class="bi bi-cash-coin"></i> Withdraw
+              </button>
+
+              <button class="btn btn-outline-secondary btn-sm history-btn"
+                      data-agent-id="${a._id}"
+                      data-agent-name="${name.replace(/"/g,'&quot;')}">
+                <i class="bi bi-clock-history"></i> History
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+      frag.appendChild(col);
+    });
+    agentsGrid.appendChild(frag);
+    resortGrid();
+  }
+
+  async function loadSummary(){
+    try{
+      const resp = await fetch('/manager-close/api/summary', { headers: { 'X-Requested-With': 'XMLHttpRequest' }});
+      const data = await resp.json().catch(()=> ({}));
+      if(resp.ok && data && data.ok){
+        if(managerNameEl && data.manager_name){ managerNameEl.textContent = data.manager_name; }
+        if(todayTextEl && data.today){ todayTextEl.textContent = data.today; }
+
+        setMoney(grossTotalEl, data.gross_total, true);
+        setMoney(grossMonthEl, data.gross_month, true);
+        setMoney(grossWeekEl, data.gross_week, true);
+        setMoney(grossTodayEl, data.gross_today, true);
+
+        setMoney(colTotalEl, data.col_total, true);
+        setMoney(colMonthEl, data.col_month, true);
+        setMoney(colWeekEl, data.col_week, true);
+        setMoney(colTodayEl, data.col_today, true);
+
+        setMoney(expTotalEl, data.exp_total, true);
+        setMoney(expMonthEl, data.exp_month, true);
+        setMoney(expWeekEl, data.exp_week, true);
+        setMoney(expTodayEl, data.exp_today, true);
+
+        setMoney(closeAvailableTotalEl, data.close_available_total, true);
+        setMoney(uncloseTotalEl, data.unclose_total, true);
+      }else{
+        showAlert('danger', 'Failed to load summary data.');
+      }
+    }catch(err){
+      console.error(err);
+      showAlert('danger', 'Network error while loading summary.');
+    }finally{
+      document.body.classList.remove('loading-state');
+      requestAnimationFrame(()=> document.body.classList.add('page-ready'));
+    }
+  }
+
+  async function loadAgents(){
+    if(agentsLoaded){
+      agentsGrid.classList.remove('agents-hidden');
+      btnHideAgents.classList.remove('d-none');
+      return;
+    }
+
+    renderAgentSkeletons();
+    agentsGrid.classList.remove('agents-hidden');
+    btnLoadAgents.disabled = true;
+
+    try{
+      const resp = await fetch('/manager-close/api/agents', { headers: { 'X-Requested-With': 'XMLHttpRequest' }});
+      const data = await resp.json().catch(()=> ({}));
+      if(resp.ok && data && data.ok){
+        renderAgents(data.agents || []);
+        agentsLoaded = true;
+        btnLoadAgents.textContent = 'Agents Loaded';
+        btnHideAgents.classList.remove('d-none');
+        searchInput.disabled = false;
+        btnLoadAgents.disabled = false;
+      }else{
+        showAlert('danger', 'Failed to load agents.');
+        agentsGrid.classList.add('agents-hidden');
+        btnLoadAgents.disabled = false;
+      }
+    }catch(err){
+      console.error(err);
+      showAlert('danger', 'Network error while loading agents.');
+      agentsGrid.classList.add('agents-hidden');
+      btnLoadAgents.disabled = false;
+    }
+  }
+
+  btnLoadAgents?.addEventListener('click', ()=>{ loadAgents(); });
+  btnHideAgents?.addEventListener('click', ()=>{
+    if(!agentsLoaded) return;
+    agentsGrid.classList.add('agents-hidden');
+  });
+
+  // Open Withdraw modal (delegated)
+  agentsGrid.addEventListener('click', (e)=>{
+    const btn = e.target.closest('.withdraw-btn');
+    if(!btn) return;
+
+    const agentId = btn.dataset.agentId;
+    const agentName = btn.dataset.agentName || 'Agent';
+    const agentPhone = btn.dataset.agentPhone || '--';
+    const available = btn.dataset.available || '0.00';
+
+    mAgentId.value   = agentId;
+    mAgentName.textContent = agentName;
+    mAgentPhone.textContent= agentPhone;
+    mAgentAvail.textContent= available;
+    mAmount.value = '';
+    mNote.value   = '';
+
+    withdrawModal.show();
+    setTimeout(()=> mAmount.focus(), 200);
+  });
+
+  // Open Agent History modal (delegated)
+  agentsGrid.addEventListener('click', async (e)=>{
+    const btn = e.target.closest('.history-btn');
+    if(!btn) return;
+
+    const agentId = btn.dataset.agentId;
+    const agentName = btn.dataset.agentName || 'Agent';
+    hAgentName.textContent = agentName;
+
+    historyTbody.innerHTML = '';
+    historyEmpty.style.display = 'none';
+    historyWrap.style.display  = 'none';
+    historyCount.textContent = 'Loading...';
+
+    try{
+      const resp = await fetch(`/manager-close/agent/${agentId}/withdrawals`, { headers: { 'X-Requested-With': 'XMLHttpRequest' }});
+      const data = await resp.json().catch(()=> ({}));
+      if(resp.ok && data && data.ok){
+        const rows = data.withdrawals || [];
+        if(rows.length === 0){
+          historyEmpty.style.display = 'block';
+          historyWrap.style.display  = 'none';
+          historyCount.textContent = '0 records';
+        }else{
+          const frag = document.createDocumentFragment();
+          rows.forEach(r=>{
+            const tr = document.createElement('tr');
+            const amt = (typeof r.amount === 'number' ? r.amount : parseFloat(r.amount || '0')).toFixed(2);
+            tr.innerHTML = `
+              <td>${r.date || ''}</td>
+              <td>${r.time || ''}</td>
+              <td class="fw-semibold">GHS ${amt}</td>
+              <td>${(r.note || '').replace(/</g,'&lt;')}</td>
+              <td>${(r.by_manager_name || '')}</td>
+            `;
+            frag.appendChild(tr);
+          });
+          historyTbody.appendChild(frag);
+          historyWrap.style.display  = 'block';
+          historyEmpty.style.display = 'none';
+          historyCount.textContent = rows.length + ' record' + (rows.length===1?'':'s');
+        }
+      }else{
+        historyEmpty.style.display = 'block';
+        historyWrap.style.display  = 'none';
+        historyCount.textContent = '0 records';
+      }
+    }catch(err){
+      console.error(err);
+      historyEmpty.style.display = 'block';
+      historyWrap.style.display  = 'none';
+      historyCount.textContent = '0 records';
+    }
+
+    historyModal.show();
+  });
+
+  // Open Manager Withdrawals History modal
+  btnManagerHistory?.addEventListener('click', async ()=>{
+    managerHistoryTbody.innerHTML = '';
+    managerHistoryEmpty.style.display = 'none';
+    managerHistoryWrap.style.display  = 'none';
+    managerHistoryCount.textContent = 'Loading...';
+
+    try{
+      const resp = await fetch(`/manager-close/manager-withdrawals?limit=50`, { headers: { 'X-Requested-With': 'XMLHttpRequest' }});
+      const data = await resp.json().catch(()=> ({}));
+      if(resp.ok && data && data.ok){
+        const rows = data.withdrawals || [];
+        if(rows.length === 0){
+          managerHistoryEmpty.style.display = 'block';
+          managerHistoryWrap.style.display  = 'none';
+          managerHistoryCount.textContent = '0 records';
+        }else{
+          const frag = document.createDocumentFragment();
+          rows.forEach(r=>{
+            const tr = document.createElement('tr');
+            const amt = (typeof r.amount === 'number' ? r.amount : parseFloat(r.amount || '0')).toFixed(2);
+            const who = (r.by_name || '') + (r.by_role ? ' · ' + r.by_role : '');
+            tr.innerHTML = `
+              <td>${r.date || ''}</td>
+              <td>${r.time || ''}</td>
+              <td class="fw-semibold">GHS ${amt}</td>
+              <td>${(r.note || '').replace(/</g,'&lt;')}</td>
+              <td>${who}</td>
+            `;
+            frag.appendChild(tr);
+          });
+          managerHistoryTbody.appendChild(frag);
+          managerHistoryWrap.style.display  = 'block';
+          managerHistoryEmpty.style.display = 'none';
+          managerHistoryCount.textContent = rows.length + ' record' + (rows.length===1?'':'s');
+        }
+      }else{
+        managerHistoryEmpty.style.display = 'block';
+        managerHistoryWrap.style.display  = 'none';
+        managerHistoryCount.textContent = '0 records';
+      }
+    }catch(err){
+      console.error(err);
+      managerHistoryEmpty.style.display = 'block';
+      managerHistoryWrap.style.display  = 'none';
+      managerHistoryCount.textContent = '0 records';
+    }
+
+    managerHistoryModal.show();
+  });
+
+  // Max button -> set amount to available
+  document.getElementById('mMaxBtn').addEventListener('click', ()=>{
+    const raw = (mAgentAvail.textContent || '0').replaceAll(',', '').trim();
+    const num = parseFloat(raw);
+    if(!isNaN(num) && num > 0){
+      mAmount.value = num.toFixed(2);
+      mAmount.focus();
+    }
+  });
+
+  // Submit modal form
+  document.getElementById('withdrawForm').addEventListener('submit', async (e)=>{
+    e.preventDefault();
+
+    const agent_id = mAgentId.value;
+    const amount = parseFloat(mAmount.value || '0');
+
+    if(!agent_id){ showAlert('warning','No agent selected.'); return; }
+    if(!(amount > 0)){ showAlert('warning','Enter a positive amount.'); return; }
+
+    const fd = new FormData();
+    fd.set('agent_id', agent_id);
+    fd.set('amount', amount);
+    fd.set('note', mNote.value || '');
+
+    setLoading(true);
+    try{
+      const resp = await fetch("{{ url_for('manager_sales_close.manager_withdraw') }}", {
+        method: 'POST',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        body: fd
+      });
+      const data = await resp.json().catch(()=> ({}));
+
+      if(resp.ok && data && data.ok){
+        // Update agent card balance
+        const balEl = document.getElementById('bal-' + agent_id);
+        if(balEl && data.available){
+          setMoney(balEl, data.available, false);
+        }
+        // Update the card's data-available for sorting (numeric)
+        const col = agentsGrid
+          .querySelector(`.agent-col [data-agent-id="${agent_id}"]`)
+          ?.closest('.agent-col');
+        if(col && data.available){
+          const num = parseMoney(data.available);
+          col.dataset.available = String(num);
+        }
+        // Update button dataset available (so next modal open is accurate)
+        const btn = agentsGrid.querySelector(`.withdraw-btn[data-agent-id="${agent_id}"]`);
+        if(btn && data.available){ btn.dataset.available = data.available; }
+        // Update modal info too
+        if(data.available){ mAgentAvail.textContent = data.available; }
+
+        // Update row 2 cards
+        if(data.unclose_total && uncloseTotalEl){
+          setMoney(uncloseTotalEl, data.unclose_total, false);
+        }
+        if(data.close_available_total && closeAvailableTotalEl){
+          setMoney(closeAvailableTotalEl, data.close_available_total, false);
+        }
+
+        // Update gross cards
+        if(data.gross_total && grossTotalEl){
+          setMoney(grossTotalEl, data.gross_total, false);
+        }
+        if(data.gross_month && grossMonthEl){
+          setMoney(grossMonthEl, data.gross_month, false);
+        }
+        if(data.gross_week && grossWeekEl){
+          setMoney(grossWeekEl, data.gross_week, false);
+        }
+        if(data.gross_today && grossTodayEl){
+          setMoney(grossTodayEl, data.gross_today, false);
+        }
+
+        // Update collections per period
+        if(data.collections_total && colTotalEl){
+          setMoney(colTotalEl, data.collections_total, false);
+        }
+        if(data.collections_month && colMonthEl){
+          setMoney(colMonthEl, data.collections_month, false);
+        }
+        if(data.collections_week && colWeekEl){
+          setMoney(colWeekEl, data.collections_week, false);
+        }
+        if(data.collections_today && colTodayEl){
+          setMoney(colTodayEl, data.collections_today, false);
+        }
+
+        // Update expenses per period
+        if(data.expenses_total && expTotalEl){
+          setMoney(expTotalEl, data.expenses_total, false);
+        }
+        if(data.expenses_month && expMonthEl){
+          setMoney(expMonthEl, data.expenses_month, false);
+        }
+        if(data.expenses_week && expWeekEl){
+          setMoney(expWeekEl, data.expenses_week, false);
+        }
+        if(data.expenses_today && expTodayEl){
+          setMoney(expTodayEl, data.expenses_today, false);
+        }
+
+        // Resort grid after amounts change
+        resortGrid();
+
+        showAlert('success', data.message || 'Withdrawal successful.');
+        bootstrap.Modal.getInstance(withdrawModalEl)?.hide();
+      }else{
+        showAlert('danger', (data && data.message) || 'Withdrawal failed.');
+      }
+    }catch(err){
+      console.error(err);
+      showAlert('danger', 'Network error. Please try again.');
+    }finally{
+      setLoading(false);
+    }
+  });
+
+  // Initial DOM sort (should already be sorted by server, but ensure on load)
+  loadSummary();
+})();
+</script>
+</body>
+</html>

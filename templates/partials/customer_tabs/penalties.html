@@ -1,0 +1,29 @@
+<div class="card p-3">
+  <h6 class="mb-3">Penalty History</h6>
+  <div class="table-wrap">
+    <table class="table table-sm mb-0">
+      <thead>
+        <tr>
+          <th>Amount</th>
+          <th>Reason</th>
+          <th>Date</th>
+          <th>New End Date</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if penalties and penalties|length > 0 %}
+          {% for penalty in penalties %}
+          <tr>
+            <td>GHS {{ "{:,.2f}".format(penalty.amount or 0) }}</td>
+            <td>{{ penalty.reason }}</td>
+            <td>{{ penalty.date[:10] }}</td>
+            <td>{{ penalty.new_end_date or 'N/A' }}</td>
+          </tr>
+          {% endfor %}
+        {% else %}
+          <tr><td colspan="4" class="text-muted">No penalties recorded yet.</td></tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>

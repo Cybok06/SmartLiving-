@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Accounts Receivable -  Aging Report</title>
+
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&family=Material+Symbols+Outlined" rel="stylesheet"/>
+<link rel="icon"
+          href="https://imagedelivery.net/h9fmMoa1o2c2P55TcWJGOg/10283f28-b9a0-4100-b254-19a854386800/public"
+          type="image/png">
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            primary: "#16a34a",
+            navy: "#0f172a",
+            soft: "#f6f8f7",
+            "neutral-lightest": "#f9fafb",
+            "neutral-light": "#e5e7eb",
+            "neutral-dark": "#111827",
+          },
+          fontFamily: { display: ["Inter","system-ui","sans-serif"] },
+          borderRadius: { xl: "1.125rem" },
+          boxShadow: {
+            soft: "0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05)"
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    .material-symbols-outlined{
+      font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24
+    }
+    .sticky-footer{
+      position:sticky;
+      bottom:0;
+      z-index:10;
+    }
+  </style>
+</head>
+
+<body class="font-display bg-soft text-neutral-dark">
+  {% include 'accounting/sidebar.html' %}
+
+  <main class="acc-with-sidebar max-w-7xl mx-auto px-4 lg:px-8 py-6 lg:py-8">
+    <!-- Page Heading & Toolbar -->
+    <header class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+      <div>
+        <h1 class="text-navy text-3xl lg:text-4xl font-black tracking-tight">
+          Accounts Receivable Aging
+        </h1>
+        <p class="text-sm text-slate-500">
+          Breakdown of outstanding client balances by aging bucket (GH₵) as of {{ as_of_label }}.
+        </p>
+      </div>
+
+      <form method="get" class="flex flex-wrap items-center gap-3">
+        <div class="flex items-center gap-2">
+          <label class="flex items-center gap-2 h-11 px-3 rounded-xl border border-slate-300 bg-white text-sm font-medium">
+            <span class="material-symbols-outlined text-base text-slate-500">calendar_today</span>
+            <span class="hidden sm:inline">As of</span>
+            <input
+              type="date"
+              name="as_of"
+              value="{{ as_of_input or '' }}"
+              class="border-0 bg-transparent focus:ring-0 text-sm p-0"
+            />
+          </label>
+        </div>
+
+        <button
+          type="submit"
+          class="flex items-center justify-center gap-2 h-11 px-4 rounded-xl border border-slate-300 text-sm font-bold text-navy hover:bg-slate-50"
+        >
+          <span class="material-symbols-outlined text-base">refresh</span>
+          <span>Refresh</span>
+        </button>
+
+        <a
+          href="{{ export_url }}"
+          class="flex items-center justify-center gap-2 h-11 px-5 rounded-xl bg-primary text-white text-sm font-bold shadow-soft hover:bg-primary/90"
+        >
+          <span class="material-symbols-outlined text-lg">download</span>
+          <span class="truncate">Export CSV</span>
+        </a>
+      </form>
+    </header>
+
+    <!-- Stats -->
+    <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div class="flex flex-col gap-2 rounded-xl p-6 bg-white border border-neutral-light shadow-soft">
+        <p class="text-navy text-base font-medium">0-30 Days</p>
+        <p class="text-navy text-2xl lg:text-3xl font-bold tracking-tight">
+          GH₵{{ "%.2f"|format(stats.b0_30) }}
+        </p>
+        <p class="text-primary text-sm font-medium">
+          {{ "%.0f"|format(stats.pct_0_30) }}% of Total
+        </p>
+      </div>
+      <div class="flex flex-col gap-2 rounded-xl p-6 bg-white border border-neutral-light shadow-soft">
+        <p class="text-navy text-base font-medium">31-60 Days</p>
+        <p class="text-navy text-2xl lg:text-3xl font-bold tracking-tight">
+          GH₵{{ "%.2f"|format(stats.b31_60) }}
+        </p>
+        <p class="text-primary text-sm font-medium">
+          {{ "%.0f"|format(stats.pct_31_60) }}% of Total
+        </p>
+      </div>
+      <div class="flex flex-col gap-2 rounded-xl p-6 bg-white border border-neutral-light shadow-soft">
+        <p class="text-navy text-base font-medium">61-90 Days</p>
+        <p class="text-navy text-2xl lg:text-3xl font-bold tracking-tight">
+          GH₵{{ "%.2f"|format(stats.b61_90) }}
+        </p>
+        <p class="text-primary text-sm font-medium">
+          {{ "%.0f"|format(stats.pct_61_90) }}% of Total
+        </p>
+      </div>
+      <div class="flex flex-col gap-2 rounded-xl p-6 bg-white border border-neutral-light shadow-soft">
+        <p class="text-navy text-base font-medium">&gt; 90 Days</p>
+        <p class="text-navy text-2xl lg:text-3xl font-bold tracking-tight">
+          GH₵{{ "%.2f"|format(stats.b90_plus) }}
+        </p>
+        <p class="text-primary text-sm font-medium">
+          {{ "%.0f"|format(stats.pct_90_plus) }}% of Total
+        </p>
+      </div>
+    </section>
+
+    <!-- Table -->
+    <section class="overflow-hidden rounded-xl border border-neutral-light shadow-soft bg-white">
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm text-left">
+          <thead class="sticky top-0 bg-neutral-lightest">
+            <tr class="border-b border-neutral-light">
+              <th class="px-6 py-4 font-semibold text-navy">Client</th>
+              <th class="px-6 py-4 font-semibold text-navy text-right">0-30 Days</th>
+              <th class="px-6 py-4 font-semibold text-navy text-right">31-60 Days</th>
+              <th class="px-6 py-4 font-semibold text-navy text-right">61-90 Days</th>
+              <th class="px-6 py-4 font-semibold text-navy text-right">&gt; 90 Days</th>
+              <th class="px-6 py-4 font-semibold text-navy text-right">Total Due</th>
+            </tr>
+          </thead>
+          <tbody class="bg-white">
+            {% for r in rows %}
+            <tr class="border-b border-neutral-light hover:bg-primary/5">
+              <td class="px-6 py-3 font-medium text-primary whitespace-nowrap">
+                <a href="{{ url_for('ar_invoices.invoices', customer=r.customer_code) }}" class="hover:underline">
+                  {{ r.customer_name }}
+                </a>
+              </td>
+              <td class="px-6 py-3 text-neutral-dark/80 text-right whitespace-nowrap">
+                GH₵{{ "%.2f"|format(r.b0_30) }}
+              </td>
+              <td class="px-6 py-3 text-neutral-dark/80 text-right whitespace-nowrap">
+                GH₵{{ "%.2f"|format(r.b31_60) }}
+              </td>
+              <td class="px-6 py-3 text-neutral-dark/80 text-right whitespace-nowrap">
+                GH₵{{ "%.2f"|format(r.b61_90) }}
+              </td>
+              <td class="px-6 py-3 text-neutral-dark/80 text-right whitespace-nowrap">
+                GH₵{{ "%.2f"|format(r.b90_plus) }}
+              </td>
+              <td class="px-6 py-3 font-semibold text-navy text-right whitespace-nowrap">
+                GH₵{{ "%.2f"|format(r.total) }}
+              </td>
+            </tr>
+            {% else %}
+            <tr>
+              <td colspan="6" class="px-6 py-12 text-center text-slate-500">
+                No outstanding invoices to age as of {{ as_of_label }}.
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+          <tfoot class="sticky-footer bg-neutral-lightest border-t-2 border-neutral-light">
+            <tr>
+              <td class="px-6 py-4 font-bold text-navy text-base">Totals</td>
+              <td class="px-6 py-4 font-bold text-navy text-right text-base whitespace-nowrap">
+                GH₵{{ "%.2f"|format(stats.b0_30) }}
+              </td>
+              <td class="px-6 py-4 font-bold text-navy text-right text-base whitespace-nowrap">
+                GH₵{{ "%.2f"|format(stats.b31_60) }}
+              </td>
+              <td class="px-6 py-4 font-bold text-navy text-right text-base whitespace-nowrap">
+                GH₵{{ "%.2f"|format(stats.b61_90) }}
+              </td>
+              <td class="px-6 py-4 font-bold text-navy text-right text-base whitespace-nowrap">
+                GH₵{{ "%.2f"|format(stats.b90_plus) }}
+              </td>
+              <td class="px-6 py-4 font-black text-navy text-right text-base whitespace-nowrap">
+                GH₵{{ "%.2f"|format(stats.total) }}
+              </td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

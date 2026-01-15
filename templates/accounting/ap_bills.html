@@ -1,0 +1,949 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Accounts Payable -  Bills</title>
+
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+<link rel="icon"
+          href="https://imagedelivery.net/h9fmMoa1o2c2P55TcWJGOg/10283f28-b9a0-4100-b254-19a854386800/public"
+          type="image/png">
+  <script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            primary: "#0f172a",
+            accent: "#16a34a",
+            soft: "#f9fafb",
+            "neutral-border": "#e5e7eb",
+          },
+          fontFamily: { display: ["Inter", "system-ui", "sans-serif"] },
+          borderRadius: { xl: "1.125rem" },
+          boxShadow: { soft: "0 4px 6px -1px rgb(0 0 0 / 0.08), 0 2px 4px -2px rgb(0 0 0 / 0.06)" },
+        },
+      },
+    }
+  </script>
+
+  <style>
+    .material-symbols-outlined{ font-variation-settings: 'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24; }
+  </style>
+</head>
+
+<body class="min-h-full font-display bg-soft text-primary">
+  {% include 'accounting/sidebar.html' %}
+
+  <main class="acc-with-sidebar max-w-7xl mx-auto px-4 lg:px-8 py-6 lg:py-8">
+    <!-- Page heading & primary actions -->
+    <header class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-6">
+      <div class="space-y-1">
+        <h1 class="text-3xl lg:text-4xl font-black tracking-tight">Accounts Payable Bills</h1>
+        <p class="text-sm text-slate-500">Track vendor bills, due dates, payments, and top-ups (add amount).</p>
+      </div>
+
+      <div class="flex flex-wrap gap-3">
+        <button
+          type="button"
+          id="btnNewBill"
+          class="inline-flex items-center justify-center gap-2 h-11 px-5 rounded-full bg-accent text-white text-sm font-bold shadow-soft hover:bg-emerald-600 transition-colors"
+        >
+          <span class="material-symbols-outlined text-base">add</span>
+          <span class="truncate">New / Add Bill</span>
+        </button>
+
+        <a
+          href="{{ export_url if export_url is defined else '#' }}"
+          class="inline-flex items-center justify-center gap-2 h-11 px-5 rounded-full border border-primary text-primary text-sm font-semibold hover:bg-primary/5 transition-colors"
+        >
+          <span class="material-symbols-outlined text-base">description</span>
+          <span class="truncate">Export CSV</span>
+        </a>
+      </div>
+    </header>
+
+    {% if ap_summary %}
+    <section class="mb-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <article class="rounded-xl bg-white border border-neutral-border shadow-soft px-4 py-4">
+        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Total Outstanding</p>
+        <p class="mt-2 text-2xl font-black text-slate-900">GH₵ {{ "{:,.2f}".format(ap_summary.total_balance or 0) }}</p>
+        <p class="mt-1 text-xs text-slate-500">Total debt left to pay to all vendors.</p>
+      </article>
+
+      <article class="rounded-xl bg-white border border-neutral-border shadow-soft px-4 py-4">
+        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Total Paid</p>
+        <p class="mt-2 text-2xl font-black text-emerald-700">GH₵ {{ "{:,.2f}".format(ap_summary.total_paid or 0) }}</p>
+        <p class="mt-1 text-xs text-slate-500">Out of GH₵ {{ "{:,.2f}".format(ap_summary.total_amount or 0) }} billed.</p>
+      </article>
+
+      <article class="rounded-xl bg-white border border-neutral-border shadow-soft px-4 py-4 flex flex-col justify-between">
+        <div>
+          <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Coverage</p>
+          <p class="mt-2 text-2xl font-black text-slate-900">{{ ap_summary.paid_pct or 0 }}%</p>
+          <p class="mt-1 text-xs text-slate-500">Percentage of bills already paid.</p>
+        </div>
+        <div class="mt-3 h-2 rounded-full bg-slate-100 overflow-hidden">
+          <div class="h-full bg-accent js-ap-progress" data-percent="{{ (ap_summary.paid_pct or 0) | int }}"></div>
+        </div>
+      </article>
+    </section>
+    {% endif %}
+
+    <!-- Filters -->
+    <section class="mb-6 rounded-xl border border-neutral-border bg-white shadow-soft px-4 py-4 sm:px-5 sm:py-4">
+      <form class="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-4 items-center" method="get">
+        <div class="relative col-span-1 lg:col-span-4 w-full">
+          <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-base">search</span>
+          <input
+            type="text"
+            name="q"
+            value="{{ request.args.get('q','') }}"
+            placeholder="Search by vendor, bill no, reference…"
+            class="w-full h-10 pl-10 pr-3 rounded-full border border-neutral-border bg-slate-50 text-sm focus:border-accent focus:ring-accent"
+          />
+        </div>
+      </form>
+    </section>
+
+    <!-- Cards -->
+    <section class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+      {% for b in rows %}
+        {% set status = (b.status or '').lower() %}
+        {% if status == 'paid' %}
+          {% set badge = 'bg-emerald-100 text-emerald-800' %}
+        {% elif status in ['partial','part-paid'] %}
+          {% set badge = 'bg-blue-100 text-blue-800' %}
+        {% elif status in ['overdue','past-due'] %}
+          {% set badge = 'bg-rose-100 text-rose-800' %}
+        {% elif status in ['approved'] %}
+          {% set badge = 'bg-cyan-100 text-cyan-800' %}
+        {% elif status in ['draft'] %}
+          {% set badge = 'bg-slate-100 text-slate-800' %}
+        {% else %}
+          {% set badge = 'bg-slate-100 text-slate-700' %}
+        {% endif %}
+
+        <article class="rounded-xl border border-neutral-border bg-white shadow-soft p-4 hover:shadow-md transition-shadow">
+          <div class="flex items-start justify-between gap-3">
+            <div class="min-w-0">
+              <div class="flex items-center gap-2">
+                <p class="font-black text-slate-900 truncate">{{ b.no or b.bill_no }}</p>
+                <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold {{ badge }}">
+                  {{ (b.status or 'Draft')|title }}
+                </span>
+              </div>
+              <p class="mt-1 text-sm text-slate-600 truncate">{{ b.vendor_name or b.vendor }}</p>
+              {% if b.reference %}
+                <p class="mt-0.5 text-xs text-slate-400 truncate">Ref: {{ b.reference }}</p>
+              {% endif %}
+            </div>
+
+            <div class="text-right">
+              <p class="text-[11px] text-slate-500 font-semibold uppercase">Left to Pay</p>
+              <p class="text-xl font-black text-rose-700">
+                {{ b.currency_symbol or '' }}{{ "{:,.2f}".format(b.balance or 0) }}
+              </p>
+            </div>
+          </div>
+
+          <div class="mt-3 grid grid-cols-3 gap-3 text-xs">
+            <div class="rounded-lg bg-slate-50 border border-neutral-border px-3 py-2">
+              <p class="text-slate-500 font-semibold uppercase tracking-wide">Total</p>
+              <p class="mt-1 font-bold text-slate-900">{{ b.currency_symbol or '' }}{{ "{:,.2f}".format(b.amount or 0) }}</p>
+            </div>
+            <div class="rounded-lg bg-slate-50 border border-neutral-border px-3 py-2">
+              <p class="text-slate-500 font-semibold uppercase tracking-wide">Paid</p>
+              <p class="mt-1 font-bold text-emerald-700">{{ b.currency_symbol or '' }}{{ "{:,.2f}".format(b.paid or 0) }}</p>
+            </div>
+            <div class="rounded-lg bg-slate-50 border border-neutral-border px-3 py-2">
+              <p class="text-slate-500 font-semibold uppercase tracking-wide">Due</p>
+              <p class="mt-1 font-bold text-slate-900">{{ b.due_date or '--' }}</p>
+            </div>
+          </div>
+
+          <div class="mt-4 flex flex-wrap gap-2">
+            <!-- Add Payment -->
+            <button
+              type="button"
+              class="inline-flex items-center gap-2 h-9 px-4 rounded-full bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 js-open-pay-modal"
+              data-bill-id="{{ b._id }}"
+              data-vendor="{{ b.vendor_name or b.vendor }}"
+              data-total="{{ b.amount or 0 }}"
+              data-paid="{{ b.paid or 0 }}"
+              data-balance="{{ b.balance or 0 }}"
+              data-currency-symbol="{{ b.currency_symbol or '' }}"
+            >
+              <span class="material-symbols-outlined text-base">payments</span>
+              Add Payment
+            </button>
+
+            <!-- Add Amount -->
+            <button
+              type="button"
+              class="inline-flex items-center gap-2 h-9 px-4 rounded-full border border-slate-200 text-slate-800 text-sm font-semibold hover:bg-slate-50 js-open-add-amount"
+              data-bill-id="{{ b._id }}"
+              data-vendor="{{ b.vendor_name or b.vendor }}"
+              data-total="{{ b.amount or 0 }}"
+              data-paid="{{ b.paid or 0 }}"
+              data-balance="{{ b.balance or 0 }}"
+              data-currency-symbol="{{ b.currency_symbol or '' }}"
+            >
+              <span class="material-symbols-outlined text-base">add_circle</span>
+              Add Amount
+            </button>
+
+            <!-- Activity History (merged: Amount Added + Paid) -->
+            <button
+              type="button"
+              class="inline-flex items-center gap-2 h-9 px-4 rounded-full border border-slate-200 text-slate-700 text-sm font-semibold hover:bg-slate-50 js-open-amount-history"
+              data-bill-id="{{ b._id }}"
+              data-vendor="{{ b.vendor_name or b.vendor }}"
+              data-total="{{ b.amount or 0 }}"
+              data-paid="{{ b.paid or 0 }}"
+              data-balance="{{ b.balance or 0 }}"
+              data-currency-symbol="{{ b.currency_symbol or '' }}"
+            >
+              <span class="material-symbols-outlined text-base">history</span>
+              History
+            </button>
+          </div>
+        </article>
+
+      {% else %}
+        <div class="col-span-full rounded-xl border border-neutral-border bg-white shadow-soft px-6 py-12 text-center text-slate-500">
+          No bills found. Use "New / Add Bill" to add your first vendor bill.
+        </div>
+      {% endfor %}
+    </section>
+
+    <!-- Pagination -->
+    {% if pager and pager.pages > 1 %}
+      <nav class="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between text-sm text-slate-600">
+        <a
+          href="{{ pager.prev_url or '#' }}"
+          class="inline-flex items-center justify-center gap-1 px-3 py-2 rounded-lg border border-neutral-border
+          {{ 'pointer-events-none opacity-50' if not pager.prev_url else 'hover:bg-slate-50' }}"
+        >
+          <span class="material-symbols-outlined text-base">chevron_left</span>
+          <span>Previous</span>
+        </a>
+
+        <p class="text-center">Page {{ pager.page }} of {{ pager.pages }}</p>
+
+        <a
+          href="{{ pager.next_url or '#' }}"
+          class="inline-flex items-center justify-center gap-1 px-3 py-2 rounded-lg border border-neutral-border
+          {{ 'pointer-events-none opacity-50' if not pager.next_url else 'hover:bg-slate-50' }}"
+        >
+          <span>Next</span>
+          <span class="material-symbols-outlined text-base">chevron_right</span>
+        </a>
+      </nav>
+    {% endif %}
+  </main>
+
+  <!-- NEW BILL SLIDE-OVER -->
+  <div id="billModalBackdrop" class="fixed inset-0 z-40 hidden bg-slate-900/40 backdrop-blur-sm"></div>
+
+  <section id="billModal" class="fixed inset-y-0 right-0 z-50 hidden w-full max-w-lg bg-white shadow-xl border-l border-neutral-border flex flex-col" aria-hidden="true">
+    <header class="flex items-center justify-between px-5 py-4 border-b border-neutral-border">
+      <div>
+        <h2 class="text-base font-semibold text-slate-900">New Bill / Add to Existing</h2>
+        <p class="text-xs text-slate-500">
+          If Bill No already exists (and not paid), we will add amount to that bill.
+        </p>
+      </div>
+      <button type="button" id="billModalClose" class="inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 text-slate-500 hover:bg-slate-100 hover:text-slate-900">
+        <span class="material-symbols-outlined text-base">close</span>
+      </button>
+    </header>
+
+    <form id="billForm" class="flex-1 overflow-y-auto px-5 py-4 space-y-4">
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs font-medium text-slate-600 mb-1">Bill No (important)</label>
+          <input type="text" name="bill_no" placeholder="If exists, we top-up that bill" class="w-full rounded-lg border border-neutral-border px-3 py-2 text-sm focus:border-accent focus:ring-accent"/>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-600 mb-1">Reference</label>
+          <input type="text" name="reference" placeholder="Vendor ref / PO" class="w-full rounded-lg border border-neutral-border px-3 py-2 text-sm focus:border-accent focus:ring-accent"/>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs font-medium text-slate-600 mb-1">Vendor Name</label>
+          <input type="text" name="vendor_name" required placeholder="E.g. Global Supplies Ltd." class="w-full rounded-lg border border-neutral-border px-3 py-2 text-sm focus:border-accent focus:ring-accent"/>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-600 mb-1">Vendor Code</label>
+          <input type="text" name="vendor" placeholder="Optional code" class="w-full rounded-lg border border-neutral-border px-3 py-2 text-sm focus:border-accent focus:ring-accent"/>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs font-medium text-slate-600 mb-1">Bill Date</label>
+          <input type="date" name="bill_date" value="{{ today }}" required class="w-full rounded-lg border border-neutral-border px-3 py-2 text-sm focus:border-accent focus:ring-accent"/>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-600 mb-1">Due Date</label>
+          <input type="date" name="due_date" required class="w-full rounded-lg border border-neutral-border px-3 py-2 text-sm focus:border-accent focus:ring-accent"/>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div class="sm:col-span-2">
+          <label class="block text-xs font-medium text-slate-600 mb-1">Amount</label>
+          <input type="number" step="0.01" min="0" name="amount" required placeholder="0.00" class="w-full rounded-lg border border-neutral-border px-3 py-2 text-sm focus:border-accent focus:ring-accent"/>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-600 mb-1">Currency</label>
+          <select name="currency" class="w-full rounded-lg border border-neutral-border px-3 py-2 text-sm focus:border-accent focus:ring-accent">
+            <option value="GHS" selected>GHS (GH₵)</option>
+            <option value="USD">USD ($)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs font-medium text-slate-600 mb-1">Initial Status</label>
+          <select name="status" class="w-full rounded-lg border border-neutral-border px-3 py-2 text-sm focus:border-accent focus:ring-accent">
+            <option value="draft">Draft</option>
+            <option value="approved">Approved</option>
+            <option value="paid">Paid</option>
+            <option value="overdue">Overdue</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-600 mb-1">Already Paid (optional)</label>
+          <input type="number" step="0.01" min="0" name="paid" placeholder="0.00" class="w-full rounded-lg border border-neutral-border px-3 py-2 text-sm focus:border-accent focus:ring-accent"/>
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-xs font-medium text-slate-600 mb-1">Note (optional)</label>
+        <textarea name="notes" rows="3" placeholder="If adding to existing, this becomes the top-up note…" class="w-full rounded-lg border border-neutral-border px-3 py-2 text-sm focus:border-accent focus:ring-accent"></textarea>
+      </div>
+    </form>
+
+    <footer class="flex items-center justify-between gap-3 border-t border-neutral-border px-5 py-3 bg-slate-50">
+      <button type="button" id="billModalCancel" class="inline-flex items-center justify-center h-9 px-4 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100">Cancel</button>
+      <button type="submit" form="billForm" id="billFormSubmit" class="inline-flex items-center justify-center gap-2 h-9 px-5 rounded-full bg-accent text-white text-sm font-semibold shadow-soft hover:bg-emerald-600 disabled:opacity-60 disabled:cursor-not-allowed">
+        <span class="material-symbols-outlined text-base" id="billFormSpinner" style="display:none;">sync</span>
+        <span>Save</span>
+      </button>
+    </footer>
+  </section>
+
+  <!-- ADD PAYMENT MODAL -->
+  <div id="payModalBackdrop" class="fixed inset-0 z-40 hidden bg-slate-900/40 backdrop-blur-sm"></div>
+  <section id="payModal" class="fixed inset-y-0 right-0 z-50 hidden w-full max-w-md bg-white shadow-xl border-l border-neutral-border flex flex-col" aria-hidden="true">
+    <header class="flex items-center justify-between px-5 py-4 border-b border-neutral-border">
+      <div>
+        <h2 class="text-base font-semibold text-slate-900">Record Payment</h2>
+        <p class="text-xs text-slate-500">Update this bill and view payment history.</p>
+      </div>
+      <button type="button" id="payModalClose" class="inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 text-slate-500 hover:bg-slate-100 hover:text-slate-900">
+        <span class="material-symbols-outlined text-base">close</span>
+      </button>
+    </header>
+
+    <div class="flex-1 overflow-y-auto px-5 py-4 space-y-4">
+      <article class="rounded-xl border border-neutral-border bg-slate-50 px-4 py-3">
+        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Vendor</p>
+        <p class="mt-1 text-sm font-semibold text-slate-900" id="payVendorLabel">--</p>
+
+        <div class="mt-3 grid grid-cols-3 gap-3 text-xs">
+          <div>
+            <p class="text-slate-500 uppercase tracking-wide font-semibold">Total</p>
+            <p class="mt-1 text-slate-900 font-bold" id="paySummaryTotal">--</p>
+          </div>
+          <div>
+            <p class="text-slate-500 uppercase tracking-wide font-semibold">Paid</p>
+            <p class="mt-1 text-emerald-700 font-bold" id="paySummaryPaid">--</p>
+          </div>
+          <div>
+            <p class="text-slate-500 uppercase tracking-wide font-semibold">Balance</p>
+            <p class="mt-1 text-rose-700 font-bold" id="paySummaryBalance">--</p>
+          </div>
+        </div>
+      </article>
+
+      <!-- Payment timeline (ONLY payments, with badge + "order-style" process layout) -->
+      <article class="rounded-xl border border-neutral-border bg-white px-4 py-3">
+        <div class="flex items-center justify-between gap-2 mb-2">
+          <p class="text-xs font-semibold text-slate-600 uppercase tracking-wide">Payment Timeline</p>
+          <span class="text-[11px] text-slate-400">Latest first</span>
+        </div>
+
+        <div id="payHistoryList" class="mt-3">
+          <p class="text-slate-400 text-xs">No payments yet.</p>
+        </div>
+      </article>
+
+      <form id="payForm" class="space-y-3">
+        <input type="hidden" name="bill_id" id="payBillId"/>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-medium text-slate-600 mb-1">Payment Date</label>
+            <input type="date" name="payment_date" id="payDateInput" value="{{ today }}" required class="w-full rounded-lg border border-neutral-border px-3 py-2 text-sm focus:border-accent focus:ring-accent"/>
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-600 mb-1">Amount</label>
+            <input type="number" step="0.01" min="0" name="amount" id="payAmountInput" placeholder="0.00" required class="w-full rounded-lg border border-neutral-border px-3 py-2 text-sm focus:border-accent focus:ring-accent"/>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-medium text-slate-600 mb-1">Method</label>
+            <input type="text" name="method" id="payMethodInput" placeholder="Cash / Bank / Momo…" class="w-full rounded-lg border border-neutral-border px-3 py-2 text-sm focus:border-accent focus:ring-accent"/>
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-600 mb-1">Note (optional)</label>
+            <input type="text" name="note" id="payNoteInput" placeholder="Ref, cheque no, etc." class="w-full rounded-lg border border-neutral-border px-3 py-2 text-sm focus:border-accent focus:ring-accent"/>
+          </div>
+        </div>
+      </form>
+    </div>
+
+    <footer class="flex items-center justify-between gap-3 border-t border-neutral-border px-5 py-3 bg-slate-50">
+      <button type="button" id="payModalCancel" class="inline-flex items-center justify-center h-9 px-4 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100">Close</button>
+      <button type="submit" form="payForm" id="payFormSubmit" class="inline-flex items-center justify-center gap-2 h-9 px-5 rounded-full bg-accent text-white text-sm font-semibold shadow-soft hover:bg-emerald-600 disabled:opacity-60 disabled:cursor-not-allowed">
+        <span class="material-symbols-outlined text-base" id="payFormSpinner" style="display:none;">sync</span>
+        <span>Save Payment</span>
+      </button>
+    </footer>
+  </section>
+
+  <!-- ADD AMOUNT + HISTORY MODAL (now shows MERGED BILL ACTIVITY timeline: Amount Added + Payments) -->
+  <div id="amtModalBackdrop" class="fixed inset-0 z-40 hidden bg-slate-900/40 backdrop-blur-sm"></div>
+  <section id="amtModal" class="fixed inset-y-0 right-0 z-50 hidden w-full max-w-md bg-white shadow-xl border-l border-neutral-border flex flex-col" aria-hidden="true">
+    <header class="flex items-center justify-between px-5 py-4 border-b border-neutral-border">
+      <div>
+        <h2 class="text-base font-semibold text-slate-900" id="amtModalTitle">Bill History</h2>
+        <p class="text-xs text-slate-500" id="amtVendorLabel">--</p>
+      </div>
+      <button type="button" id="amtModalClose" class="inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 text-slate-500 hover:bg-slate-100 hover:text-slate-900">
+        <span class="material-symbols-outlined text-base">close</span>
+      </button>
+    </header>
+
+    <div class="flex-1 overflow-y-auto px-5 py-4 space-y-4">
+      <article class="rounded-xl border border-neutral-border bg-slate-50 px-4 py-3">
+        <div class="grid grid-cols-3 gap-3 text-xs">
+          <div>
+            <p class="text-slate-500 uppercase tracking-wide font-semibold">Total</p>
+            <p class="mt-1 text-slate-900 font-bold" id="amtSummaryTotal">--</p>
+          </div>
+          <div>
+            <p class="text-slate-500 uppercase tracking-wide font-semibold">Paid</p>
+            <p class="mt-1 text-emerald-700 font-bold" id="amtSummaryPaid">--</p>
+          </div>
+          <div>
+            <p class="text-slate-500 uppercase tracking-wide font-semibold">Balance</p>
+            <p class="mt-1 text-rose-700 font-bold" id="amtSummaryBalance">--</p>
+          </div>
+        </div>
+      </article>
+ <!-- Add Amount form -->
+      <form id="amtForm" class="space-y-3">
+        <input type="hidden" id="amtBillId" />
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-medium text-slate-600 mb-1">Date</label>
+            <input type="date" id="amtDate" value="{{ today }}" class="w-full rounded-lg border border-neutral-border px-3 py-2 text-sm focus:border-accent focus:ring-accent"/>
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-600 mb-1">Add Amount</label>
+            <input type="number" step="0.01" min="0" id="amtAmount" placeholder="0.00" class="w-full rounded-lg border border-neutral-border px-3 py-2 text-sm focus:border-accent focus:ring-accent"/>
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-600 mb-1">Note (optional)</label>
+          <input type="text" id="amtNote" placeholder="Why are you adding more? (extra items, charges, etc.)"
+                 class="w-full rounded-lg border border-neutral-border px-3 py-2 text-sm focus:border-accent focus:ring-accent"/>
+        </div>
+      </form>
+      <!-- Merged timeline -->
+      <article class="rounded-xl border border-neutral-border bg-white px-4 py-3">
+        <div class="flex items-center justify-between gap-2 mb-2">
+          <p class="text-xs font-semibold text-slate-600 uppercase tracking-wide">Bill Activity (Amount Added + Payments)</p>
+          <span class="text-[11px] text-slate-400">Latest first</span>
+        </div>
+        <div id="amtHistoryList" class="mt-3">
+          <p class="text-slate-400 text-xs">No history yet.</p>
+        </div>
+      </article>
+
+     
+    </div>
+
+    <footer class="flex items-center justify-between gap-3 border-t border-neutral-border px-5 py-3 bg-slate-50">
+      <button type="button" id="amtModalCancel" class="inline-flex items-center justify-center h-9 px-4 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100">Close</button>
+      <button type="button" id="amtSaveBtn" class="inline-flex items-center justify-center gap-2 h-9 px-5 rounded-full bg-accent text-white text-sm font-semibold shadow-soft hover:bg-emerald-600 disabled:opacity-60 disabled:cursor-not-allowed">
+        <span class="material-symbols-outlined text-base" id="amtSpinner" style="display:none;">sync</span>
+        <span>Save Amount</span>
+      </button>
+    </footer>
+  </section>
+
+  <script>
+    // progress bar
+    (function(){
+      document.querySelectorAll('.js-ap-progress').forEach(el => {
+        const raw = el.getAttribute('data-percent') || '0';
+        let pct = parseInt(raw, 10);
+        if (isNaN(pct)) pct = 0;
+        pct = Math.max(0, Math.min(pct, 100));
+        el.style.width = pct + '%';
+      });
+    })();
+
+    // ===== Shared timeline renderer (order-like process layout) =====
+    function __fmtMoney(sym, n){
+      return (sym || '') + Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+    function __safeDateStr(x){
+      return (x || '').toString();
+    }
+    function __toSortKey(d){
+      // Handles YYYY-MM-DD and ISO, fallback to 0
+      const s = (d || '').toString();
+      const dt = new Date(s);
+      if (!isNaN(dt.getTime())) return dt.getTime();
+      // if it's "YYYY-MM-DD"
+      const m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+      if (m){
+        const dt2 = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+        return dt2.getTime();
+      }
+      return 0;
+    }
+    function __badgeForKind(kind){
+      const k = (kind || '').toLowerCase();
+      if (k === 'payment') return { text:'PAID', cls:'bg-emerald-100 text-emerald-800 border-emerald-200', dot:'bg-emerald-600' };
+      if (k === 'topup')   return { text:'AMOUNT ADDED', cls:'bg-amber-100 text-amber-900 border-amber-200', dot:'bg-amber-500' };
+      return { text:'UPDATE', cls:'bg-slate-100 text-slate-700 border-slate-200', dot:'bg-slate-400' };
+    }
+
+    function renderTimeline(container, items, currencySymbol){
+      if(!container) return;
+
+      const list = (items || [])
+        .filter(x => x && (Number(x.amount || 0) !== 0 || x.kind))
+        .sort((a,b) => (__toSortKey(b.date) - __toSortKey(a.date)));
+
+      if(!list.length){
+        container.innerHTML = '<p class="text-slate-400 text-xs">No history yet.</p>';
+        return;
+      }
+
+      container.innerHTML = `
+        <div class="relative pl-6">
+          <div class="absolute left-2 top-1 bottom-1 w-px bg-slate-200"></div>
+          <div class="space-y-3">
+            ${list.map(ev => {
+              const b = __badgeForKind(ev.kind);
+              const amount = __fmtMoney(currencySymbol, ev.amount);
+              const date = __safeDateStr(ev.date);
+              const metaLeft = (ev.kind === 'payment') ? (ev.method || '--') : (ev.reason || ev.type || '--');
+              const note = (ev.note || '').trim();
+
+              return `
+                <div class="relative">
+                  <div class="absolute left-[-2px] top-3 h-3 w-3 rounded-full ${b.dot} ring-4 ring-white"></div>
+
+                  <div class="rounded-xl border border-neutral-border bg-white shadow-soft px-4 py-3">
+                    <div class="flex items-start justify-between gap-3">
+                      <div class="min-w-0">
+                        <div class="flex items-center gap-2">
+                          <span class="inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold border ${b.cls}">
+                            ${b.text}
+                          </span>
+                          <span class="text-[11px] text-slate-400">${date}</span>
+                        </div>
+
+                        <div class="mt-1 text-xs text-slate-500">
+                          ${metaLeft ? metaLeft : '--'}
+                        </div>
+
+                        ${note ? `<div class="mt-1 text-xs text-slate-600 italic">"${note.replace(/</g,'&lt;').replace(/>/g,'&gt;')}"</div>` : ``}
+                      </div>
+
+                      <div class="text-right shrink-0">
+                        <div class="text-[11px] text-slate-500 font-semibold uppercase">
+                          ${ev.kind === 'payment' ? 'Amount Paid' : 'Amount Added'}
+                        </div>
+                        <div class="text-sm font-black ${ev.kind === 'payment' ? 'text-emerald-700' : 'text-amber-800'}">
+                          ${amount}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        </div>
+      `;
+    }
+
+    // NEW BILL MODAL
+    (function(){
+      const newBillBtn    = document.getElementById('btnNewBill');
+      const billModal     = document.getElementById('billModal');
+      const billBackdrop  = document.getElementById('billModalBackdrop');
+      const billClose     = document.getElementById('billModalClose');
+      const billCancel    = document.getElementById('billModalCancel');
+      const billForm      = document.getElementById('billForm');
+      const billSubmit    = document.getElementById('billFormSubmit');
+      const billSpinner   = document.getElementById('billFormSpinner');
+
+      function openBillModal(){
+        billModal.classList.remove('hidden');
+        billBackdrop.classList.remove('hidden');
+        billModal.setAttribute('aria-hidden','false');
+      }
+      function closeBillModal(){
+        billModal.classList.add('hidden');
+        billBackdrop.classList.add('hidden');
+        billModal.setAttribute('aria-hidden','true');
+      }
+
+      newBillBtn?.addEventListener('click', openBillModal);
+      billClose?.addEventListener('click', closeBillModal);
+      billCancel?.addEventListener('click', closeBillModal);
+      billBackdrop?.addEventListener('click', closeBillModal);
+      window.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') closeBillModal(); });
+
+      billForm?.addEventListener('submit', async (e)=>{
+        e.preventDefault();
+        billSubmit.disabled = true;
+        if (billSpinner) billSpinner.style.display = 'inline-block';
+
+        const formData = new FormData(billForm);
+
+        try{
+          const resp = await fetch("{{ url_for('ap_bills.quick_create') }}", { method: "POST", body: formData });
+          const data = await resp.json().catch(()=>({}));
+
+          if(!resp.ok || !data.ok){
+            alert(data.message || "Failed to save bill.");
+          }else{
+            closeBillModal();
+            window.location.reload();
+          }
+        }catch(err){
+          console.error(err);
+          alert("An error occurred while saving the bill.");
+        }finally{
+          billSubmit.disabled = false;
+          if (billSpinner) billSpinner.style.display = 'none';
+        }
+      });
+    })();
+
+    // PAYMENTS MODAL (timeline shows ONLY payments with badge)
+    (function(){
+      const payModal       = document.getElementById('payModal');
+      const payBackdrop    = document.getElementById('payModalBackdrop');
+      const payClose       = document.getElementById('payModalClose');
+      const payCancel      = document.getElementById('payModalCancel');
+      const payForm        = document.getElementById('payForm');
+      const paySubmit      = document.getElementById('payFormSubmit');
+      const paySpinner     = document.getElementById('payFormSpinner');
+
+      const payVendorLabel   = document.getElementById('payVendorLabel');
+      const paySummaryTotal  = document.getElementById('paySummaryTotal');
+      const paySummaryPaid   = document.getElementById('paySummaryPaid');
+      const paySummaryBalance= document.getElementById('paySummaryBalance');
+      const payBillIdInput   = document.getElementById('payBillId');
+      const payAmountInput   = document.getElementById('payAmountInput');
+      const payHistoryList   = document.getElementById('payHistoryList');
+
+      const payEndpointBase = "{{ url_for('ap_bills.add_payment', bill_id='BILL_ID') }}";
+      const paymentsEndpointBase = "{{ url_for('ap_bills.get_payments', bill_id='BILL_ID') }}";
+
+      let currentBillId = null;
+      let currentCurrencySymbol = '';
+
+      function fmt(n){
+        return Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      }
+      function openPayModal(){
+        payModal.classList.remove('hidden');
+        payBackdrop.classList.remove('hidden');
+        payModal.setAttribute('aria-hidden','false');
+      }
+      function closePayModal(){
+        payModal.classList.add('hidden');
+        payBackdrop.classList.add('hidden');
+        payModal.setAttribute('aria-hidden','true');
+        currentBillId = null;
+        currentCurrencySymbol = '';
+        payForm?.reset();
+      }
+
+      payClose?.addEventListener('click', closePayModal);
+      payCancel?.addEventListener('click', closePayModal);
+      payBackdrop?.addEventListener('click', closePayModal);
+      window.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') closePayModal(); });
+
+      async function loadPaymentsTimeline(billId){
+        if(!payHistoryList) return;
+        payHistoryList.innerHTML = '<p class="text-slate-400 text-xs">Loading…</p>';
+
+        try{
+          const url = paymentsEndpointBase.replace('BILL_ID', billId);
+          const resp = await fetch(url);
+          const data = await resp.json().catch(()=>({}));
+
+          if(!resp.ok || !data.ok){
+            payHistoryList.innerHTML = '<p class="text-slate-400 text-xs">No history available.</p>';
+            return;
+          }
+
+          const payments = (data.payments || []).map(p => ({
+            kind: 'payment',
+            amount: Number(p.amount || 0),
+            method: (p.method || ''),
+            note: (p.note || ''),
+            date: (p.date || '')
+          }));
+
+          renderTimeline(payHistoryList, payments, currentCurrencySymbol);
+        }catch(err){
+          console.error(err);
+          payHistoryList.innerHTML = '<p class="text-slate-400 text-xs">Error loading history.</p>';
+        }
+      }
+
+      document.querySelectorAll('.js-open-pay-modal').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const billId = btn.getAttribute('data-bill-id');
+          const vendor = btn.getAttribute('data-vendor') || 'Vendor';
+          const total  = parseFloat(btn.getAttribute('data-total') || '0');
+          const paid   = parseFloat(btn.getAttribute('data-paid') || '0');
+          const balance= parseFloat(btn.getAttribute('data-balance') || '0');
+          const sym    = btn.getAttribute('data-currency-symbol') || '';
+
+          currentBillId = billId;
+          currentCurrencySymbol = sym;
+
+          payBillIdInput.value = billId;
+          payVendorLabel.textContent = vendor;
+          paySummaryTotal.textContent   = sym + fmt(total);
+          paySummaryPaid.textContent    = sym + fmt(paid);
+          paySummaryBalance.textContent = sym + fmt(balance);
+
+          payAmountInput.value = balance > 0 ? balance.toFixed(2) : '';
+          openPayModal();
+          loadPaymentsTimeline(billId);
+        });
+      });
+
+      payForm?.addEventListener('submit', async (e)=>{
+        e.preventDefault();
+        if(!currentBillId) return;
+
+        paySubmit.disabled = true;
+        if (paySpinner) paySpinner.style.display = 'inline-block';
+
+        const formData = new FormData(payForm);
+
+        try{
+          const url = payEndpointBase.replace('BILL_ID', currentBillId);
+          const resp = await fetch(url, { method: 'POST', body: formData });
+          const data = await resp.json().catch(()=>({}));
+
+          if(!resp.ok || !data.ok){
+            alert(data.message || 'Failed to save payment.');
+          }else{
+            closePayModal();
+            window.location.reload();
+          }
+        }catch(err){
+          console.error(err);
+          alert('An error occurred while saving the payment.');
+        }finally{
+          paySubmit.disabled = false;
+          if (paySpinner) paySpinner.style.display = 'none';
+        }
+      });
+    })();
+
+    // ADD AMOUNT + MERGED BILL HISTORY (Amount Added + Payments) -- fixes "mixed" history by labeling & separating in timeline
+    (function(){
+      const amtModal       = document.getElementById('amtModal');
+      const amtBackdrop    = document.getElementById('amtModalBackdrop');
+      const amtClose       = document.getElementById('amtModalClose');
+      const amtCancel      = document.getElementById('amtModalCancel');
+
+      const amtVendorLabel = document.getElementById('amtVendorLabel');
+      const amtSummaryTotal= document.getElementById('amtSummaryTotal');
+      const amtSummaryPaid = document.getElementById('amtSummaryPaid');
+      const amtSummaryBal  = document.getElementById('amtSummaryBalance');
+      const amtHistoryList = document.getElementById('amtHistoryList');
+
+      const amtBillId      = document.getElementById('amtBillId');
+      const amtDate        = document.getElementById('amtDate');
+      const amtAmount      = document.getElementById('amtAmount');
+      const amtNote        = document.getElementById('amtNote');
+      const amtSaveBtn     = document.getElementById('amtSaveBtn');
+      const amtSpinner     = document.getElementById('amtSpinner');
+
+      const addAmountEndpointBase = "{{ url_for('ap_bills.add_amount', bill_id='BILL_ID') }}";
+      const amountHistoryEndpointBase = "{{ url_for('ap_bills.get_amount_history', bill_id='BILL_ID') }}";
+      const paymentsEndpointBase = "{{ url_for('ap_bills.get_payments', bill_id='BILL_ID') }}";
+
+      let currentBillId = null;
+      let currentCurrencySymbol = '';
+
+      function fmt(n){
+        return Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      }
+      function openAmtModal(){
+        amtModal.classList.remove('hidden');
+        amtBackdrop.classList.remove('hidden');
+        amtModal.setAttribute('aria-hidden','false');
+      }
+      function closeAmtModal(){
+        amtModal.classList.add('hidden');
+        amtBackdrop.classList.add('hidden');
+        amtModal.setAttribute('aria-hidden','true');
+        currentBillId = null;
+        currentCurrencySymbol = '';
+        if (amtAmount) amtAmount.value = '';
+        if (amtNote) amtNote.value = '';
+      }
+
+      amtClose?.addEventListener('click', closeAmtModal);
+      amtCancel?.addEventListener('click', closeAmtModal);
+      amtBackdrop?.addEventListener('click', closeAmtModal);
+      window.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') closeAmtModal(); });
+
+      async function loadMergedActivity(billId){
+        if(!amtHistoryList) return;
+        amtHistoryList.innerHTML = '<p class="text-slate-400 text-xs">Loading…</p>';
+
+        try{
+          const urlTopups = amountHistoryEndpointBase.replace('BILL_ID', billId);
+          const urlPays   = paymentsEndpointBase.replace('BILL_ID', billId);
+
+          const [rTopups, rPays] = await Promise.allSettled([fetch(urlTopups), fetch(urlPays)]);
+
+          let topups = [];
+          let pays = [];
+
+          if (rTopups.status === 'fulfilled'){
+            const resp = rTopups.value;
+            const data = await resp.json().catch(()=>({}));
+            if (resp.ok && data.ok){
+              topups = (data.items || []).map(it => ({
+                kind: 'topup',
+                amount: Number(it.amount || 0),
+                note: (it.note || ''),
+                reason: (it.type || 'Top-up'),
+                date: (it.date || '')
+              }));
+            }
+          }
+
+          if (rPays.status === 'fulfilled'){
+            const resp = rPays.value;
+            const data = await resp.json().catch(()=>({}));
+            if (resp.ok && data.ok){
+              pays = (data.payments || []).map(p => ({
+                kind: 'payment',
+                amount: Number(p.amount || 0),
+                method: (p.method || ''),
+                note: (p.note || ''),
+                date: (p.date || '')
+              }));
+            }
+          }
+
+          const merged = [...topups, ...pays];
+          renderTimeline(amtHistoryList, merged, currentCurrencySymbol);
+        }catch(err){
+          console.error(err);
+          amtHistoryList.innerHTML = '<p class="text-slate-400 text-xs">Error loading history.</p>';
+        }
+      }
+
+      function primeFromButton(btn){
+        const billId = btn.getAttribute('data-bill-id');
+        const vendor = btn.getAttribute('data-vendor') || 'Vendor';
+        const total  = parseFloat(btn.getAttribute('data-total') || '0');
+        const paid   = parseFloat(btn.getAttribute('data-paid') || '0');
+        const bal    = parseFloat(btn.getAttribute('data-balance') || '0');
+        const sym    = btn.getAttribute('data-currency-symbol') || '';
+
+        currentBillId = billId;
+        currentCurrencySymbol = sym;
+
+        amtBillId.value = billId;
+        amtVendorLabel.textContent = vendor;
+        amtSummaryTotal.textContent = sym + fmt(total);
+        amtSummaryPaid.textContent  = sym + fmt(paid);
+        amtSummaryBal.textContent   = sym + fmt(bal);
+
+        loadMergedActivity(billId);
+        openAmtModal();
+      }
+
+      document.querySelectorAll('.js-open-add-amount').forEach(btn => {
+        btn.addEventListener('click', () => primeFromButton(btn));
+      });
+      document.querySelectorAll('.js-open-amount-history').forEach(btn => {
+        btn.addEventListener('click', () => primeFromButton(btn));
+      });
+
+      amtSaveBtn?.addEventListener('click', async ()=>{
+        if(!currentBillId) return;
+
+        const val = parseFloat(amtAmount.value || '0');
+        if(!(val > 0)){
+          alert('Enter an amount greater than zero.');
+          return;
+        }
+
+        amtSaveBtn.disabled = true;
+        if(amtSpinner) amtSpinner.style.display = 'inline-block';
+
+        const fd = new FormData();
+        fd.append('amount', String(val));
+        fd.append('note', (amtNote.value || '').trim());
+        fd.append('date', (amtDate.value || '').trim());
+
+        try{
+          const url = addAmountEndpointBase.replace('BILL_ID', currentBillId);
+          const resp = await fetch(url, { method:'POST', body: fd });
+          const data = await resp.json().catch(()=>({}));
+
+          if(!resp.ok || !data.ok){
+            alert(data.message || 'Failed to save amount.');
+            return;
+          }
+
+          closeAmtModal();
+          window.location.reload();
+        }catch(err){
+          console.error(err);
+          alert('An error occurred while saving the amount.');
+        }finally{
+          amtSaveBtn.disabled = false;
+          if(amtSpinner) amtSpinner.style.display = 'none';
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

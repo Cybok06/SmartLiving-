@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Executive - Customer List</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <!-- Bootstrap & Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+  <link rel="icon"
+          href="https://imagedelivery.net/h9fmMoa1o2c2P55TcWJGOg/10283f28-b9a0-4100-b254-19a854386800/public"
+          type="image/png">
+
+  <style>
+    body {
+      background-color: #f9f9f9;
+      padding: 20px;
+    }
+
+    .card {
+      border-radius: 12px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+      transition: transform 0.2s ease-in-out;
+      background: #fff;
+    }
+
+    .card:hover {
+      transform: translateY(-4px);
+    }
+
+    .card img {
+      width: 80px;
+      height: 80px;
+      object-fit: cover;
+      border-radius: 50%;
+      margin: 10px auto;
+    }
+
+    .status-badge {
+      font-size: 0.75rem;
+      padding: 4px 10px;
+      border-radius: 20px;
+      display: inline-block;
+    }
+
+    .status-Active {
+      background-color: #d1e7dd;
+      color: #0f5132;
+    }
+
+    .status-Overdue {
+      background-color: #f8d7da;
+      color: #842029;
+    }
+
+    .status-Not\ Active {
+      background-color: #e2e3e5;
+      color: #41464b;
+    }
+
+    .search-bar {
+      max-width: 500px;
+      margin-bottom: 30px;
+    }
+
+    .pagination {
+      justify-content: center;
+    }
+
+    @media (max-width: 768px) {
+      .card h5 {
+        font-size: 1rem;
+      }
+      .card p {
+        font-size: 0.9rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  {% include 'executive_sidebar.html' %}
+
+  <div class="container">
+    <h3 class="fw-bold text-primary mb-4">👥 Executive: Customer List</h3>
+
+    <form method="get" class="search-bar mx-auto">
+      <div class="input-group">
+        <input type="text" name="search" value="{{ search_term }}" placeholder="Search by name or phone..." class="form-control" />
+        <button class="btn btn-outline-secondary" type="submit"><i class="bi bi-search"></i></button>
+      </div>
+    </form>
+
+    <div class="row">
+      {% for customer in customers %}
+      <div class="col-xl-3 col-md-4 col-sm-6 mb-4">
+        <div class="card p-3 text-center">
+          <img src="{{ customer.image_url }}" alt="{{ customer.name }}">
+          <h5 class="fw-bold mb-0">{{ customer.name }}</h5>
+          <p class="text-muted mb-1">{{ customer.phone }}</p>
+          <span class="status-badge status-{{ customer.status | replace(' ', '\\ ') }}">{{ customer.status }}</span>
+          <hr>
+          <a href="{{ url_for('executive_customers.executive_customer_profile', customer_id=customer.id) }}"
+             class="btn btn-sm btn-outline-primary">
+            View Profile
+          </a>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    {% if total_pages > 1 %}
+    <nav aria-label="Customer pagination">
+      <ul class="pagination mt-4">
+        {% if current_page > 1 %}
+        <li class="page-item">
+          <a class="page-link" href="{{ url_for('executive_customers.executive_customers_list', page=current_page-1, search=search_term) }}">« Prev</a>
+        </li>
+        {% endif %}
+
+        {% for page_num in range(1, total_pages + 1) %}
+        <li class="page-item {% if page_num == current_page %}active{% endif %}">
+          <a class="page-link" href="{{ url_for('executive_customers.executive_customers_list', page=page_num, search=search_term) }}">{{ page_num }}</a>
+        </li>
+        {% endfor %}
+
+        {% if current_page < total_pages %}
+        <li class="page-item">
+          <a class="page-link" href="{{ url_for('executive_customers.executive_customers_list', page=current_page+1, search=search_term) }}">Next »</a>
+        </li>
+        {% endif %}
+      </ul>
+    </nav>
+    {% endif %}
+  </div>
+    {% include 'app_footer.html' %}
+
+</body>
+</html>

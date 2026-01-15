@@ -1,0 +1,48 @@
+<div class="card p-3">
+  <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+    <div>
+      <div class="fw-semibold">Withdrawal History</div>
+      <div class="small muted">
+        {{ withdrawals|length }} withdrawals - GHS {{ "{:,.2f}".format(withdrawals|sum(attribute='amount') or 0) }}
+        {% if showing_limit %}<span class="ms-1">(Showing latest 300)</span>{% endif %}
+      </div>
+    </div>
+    <div class="row g-2 filter-row">
+      <div class="col-12 col-md">
+        <input class="form-control form-control-sm" id="withFilterDate" placeholder="Filter by date (YYYY-MM-DD)">
+      </div>
+      <div class="col-6 col-md">
+        <input class="form-control form-control-sm" id="withFilterMethod" placeholder="Method">
+      </div>
+      <div class="col-6 col-md">
+        <input class="form-control form-control-sm" id="withFilterNote" placeholder="Note">
+      </div>
+    </div>
+  </div>
+  <div class="table-wrap">
+    <table class="table table-sm mb-0">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Amount</th>
+          <th>Method</th>
+          <th>Note</th>
+        </tr>
+      </thead>
+      <tbody id="withdrawalsBody">
+        {% if withdrawals and withdrawals|length > 0 %}
+          {% for withdrawal in withdrawals %}
+          <tr data-date="{{ withdrawal.date[:10] }}" data-method="{{ withdrawal.method or '' }}" data-note="{{ withdrawal.note or '' }}">
+            <td>{{ withdrawal.date[:10] }}</td>
+            <td>GHS {{ "{:,.2f}".format(withdrawal.amount or 0) }}</td>
+            <td>{{ withdrawal.method }}</td>
+            <td>{{ withdrawal.note or "N/A" }}</td>
+          </tr>
+          {% endfor %}
+        {% else %}
+          <tr><td colspan="4" class="text-muted">No withdrawals recorded yet.</td></tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>

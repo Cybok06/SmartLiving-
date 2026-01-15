@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Login -  SMARTLIVING EMPORIUM PLUS (Flux360)</title>
+  <meta name="theme-color" content="#0d6efd" />
+
+  <!-- Favicon (SmartLiving) -->
+  <link rel="icon"
+        href="https://imagedelivery.net/h9fmMoa1o2c2P55TcWJGOg/10283f28-b9a0-4100-b254-19a854386800/public"
+        type="image/png"/>
+
+  <!-- Icons -->
+  <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+  <!-- Font -->
+  <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Raleway:wght@400;500;600;700;800;900&display=swap">
+
+  <style>
+    :root{
+      /* Brand */
+      --ax-blue:#0066cc;
+      --ax-blue-dark:#004a99;
+      --ax-orange:#f58634;
+      --sl-purple:#7c3aed;
+
+      /* Neutrals */
+      --ink:#0f172a;
+      --muted:#64748b;
+      --card:rgba(255,255,255,.88);
+
+      /* Error */
+      --danger-bg:#fee2e2;
+      --danger-ink:#991b1b;
+      --danger-bd:#fecaca;
+
+      /* Success */
+      --ok-bg: rgba(16,185,129,.12);
+      --ok-ink: #065f46;
+    }
+
+    *{ box-sizing:border-box; margin:0; padding:0; font-family:"Raleway",system-ui,-apple-system,BlinkMacSystemFont,sans-serif; }
+
+    body{
+      min-height:100vh;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:22px 16px;
+      color:var(--ink);
+      background:
+        radial-gradient(circle at 16% 16%, rgba(245,158,11,.12), transparent 55%),
+        radial-gradient(circle at 86% 20%, rgba(17,102,204,.14), transparent 55%),
+        radial-gradient(circle at 80% 86%, rgba(124,58,237,.12), transparent 55%),
+        linear-gradient(180deg, #f8fafc, #eef2ff);
+      background-attachment: fixed;
+    }
+
+    body::before{
+      content:"";
+      position:fixed;
+      inset:0;
+      background: linear-gradient(180deg, rgba(255,255,255,.55), rgba(255,255,255,.25));
+      pointer-events:none;
+      z-index:0;
+    }
+
+    .card{
+      position:relative;
+      width:100%;
+      max-width:520px;
+      border-radius:22px;
+      background:var(--card);
+      box-shadow: 0 26px 60px rgba(15,23,42,.16), 0 0 0 1px rgba(148,163,184,.24);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      overflow:hidden;
+      animation: pop .65s cubic-bezier(.22,.61,.36,1) both;
+      z-index: 2;
+    }
+
+    .card::before{
+      content:"";
+      position:absolute;
+      left:0; right:0; top:0;
+      height:7px;
+      background: linear-gradient(90deg, var(--ax-orange), var(--ax-blue), var(--sl-purple));
+      opacity:.95;
+    }
+
+    @keyframes pop{
+      0%{ opacity:0; transform: translateY(10px) scale(.99); }
+      100%{ opacity:1; transform: translateY(0) scale(1); }
+    }
+
+    .inner{
+      padding:28px 30px 26px;
+      background: linear-gradient(180deg, rgba(255,255,255,.82), rgba(255,255,255,.94));
+    }
+    @media (max-width:520px){ .inner{ padding:22px 18px; } }
+
+    /* Header */
+    .brand{
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      text-align:center;
+      gap:10px;
+      margin-bottom:14px;
+    }
+
+    .logo{
+      width:78px;height:78px;
+      border-radius:20px;
+      border:1px solid rgba(148,163,184,.28);
+      background:#fff;
+      overflow:hidden;
+      box-shadow: 0 10px 24px rgba(15,23,42,.08);
+      display:flex;align-items:center;justify-content:center;
+    }
+    .logo img{ width:100%; height:100%; object-fit:cover; }
+
+    .brand-name{
+      font-weight:900;
+      letter-spacing:.06em;
+      text-transform:uppercase;
+      font-size:16px;
+      color:var(--ink);
+      line-height:1.1;
+    }
+
+    .powered{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:6px 10px;
+      border-radius:999px;
+      border:1px solid rgba(0,102,204,.18);
+      background: rgba(255,255,255,.72);
+      font-size:11px;
+      font-weight:900;
+      letter-spacing:.10em;
+      text-transform:uppercase;
+      color:var(--ax-blue-dark);
+      white-space:nowrap;
+    }
+    .powered i{ color:var(--sl-purple); }
+
+    .title{
+      font-size:22px;
+      font-weight:900;
+      text-align:center;
+      margin: 6px 0 6px;
+    }
+    .sub{
+      font-size:13px;
+      color:var(--muted);
+      text-align:center;
+      line-height:1.55;
+      margin-bottom:14px;
+    }
+
+    /* Flash */
+    .popup-error{
+      margin: 0 0 14px;
+      border-radius:12px;
+      padding:10px 12px;
+      font-size:12px;
+      display:flex;
+      align-items:flex-start;
+      gap:10px;
+      background:var(--danger-bg);
+      color:var(--danger-ink);
+      border:1px solid var(--danger-bd);
+    }
+    .popup-error i{ margin-top:2px; font-size:14px; }
+
+    /* Form */
+    .field{ margin-bottom:14px; }
+    .label{
+      font-size:11px;
+      font-weight:900;
+      letter-spacing:.12em;
+      text-transform:uppercase;
+      color: rgba(71,85,105,.85);
+      margin-bottom:6px;
+      display:block;
+    }
+
+    .inputwrap{ position:relative; }
+    .inputwrap i{
+      position:absolute; left:12px; top:50%;
+      transform: translateY(-50%);
+      font-size:13px;
+      color: rgba(100,116,139,.75);
+      pointer-events:none;
+    }
+
+    .input{
+      width:100%;
+      border-radius:999px;
+      border:1px solid rgba(148,163,184,.55);
+      background: rgba(249,250,251,.92);
+      padding: 11px 14px 11px 34px;
+      font-size:14px;
+      outline:none;
+      transition: box-shadow .16s ease, border-color .16s ease, transform .08s ease, background .16s ease;
+    }
+    .input:focus{
+      border-color: rgba(0,102,204,.85);
+      background:#fff;
+      box-shadow: 0 0 0 1px rgba(0,102,204,.45), 0 0 0 6px rgba(124,58,237,.14);
+      transform: translateY(-.5px);
+    }
+
+    .row{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      margin: 10px 0 14px;
+      font-size:11px;
+      color: rgba(71,85,105,.85);
+      flex-wrap:wrap;
+    }
+    .remember{
+      display:flex; align-items:center; gap:7px;
+    }
+    .remember input{ width:14px; height:14px; accent-color: var(--ax-blue); cursor:pointer; }
+
+    .forgot{
+      text-decoration:none;
+      font-weight:900;
+      color: var(--ax-blue-dark);
+    }
+    .forgot:hover{ text-decoration:underline; }
+
+    /* Footer actions: location icon + login button */
+    .actions{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      margin-top: 10px;
+    }
+
+    .loc-icon{
+      width:44px;
+      height:44px;
+      border-radius:999px;
+      border:1px solid rgba(148,163,184,.55);
+      background: rgba(255,255,255,.92);
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      cursor:pointer;
+      user-select:none;
+      transition: transform .10s ease, box-shadow .18s ease, background .12s ease, border-color .12s ease;
+      flex: 0 0 auto;
+    }
+    .loc-icon i{ color: rgba(71,85,105,.90); font-size: 16px; }
+
+    /* States */
+    .loc-icon.ok{
+      border-color: rgba(16,185,129,.35);
+      background: rgba(16,185,129,.12);
+    }
+    .loc-icon.ok i{ color: var(--ok-ink); }
+
+    .loc-icon.bad{
+      border-color: rgba(239,68,68,.30);
+      background: rgba(239,68,68,.10);
+    }
+    .loc-icon.bad i{ color: var(--danger-ink); }
+
+    .loc-icon:hover{ transform: translateY(-1px); box-shadow: 0 12px 30px rgba(15,23,42,.10); }
+    .loc-icon:active{ transform: translateY(0); box-shadow:none; }
+
+    .btn{
+      width:100%;
+      border:none;
+      cursor:pointer;
+      border-radius:999px;
+      padding: 12px 18px;
+      font-size:14px;
+      font-weight:900;
+      letter-spacing:.06em;
+      text-transform:uppercase;
+      color:#fff;
+      background: linear-gradient(90deg, var(--ax-orange), var(--ax-blue), var(--sl-purple));
+      box-shadow: 0 14px 34px rgba(0,102,204,.20);
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      gap:10px;
+      transition: transform .10s ease, box-shadow .18s ease, filter .10s ease;
+    }
+    .btn:hover{ transform: translateY(-1px); filter: brightness(1.03); box-shadow: 0 18px 44px rgba(0,102,204,.26); }
+    .btn:active{ transform: translateY(0); box-shadow: 0 10px 26px rgba(0,102,204,.20); }
+
+    .loc-status{
+      font-size:11px;
+      color:var(--muted);
+      margin-top:8px;
+      display:none;
+    }
+    .loc-status.ok{ color: var(--ok-ink); }
+    .loc-status.bad{ color: var(--danger-ink); }
+
+    /* Toast */
+    .toast{
+      position: fixed;
+      left: 50%;
+      bottom: 18px;
+      transform: translateX(-50%);
+      min-width: min(520px, calc(100% - 24px));
+      max-width: 520px;
+      padding: 12px 14px;
+      border-radius: 14px;
+      background: rgba(15,23,42,.92);
+      color: rgba(255,255,255,.95);
+      display:flex;
+      align-items:flex-start;
+      gap:10px;
+      box-shadow: 0 18px 50px rgba(0,0,0,.25);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .18s ease, transform .18s ease;
+      z-index: 9999;
+    }
+    .toast.show{
+      opacity: 1;
+      transform: translateX(-50%) translateY(-2px);
+    }
+    .toast i{ margin-top:2px; color: #ffffff; opacity:.9; }
+    .toast .t-title{ font-weight:900; letter-spacing:.02em; }
+    .toast .t-sub{ font-size: 12px; opacity:.85; margin-top: 2px; line-height: 1.35; }
+
+    /* Spinner overlay */
+    #spinnerOverlay{
+      position:fixed;
+      inset:0;
+      background: rgba(15,23,42,.40);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      z-index:9998;
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+    }
+    .spinner{
+      width:56px;height:56px;
+      border-radius:999px;
+      border: 6px solid rgba(148,163,184,.45);
+      border-top-color: var(--ax-blue);
+      animation: spin .9s linear infinite;
+      background:#fff;
+    }
+    @keyframes spin{ to{ transform: rotate(360deg);} }
+
+    @media (prefers-reduced-motion: reduce){
+      .card{ animation:none; }
+      .toast{ transition:none; }
+    }
+
+    .brand-lockup{ display:flex; align-items:center; gap:10px; }
+    .brand-logo{ height:32px; width:auto; object-fit:contain; }
+    .platform-logo{ height:18px; width:auto; object-fit:contain; }
+
+    .brand-footer{
+      margin-top: 18px;
+      padding-top: 16px;
+      border-top: 1px solid rgba(148,163,184,.3);
+      display:flex;
+      flex-wrap:wrap;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      font-size:12px;
+      color:var(--muted);
+    }
+    .brand-footer .brand-name-text{
+      font-weight:800;
+      letter-spacing:.04em;
+      text-transform:uppercase;
+      font-size:12px;
+      color:var(--ink);
+    }
+  </style>
+</head>
+
+<body>
+  <div id="spinnerOverlay"><div class="spinner"></div></div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast" aria-live="polite" aria-atomic="true">
+    <i class="fa-solid fa-circle-info"></i>
+    <div>
+      <div class="t-title" id="toastTitle">Info</div>
+      <div class="t-sub" id="toastSub">Message</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="inner">
+
+      <div class="brand">
+        <div class="logo" title="SmartLiving Emporium Plus">
+          <img src="https://imagedelivery.net/h9fmMoa1o2c2P55TcWJGOg/10283f28-b9a0-4100-b254-19a854386800/public"
+               alt="SmartLiving Logo">
+        </div>
+
+        <div class="brand-name">SmartLiving Emporium Plus</div>
+
+        <div class="powered" title="Platform provider">
+          Powered by Flux360
+          <img src="https://imagedelivery.net/h9fmMoa1o2c2P55TcWJGOg/237a407f-0df9-4a4b-b777-7ecbaacc0300/public"
+               alt="Flux360"
+               class="platform-logo">
+        </div>
+      </div>
+
+      <div class="title">Sign in  </div>
+      <div class="sub">Enter your username and password to continue.</div>
+
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          <div class="popup-error">
+            <i class="fa-solid fa-circle-exclamation"></i>
+            <div>
+              {% for category, message in messages %}
+                {{ message }}{% if not loop.last %}<br>{% endif %}
+              {% endfor %}
+            </div>
+          </div>
+        {% endif %}
+      {% endwith %}
+
+      <form method="POST" action="{{ url_for('login.login') }}" onsubmit="return gateLoginSubmit()">
+        <!-- Hidden geo fields -->
+        <input type="hidden" name="geo_lat" id="geo_lat">
+        <input type="hidden" name="geo_lng" id="geo_lng">
+        <input type="hidden" name="geo_accuracy" id="geo_accuracy">
+        <input type="hidden" name="geo_ts" id="geo_ts">
+        <input type="hidden" name="geo_available" id="geo_available" value="false">
+        <input type="hidden" name="geo_reason" id="geo_reason" value="Not captured">
+
+        <div class="field">
+          <label class="label" for="username">Username</label>
+          <div class="inputwrap">
+            <i class="fa-regular fa-user"></i>
+            <input class="input" type="text" id="username" name="username" placeholder="Enter your username" required>
+          </div>
+        </div>
+
+        <div class="field">
+          <label class="label" for="password">Password</label>
+          <div class="inputwrap">
+            <i class="fa-solid fa-lock"></i>
+            <input class="input" type="password" id="password" name="password" placeholder="Enter your password" required>
+          </div>
+        </div>
+
+        <div class="row">
+          <label class="remember">
+            <input type="checkbox" name="remember_me">
+            <span>Keep me signed in</span>
+          </label>
+          <a href="{{ url_for('auth_password_reset.forgot_password') }}" class="forgot">Forgot password?</a>
+        </div>
+
+        <div class="actions">
+          <!-- Location icon (no UI prompts; just a toast on tap) -->
+          <button type="button" class="loc-icon" id="locIconBtn" title="Location">
+            <i class="fa-solid fa-location-dot"></i>
+          </button>
+
+          <button type="submit" id="loginBtn" class="btn">
+            <span>Log In</span>
+            <i class="fa-solid fa-arrow-right"></i>
+          </button>
+        </div>
+
+        <div id="locStatus" class="loc-status" role="status" aria-live="polite"></div>
+      </form>
+
+      <div class="brand-footer">
+        <div class="brand-lockup">
+          <img src="https://imagedelivery.net/h9fmMoa1o2c2P55TcWJGOg/10283f28-b9a0-4100-b254-19a854386800/public"
+               alt="SmartLiving Emporium Plus"
+               class="brand-logo">
+          <span class="brand-name-text">SMARTLIVING EMPORIUM PLUS</span>
+        </div>
+        <div class="brand-lockup">
+          <span>Powered by Flux360</span>
+          <img src="https://imagedelivery.net/h9fmMoa1o2c2P55TcWJGOg/237a407f-0df9-4a4b-b777-7ecbaacc0300/public"
+               alt="Flux360"
+               class="platform-logo">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // =============================
+    // Spinner
+    // =============================
+    function showSpinner(){
+      const overlay = document.getElementById("spinnerOverlay");
+      if (overlay) overlay.style.display = "flex";
+    }
+    function gateLoginSubmit(){
+      showSpinner();
+      return true;
+    }
+
+    // =============================
+    // Toast helper
+    // =============================
+    let toastTimer = null;
+    function showToast(title, sub, ms=2600){
+      const t = document.getElementById("toast");
+      const tt = document.getElementById("toastTitle");
+      const ts = document.getElementById("toastSub");
+      if (!t || !tt || !ts) return;
+
+      tt.textContent = title || "Info";
+      ts.textContent = sub || "";
+
+      t.classList.add("show");
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => t.classList.remove("show"), ms);
+    }
+
+    // =============================
+    // Location (AUTO capture on load)
+    // - No "getting location" / retry UI
+    // - Icon just shows: "Your location gets saved when you log in"
+    // =============================
+    function canUseLocation() {
+      const isLocalhost =
+        location.hostname === "localhost" ||
+        location.hostname === "127.0.0.1";
+      return window.isSecureContext || location.protocol === "https:" || isLocalhost;
+    }
+
+    function setHiddenGeoUnavailable(reason){
+      const availEl = document.getElementById("geo_available");
+      const reasonEl = document.getElementById("geo_reason");
+      const latEl = document.getElementById("geo_lat");
+      const lngEl = document.getElementById("geo_lng");
+      const accEl = document.getElementById("geo_accuracy");
+      const tsEl  = document.getElementById("geo_ts");
+
+      if (availEl) availEl.value = "false";
+      if (reasonEl) reasonEl.value = reason || "Not available";
+      if (latEl) latEl.value = "";
+      if (lngEl) lngEl.value = "";
+      if (accEl) accEl.value = "";
+      if (tsEl)  tsEl.value  = "";
+    }
+
+    function applyGeo(lat, lng, accuracy, ts){
+      const latEl = document.getElementById("geo_lat");
+      const lngEl = document.getElementById("geo_lng");
+      const accEl = document.getElementById("geo_accuracy");
+      const tsEl  = document.getElementById("geo_ts");
+      const availEl = document.getElementById("geo_available");
+      const reasonEl = document.getElementById("geo_reason");
+
+      if (latEl) latEl.value = lat;
+      if (lngEl) lngEl.value = lng;
+      if (accEl) accEl.value = accuracy || "";
+      if (tsEl)  tsEl.value  = ts || "";
+      if (availEl) availEl.value = "true";
+      if (reasonEl) reasonEl.value = "";
+
+      setLocIconState("ok");
+    }
+
+    function setLocIconState(state){
+      const btn = document.getElementById("locIconBtn");
+      if (!btn) return;
+      btn.classList.remove("ok", "bad");
+
+      if (state === "ok") btn.classList.add("ok");
+      else if (state === "bad") btn.classList.add("bad");
+    }
+
+    function showLocationStatus(message, state){
+      const el = document.getElementById("locStatus");
+      if (!el) return;
+      if (!message){
+        el.textContent = "";
+        el.style.display = "none";
+        el.classList.remove("ok", "bad");
+        return;
+      }
+      el.textContent = message;
+      el.style.display = "block";
+      el.classList.remove("ok", "bad");
+      if (state) el.classList.add(state);
+    }
+
+    function autoRequestGeo(){
+      // If not secure, mark unavailable (no prompt)
+      if (!canUseLocation()){
+        setHiddenGeoUnavailable("HTTPS required");
+        setLocIconState("bad");
+        showLocationStatus("Location unavailable (HTTPS required)", "bad");
+        return;
+      }
+
+      // If unsupported, mark unavailable (no prompt)
+      if (!("geolocation" in navigator)){
+        setHiddenGeoUnavailable("Geolocation unsupported");
+        setLocIconState("bad");
+        showLocationStatus("Location unavailable", "bad");
+        return;
+      }
+
+      // This will still trigger the browser permission prompt on first use.
+      // We don't show any UI text; only the browser does its own prompt.
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          applyGeo(
+            pos.coords.latitude,
+            pos.coords.longitude,
+            pos.coords.accuracy,
+            pos.timestamp
+          );
+          showLocationStatus("", "");
+        },
+        (err) => {
+          const msg = (err && err.message) ? err.message : "Permission denied";
+          setHiddenGeoUnavailable(msg);
+          setLocIconState("bad");
+          showLocationStatus("Location unavailable", "bad");
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+      );
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      // Icon tap message (as you requested)
+      const btn = document.getElementById("locIconBtn");
+      if (btn){
+        btn.addEventListener("click", () => {
+          showToast("Location", "Your location gets saved when you log in.");
+        });
+      }
+
+      // Auto-capture on page load
+      setLocIconState("neutral");
+      setHiddenGeoUnavailable("Not captured");
+      autoRequestGeo();
+    });
+  </script>
+
+</body>
+</html>

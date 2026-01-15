@@ -1,0 +1,588 @@
+{# templates/hr_pages/partials/hr_dashboard_inner.html #}
+
+<style>
+  /* ========= Flux360 HR Dashboard (Pro) ========= */
+  :root{
+    --hr-ink:#0f172a;
+    --hr-muted:#64748b;
+    --hr-card:#ffffff;
+    --hr-line:rgba(2,6,23,.08);
+    --hr-soft:rgba(2,6,23,.04);
+    --hr-shadow:0 .45rem 1.35rem rgba(2,6,23,.08);
+    --hr-radius:18px;
+  }
+
+  .hr-topbar{
+    background: linear-gradient(135deg, rgba(14,165,233,.12), rgba(249,115,22,.10));
+    border:1px solid var(--hr-line);
+    border-radius: var(--hr-radius);
+    box-shadow: var(--hr-shadow);
+  }
+
+  .hr-card{
+    background:var(--hr-card);
+    border:1px solid var(--hr-line);
+    border-radius: var(--hr-radius);
+    box-shadow: var(--hr-shadow);
+  }
+
+  .hr-kpi{
+    position:relative;
+    overflow:hidden;
+  }
+  .hr-kpi:before{
+    content:"";
+    position:absolute; inset:-2px;
+    background: radial-gradient(circle at 20% 10%, rgba(14,165,233,.18), transparent 42%),
+                radial-gradient(circle at 90% 20%, rgba(249,115,22,.16), transparent 45%);
+    pointer-events:none;
+  }
+  .hr-kpi .inner{ position:relative; z-index:1; }
+
+  .hr-kpi-num{
+    font-weight:800;
+    letter-spacing:-.03em;
+    font-size:1.75rem;
+    color:var(--hr-ink);
+    line-height:1.1;
+  }
+  .hr-kpi-label{ color:var(--hr-muted); font-size:.85rem; }
+  .hr-kpi-sub{ color:var(--hr-muted); font-size:.78rem; }
+
+  .hr-chip{
+    display:inline-flex; align-items:center; gap:.4rem;
+    padding:.35rem .6rem;
+    border-radius:999px;
+    border:1px solid var(--hr-line);
+    background:rgba(255,255,255,.7);
+    font-size:.8rem;
+    color:var(--hr-ink);
+    white-space:nowrap;
+  }
+
+  .hr-section-title{
+    font-weight:800;
+    letter-spacing:-.02em;
+    color:var(--hr-ink);
+  }
+
+  .hr-muted{ color:var(--hr-muted); }
+
+  .hr-table thead th{
+    font-size:.78rem;
+    color:var(--hr-muted);
+    border-bottom:1px solid var(--hr-line) !important;
+  }
+  .hr-table tbody td{
+    border-top:1px solid rgba(2,6,23,.06) !important;
+  }
+
+  .hr-avatar{
+    width:34px; height:34px;
+    border-radius:999px;
+    border:1px solid var(--hr-line);
+    overflow:hidden;
+    background:rgba(2,6,23,.04);
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    font-weight:700;
+    color:var(--hr-ink);
+    flex:0 0 auto;
+  }
+  .hr-avatar img{ width:100%; height:100%; object-fit:cover; }
+
+  .hr-skeleton{
+    background: linear-gradient(90deg, rgba(2,6,23,.06), rgba(2,6,23,.02), rgba(2,6,23,.06));
+    background-size:200% 100%;
+    animation: shimmer 1.1s infinite;
+    border-radius:12px;
+    min-height:14px;
+  }
+  @keyframes shimmer{ 0%{background-position:0% 0} 100%{background-position:-200% 0} }
+
+  .chart-wrap{ min-height:240px; }
+  canvas{ max-width:100%; }
+
+  .hr-link{
+    text-decoration:none;
+    color:inherit;
+  }
+  .hr-link:hover{ text-decoration:underline; }
+
+  .btn-soft{
+    border:1px solid var(--hr-line);
+    background:rgba(255,255,255,.7);
+  }
+
+  .hr-dash-scope{
+    position:relative;
+  }
+  .hr-loading-overlay{
+    position:absolute;
+    inset:0;
+    background:rgba(255,255,255,.55);
+    opacity:0;
+    pointer-events:none;
+    transition: opacity .18s ease;
+    border-radius: var(--hr-radius);
+    overflow:hidden;
+  }
+  .hr-loading-overlay.active{
+    opacity:1;
+    pointer-events:auto;
+  }
+  .hr-loading-swipe{
+    position:absolute;
+    inset:-15% -60%;
+    background: linear-gradient(120deg, transparent 35%, rgba(37,99,235,.18) 50%, transparent 65%);
+    animation: hr-swipe 1.05s ease-in-out infinite;
+  }
+  @keyframes hr-swipe{
+    0%{ transform: translateX(-30%); }
+    100%{ transform: translateX(30%); }
+  }
+  .hr-dash-scope.is-loading .hr-kpi-num{
+    color:transparent;
+    background: linear-gradient(90deg, rgba(2,6,23,.08), rgba(2,6,23,.02), rgba(2,6,23,.08));
+    background-size:200% 100%;
+    animation: shimmer 1.1s infinite;
+    border-radius:8px;
+  }
+  .hr-dash-scope.is-loading canvas{
+    opacity:.25;
+  }
+</style>
+
+<!-- ========= HEADER / CONTROL BAR ========= -->
+<div class="hr-topbar p-3 p-md-4 mb-3">
+  <div class="d-flex justify-content-between flex-wrap gap-3 align-items-start">
+    <div>
+      <div class="d-flex align-items-center gap-2 flex-wrap">
+        <h1 class="h5 mb-0 hr-section-title">HR Control Center</h1>
+        <span class="hr-chip"><i class="bi bi-pulse"></i> Real-time overview</span>
+      </div>
+      <div class="small hr-muted mt-1">
+        Workforce health, risk tracking, recruitment pipeline, exits, and birthdays.
+      </div>
+    </div>
+
+    <div class="d-flex gap-2 flex-wrap align-items-center">
+      <div class="hr-chip">
+        <i class="bi bi-geo-alt"></i>
+        <select class="form-select form-select-sm border-0 p-0 bg-transparent" id="hrDashBranch" style="min-width:160px;">
+          <option value="">All branches</option>
+          {% for b in hr_branches %}
+            <option value="{{ b }}" {% if current_branch==b %}selected{% endif %}>{{ b }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <button class="btn btn-sm btn-soft" id="hrDashRefresh">
+        <i class="bi bi-arrow-clockwise me-1"></i>Refresh
+      </button>
+
+      <a class="btn btn-sm btn-primary" href="{{ url_for('hr.employees') }}">
+        <i class="bi bi-people me-1"></i>Employees
+      </a>
+
+      <button class="btn btn-sm btn-outline-primary" id="hrOpenAddEmployee" type="button">
+        <i class="bi bi-person-plus me-1"></i>Add Employee
+      </button>
+
+      <a class="btn btn-sm btn-outline-danger" href="{{ url_for('login.logout') }}">
+        <i class="bi bi-box-arrow-right me-1"></i>Logout
+      </a>
+    </div>
+  </div>
+</div>
+
+<div class="hr-dash-scope" id="hrDashScope">
+  <div class="hr-loading-overlay" id="hrDashLoader" aria-hidden="true">
+    <div class="hr-loading-swipe"></div>
+  </div>
+
+<!-- ========= KPI CARDS ========= -->
+<div class="row g-3 mb-3">
+  {% set kpis = [
+    ("total_employees","Total Employees","All staff across roles","bi-people"),
+    ("active_employees","Active Employees","Currently active workforce","bi-check2-circle"),
+    ("on_probation","On Probation","Needs review & coaching","bi-hourglass-split"),
+    ("recruitment_in_progress","Recruitment In Progress","Pipeline stages ongoing","bi-diagram-3"),
+    ("open_cases","Open Cases","Discipline & compliance risks","bi-exclamation-triangle"),
+    ("exits_in_progress","Exits In Progress","Handover & clearance running","bi-door-open"),
+  ] %}
+  {% for key,label,sub,icon in kpis %}
+  <div class="col-12 col-sm-6 col-lg-4 col-xxl-2">
+    <div class="hr-card hr-kpi p-3 h-100">
+      <div class="inner">
+        <div class="d-flex justify-content-between align-items-start">
+          <div>
+            <div class="hr-kpi-label">{{ label }}</div>
+            <div class="hr-kpi-num" id="k_{{ key }}">--</div>
+            <div class="hr-kpi-sub mt-1">{{ sub }}</div>
+          </div>
+          <div class="hr-chip"><i class="bi {{ icon }}"></i></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<!-- ========= CHARTS ========= -->
+<div class="row g-3 mb-3">
+  <div class="col-12 col-lg-6">
+    <div class="hr-card p-3">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <div>
+          <div class="fw-semibold">Employees by Branch</div>
+          <div class="small hr-muted">Distribution of staff across branches</div>
+        </div>
+        <span class="hr-chip"><i class="bi bi-bar-chart"></i> Branch</span>
+      </div>
+      <div class="chart-wrap">
+        <canvas id="chEmployeesByBranch"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12 col-lg-6">
+    <div class="hr-card p-3">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <div>
+          <div class="fw-semibold">Employees by Role</div>
+          <div class="small hr-muted">Role mix for workforce planning</div>
+        </div>
+        <span class="hr-chip"><i class="bi bi-pie-chart"></i> Role</span>
+      </div>
+      <div class="chart-wrap">
+        <canvas id="chEmployeesByRole"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12 col-lg-6">
+    <div class="hr-card p-3">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <div>
+          <div class="fw-semibold">Recruitment Pipeline</div>
+          <div class="small hr-muted">Stage count for onboarding control</div>
+        </div>
+        <span class="hr-chip"><i class="bi bi-diagram-3"></i> Pipeline</span>
+      </div>
+      <div class="chart-wrap">
+        <canvas id="chRecruitmentPipeline"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12 col-lg-6">
+    <div class="hr-card p-3">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <div>
+          <div class="fw-semibold">Cases by Status</div>
+          <div class="small hr-muted">Risk & discipline resolution view</div>
+        </div>
+        <span class="hr-chip"><i class="bi bi-shield-exclamation"></i> Cases</span>
+      </div>
+      <div class="chart-wrap">
+        <canvas id="chCasesByStatus"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ========= OPEN CASES + BIRTHDAYS ========= -->
+<div class="row g-3">
+  <div class="col-12 col-xl-7">
+    <div class="hr-card p-3">
+      <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
+        <div>
+          <div class="fw-semibold">Open Cases</div>
+          <div class="small hr-muted">Top 10 latest open discipline/compliance cases</div>
+        </div>
+        <span class="hr-chip"><i class="bi bi-exclamation-triangle"></i> Attention</span>
+      </div>
+
+      <div class="table-responsive">
+        <table class="table table-sm align-middle mb-0 hr-table">
+          <thead>
+            <tr>
+              <th>Case</th>
+              <th>Employee</th>
+              <th>Branch</th>
+              <th>Priority</th>
+              <th>Status</th>
+              <th class="text-end">Action</th>
+            </tr>
+          </thead>
+          <tbody id="openCasesBody">
+            <tr>
+              <td colspan="6" class="py-3">
+                <div class="hr-skeleton" style="height:16px;width:60%;"></div>
+                <div class="hr-skeleton mt-2" style="height:14px;width:85%;"></div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="col-12 col-xl-5">
+    <div class="hr-card p-3">
+      <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
+        <div>
+          <div class="fw-semibold">Upcoming Birthdays</div>
+          <div class="small hr-muted">Top 10 birthdays by next occurrence</div>
+        </div>
+        <span class="hr-chip"><i class="bi bi-cake2"></i> Culture</span>
+      </div>
+
+      <div class="list-group" id="birthdaysList">
+        <div class="list-group-item">
+          <div class="hr-skeleton" style="height:14px;width:70%"></div>
+          <div class="hr-skeleton mt-2" style="height:12px;width:55%"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div>
+
+{% include "hr_pages/partials/hr_employee_add_modal.html" %}
+
+<script>
+(function(){
+  const $ = (id) => document.getElementById(id);
+
+  const branchSel = $("hrDashBranch");
+  const refreshBtn = $("hrDashRefresh");
+  const openAddBtn = $("hrOpenAddEmployee");
+  const dashScope = $("hrDashScope");
+  const dashLoader = $("hrDashLoader");
+
+  const kpiIds = [
+    "total_employees","active_employees","on_probation",
+    "recruitment_in_progress","open_cases","exits_in_progress"
+  ];
+
+  const openCasesBody = $("openCasesBody");
+  const birthdaysList = $("birthdaysList");
+
+  let charts = {
+    byBranch: null,
+    byRole: null,
+    pipeline: null,
+    cases: null
+  };
+
+  function esc(s){ return (s ?? "").toString().replaceAll("<","&lt;").replaceAll(">","&gt;"); }
+
+  async function ensureChartJs(){
+    if(window.Chart) return;
+    await new Promise((resolve, reject) => {
+      const s = document.createElement("script");
+      s.src = "https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js";
+      s.onload = resolve;
+      s.onerror = reject;
+      document.head.appendChild(s);
+    });
+  }
+
+  function setKpis(k){
+    kpiIds.forEach(key => {
+      const el = document.getElementById("k_" + key);
+      if(el) el.textContent = (k && (k[key] ?? 0)) ?? 0;
+    });
+  }
+
+  function renderOpenCases(list){
+    if(!list || !list.length){
+      openCasesBody.innerHTML = `<tr><td colspan="6" class="text-muted fst-italic">No open cases.</td></tr>`;
+      return;
+    }
+
+    openCasesBody.innerHTML = list.map(x => `
+      <tr>
+        <td>
+          <div class="fw-semibold">${esc(x.title || "Case")}</div>
+          <div class="small text-muted">${esc((x.created_at||"").toString()).slice(0,19).replace("T"," ")}</div>
+        </td>
+        <td>${esc(x.employee || "--")}</td>
+        <td>${esc(x.branch || "--")}</td>
+        <td>
+          <span class="badge rounded-pill ${x.priority==="High"?"bg-danger-subtle text-danger-emphasis":(x.priority==="Medium"?"bg-warning-subtle text-warning-emphasis":"bg-secondary-subtle text-secondary-emphasis")}">
+            ${esc(x.priority || "Normal")}
+          </span>
+        </td>
+        <td>
+          <span class="badge rounded-pill bg-info-subtle text-info-emphasis">${esc(x.status || "Open")}</span>
+        </td>
+        <td class="text-end">
+          <a class="btn btn-sm btn-outline-primary" href="#" onclick="return false;">
+            <i class="bi bi-folder2-open me-1"></i>Open
+          </a>
+        </td>
+      </tr>
+    `).join("");
+  }
+
+  function renderBirthdays(list){
+    if(!list || !list.length){
+      birthdaysList.innerHTML = `<div class="list-group-item text-muted fst-italic">No birthdays found (missing DOB).</div>`;
+      return;
+    }
+
+    birthdaysList.innerHTML = list.map(u => {
+      const initials = (u.name || "--").split(" ").slice(0,2).map(x=>x[0]).join("").toUpperCase();
+      const days = Number(u.days_remaining ?? 0);
+      const badge =
+        days === 0 ? "Today 🎉" :
+        days === 1 ? "Tomorrow" :
+        `in ${days} days`;
+
+      return `
+        <div class="list-group-item">
+          <div class="d-flex gap-2 align-items-center">
+            <div class="hr-avatar">
+              ${u.image_url ? `<img src="${esc(u.image_url)}" alt="${esc(u.name)}">` : `<span>${esc(initials)}</span>`}
+            </div>
+            <div class="flex-grow-1">
+              <div class="d-flex justify-content-between gap-2">
+                <div class="fw-semibold">${esc(u.name)}</div>
+                <span class="badge rounded-pill bg-success-subtle text-success-emphasis">${esc(u.birthday || "")}</span>
+              </div>
+              <div class="small text-muted">
+                ${esc(u.branch || "--")} -  ${esc(u.role || "--")} -  <span class="text-primary">${esc(badge)}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join("");
+  }
+
+  function destroyChart(ch){
+    try{ ch && ch.destroy && ch.destroy(); }catch(e){}
+  }
+
+  function setLoadingState(isLoading){
+    if (dashScope) dashScope.classList.toggle("is-loading", isLoading);
+    if (dashLoader) dashLoader.classList.toggle("active", isLoading);
+    if (branchSel) branchSel.disabled = isLoading;
+    if (refreshBtn) refreshBtn.disabled = isLoading;
+    if (openAddBtn) openAddBtn.disabled = isLoading;
+  }
+
+  if (openAddBtn) {
+    openAddBtn.addEventListener("click", () => {
+      const el = document.getElementById("hrAddEmployeeModal");
+      if (!el) {
+        window.showToast && window.showToast("danger", "Add Employee modal not found.");
+        return;
+      }
+      if (window.bootstrap && bootstrap.Modal) {
+        bootstrap.Modal.getOrCreateInstance(el).show();
+      }
+    });
+  }
+
+  async function renderCharts(chartsData){
+    await ensureChartJs();
+
+    // Employees by Branch (bar)
+    const b = chartsData.employees_by_branch || [];
+    const bLabels = b.map(x => x.branch_name || x.branch || "Unassigned");
+    const bVals = b.map(x => x.employee_count ?? x.count ?? 0);
+
+    destroyChart(charts.byBranch);
+    charts.byBranch = new Chart(document.getElementById("chEmployeesByBranch"), {
+      type: "bar",
+      data: { labels: bLabels, datasets: [{ label: "Employees", data: bVals }] },
+      options: { responsive: true, maintainAspectRatio: false, plugins:{ legend:{ display:false } } }
+    });
+
+    // Employees by Role (doughnut)
+    const r = chartsData.employees_by_role || [];
+    destroyChart(charts.byRole);
+    charts.byRole = new Chart(document.getElementById("chEmployeesByRole"), {
+      type: "doughnut",
+      data: { labels: r.map(x=>x.role), datasets: [{ data: r.map(x=>x.count) }] },
+      options: { responsive:true, maintainAspectRatio:false }
+    });
+
+    // Recruitment pipeline (bar)
+    const p = chartsData.recruitment_pipeline || {};
+    const pLabels = Object.keys(p);
+    const pVals = Object.values(p);
+
+    destroyChart(charts.pipeline);
+    charts.pipeline = new Chart(document.getElementById("chRecruitmentPipeline"), {
+      type: "bar",
+      data: { labels: pLabels, datasets: [{ label: "Count", data: pVals }] },
+      options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{ display:false } } }
+    });
+
+    // Cases by status (doughnut)
+    const cs = chartsData.cases_by_status || {};
+    destroyChart(charts.cases);
+    charts.cases = new Chart(document.getElementById("chCasesByStatus"), {
+      type: "doughnut",
+      data: { labels: Object.keys(cs), datasets: [{ data: Object.values(cs) }] },
+      options: { responsive:true, maintainAspectRatio:false }
+    });
+  }
+
+  async function loadDashboard(){
+    const params = new URLSearchParams();
+    if(branchSel && branchSel.value) params.set("branch", branchSel.value);
+
+    const url = `{{ url_for('hr.dashboard_data') }}?` + params.toString();
+
+    // skeleton state
+    kpiIds.forEach(k => { const el = document.getElementById("k_" + k); if(el) el.textContent = "--"; });
+    setLoadingState(true);
+
+    try{
+      const resp = await fetch(url, { headers: { "X-Requested-With":"XMLHttpRequest" } });
+      let data = {};
+      try{
+        data = await resp.json();
+      }catch(parseErr){
+        console.error("HR dashboard JSON parse error", { url, status: resp.status, parseErr });
+        throw new Error("Invalid server response.");
+      }
+      if(!resp.ok || !data.ok){
+        console.error("HR dashboard fetch failed", { url, status: resp.status, data });
+        throw new Error(data.message || "Failed to load dashboard");
+      }
+
+      setKpis(data.kpis || {});
+      renderOpenCases(data.open_cases || []);
+      renderBirthdays(data.upcoming_birthdays || []);
+      await renderCharts(data.charts || {});
+    }catch(err){
+      console.error(err);
+      window.showToast && window.showToast("danger", err.message || "Dashboard failed");
+      openCasesBody.innerHTML = `<tr><td colspan="6" class="text-danger">Failed to load cases.</td></tr>`;
+      birthdaysList.innerHTML = `<div class="list-group-item text-danger">Failed to load birthdays.</div>`;
+    }finally{
+      setLoadingState(false);
+    }
+  }
+
+  refreshBtn && refreshBtn.addEventListener("click", loadDashboard);
+
+  branchSel && branchSel.addEventListener("change", () => {
+    // SPA-friendly: simply reload data; if you want URL update, we can add history.pushState.
+    loadDashboard();
+  });
+
+  // init
+  loadDashboard();
+})();
+</script>

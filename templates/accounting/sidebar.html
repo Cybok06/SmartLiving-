@@ -1,0 +1,464 @@
+{# ================= URL HELPERS ================= #}
+{% set url_journals_list      = url_for('journals.journals') %}
+{% set url_journal_new        = url_for('journals.journal_new') %}
+{% set url_accounts           = url_for('accounting.accounts') %}
+{% set url_ledger             = url_for('ledger.ledger') %}
+
+{# ✅ AR Clients (Accounting customers) - blueprint alias: acc_clients, view: customers #}
+{% set url_clients            = url_for('acc_clients.customers') %}
+
+{% set url_ar_invoices        = url_for('ar_invoices.invoices') %}
+{% set url_ar_payments        = url_for('ar_payments.payments') %}
+{% set url_ar_aging           = url_for('ar_aging.aging_report') %}
+{% set url_ap_bills           = url_for('ap_bills.bills') %}
+
+{# 👇 alias from app.register_blueprint(name="acc_bank_accounts") #}
+{% set url_bank_accounts      = url_for('acc_bank_accounts.list_accounts') %}
+{% set url_bank_recon         = url_for('bank_recon.bank_recon_index') %}
+{% set url_fixed_assets       = url_for('fixed_assets.register') %}
+{% set url_income             = url_for('accounting_income.page') %}
+
+{# Private Ledger (Blueprint: private_ledger) #}
+{% set url_private_ledger     = url_for('private_ledger.private_ledger') %}
+
+{# Prepayments (Blueprint: prepayments) #}
+{% set url_prepayments        = url_for('prepayments.prepayments_page') %}
+
+{# Accruals (Blueprint: accruals) #}
+{% set url_accruals           = url_for('accruals.accruals_page') %}
+
+{# Loans (Blueprint: acc_loans) #}
+
+{# Payroll calculator (Blueprint: acc_payroll_calc) #}
+{% set url_payroll_calc       = url_for('acc_payroll_calc.payroll_calculator') %}
+
+{# Expense tracker (Blueprint: acc_expenses) #}
+{% set url_expenses           = url_for('acc_expenses.expenses_page') %}
+
+{# Balance Sheet (Blueprint: acc_balance_sheet) #}
+{% set url_balance_sheet      = url_for('acc_balance_sheet.balance_sheet_page') %}
+
+{# Profit & Loss (Blueprint: profit_loss, view: profit_loss) #}
+{% set url_profit_loss        = url_for('profit_loss.profit_loss') %}
+
+{# Accounting Overview Dashboard (Blueprint: acc_dashboard) #}
+{% set url_dashboard          = url_for('acc_dashboard.accounting_dashboard') %}
+
+{# My Profile (Blueprint: acc_profile) #}
+{% set url_acc_profile        = url_for('acc_profile.profile') %}
+
+{# Payment Vouchers (Blueprint: payment_voucher) #}
+{% set url_payment_vouchers   = url_for('payment_voucher.form_page') %}
+
+<link id="acc-material-icons" rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined"
+      onload="this.media='all'" media="print">
+
+<!-- Sidebar -->
+<aside id="accSidebar" class="acc-sidebar" data-open="false" aria-hidden="true">
+  <div class="acc-sidebar__head">
+    <div class="acc-brand">
+      <img
+        src="https://res.cloudinary.com/dljpgzbto/image/upload/v1743993646/company-logo_dksb23.jpg"
+        alt="SMARTLIVING EMPORIUM PLUS"
+        class="acc-brand__logo"
+      >
+      <div class="acc-brand__meta">
+        <span class="acc-brand__title">SMARTLIVING</span>
+        <span class="acc-brand__subtitle">Accounting Suite</span>
+      </div>
+    </div>
+  </div>
+
+  <nav class="acc-nav" aria-label="Accounting navigation">
+
+    {# ===== Overview ===== #}
+    <p class="acc-sec">Overview</p>
+
+    <a class="acc-link {% if url_dashboard and request.path.startswith(url_dashboard) %}is-active{% endif %}"
+       href="{{ url_dashboard }}">
+      <span class="material-symbols-outlined acc-ico">space_dashboard</span>
+      <span class="acc-text">Dashboard</span>
+    </a>
+
+    {# ===== Expenses & Payables ===== #}
+    <p class="acc-sec">Expenses &amp; Payables</p>
+
+    <a class="acc-link {% if url_expenses and request.path.startswith(url_expenses) %}is-active{% endif %}"
+       href="{{ url_expenses }}">
+      <span class="material-symbols-outlined acc-ico">money_off</span>
+      <span class="acc-text">Expense Tracker</span>
+    </a>
+
+    <a class="acc-link {% if url_payment_vouchers and request.path.startswith(url_payment_vouchers) %}is-active{% endif %}"
+       href="{{ url_payment_vouchers }}">
+      <span class="material-symbols-outlined acc-ico">request_quote</span>
+      <span class="acc-text">Payment Vouchers</span>
+    </a>
+
+    <a class="acc-link {% if url_ap_bills and request.path.startswith(url_ap_bills) %}is-active{% endif %}"
+       href="{{ url_ap_bills }}">
+      <span class="material-symbols-outlined acc-ico">receipt_long</span>
+      <span class="acc-text">AP Bills</span>
+    </a>
+
+    {# ===== Receivables ===== #}
+    <p class="acc-sec">Receivables</p>
+
+    <a class="acc-link {{ 'is-active' if url_clients and request.path.startswith(url_clients) else '' }}"
+       href="{{ url_clients }}">
+      <span class="material-symbols-outlined acc-ico">group</span>
+      <span class="acc-text">Clients</span>
+    </a>
+
+    <a class="acc-link {% if url_ar_invoices and request.path.startswith(url_ar_invoices) %}is-active{% endif %}"
+       href="{{ url_ar_invoices }}">
+      <span class="material-symbols-outlined acc-ico">receipt_long</span>
+      <span class="acc-text">AR Invoices</span>
+    </a>
+
+    <a class="acc-link {% if url_ar_payments and request.path.startswith(url_ar_payments) %}is-active{% endif %}"
+       href="{{ url_ar_payments }}">
+      <span class="material-symbols-outlined acc-ico">payments</span>
+      <span class="acc-text">AR Payments</span>
+    </a>
+
+    <a class="acc-link {% if url_ar_aging and request.path.startswith(url_ar_aging) %}is-active{% endif %}"
+       href="{{ url_ar_aging }}">
+      <span class="material-symbols-outlined acc-ico">lab_profile</span>
+      <span class="acc-text">AR Aging</span>
+    </a>
+
+    {# ===== Bank & Cash ===== #}
+    <p class="acc-sec">Bank &amp; Cash</p>
+
+    <a class="acc-link {% if url_bank_accounts and request.path.startswith(url_bank_accounts) %}is-active{% endif %}"
+       href="{{ url_bank_accounts }}">
+      <span class="material-symbols-outlined acc-ico">account_balance</span>
+      <span class="acc-text">Bank &amp; Cash Accounts</span>
+    </a>
+
+    <a class="acc-link {% if url_bank_recon and request.path.startswith(url_bank_recon) %}is-active{% endif %}"
+       href="{{ url_bank_recon }}">
+      <span class="material-symbols-outlined acc-ico">account_balance_wallet</span>
+      <span class="acc-text">Bank Reconciliation</span>
+    </a>
+
+    {# ===== Owner & Accruals ===== #}
+    <p class="acc-sec">Owner &amp; Accruals</p>
+
+    <a class="acc-link {% if url_private_ledger and request.path.startswith(url_private_ledger) %}is-active{% endif %}"
+       href="{{ url_private_ledger }}">
+      <span class="material-symbols-outlined acc-ico">person</span>
+      <span class="acc-text">Private Ledger</span>
+    </a>
+    <a class="acc-link {% if url_income and request.path.startswith(url_income) %}is-active{% endif %}"
+       href="{{ url_income }}">
+      <span class="material-symbols-outlined acc-ico">paid</span>
+      <span class="acc-text">Investment &amp; Income</span>
+    </a>
+
+    <a class="acc-link {% if url_prepayments and request.path.startswith(url_prepayments) %}is-active{% endif %}"
+       href="{{ url_prepayments }}">
+      <span class="material-symbols-outlined acc-ico">schedule</span>
+      <span class="acc-text">Prepayments</span>
+    </a>
+
+    <a class="acc-link {% if url_accruals and request.path.startswith(url_accruals) %}is-active{% endif %}"
+       href="{{ url_accruals }}">
+      <span class="material-symbols-outlined acc-ico">pending_actions</span>
+      <span class="acc-text">Accruals / Owings</span>
+    </a>
+
+    {% if url_loans %}
+      <a class="acc-link {% if request.path.startswith(url_loans) %}is-active{% endif %}"
+         href="{{ url_loans }}">
+        <span class="material-symbols-outlined acc-ico">handshake</span>
+        <span class="acc-text">Loans</span>
+      </a>
+    {% endif %}
+
+    {# ===== Payroll ===== #}
+    <p class="acc-sec">Payroll</p>
+
+    <a class="acc-link {% if url_payroll_calc and request.path.startswith(url_payroll_calc) %}is-active{% endif %}"
+       href="{{ url_payroll_calc }}">
+      <span class="material-symbols-outlined acc-ico">badge</span>
+      <span class="acc-text">Payroll Calculator</span>
+    </a>
+
+    {# ===== Reports ===== #}
+    <p class="acc-sec">Reports</p>
+
+    <a class="acc-link {% if url_profit_loss and request.path.startswith(url_profit_loss) %}is-active{% endif %}"
+       href="{{ url_profit_loss }}">
+      <span class="material-symbols-outlined acc-ico">insights</span>
+      <span class="acc-text">Profit &amp; Loss</span>
+    </a>
+
+    <a class="acc-link {% if url_balance_sheet and request.path.startswith(url_balance_sheet) %}is-active{% endif %}"
+       href="{{ url_balance_sheet }}">
+      <span class="material-symbols-outlined acc-ico">analytics</span>
+      <span class="acc-text">Balance Sheet</span>
+    </a>
+
+    {# ===== Ledger & Setup ===== #}
+    <p class="acc-sec">Ledger &amp; Setup</p>
+
+    <a class="acc-link {% if url_ledger and request.path == url_ledger %}is-active{% endif %}"
+       href="{{ url_ledger }}">
+      <span class="material-symbols-outlined acc-ico">receipt_long</span>
+      <span class="acc-text">General Ledger</span>
+    </a>
+
+    <a class="acc-link {% if url_accounts and request.path.startswith(url_accounts) %}is-active{% endif %}"
+       href="{{ url_accounts }}">
+      <span class="material-symbols-outlined acc-ico">account_balance</span>
+      <span class="acc-text">Chart of Accounts</span>
+    </a>
+
+    {# ===== Journals ===== #}
+    <p class="acc-sec">Journals</p>
+
+    <a class="acc-link {% if url_journals_list and request.path == url_journals_list %}is-active{% endif %}"
+       href="{{ url_journals_list }}">
+      <span class="material-symbols-outlined acc-ico">menu_book</span>
+      <span class="acc-text">All Journal Entries</span>
+    </a>
+
+    <a class="acc-link {% if url_journal_new and request.path == url_journal_new %}is-active{% endif %}"
+       href="{{ url_journal_new }}">
+      <span class="material-symbols-outlined acc-ico">add_circle</span>
+      <span class="acc-text">New Journal</span>
+    </a>
+
+    <div class="acc-link acc-link--muted" tabindex="-1">
+      <span class="material-symbols-outlined acc-ico">visibility</span>
+      <span class="acc-text">View Journal (open from list)</span>
+    </div>
+
+    {# ===== Assets ===== #}
+    <p class="acc-sec">Assets</p>
+
+    <a class="acc-link {% if url_fixed_assets and request.path.startswith(url_fixed_assets) %}is-active{% endif %}"
+       href="{{ url_fixed_assets }}">
+      <span class="material-symbols-outlined acc-ico">inventory_2</span>
+      <span class="acc-text">Fixed Assets</span>
+    </a>
+<a class="acc-link {% if request.path.startswith(url_for('acc_budget.budget_page')) %}is-active{% endif %}"
+   href="{{ url_for('acc_budget.budget_page') }}">
+  <span class="material-symbols-outlined acc-ico">account_tree</span>
+  <span class="acc-text">Budget</span>
+</a>
+
+    {# ===== Account ===== #}
+    <p class="acc-sec">Account</p>
+
+    <a class="acc-link {% if url_acc_profile and request.path.startswith(url_acc_profile) %}is-active{% endif %}"
+       href="{{ url_acc_profile }}">
+      <span class="material-symbols-outlined acc-ico">account_circle</span>
+      <span class="acc-text">My Profile</span>
+    </a>
+
+  </nav>
+
+  <div class="acc-foot">
+    <div>© SMARTLIVING EMPORIUM PLUS</div>
+    <div>v1.0 -  Accounting Suite</div>
+  </div>
+</aside>
+
+<!-- Backdrop for mobile -->
+<div id="accSidebarBackdrop" class="acc-backdrop" hidden aria-hidden="true"></div>
+
+<!-- Single floating toggle (icon changes between menu & close) -->
+<button id="accSidebarToggle" class="acc-toggle" aria-label="Open menu" title="Menu">
+  <span id="accSidebarToggleIcon" class="material-symbols-outlined">menu</span>
+</button>
+
+<style>
+  .acc-with-sidebar{ transition: margin-left .25s ease; }
+  @media (min-width:1024px){
+    body[data-acc-sidebar="open"] .acc-with-sidebar{ margin-left:280px; }
+  }
+
+  .acc-sidebar{
+    position:fixed; inset:0 auto 0 0; z-index:1040;
+    width:280px; max-width:85vw; height:100vh;
+    background: radial-gradient(circle at 0 0, #0b1120 0, #0f172a 45%, #1d4ed8 80%, #6d28d9 100%);
+    border-right:1px solid rgba(148, 163, 184, 0.35);
+    transform:translateX(-100%); transition:transform .25s ease;
+    display:flex; flex-direction:column;
+    color:#e5e7eb;
+  }
+  .acc-sidebar[data-open="true"]{ transform:translateX(0); }
+  @media (min-width:1024px){
+    .acc-sidebar{ transform:translateX(0); }
+    body[data-acc-sidebar="closed"] .acc-sidebar{ transform:translateX(-100%); }
+  }
+
+  .acc-sidebar__head{
+    height:76px; display:flex; align-items:center; justify-content:center;
+    padding:0 16px; border-bottom:1px solid rgba(148, 163, 184, 0.35);
+    backdrop-filter: blur(10px);
+    background: linear-gradient(135deg, rgba(15,23,42,0.9), rgba(30,64,175,0.85));
+  }
+
+  .acc-brand{
+    display:flex; align-items:center; gap:10px; width:100%;
+  }
+  .acc-brand__logo{
+    width:42px;
+    height:42px;
+    border-radius:999px;
+    object-fit:cover;
+    box-shadow:0 6px 16px rgba(15,23,42,.55);
+    border:2px solid rgba(129, 140, 248, 0.85);
+    background:#020617;
+  }
+  .acc-brand__meta{
+    display:flex; flex-direction:column;
+  }
+  .acc-brand__title{
+    font-size:0.9rem;
+    font-weight:700;
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+    color:#bfdbfe;
+  }
+  .acc-brand__subtitle{
+    font-size:0.75rem;
+    color:#e0e7ff;
+  }
+
+  .acc-nav{ padding:10px 0; overflow-y:auto; flex:1; }
+  .acc-sec{
+    margin:14px 16px 6px; font-size:11px; text-transform:uppercase;
+    color:#94a3b8; letter-spacing:.08em;
+  }
+
+  .acc-link{
+    display:flex; align-items:center; gap:10px; margin:2px 8px; border-radius:10px;
+    padding:10px 16px; color:#e5e7eb; text-decoration:none; transition:
+      background .15s ease, color .15s ease, box-shadow .15s ease, transform .1s ease;
+  }
+  .acc-link:hover{
+    background:rgba(30, 64, 175, 0.35);
+    transform:translateX(1px);
+    box-shadow:0 6px 14px rgba(15,23,42,.45);
+  }
+  .acc-link.is-active{
+    background:linear-gradient(135deg,#2563eb,#7c3aed);
+    color:#f9fafb;
+    font-weight:600;
+    box-shadow:0 10px 25px rgba(37,99,235,.65);
+  }
+  .acc-link.is-active .acc-ico{
+    color:#e0f2fe;
+  }
+
+  .acc-link--muted{
+    color:#64748b;
+    cursor:default;
+    background:rgba(15,23,42,0.35);
+  }
+
+  .acc-ico{
+    font-size:20px; line-height:1; width:22px; text-align:center;
+    color:#a5b4fc;
+  }
+  .acc-text{
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    font-size:0.9rem;
+  }
+
+  .acc-foot{
+    border-top:1px solid rgba(148, 163, 184, 0.35); padding:10px 14px;
+    font-size:12px; color:#9ca3af;
+    display:flex; justify-content:space-between;
+    background:linear-gradient(135deg,rgba(15,23,42,0.9),rgba(30,64,175,0.75));
+  }
+
+  .acc-backdrop{
+    position:fixed; inset:0; z-index:1035; background:rgba(15,23,42,.6);
+    opacity:0; transition:opacity .2s ease;
+  }
+  .acc-backdrop[aria-hidden="false"]{ opacity:1; }
+  .acc-backdrop[hidden]{ display:none; }
+
+  .acc-toggle{
+    position:fixed; left:14px; top:14px; z-index:1051;
+    width:44px; height:44px; border:1px solid rgba(129, 140, 248, 0.85);
+    background:radial-gradient(circle at 0 0,#1d4ed8,#0f172a);
+    box-shadow:0 8px 22px rgba(15,23,42,.6);
+    cursor:pointer; display:grid; place-items:center;
+    border-radius:999px;
+    color:#e5e7eb;
+  }
+
+  @media (min-width:1280px){
+    body[data-acc-sidebar="collapsed"] .acc-with-sidebar{ margin-left:72px; }
+    body[data-acc-sidebar="collapsed"] .acc-sidebar{ width:72px; }
+    body[data-acc-sidebar="collapsed"] .acc-text,
+    body[data-acc-sidebar="collapsed"] .acc-sec,
+    body[data-acc-sidebar="collapsed"] .acc-brand__meta{ display:none; }
+    body[data-acc-sidebar="collapsed"] .acc-brand{ justify-content:center; }
+  }
+</style>
+
+<script>
+  (function(){
+    const sidebar   = document.getElementById('accSidebar');
+    const toggle    = document.getElementById('accSidebarToggle');
+    const icon      = document.getElementById('accSidebarToggleIcon');
+    const backdrop  = document.getElementById('accSidebarBackdrop');
+
+    function isDesktop(){ return matchMedia('(min-width:1024px)').matches; }
+
+    function setIcon(open){
+      if (!icon) return;
+      icon.textContent = open ? 'close' : 'menu';
+      toggle?.setAttribute('aria-label', open ? 'Close menu' : 'Open menu');
+      toggle?.setAttribute('title', open ? 'Close' : 'Menu');
+    }
+
+    function openSidebar(){
+      sidebar.setAttribute('data-open','true');
+      document.body.setAttribute('data-acc-sidebar','open');
+      backdrop.removeAttribute('hidden');
+      backdrop.setAttribute('aria-hidden','false');
+      setIcon(true);
+    }
+    function closeSidebar(){
+      if(isDesktop()) document.body.setAttribute('data-acc-sidebar','closed');
+      sidebar.setAttribute('data-open','false');
+      backdrop.setAttribute('hidden','');
+      backdrop.setAttribute('aria-hidden','true');
+      setIcon(false);
+    }
+    function toggleSidebar(){
+      (sidebar.getAttribute('data-open') === 'true') ? closeSidebar() : openSidebar();
+    }
+
+    // Initial state
+    if(isDesktop()){
+      openSidebar();
+    } else {
+      closeSidebar();
+    }
+
+    toggle?.addEventListener('click', toggleSidebar);
+    backdrop?.addEventListener('click', closeSidebar);
+    window.addEventListener('keydown', e=>{ if(e.key==='Escape') closeSidebar(); });
+    window.addEventListener('resize', ()=>{
+      if(isDesktop()){
+        openSidebar();
+      } else {
+        closeSidebar();
+        document.body.removeAttribute('data-acc-sidebar');
+      }
+    });
+
+    window.toggleAccSidebar = toggleSidebar;
+  })();
+</script>

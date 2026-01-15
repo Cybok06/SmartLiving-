@@ -1,0 +1,700 @@
+{# templates/hr_pages/hr_reminders_page.html #}
+{% extends "hr_pages/hr_shell.html" %}
+{% block hr_content %}
+
+<style>
+  .soft-card{
+    border:1px solid rgba(0,0,0,.06);
+    border-radius:16px;
+    background:#fff;
+    box-shadow:0 .35rem 1.1rem rgba(0,0,0,.06);
+  }
+  .extra-small{ font-size:.74rem; }
+  .chip{
+    display:inline-flex; align-items:center; gap:.4rem;
+    border:1px solid rgba(0,0,0,.08);
+    border-radius:999px; padding:.25rem .55rem;
+    background:#f8f9fa;
+    margin:.15rem .2rem 0 0;
+    font-size:.78rem;
+  }
+  .chip .x{ cursor:pointer; opacity:.65; }
+  .chip .x:hover{ opacity:1; }
+  .mention-hint{
+    border:1px dashed rgba(0,0,0,.15);
+    border-radius:12px;
+    padding:.5rem .65rem;
+    background:#fcfcfd;
+  }
+  .badge-soft{
+    border:1px solid rgba(0,0,0,.08);
+    background:#fff;
+  }
+  .priority-Critical{ background:rgba(220,53,69,.10); color:#b02a37; border-color:rgba(220,53,69,.25) }
+  .priority-High{ background:rgba(255,193,7,.16); color:#8a6d00; border-color:rgba(255,193,7,.35) }
+  .priority-Normal{ background:rgba(13,110,253,.10); color:#0b5ed7; border-color:rgba(13,110,253,.25) }
+  .priority-Low{ background:rgba(25,135,84,.10); color:#146c43; border-color:rgba(25,135,84,.25) }
+</style>
+
+<div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
+  <div>
+    <h4 class="mb-1">Reminders</h4>
+    <div class="text-muted small">
+      Create internal reminders, assign staff, and @mention users in the message for visibility.
+    </div>
+  </div>
+
+  <div class="d-flex gap-2">
+    <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#remCreateModal">
+      <i class="bi bi-bell-plus me-1"></i>New Reminder
+    </button>
+    <button class="btn btn-outline-secondary btn-sm" id="remRefreshBtn">
+      <i class="bi bi-arrow-clockwise me-1"></i>Refresh
+    </button>
+  </div>
+</div>
+
+<!-- KPIs -->
+<div class="row g-3 mb-3">
+  <div class="col-12 col-md-3">
+    <div class="soft-card p-3">
+      <div class="small text-muted">Total</div>
+      <div class="h3 mb-0" id="kTotal">--</div>
+    </div>
+  </div>
+  <div class="col-12 col-md-3">
+    <div class="soft-card p-3">
+      <div class="small text-muted">Open</div>
+      <div class="h3 mb-0 text-primary" id="kOpen">--</div>
+    </div>
+  </div>
+  <div class="col-12 col-md-3">
+    <div class="soft-card p-3">
+      <div class="small text-muted">Done</div>
+      <div class="h3 mb-0 text-success" id="kDone">--</div>
+    </div>
+  </div>
+  <div class="col-12 col-md-3">
+    <div class="soft-card p-3">
+      <div class="small text-muted">Overdue</div>
+      <div class="h3 mb-0 text-danger" id="kOverdue">--</div>
+    </div>
+  </div>
+</div>
+
+<!-- Filters -->
+<div class="soft-card p-3 mb-3">
+  <div class="row g-2 align-items-end">
+    <div class="col-12 col-md-3">
+      <label class="form-label small mb-1">Branch</label>
+      <select class="form-select form-select-sm" id="fBranch">
+        <option value="">All branches</option>
+      </select>
+    </div>
+
+    <div class="col-6 col-md-2">
+      <label class="form-label small mb-1">Status</label>
+      <select class="form-select form-select-sm" id="fStatus">
+        <option value="">All</option>
+        <option>Open</option>
+        <option>Done</option>
+        <option>Snoozed</option>
+        <option>Cancelled</option>
+      </select>
+    </div>
+
+    <div class="col-6 col-md-2">
+      <label class="form-label small mb-1">Priority</label>
+      <select class="form-select form-select-sm" id="fPriority">
+        <option value="">All</option>
+        <option>Low</option>
+        <option>Normal</option>
+        <option>High</option>
+        <option>Critical</option>
+      </select>
+    </div>
+
+    <div class="col-6 col-md-2">
+      <label class="form-label small mb-1">From</label>
+      <input type="date" class="form-control form-control-sm" id="fFrom">
+    </div>
+
+    <div class="col-6 col-md-2">
+      <label class="form-label small mb-1">To</label>
+      <input type="date" class="form-control form-control-sm" id="fTo">
+    </div>
+
+    <div class="col-12 col-md-4">
+      <label class="form-label small mb-1">Search</label>
+      <div class="input-group input-group-sm">
+        <span class="input-group-text"><i class="bi bi-search"></i></span>
+        <input class="form-control" id="fQ" placeholder="Title, message, assignee, mentions, tags...">
+        <button class="btn btn-outline-secondary" id="fApply">
+          <i class="bi bi-funnel me-1"></i>Apply
+        </button>
+      </div>
+    </div>
+
+    <div class="col-12 col-md-2">
+      <button class="btn btn-light border btn-sm w-100" id="fReset">
+        <i class="bi bi-x-circle me-1"></i>Reset
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Table -->
+<div class="soft-card p-3">
+  <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
+    <div>
+      <div class="fw-semibold">Reminder Feed</div>
+      <div class="small text-muted">Most recent first.</div>
+    </div>
+    <div class="small text-muted" id="countHint">--</div>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table table-sm align-middle mb-0">
+      <thead class="table-light small">
+        <tr>
+          <th style="width:22%;">Reminder</th>
+          <th style="width:16%;">Assignees</th>
+          <th style="width:14%;">Due</th>
+          <th style="width:12%;">Priority</th>
+          <th style="width:12%;">Status</th>
+          <th class="text-end" style="width:24%;">Actions</th>
+        </tr>
+      </thead>
+      <tbody id="remBody" class="small">
+        <tr><td colspan="6" class="text-muted fst-italic">Loading...</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Create Modal -->
+<div class="modal fade" id="remCreateModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div>
+          <h5 class="modal-title mb-0">New Reminder</h5>
+          <div class="text-muted small">Assign staff and @mention users inside the message.</div>
+        </div>
+        <button class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body">
+        <div class="row g-3">
+          <div class="col-12">
+            <label class="form-label small mb-1">Title</label>
+            <input class="form-control form-control-sm" id="cTitle" placeholder="e.g. Submit weekly accountability report">
+          </div>
+
+          <div class="col-12">
+            <label class="form-label small mb-1">Message</label>
+            <textarea class="form-control form-control-sm" id="cMessage" rows="4"
+              placeholder="Type your reminder. Use @ to mention staff (e.g. @Benjamin please compile media report)."></textarea>
+
+            <div class="mention-hint mt-2">
+              <div class="small fw-semibold mb-1"><i class="bi bi-at me-1"></i>Mentions</div>
+              <div class="small text-muted mb-2">Click names below to add as mentions (we'll attach them to this reminder).</div>
+              <div class="d-flex flex-wrap gap-1" id="mentionPicker"></div>
+              <div class="mt-2" id="mentionChips"></div>
+            </div>
+          </div>
+
+          <div class="col-12">
+            <label class="form-label small mb-1">Assign To</label>
+            <div class="d-flex flex-wrap gap-1" id="assigneePicker"></div>
+            <div class="mt-2" id="assigneeChips"></div>
+          </div>
+
+          <div class="col-6 col-md-3">
+            <label class="form-label small mb-1">Priority</label>
+            <select class="form-select form-select-sm" id="cPriority">
+              <option>Low</option>
+              <option selected>Normal</option>
+              <option>High</option>
+              <option>Critical</option>
+            </select>
+          </div>
+
+          <div class="col-6 col-md-3">
+            <label class="form-label small mb-1">Channel</label>
+            <select class="form-select form-select-sm" id="cChannel">
+              <option selected>In-App</option>
+            </select>
+          </div>
+
+          <div class="col-12 col-md-6">
+            <label class="form-label small mb-1">Due (optional)</label>
+            <input type="datetime-local" class="form-control form-control-sm" id="cDue">
+            <div class="extra-small text-muted mt-1">If you leave it empty, it's still tracked.</div>
+          </div>
+
+          <div class="col-12">
+            <label class="form-label small mb-1">Tags (comma separated)</label>
+            <input class="form-control form-control-sm" id="cTags" placeholder="e.g. Payroll, Training, Audit">
+          </div>
+
+          <div class="col-12 d-grid">
+            <button class="btn btn-primary btn-sm" id="cSaveBtn">
+              <span class="spinner-border spinner-border-sm me-2 d-none" id="cSpin"></span>
+              Create Reminder
+            </button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Audit Modal -->
+<div class="modal fade" id="auditModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title mb-0">Audit Trail</h5>
+        <button class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="list-group" id="auditList"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  // KPIs
+  const kTotal = document.getElementById('kTotal');
+  const kOpen = document.getElementById('kOpen');
+  const kDone = document.getElementById('kDone');
+  const kOverdue = document.getElementById('kOverdue');
+
+  // filters
+  const fBranch = document.getElementById('fBranch');
+  const fStatus = document.getElementById('fStatus');
+  const fPriority = document.getElementById('fPriority');
+  const fFrom = document.getElementById('fFrom');
+  const fTo = document.getElementById('fTo');
+  const fQ = document.getElementById('fQ');
+  const fApply = document.getElementById('fApply');
+  const fReset = document.getElementById('fReset');
+  const refreshBtn = document.getElementById('remRefreshBtn');
+
+  // table
+  const body = document.getElementById('remBody');
+  const countHint = document.getElementById('countHint');
+
+  // create modal
+  const cTitle = document.getElementById('cTitle');
+  const cMessage = document.getElementById('cMessage');
+  const cPriority = document.getElementById('cPriority');
+  const cChannel = document.getElementById('cChannel');
+  const cDue = document.getElementById('cDue');
+  const cTags = document.getElementById('cTags');
+  const cSaveBtn = document.getElementById('cSaveBtn');
+  const cSpin = document.getElementById('cSpin');
+
+  const mentionPicker = document.getElementById('mentionPicker');
+  const assigneePicker = document.getElementById('assigneePicker');
+  const mentionChips = document.getElementById('mentionChips');
+  const assigneeChips = document.getElementById('assigneeChips');
+
+  // audit
+  const auditList = document.getElementById('auditList');
+
+  let employees = [];
+  let branches = [];
+  let selectedMentions = []; // ids
+  let selectedAssignees = []; // ids
+
+  function setSpinner(el, on){ if(el) el.classList.toggle('d-none', !on); }
+
+  function escapeHtml(s){
+    return String(s || '')
+      .replace(/&/g,'&amp;')
+      .replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;')
+      .replace(/'/g,'&#39;');
+  }
+
+  function chip(label, onRemove){
+    const span = document.createElement('span');
+    span.className = 'chip';
+    span.innerHTML = `<span>${escapeHtml(label)}</span><span class="x"><i class="bi bi-x"></i></span>`;
+    span.querySelector('.x').addEventListener('click', onRemove);
+    return span;
+  }
+
+  function badgePriority(p){
+    const cls = `badge badge-soft rounded-pill px-2 py-1 priority-${p}`;
+    return `<span class="${cls}">${escapeHtml(p)}</span>`;
+  }
+
+  function badgeStatus(s){
+    const map = {
+      "Open": "bg-primary-subtle text-primary-emphasis",
+      "Done": "bg-success-subtle text-success-emphasis",
+      "Snoozed": "bg-warning-subtle text-warning-emphasis",
+      "Cancelled": "bg-secondary-subtle text-secondary-emphasis"
+    };
+    return `<span class="badge rounded-pill ${map[s] || 'bg-light text-muted border'}">${escapeHtml(s)}</span>`;
+  }
+
+  function buildQuery(){
+    const p = new URLSearchParams();
+    if(fQ.value.trim()) p.set('q', fQ.value.trim());
+    if(fBranch.value) p.set('branch', fBranch.value);
+    if(fStatus.value) p.set('status', fStatus.value);
+    if(fPriority.value) p.set('priority', fPriority.value);
+    if(fFrom.value) p.set('from', fFrom.value);
+    if(fTo.value) p.set('to', fTo.value);
+    p.set('limit', '300');
+    return p.toString();
+  }
+
+  function renderBranches(){
+    fBranch.innerHTML = `<option value="">All branches</option>` +
+      branches.map(b => `<option value="${escapeHtml(b)}">${escapeHtml(b)}</option>`).join('');
+  }
+
+  function renderPickers(){
+    mentionPicker.innerHTML = '';
+    assigneePicker.innerHTML = '';
+
+    const makeBtn = (u, onClick) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'btn btn-light border btn-sm';
+      b.style.borderRadius = '999px';
+      b.textContent = u.name;
+      b.addEventListener('click', onClick);
+      return b;
+    };
+
+    employees.slice(0, 40).forEach(u => {
+      mentionPicker.appendChild(makeBtn(u, () => addMention(u.id)));
+      assigneePicker.appendChild(makeBtn(u, () => addAssignee(u.id)));
+    });
+
+    if(employees.length > 40){
+      const note = document.createElement('div');
+      note.className = 'small text-muted mt-2';
+      note.textContent = `Showing first 40 staff for quick pick.`;
+      mentionPicker.appendChild(note.cloneNode(true));
+      assigneePicker.appendChild(note);
+    }
+  }
+
+  function renderSelected(){
+    mentionChips.innerHTML = '';
+    assigneeChips.innerHTML = '';
+
+    selectedMentions.forEach(id => {
+      const u = employees.find(x => x.id === id);
+      if(!u) return;
+      mentionChips.appendChild(chip(`@${u.name}`, () => {
+        selectedMentions = selectedMentions.filter(x => x !== id);
+        renderSelected();
+      }));
+    });
+
+    selectedAssignees.forEach(id => {
+      const u = employees.find(x => x.id === id);
+      if(!u) return;
+      assigneeChips.appendChild(chip(`${u.name}${u.branch ? " -- " + u.branch : ""}`, () => {
+        selectedAssignees = selectedAssignees.filter(x => x !== id);
+        renderSelected();
+      }));
+    });
+  }
+
+  function addMention(id){
+    if(!selectedMentions.includes(id)) selectedMentions.push(id);
+
+    const u = employees.find(x => x.id === id);
+    if(u){
+      const token = `@${u.name} `;
+      const el = cMessage;
+      const start = (typeof el.selectionStart === 'number') ? el.selectionStart : el.value.length;
+      const end = (typeof el.selectionEnd === 'number') ? el.selectionEnd : el.value.length;
+      el.value = el.value.slice(0,start) + token + el.value.slice(end);
+      el.focus();
+      el.selectionStart = el.selectionEnd = start + token.length;
+    }
+    renderSelected();
+  }
+
+  function addAssignee(id){
+    if(!selectedAssignees.includes(id)) selectedAssignees.push(id);
+    renderSelected();
+  }
+
+  function setKpis(k){
+    kTotal.textContent = k?.total ?? 0;
+    kOpen.textContent = k?.open ?? 0;
+    kDone.textContent = k?.done ?? 0;
+    kOverdue.textContent = k?.overdue ?? 0;
+  }
+
+  function renderAudit(audit){
+    auditList.innerHTML = '';
+    if(!audit || !audit.length){
+      auditList.innerHTML = `<div class="text-muted small fst-italic">No audit logs.</div>`;
+      return;
+    }
+    audit.forEach(x => {
+      const div = document.createElement('div');
+      div.className = 'list-group-item';
+      const at = (x.at || '').toString().slice(0,19).replace('T',' ');
+      div.innerHTML = `
+        <div class="fw-semibold">${escapeHtml(x.action || 'Action')}</div>
+        <div class="small text-muted">${escapeHtml(x.by || 'HR')} -  ${escapeHtml(at)}</div>
+        ${x.note ? `<div class="small mt-1">${escapeHtml(x.note)}</div>` : ``}
+      `;
+      auditList.appendChild(div);
+    });
+  }
+
+  function renderRows(list){
+    body.innerHTML = '';
+    countHint.textContent = `${(list || []).length} reminder(s)`;
+
+    if(!list || !list.length){
+      body.innerHTML = `<tr><td colspan="6" class="text-muted fst-italic">No reminders found.</td></tr>`;
+      return;
+    }
+
+    list.forEach(r => {
+      const assignees = (r.assignees || []).map(a => a.name).slice(0,3).join(', ');
+      const more = (r.assignees || []).length > 3 ? ` +${(r.assignees||[]).length-3}` : '';
+      const due = (r.due_at || '').slice(0,16).replace('T',' ') || '--';
+      const tags = (r.tags || []).map(t => `<span class="badge rounded-pill bg-light text-muted border me-1">${escapeHtml(t)}</span>`).join('');
+
+      const tr = document.createElement('tr');
+
+      tr.innerHTML = `
+        <td>
+          <div class="fw-semibold">${escapeHtml(r.title || '--')}</div>
+          <div class="text-muted extra-small mb-1">${escapeHtml((r.created_at || '').slice(0,16).replace('T',' '))}</div>
+          <div class="small">${escapeHtml(r.message || '')}</div>
+          <div class="mt-2">${tags}</div>
+        </td>
+        <td>
+          <div>${assignees ? escapeHtml(assignees) : '<span class="text-muted">--</span>'}${more ? escapeHtml(more) : ''}</div>
+          <div class="extra-small text-muted mt-1">
+            Mentions: ${(r.mentions || []).map(m => '@'+m.name).slice(0,3).map(escapeHtml).join(', ') || '--'}
+          </div>
+        </td>
+        <td>${escapeHtml(due)}</td>
+        <td>${badgePriority(r.priority || 'Normal')}</td>
+        <td>${badgeStatus(r.status || 'Open')}</td>
+        <td class="text-end">
+          <div class="d-flex justify-content-end gap-2 flex-wrap">
+            <div class="btn-group">
+              <button class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
+                Update
+              </button>
+              <ul class="dropdown-menu dropdown-menu-end">
+                <li><button class="dropdown-item" data-act="Open" data-id="${escapeHtml(r.id)}"><i class="bi bi-circle me-2"></i>Open</button></li>
+                <li><button class="dropdown-item" data-act="Done" data-id="${escapeHtml(r.id)}"><i class="bi bi-check2-circle me-2"></i>Done</button></li>
+                <li><button class="dropdown-item" data-act="Snoozed" data-id="${escapeHtml(r.id)}"><i class="bi bi-clock-history me-2"></i>Snooze</button></li>
+                <li><button class="dropdown-item" data-act="Cancelled" data-id="${escapeHtml(r.id)}"><i class="bi bi-slash-circle me-2"></i>Cancel</button></li>
+              </ul>
+            </div>
+
+            <button class="btn btn-sm btn-outline-primary" data-audit="1" data-audit-json="${escapeHtml(JSON.stringify(r.audit || []))}" data-bs-toggle="modal" data-bs-target="#auditModal">
+              <i class="bi bi-shield-check me-1"></i>Audit
+            </button>
+
+            <button class="btn btn-sm btn-outline-danger" data-del="${escapeHtml(r.id)}">
+              <i class="bi bi-trash me-1"></i>Delete
+            </button>
+          </div>
+        </td>
+      `;
+      body.appendChild(tr);
+    });
+
+    // audit buttons
+    body.querySelectorAll('button[data-audit="1"]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        try{
+          const audit = JSON.parse(btn.getAttribute('data-audit-json') || '[]');
+          renderAudit(audit);
+        }catch(e){
+          renderAudit([]);
+        }
+      });
+    });
+
+    // status update
+    body.querySelectorAll('button[data-act][data-id]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const id = btn.getAttribute('data-id');
+        const st = btn.getAttribute('data-act');
+
+        let payload = {status: st, note: ""};
+
+        if(st === "Snoozed"){
+          const snooze = prompt("Snooze until (YYYY-MM-DDTHH:MM) e.g. 2025-12-12T18:30");
+          if(!snooze) return;
+          payload.snooze_until = snooze;
+          payload.note = "Snoozed by HR";
+        }
+
+        try{
+          const resp = await fetch(`{{ url_for('hr.reminders_update_status', reminder_id='__ID__') }}`.replace('__ID__', id), {
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body: JSON.stringify(payload)
+          });
+          const d = await resp.json();
+          if(!d.ok) throw new Error(d.message || 'Failed');
+          window.showToast && window.showToast('success', d.message || 'Updated');
+          load();
+        }catch(err){
+          console.error(err);
+          window.showToast && window.showToast('danger', err.message || 'Failed');
+        }
+      });
+    });
+
+    // delete
+    body.querySelectorAll('button[data-del]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const id = btn.getAttribute('data-del');
+        if(!confirm("Delete this reminder?")) return;
+
+        try{
+          const resp = await fetch(`{{ url_for('hr.reminders_delete', reminder_id='__ID__') }}`.replace('__ID__', id), {method:'POST'});
+          const d = await resp.json();
+          if(!d.ok) throw new Error(d.message || 'Failed');
+          window.showToast && window.showToast('success', d.message || 'Deleted');
+          load();
+        }catch(err){
+          console.error(err);
+          window.showToast && window.showToast('danger', err.message || 'Failed');
+        }
+      });
+    });
+  }
+
+  async function loadEmployees(){
+    const resp = await fetch(`{{ url_for('hr.reminders_employees_list') }}`);
+    const d = await resp.json();
+    if(!d.ok) throw new Error(d.message || 'Failed to load employees');
+
+    employees = d.employees || [];
+    branches = d.branches || [];
+    renderBranches();
+    renderPickers();
+    renderSelected();
+  }
+
+  async function load(){
+    const qs = buildQuery();
+    const resp = await fetch(`{{ url_for('hr.reminders_list') }}?${qs}`);
+    const d = await resp.json();
+    if(!d.ok) throw new Error(d.message || 'Failed to load reminders');
+    setKpis(d.kpis || {});
+    renderRows(d.reminders || []);
+  }
+
+  // Create
+  cSaveBtn.addEventListener('click', async () => {
+    const title = (cTitle.value || '').trim();
+    const message = (cMessage.value || '').trim();
+    if(!title || !message){
+      window.showToast && window.showToast('warning', 'Title and message are required.');
+      return;
+    }
+
+    const tags = (cTags.value || '')
+      .split(',')
+      .map(x => x.trim())
+      .filter(Boolean)
+      .slice(0,10);
+
+    const payload = {
+      title,
+      message,
+      priority: cPriority.value,
+      channel: cChannel.value,
+      due_at: (cDue.value || '').trim(),
+      tags,
+      assignee_ids: selectedAssignees,
+      mention_ids: selectedMentions,
+    };
+
+    cSaveBtn.disabled = true;
+    setSpinner(cSpin, true);
+
+    try{
+      const resp = await fetch(`{{ url_for('hr.reminders_create') }}`, {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify(payload)
+      });
+      const d = await resp.json();
+      if(!d.ok) throw new Error(d.message || 'Failed');
+
+      window.showToast && window.showToast('success', d.message || 'Created');
+
+      // reset
+      cTitle.value = '';
+      cMessage.value = '';
+      cDue.value = '';
+      cTags.value = '';
+      selectedMentions = [];
+      selectedAssignees = [];
+      renderSelected();
+
+      // close modal safely
+      const modalEl = document.getElementById('remCreateModal');
+      if (modalEl) {
+        const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+        modal.hide();
+      }
+
+      load();
+    }catch(err){
+      console.error(err);
+      window.showToast && window.showToast('danger', err.message || 'Failed');
+    }finally{
+      cSaveBtn.disabled = false;
+      setSpinner(cSpin, false);
+    }
+  });
+
+  // Filters
+  fApply.addEventListener('click', (e)=>{ e.preventDefault(); load(); });
+  fReset.addEventListener('click', (e)=>{
+    e.preventDefault();
+    fBranch.value = '';
+    fStatus.value = '';
+    fPriority.value = '';
+    fFrom.value = '';
+    fTo.value = '';
+    fQ.value = '';
+    load();
+  });
+  refreshBtn.addEventListener('click', ()=>load());
+
+  // init
+  Promise.resolve()
+    .then(loadEmployees)
+    .then(load)
+    .catch(err => {
+      console.error(err);
+      window.showToast && window.showToast('danger', err.message || 'Failed to initialize reminders');
+    });
+})();
+</script>
+
+{% endblock %}

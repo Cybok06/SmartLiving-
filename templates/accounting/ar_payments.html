@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Accounts Receivable -  Payments</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&family=Material+Symbols+Outlined" rel="stylesheet"/>
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link rel="icon"
+          href="https://imagedelivery.net/h9fmMoa1o2c2P55TcWJGOg/10283f28-b9a0-4100-b254-19a854386800/public"
+          type="image/png">
+  <script>
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            primary: "#0f172a",
+            accent: "#16a34a",
+            soft: "#f9fafb"
+          },
+          fontFamily: { display: ["Inter","system-ui","sans-serif"] },
+          borderRadius: { xl: "1.125rem" }
+        }
+      }
+    }
+  </script>
+  <style>
+    .material-symbols-outlined{
+      font-variation-settings:'FILL' 0,'wght' 500,'GRAD' 0,'opsz' 24
+    }
+  </style>
+</head>
+<body class="min-h-full bg-soft text-primary font-display">
+  {% include 'accounting/sidebar.html' %}
+
+  <main class="max-w-7xl mx-auto px-4 lg:px-8 py-6 lg:py-8 acc-with-sidebar">
+    <!-- Header -->
+    <header class="mb-6 flex flex-wrap items-center justify-between gap-3">
+      <div>
+        <h1 class="text-3xl lg:text-4xl font-black tracking-tight">Accounts Receivable Payments</h1>
+        <p class="text-sm text-slate-500">Cash receipts and allocations (GH₵).</p>
+      </div>
+      <div class="flex gap-2">
+        <a href="{{ export_url }}" class="h-10 px-4 rounded-full border font-semibold hover:bg-white/60 flex items-center gap-2">
+          <span class="material-symbols-outlined">download</span> Export
+        </a>
+        <button id="openRec" type="button" class="h-10 px-4 rounded-full bg-accent text-white font-bold hover:bg-accent/90 flex items-center gap-2">
+          <span class="material-symbols-outlined">add</span> Add Payment
+        </button>
+      </div>
+    </header>
+
+    <!-- Quick stats -->
+    {% if stats %}
+    <section class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+      <div class="rounded-xl bg-white border p-4">
+        <p class="text-sm text-slate-500">Running Cash Impact</p>
+        <p class="text-2xl font-bold">GH₵{{ "%.2f"|format(stats.cash_impact) }}</p>
+      </div>
+      <div class="rounded-xl bg-white border p-4">
+        <p class="text-sm text-slate-500">Unallocated Funds</p>
+        <p class="text-2xl font-bold">GH₵{{ "%.2f"|format(stats.unallocated) }}</p>
+      </div>
+    </section>
+    {% endif %}
+
+    <!-- Filters -->
+    <section class="bg-white rounded-xl border border-slate-200 p-4 mb-4">
+      <form method="get" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
+        <input
+          name="q"
+          value="{{ request.args.get('q','') }}"
+          placeholder="Receipt # / Client"
+          class="h-10 rounded-full border px-4 bg-slate-50"
+        />
+        <input
+          name="from"
+          value="{{ request.args.get('from','') }}"
+          type="date"
+          class="h-10 rounded-full border px-3"
+        >
+        <input
+          name="to"
+          value="{{ request.args.get('to','') }}"
+          type="date"
+          class="h-10 rounded-full border px-3"
+        >
+        <input
+          name="customer"
+          value="{{ request.args.get('customer','') }}"
+          placeholder="Client code"
+          class="h-10 rounded-full border px-4 bg-slate-50"
+        />
+        <select name="status" class="h-10 rounded-full border px-3">
+          {% set st = request.args.get('status','') %}
+          <option value="">All status</option>
+          <option value="allocated" {{ 'selected' if st=='allocated' }}>Fully Allocated</option>
+          <option value="partial"   {{ 'selected' if st=='partial'   }}>Partially Allocated</option>
+          <option value="unalloc"   {{ 'selected' if st=='unalloc'   }}>Unallocated</option>
+        </select>
+        <div class="lg:col-span-5">
+          <button class="h-10 px-4 rounded-full border font-semibold">Apply</button>
+        </div>
+      </form>
+    </section>
+
+    <!-- Table -->
+    <section class="rounded-xl border border-slate-200 bg-white overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="min-w-full text-left text-sm">
+          <thead class="bg-slate-50">
+            <tr>
+              <th class="px-6 py-3 font-semibold">Receipt No</th>
+              <th class="px-6 py-3 font-semibold">Date</th>
+              <th class="px-6 py-3 font-semibold">Client</th>
+              <th class="px-6 py-3 font-semibold">Method</th>
+              <th class="px-6 py-3 font-semibold text-right">Amount</th>
+              <th class="px-6 py-3 font-semibold text-right">Allocated</th>
+              <th class="px-6 py-3 font-semibold text-right">Unallocated</th>
+              <th class="px-6 py-3 font-semibold">Reference</th>
+              <th class="px-6 py-3 font-semibold text-center">Status</th>
+              <th class="px-6 py-3 font-semibold text-center">Actions</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y">
+            {% for r in rows %}
+            <tr class="hover:bg-slate-50">
+              <td class="px-6 py-3 font-medium text-emerald-700">{{ r.no }}</td>
+              <td class="px-6 py-3">{{ r.date }}</td>
+              <td class="px-6 py-3 font-medium">{{ r.customer_name or r.customer }}</td>
+              <td class="px-6 py-3">{{ r.method }}</td>
+              <td class="px-6 py-3 text-right">GH₵{{ "%.2f"|format(r.amount) }}</td>
+              <td class="px-6 py-3 text-right">GH₵{{ "%.2f"|format(r.allocated) }}</td>
+              <td class="px-6 py-3 text-right">GH₵{{ "%.2f"|format(r.unallocated) }}</td>
+              <td class="px-6 py-3 text-slate-500">{{ r.reference or '--' }}</td>
+              <td class="px-6 py-3 text-center">
+                {% set cls = 'bg-emerald-500/10 text-emerald-700' if r.status=='allocated'
+                             else ('bg-yellow-500/10 text-yellow-700' if r.status=='partial'
+                                   else 'bg-slate-200 text-slate-800') %}
+                <span class="inline-flex items-center px-2.5 py-0.5 text-xs font-medium rounded-full {{ cls }}">
+                  {{ r.status|title }}
+                </span>
+              </td>
+              <td class="px-6 py-3 text-center">
+                <a
+                  class="font-medium text-accent hover:underline"
+                  href="{{ url_for('ar_invoices.invoices', customer=r.customer, receipt=r.no) }}"
+                >
+                  Allocate
+                </a>
+              </td>
+            </tr>
+            {% else %}
+            <tr>
+              <td colspan="10" class="px-6 py-12 text-center text-slate-500">
+                No receipts match your filters.
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Pagination -->
+    {% if pager and pager.pages > 1 %}
+    <nav class="mt-6 flex items-center justify-between">
+      <a
+        class="px-3 py-2 rounded-lg border {{ 'pointer-events-none opacity-50' if not pager.prev_url else '' }}"
+        href="{{ pager.prev_url or '#' }}"
+      >Previous</a>
+      <div class="text-sm text-slate-500">Page {{ pager.page }} of {{ pager.pages }}</div>
+      <a
+        class="px-3 py-2 rounded-lg border {{ 'pointer-events-none opacity-50' if not pager.next_url else '' }}"
+        href="{{ pager.next_url or '#' }}"
+      >Next</a>
+    </nav>
+    {% endif %}
+  </main>
+
+  <!-- Quick Add Receipt Modal -->
+  <div id="recBackdrop" class="fixed inset-0 bg-black/40 z-[100] hidden"></div>
+  <div id="recModal" class="fixed inset-0 z-[101] hidden p-4 overflow-y-auto">
+    <div class="mx-auto max-w-xl">
+      <div class="rounded-xl border border-slate-200 bg-white shadow">
+        <div class="flex items-center justify-between px-5 py-3 border-b">
+          <h3 class="text-lg font-bold">Add Payment</h3>
+          <button id="closeRec" class="h-9 w-9 grid place-items-center rounded-lg border hover:bg-slate-50">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </div>
+        <form id="recForm" class="p-5 space-y-4">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <!-- Auto-generated receipt no -->
+            <label class="block">
+              <span class="text-sm font-medium">Receipt No</span>
+              <input
+                name="no"
+                required
+                class="mt-1 w-full h-11 rounded-xl border p-2.5 bg-slate-50"
+                value="{{ next_receipt_no }}"
+                readonly
+              >
+            </label>
+            <label class="block">
+              <span class="text-sm font-medium">Date</span>
+              <input
+                name="date"
+                type="date"
+                required
+                class="mt-1 w-full h-11 rounded-xl border p-2.5"
+              >
+            </label>
+
+            <!-- Client dropdown (backend field name `customer`) -->
+            <label class="block sm:col-span-2">
+              <span class="text-sm font-medium">Client</span>
+              <select
+                name="customer"
+                required
+                class="mt-1 w-full h-11 rounded-xl border p-2.5 bg-white cursor-pointer"
+              >
+                <option value="">Select client…</option>
+                {% if customers_list and customers_list|length > 0 %}
+                  {% for c in customers_list %}
+                    <option value="{{ c.code }}">{{ c.code }} -- {{ c.name }}</option>
+                  {% endfor %}
+                {% else %}
+                  <option value="" disabled>No clients found. Create one in Clients first.</option>
+                {% endif %}
+              </select>
+            </label>
+
+            <label class="block">
+              <span class="text-sm font-medium">Method</span>
+              <select name="method" class="mt-1 w-full h-11 rounded-xl border p-2.5 bg-white cursor-pointer">
+                <option>Cash</option>
+                <option>Bank Transfer</option>
+                <option>Mobile</option>
+                <option>Cheque</option>
+              </select>
+            </label>
+            <label class="block">
+              <span class="text-sm font-medium">Amount (GH₵)</span>
+              <input
+                name="amount"
+                type="number"
+                step="0.01"
+                min="0.01"
+                required
+                class="mt-1 w-full h-11 rounded-xl border p-2.5"
+              >
+            </label>
+            <label class="block sm:col-span-2">
+              <span class="text-sm font-medium">Reference</span>
+              <input
+                name="reference"
+                class="mt-1 w-full h-11 rounded-xl border p-2.5"
+                placeholder="INV-XXX Payment"
+              >
+            </label>
+          </div>
+          <div class="flex items-center justify-between pt-2">
+            <p id="recMsg" class="text-sm text-slate-500"></p>
+            <div class="flex gap-2">
+              <button type="button" id="cancelRec" class="h-11 px-5 rounded-full border">Cancel</button>
+              <button type="submit" id="saveRec" class="h-11 px-6 rounded-full bg-accent text-white font-bold hover:bg-accent/90">
+                Save
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function openM(m,b){ m.classList.remove('hidden'); b.classList.remove('hidden'); }
+    function closeM(m,b){ m.classList.add('hidden'); b.classList.add('hidden'); }
+
+    const m = document.getElementById('recModal'),
+          b = document.getElementById('recBackdrop');
+
+    document.getElementById('openRec')?.addEventListener('click', ()=>openM(m,b));
+    document.getElementById('closeRec')?.addEventListener('click', ()=>closeM(m,b));
+    document.getElementById('cancelRec')?.addEventListener('click', ()=>closeM(m,b));
+    b?.addEventListener('click', ()=>closeM(m,b));
+    window.addEventListener('keydown', e => { if(e.key === 'Escape') closeM(m,b); });
+
+    const form = document.getElementById('recForm'),
+          msg  = document.getElementById('recMsg'),
+          btn  = document.getElementById('saveRec');
+
+    form?.addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      msg.textContent = '';
+      btn.disabled = true;
+      try{
+        const fd  = new FormData(form);
+        const res = await fetch("{{ url_for('ar_payments.quick_create') }}", {
+          method: "POST",
+          body: fd
+        });
+        const data = await res.json();
+        if(!res.ok || !data.ok){
+          msg.textContent = data.message || 'Failed';
+          btn.disabled = false;
+          return;
+        }
+        closeM(m,b);
+        location.reload();
+      }catch(err){
+        console.error(err);
+        msg.textContent = 'Network error';
+        btn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>

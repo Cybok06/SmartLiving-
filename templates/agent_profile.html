@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Agent Profile</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="icon" type="image/png" href="https://res.cloudinary.com/dljpgzbto/image/upload/v1743993646/company-logo_dksb23.jpg">
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
+
+  <style>
+    :root{
+      --ink:#0f172a;
+      --muted:#64748b;
+      --panel:#ffffff;
+      --edge:#e2e8f0;
+      --accent:#2563eb;
+      --soft:#f1f5f9;
+    }
+    *{box-sizing:border-box;}
+    body{
+      font-family:"Manrope", sans-serif;
+      background: radial-gradient(circle at top, #eef2ff 0%, #f8fafc 45%, #f5f6fb 100%);
+      color:var(--ink);
+      min-height:100vh;
+    }
+    .page-shell{padding:1.5rem 1.25rem 3rem;}
+    .page-header{
+      background:linear-gradient(120deg,#0f172a,#1e3a8a);
+      color:#fff;
+      border-radius:18px;
+      padding:1.2rem 1.4rem;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:1rem;
+      box-shadow:0 16px 30px rgba(15,23,42,.18);
+      margin-bottom:1.5rem;
+    }
+    .page-header h1{font-size:1.35rem;margin:0;font-weight:700;}
+    .chip{
+      background:rgba(255,255,255,.16);
+      border:1px solid rgba(255,255,255,.25);
+      color:#fff;
+      border-radius:999px;
+      padding:.25rem .7rem;
+      font-size:.75rem;
+      font-weight:600;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+    }
+    .profile-card{
+      background:var(--panel);
+      border:1px solid var(--edge);
+      border-radius:18px;
+      box-shadow:0 12px 30px rgba(15,23,42,.08);
+      padding:1.5rem;
+    }
+    .avatar{
+      width:110px;
+      height:110px;
+      border-radius:50%;
+      object-fit:cover;
+      border:3px solid #dbe4f0;
+    }
+    .status-pill{
+      padding:.25rem .7rem;
+      border-radius:999px;
+      font-size:.75rem;
+      font-weight:600;
+    }
+    .status-active{background:#dcfce7;color:#166534;}
+    .status-not-active{background:#fee2e2;color:#b91c1c;}
+    .details-grid{
+      display:grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap:1rem;
+    }
+    .detail-card{
+      background:#f8fafc;
+      border:1px solid #e2e8f0;
+      border-radius:12px;
+      padding:.75rem 1rem;
+    }
+    .detail-card small{color:var(--muted);display:block;}
+    .cred-box{
+      background:#f8fafc;
+      border:1px solid #e2e8f0;
+      border-radius:12px;
+      padding:.6rem .75rem;
+      font-size:.85rem;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:.5rem;
+    }
+    .cred-value{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; font-size:.78rem; color:#0f172a;}
+    .btn-ghost{
+      border:1px solid #dbe4f0;
+      background:#fff;
+      color:#1f2937;
+      border-radius:10px;
+      padding:.25rem .5rem;
+      font-size:.75rem;
+    }
+    @media (max-width: 768px){
+      .details-grid{grid-template-columns:1fr;}
+    }
+  </style>
+</head>
+<body>
+
+<nav class="navbar navbar-expand-lg bg-white shadow-sm">
+  <div class="container-fluid px-3">
+    <a class="navbar-brand d-flex align-items-center" href="#">
+      <img src="https://res.cloudinary.com/dljpgzbto/image/upload/v1743993646/company-logo_dksb23.jpg" alt="Logo" width="40" height="40" class="rounded-circle me-2">
+      <span>SMART LIVING</span>
+    </a>
+    <div class="ms-auto">
+      <a class="btn btn-outline-secondary btn-sm" href="/view/customers">View Customers</a>
+      <a class="btn btn-outline-danger btn-sm ms-2" href="/logout">Logout</a>
+    </div>
+  </div>
+</nav>
+
+<div class="page-shell">
+  <div class="page-header">
+    <div>
+      <div class="chip mb-2">Agent</div>
+      <h1>Agent Profile</h1>
+    </div>
+    <div class="chip">Credentials</div>
+  </div>
+
+  <div class="profile-card">
+    <div class="d-flex flex-wrap align-items-center gap-4 mb-4">
+      <img src="{{ agent.image_url or 'https://via.placeholder.com/110' }}" alt="Agent Image" class="avatar" />
+      <div>
+        <h2 class="mb-1">{{ agent.name }}</h2>
+        <div class="text-muted">{{ agent.phone }} | {{ agent.email }}</div>
+        <div class="mt-2">
+          <span class="status-pill {% if agent.status == 'Active' %}status-active{% else %}status-not-active{% endif %}">{{ agent.status }}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="details-grid mb-4">
+      <div class="detail-card"><small>Gender</small>{{ agent.gender }}</div>
+      <div class="detail-card"><small>Branch</small>{{ agent.branch }}</div>
+      <div class="detail-card"><small>Position</small>{{ agent.position }}</div>
+      <div class="detail-card"><small>Location</small>{{ agent.location }}</div>
+      <div class="detail-card"><small>Start Date</small>{{ agent.start_date }}</div>
+      <div class="detail-card"><small>Registered On</small>{{ agent.date_registered }}</div>
+    </div>
+
+    <div class="mb-3 text-muted small">Credentials</div>
+    <div class="cred-box mb-2">
+      <div>
+        <div class="text-muted small">Username</div>
+        <div class="cred-value">{{ agent.username or 'N/A' }}</div>
+      </div>
+      <button type="button" class="btn-ghost copy-btn" data-copy="{{ agent.username or '' }}">Copy</button>
+    </div>
+    <div class="cred-box">
+      <div>
+        <div class="text-muted small">Password</div>
+        <div class="cred-value">Hidden</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="profile-card mt-4">
+    <div class="d-flex align-items-center justify-content-between flex-wrap mb-3">
+      <h5 class="mb-0">Recent Logs (Last 5)</h5>
+      <div class="d-flex flex-wrap gap-2">
+        <span class="badge bg-light text-dark border">Last login:
+          {% if login_stats.last_login %}
+            {{ login_stats.last_login.strftime('%Y-%m-%d %H:%M') }}
+          {% else %}
+            --
+          {% endif %}
+        </span>
+        <span class="badge bg-light text-dark border">Total logins (30 days): {{ login_stats.total_logins }}</span>
+        <span class="badge bg-light text-dark border">Unique IPs (30 days): {{ login_stats.unique_ips }}</span>
+        <span class="badge bg-light text-dark border">Unique devices (30 days): {{ login_stats.unique_devices }}</span>
+      </div>
+    </div>
+
+    <div class="table-responsive">
+      <table class="table table-sm align-middle">
+        <thead class="table-light">
+        <tr>
+          <th>Date/Time</th>
+          <th>IP</th>
+          <th>Device</th>
+          <th>Location</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% if login_logs and login_logs|length %}
+          {% for log in login_logs %}
+            <tr>
+              <td>
+                {% if log.timestamp %}
+                  {{ log.timestamp.strftime('%Y-%m-%d %H:%M') if log.timestamp.__class__.__name__ == 'datetime' else log.timestamp }}
+                {% else %}--{% endif %}
+                {% if log.is_new_location %}
+                  <span class="badge bg-warning text-dark ms-2">New location</span>
+                {% endif %}
+                {% if log.is_low_accuracy %}
+                  <span class="badge bg-secondary ms-2">Low accuracy</span>
+                {% endif %}
+              </td>
+              <td>{{ log.ip or '--' }}</td>
+              <td>
+                <div>{{ (log.device.os or 'Unknown') }} -  {{ (log.device.browser or 'Unknown') }}</div>
+                <small class="text-muted">{{ 'Mobile' if log.device.is_mobile else 'Desktop' }}</small>
+              </td>
+              <td>
+                {% if log.geo and log.geo.lat is not none %}
+                  <div>Lat {{ log.geo.lat }}, Lng {{ log.geo.lng }} (±{{ log.geo.accuracy_m or 0 }}m)</div>
+                  <a class="btn btn-outline-primary btn-sm mt-1" target="_blank"
+                     href="https://www.google.com/maps?q={{ log.geo.lat }},{{ log.geo.lng }}">
+                    Open Map
+                  </a>
+                {% else %}
+                  --
+                {% endif %}
+                {% set ip_loc = log.ip_location or log.location %}
+                {% if ip_loc %}
+                  <div class="text-muted small">
+                    {{ ip_loc.city or '' }} {{ ip_loc.region or '' }} {{ ip_loc.country or '' }}
+                  </div>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        {% else %}
+          <tr><td colspan="4" class="text-center text-muted py-3">No login activity yet.</td></tr>
+        {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<footer class="text-center text-muted py-4">&copy; 2025 SMART LIVING CRM. All Rights Reserved.</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+  document.querySelectorAll('.copy-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const value = btn.getAttribute('data-copy') || '';
+      if (!value) return;
+      try {
+        await navigator.clipboard.writeText(value);
+        btn.textContent = 'Copied';
+        setTimeout(() => { btn.textContent = 'Copy'; }, 1200);
+      } catch (e) {
+        // silent
+      }
+    });
+  });
+</script>
+  {% include 'app_footer.html' %}
+
+</body>
+</html>

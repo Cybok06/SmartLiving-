@@ -1,0 +1,657 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <title>My Complaints -  Agent</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="icon" href="https://res.cloudinary.com/dljpgzbto/image/upload/v1743993646/company-logo_dksb23.jpg" type="image/png">
+
+  <style>
+    :root{
+      --ink:#0b3b52; --muted:#64748b; --ring:#e5e7eb; --soft:#f9fafb;
+      --brand:#0ea5e9; --ok:#16a34a; --warn:#f59e0b; --bad:#dc2626;
+    }
+    body{
+      background: radial-gradient(circle at top,#e0f2fe 0,#fdf2ff 40%,#f9fafb 100%);
+      color:var(--ink);
+      font-family: system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    }
+    .card{
+      border-radius:18px;
+      box-shadow: 0 8px 22px rgba(15,23,42,0.06);
+      border:1px solid var(--ring);
+      background:#ffffff;
+    }
+    .pill-card{
+      border-radius:999px;
+      background:rgba(255,255,255,0.9);
+      border:1px solid rgba(148,163,184,0.4);
+      padding:.4rem .9rem;
+      font-size:.8rem;
+    }
+    .muted{color:var(--muted);font-size:.85rem;}
+
+    .status-badge{
+      border-radius:999px;
+      font-size:.7rem;
+      padding:.18rem .6rem;
+      font-weight:600;
+    }
+    .status-Assigned{ background:#fff7ed; color:#b45309; }
+    .status-In\ Progress{ background:#ecfeff; color:#0369a1; }
+    .status-Waiting\ for\ Customer{ background:#fef9c3; color:#854d0e; }
+    .status-Resolved{ background:#dcfce7; color:#166534; }
+    .status-Closed{ background:#e5e7eb; color:#374151; }
+
+    .bucket-btn{
+      border-radius:999px!important;
+      font-size:.78rem;
+      padding:.25rem .9rem;
+    }
+
+    .search-pill{
+      border-radius:999px;
+      background:#ffffff;
+      border:1px solid #e5e7eb;
+      padding:.25rem .75rem;
+      display:flex;
+      align-items:center;
+      gap:.35rem;
+      font-size:.85rem;
+    }
+    .search-pill input{
+      border:none;
+      outline:none;
+      background:transparent;
+      font-size:.85rem;
+      width:100%;
+    }
+    .search-pill input::placeholder{color:#9ca3af;}
+
+    .complaint-card{
+      border-radius:16px;
+      border:1px solid #e2e8f0;
+      background:linear-gradient(135deg,#ffffff,#f8fafc);
+      padding:.85rem .9rem;
+    }
+    .complaint-meta{
+      font-size:.8rem;
+    }
+    .complaint-meta span{
+      display:inline-flex;
+      align-items:center;
+      gap:.25rem;
+    }
+
+    .tag-chip{
+      font-size:.7rem;
+      border-radius:999px;
+      background:#eff6ff;
+      padding:.15rem .55rem;
+      color:#1d4ed8;
+    }
+
+    .timeline-dot{ width:10px;height:10px;border-radius:999px; }
+    .timeline-line{ width:2px;flex:0 0 2px;background:#e5e7eb; }
+    .timeline-item{ display:flex; gap:.75rem; }
+    .timeline-icon{
+      width:24px;height:24px;border-radius:999px;
+      display:flex;align-items:center;justify-content:center;
+      font-size:.7rem;
+    }
+
+    .offcanvas-body{
+      background:linear-gradient(180deg,#f9fafb,#ffffff);
+    }
+
+    @media (min-width: 768px){
+      .complaints-grid{
+        display:grid;
+        grid-template-columns:repeat(2,minmax(0,1fr));
+        gap:.75rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  {% include 'side_bar.html' %}
+
+<div class="container py-3" style="max-width:980px;">
+
+  <!-- Header / stats -->
+  <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+    <div>
+      <h4 class="mb-0">My Complaints</h4>
+      <small class="muted d-block">View tickets assigned to you, update status and log follow-ups.</small>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+      <div class="pill-card">
+        <div class="text-uppercase text-muted" style="letter-spacing:.08em;font-size:.65rem;">Open</div>
+        <div class="fw-semibold">{{ stats.open }}</div>
+      </div>
+      <div class="pill-card">
+        <div class="text-uppercase text-muted" style="letter-spacing:.08em;font-size:.65rem;">Resolved</div>
+        <div class="fw-semibold text-success">{{ stats.resolved }}</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filters: bucket + search -->
+  <form method="GET" id="filterForm" class="mb-3">
+    <input type="hidden" name="bucket" id="bucketInput" value="{{ filters.bucket or 'open' }}">
+    <div class="d-flex flex-column gap-2">
+      <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+        <div class="btn-group" role="group" aria-label="Buckets">
+          <button type="button"
+                  class="btn btn-sm btn-outline-secondary bucket-btn"
+                  data-bucket="open">Open</button>
+          <button type="button"
+                  class="btn btn-sm btn-outline-secondary bucket-btn"
+                  data-bucket="resolved">Resolved</button>
+          <button type="button"
+                  class="btn btn-sm btn-outline-secondary bucket-btn"
+                  data-bucket="all">All</button>
+        </div>
+
+        <div class="d-flex align-items-center gap-2">
+          <select name="status" class="form-select form-select-sm" style="max-width:150px;">
+            <option value="">Any status</option>
+            {% for s in statuses %}
+              <option value="{{ s }}" {{ 'selected' if filters.status==s else '' }}>{{ s }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <div class="search-pill">
+        <span>🔍</span>
+        <input type="text" name="q" placeholder="Search ticket, name, phone, issue..."
+               value="{{ filters.q or '' }}">
+        <button class="btn btn-sm btn-outline-primary ms-1" type="submit">Filter</button>
+      </div>
+    </div>
+  </form>
+
+  <!-- Activity quick open by phone -->
+  <div class="card mb-3">
+    <div class="card-body py-2">
+      <div class="d-flex flex-wrap align-items-center gap-2">
+        <span class="muted">Customer activity:</span>
+        <div class="search-pill flex-grow-1" style="max-width:300px;">
+          <span>🕒</span>
+          <input type="text" id="activityPhoneInput" placeholder="Enter customer phone (e.g. 054xxxxxxx)">
+        </div>
+        <button type="button" class="btn btn-outline-primary btn-sm d-flex align-items-center" id="activitySearchBtn">
+          <span class="spinner-border spinner-border-sm me-1 d-none" id="activitySearchSpinner"></span>
+          View
+        </button>
+      </div>
+      <small class="text-muted" style="font-size:.75rem;">Shows payments, packages, complaints & your notes.</small>
+    </div>
+  </div>
+
+  <!-- Complaints list -->
+  <div class="complaints-grid">
+    {% for it in items %}
+    <div class="complaint-card mb-2"
+         data-id="{{ it._id }}"
+         data-phone="{{ it.customer_phone }}"
+         data-customer-id="{{ it.customer_id or '' }}">
+      <div class="d-flex justify-content-between align-items-center mb-1">
+        <div>
+          <div class="fw-semibold" style="font-size:.9rem;">{{ it.ticket_no }}</div>
+          <div class="muted">{{ it.date_reported }}</div>
+        </div>
+        <div class="text-end">
+          <span class="status-badge status-{{ it.status|replace(' ','\\ ') }}">{{ it.status }}</span>
+          {% if it.sla_due %}
+            <div class="mt-1" style="font-size:.75rem;">
+              <span class="text-muted">SLA:</span> <span class="fw-semibold">{{ it.sla_due }}</span>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="complaint-meta mb-2">
+        <div class="d-flex justify-content-between">
+          <span><strong>{{ it.customer_name }}</strong></span>
+          <span>📞 {{ it.customer_phone }}</span>
+        </div>
+        <div class="mt-1 d-flex justify-content-between">
+          <span class="tag-chip">{{ it.issue_type }}</span>
+          {% if it.branch %}
+            <span class="text-muted">{{ it.branch }}</span>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+        <div class="d-flex gap-1">
+          <button class="btn btn-sm btn-outline-secondary timelineBtn">
+            🕒 Activity
+          </button>
+        </div>
+        <div class="d-flex gap-1 align-items-center">
+          <select class="form-select form-select-sm statusSelect" style="min-width:145px;">
+            {% for s in statuses %}
+              <option value="{{ s }}" {{ 'selected' if it.status==s else '' }}>{{ s }}</option>
+            {% endfor %}
+          </select>
+          <button class="btn btn-sm btn-outline-success saveStatusBtn">
+            <span class="spinner-border spinner-border-sm me-1 d-none"></span>
+            Save
+          </button>
+        </div>
+      </div>
+    </div>
+    {% else %}
+    <div class="text-center text-muted py-4">
+      No complaints found for this filter.
+    </div>
+    {% endfor %}
+  </div>
+
+</div>
+
+<!-- Customer Timeline Offcanvas -->
+<div class="offcanvas offcanvas-end" tabindex="-1" id="timelineCanvas" aria-labelledby="timelineCanvasLabel">
+  <div class="offcanvas-header">
+    <div>
+      <h5 id="timelineCanvasLabel" class="mb-0">Customer Activity</h5>
+      <small class="text-muted">Complaints, payments, packages and your follow-up notes.</small>
+    </div>
+    <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+  </div>
+  <div class="offcanvas-body">
+    <div class="mb-2">
+      <span class="muted">Customer:</span> <strong id="tCustomerName"></strong><br>
+      <span class="muted">Phone:</span> <strong id="tCustomerPhone"></strong>
+    </div>
+
+    <!-- Manual activity form -->
+    <div class="card mb-3">
+      <div class="card-body p-3">
+        <div class="mb-2">
+          <div class="small text-muted">Log follow-up</div>
+          <div class="fw-semibold" style="font-size:.9rem;">Add call / visit / WhatsApp / note</div>
+        </div>
+        <form id="manualActivityForm">
+          <input type="hidden" id="maCustomerId" name="customer_id">
+          <input type="hidden" id="maPhone" name="phone">
+          <div class="mb-2">
+            <label class="form-label small">Title</label>
+            <input type="text" class="form-control form-control-sm" id="maTitle"
+                   placeholder="e.g. Called about missed payment">
+          </div>
+          <div class="mb-2">
+            <label class="form-label small">Type</label>
+            <select class="form-select form-select-sm" id="maType">
+              <option value="manual">General note</option>
+              <option value="call">Call</option>
+              <option value="visit">Visit</option>
+              <option value="whatsapp">WhatsApp</option>
+              <option value="followup">Follow-up</option>
+            </select>
+          </div>
+          <div class="mb-2">
+            <label class="form-label small">Details</label>
+            <textarea class="form-control form-control-sm" rows="2" id="maNote"
+                      placeholder="Short, clear note of what happened"></textarea>
+          </div>
+          <div class="d-flex justify-content-end align-items-center gap-2">
+            <span class="small text-muted" id="maHint"></span>
+            <button type="submit" class="btn btn-primary btn-sm">
+              <span class="spinner-border spinner-border-sm me-1 d-none" id="maSpinner"></span>
+              Save
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <hr>
+
+    <div id="timelineLoading" class="text-center my-3 d-none">
+      <div class="spinner-border spinner-border-sm"></div>
+      <div class="small text-muted mt-1">Loading activity...</div>
+    </div>
+
+    <div id="timelineEmpty" class="text-muted small d-none">No activities recorded for this customer yet.</div>
+    <div id="timelineContainer" class="d-flex flex-column gap-3"></div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+(function(){
+  // ===== Bucket buttons =====
+  const bucketInput = document.getElementById('bucketInput');
+  const bucketButtons = document.querySelectorAll('.bucket-btn');
+  const filterForm = document.getElementById('filterForm');
+
+  function syncBuckets(){
+    const current = (bucketInput.value || 'open').toLowerCase();
+    bucketButtons.forEach(btn => {
+      const val = (btn.dataset.bucket || '').toLowerCase();
+      if(val === current){
+        btn.classList.add('btn-primary');
+        btn.classList.remove('btn-outline-secondary');
+      }else{
+        btn.classList.remove('btn-primary');
+        btn.classList.add('btn-outline-secondary');
+      }
+    });
+  }
+  if(bucketInput && bucketButtons.length){
+    syncBuckets();
+    bucketButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        bucketInput.value = btn.dataset.bucket || 'open';
+        filterForm.submit();
+      });
+    });
+  }
+
+  // ===== Inline status update (agent endpoint) =====
+  document.addEventListener('click', async (e)=>{
+    const btn = e.target.closest('.saveStatusBtn');
+    if(!btn) return;
+
+    const card = btn.closest('.complaint-card');
+    const id = card?.dataset?.id;
+    const select = card?.querySelector('.statusSelect');
+    const badge = card?.querySelector('.status-badge');
+    const spinner = btn.querySelector('.spinner-border');
+
+    if(!id || !select || !badge) return;
+
+    const newStatus = select.value;
+
+    btn.disabled = true;
+    if(spinner) spinner.classList.remove('d-none');
+
+    try{
+      const fd = new FormData();
+      fd.append('status', newStatus);
+
+      const res = await fetch(`/agent/complaints/${id}/status`, {
+        method: 'POST',
+        body: fd,
+        headers: {'X-Requested-With':'XMLHttpRequest'}
+      });
+      const j = await res.json();
+      if(j.ok){
+        const safe = newStatus.replaceAll(' ','\\ ');
+        badge.textContent = newStatus;
+        badge.className = 'status-badge status-' + safe;
+
+        // If current bucket is "open" and status is resolved, hide the card
+        const bucket = (bucketInput?.value || 'open').toLowerCase();
+        if(bucket === 'open' && (newStatus === 'Resolved' || newStatus === 'Closed')){
+          card.remove();
+        }
+      }else{
+        alert(j.message || 'Failed to update status');
+      }
+    }catch(_){
+      alert('Network error while updating status');
+    }finally{
+      btn.disabled = false;
+      if(spinner) spinner.classList.add('d-none');
+    }
+  });
+
+  // ===== Timeline / activities =====
+  const timelineCanvasEl = document.getElementById('timelineCanvas');
+  const timelineCanvas = timelineCanvasEl ? new bootstrap.Offcanvas(timelineCanvasEl) : null;
+  const tCustomerName = document.getElementById('tCustomerName');
+  const tCustomerPhone = document.getElementById('tCustomerPhone');
+  const timelineContainer = document.getElementById('timelineContainer');
+  const timelineEmpty = document.getElementById('timelineEmpty');
+  const timelineLoading = document.getElementById('timelineLoading');
+
+  const maForm = document.getElementById('manualActivityForm');
+  const maCustomerId = document.getElementById('maCustomerId');
+  const maPhone = document.getElementById('maPhone');
+  const maTitle = document.getElementById('maTitle');
+  const maType = document.getElementById('maType');
+  const maNote = document.getElementById('maNote');
+  const maHint = document.getElementById('maHint');
+  const maSpinner = document.getElementById('maSpinner');
+
+  function buildTimelineRow(a){
+    const type = (a.type || a.activity_type || '').toLowerCase();
+    let dotColor = '#6b7280';
+    let iconBg = '#e5e7eb';
+    let iconText = '- ';
+    let title = a.title || 'Activity';
+    let status = a.status || '';
+    let when = a.date || a.date_reported || a.submitted_at || a.created_at || '';
+    let details = '';
+    let amount = '';
+    let ref = '';
+
+    if(type === 'payment'){
+      dotColor = '#16a34a'; iconBg='#dcfce7'; iconText='₵';
+      title = 'Payment';
+      when = (a.date || '') + (a.time ? (' ' + a.time) : '');
+      details = [
+        a.method ? ('Method: ' + a.method) : '',
+        a.payment_type ? ('Type: ' + a.payment_type) : '',
+        a.product_name ? ('Product: ' + a.product_name) : '',
+        a.note ? ('Note: ' + a.note) : ''
+      ].filter(Boolean).join(' -  ');
+      amount = a.amount ? String(a.amount) : '';
+    }else if(type === 'package'){
+      dotColor = '#0ea5e9'; iconBg='#e0f2fe'; iconText='📦';
+      title = 'Package / Product';
+      when = a.submitted_at || a.purchase_date || when;
+      details = [
+        a.product_name ? ('Product: ' + a.product_name) : '',
+        a.purchase_type ? ('Purchase: ' + a.purchase_type) : '',
+        a.end_date ? ('End: ' + a.end_date) : ''
+      ].filter(Boolean).join(' -  ');
+      amount = a.product_total ? String(a.product_total) : '';
+    }else if(type === 'complaint'){
+      dotColor = '#f97316'; iconBg='#ffedd5'; iconText='!';
+      title = 'Complaint: ' + (a.issue_type || '');
+      when = a.date_reported || when;
+      details = [
+        a.channel ? ('Channel: ' + a.channel) : '',
+        a.description ? a.description : ''
+      ].filter(Boolean).join(' -  ');
+      ref = a.ticket_no || '';
+    }else{
+      dotColor = '#6366f1'; iconBg='#eef2ff'; iconText='✏️';
+      title = a.title || 'Manual activity';
+      details = a.note || '';
+      if(!when && a.timestamp){
+        when = a.timestamp.slice(0,16).replace('T',' ');
+      }
+    }
+
+    const row = document.createElement('div');
+    row.className = 'timeline-item';
+    row.innerHTML = `
+      <div class="d-flex flex-column align-items-center mt-1">
+        <div class="timeline-dot" style="background:${dotColor};"></div>
+        <div class="timeline-line flex-grow-1 mt-1"></div>
+      </div>
+      <div class="flex-grow-1">
+        <div class="d-flex justify-content-between align-items-center mb-1">
+          <div class="d-flex align-items-center gap-2">
+            <div class="timeline-icon" style="background:${iconBg};color:#111827;">${iconText}</div>
+            <div>
+              <strong>${title}</strong>
+              ${status ? `<span class="badge bg-light text-dark border ms-1">${status}</span>` : ''}
+            </div>
+          </div>
+          <small class="text-muted">${when || ''}</small>
+        </div>
+        ${details ? `<div class="small text-muted mb-1">${details}</div>` : ''}
+        ${amount ? `<div class="small"><strong>Amount:</strong> GHS ${amount}</div>` : ''}
+        ${ref ? `<div class="small text-muted">Ref: ${ref}</div>` : ''}
+      </div>`;
+    return row;
+  }
+
+  async function loadCustomerActivity({ phone, customerId }){
+    if(!timelineCanvas) return;
+    if(!phone && !customerId){
+      alert('Provide a phone or select a ticket with a phone.');
+      return;
+    }
+
+    timelineContainer.innerHTML = '';
+    timelineEmpty.classList.add('d-none');
+    tCustomerName.textContent = 'Loading...';
+    tCustomerPhone.textContent = phone || '';
+    timelineLoading.classList.remove('d-none');
+
+    // Prefill manual form
+    maCustomerId.value = customerId || '';
+    maPhone.value = phone || '';
+
+    try{
+      const params = new URLSearchParams();
+      if(phone) params.append('phone', phone);
+      if(customerId) params.append('customer_id', customerId);
+
+      const res = await fetch(`/complaints/customer_activity?${params.toString()}`, {
+        headers:{'X-Requested-With':'XMLHttpRequest'}
+      });
+      const j = await res.json();
+      if(!j.ok){
+        timelineEmpty.textContent = j.message || 'No activity found.';
+        timelineEmpty.classList.remove('d-none');
+        tCustomerName.textContent = '';
+        tCustomerPhone.textContent = phone || '';
+        timelineLoading.classList.add('d-none');
+        timelineCanvas.show();
+        return;
+      }
+
+      const cust = j.customer || {};
+      const acts = j.activities || [];
+
+      tCustomerName.textContent = cust.name || '(Unknown)';
+      tCustomerPhone.textContent = cust.phone_number || phone || '';
+
+      maCustomerId.value = cust.id || customerId || '';
+      maPhone.value = cust.phone_number || phone || '';
+
+      if(!acts.length){
+        timelineEmpty.textContent = 'No activities recorded for this customer yet.';
+        timelineEmpty.classList.remove('d-none');
+      }else{
+        acts.forEach(a=>{
+          const row = buildTimelineRow(a);
+          timelineContainer.appendChild(row);
+        });
+      }
+      timelineLoading.classList.add('d-none');
+      timelineCanvas.show();
+    }catch(_){
+      timelineEmpty.textContent = 'Failed to load activities.';
+      timelineEmpty.classList.remove('d-none');
+      timelineLoading.classList.add('d-none');
+      timelineCanvas.show();
+    }
+  }
+
+  // Open timeline from card
+  document.addEventListener('click', (e)=>{
+    const btn = e.target.closest('.timelineBtn');
+    if(!btn) return;
+    const card = btn.closest('.complaint-card');
+    if(!card) return;
+    const phone = card.dataset.phone || '';
+    const customerId = card.dataset.customerId || '';
+    loadCustomerActivity({ phone, customerId });
+  });
+
+  // Quick activity by phone
+  const activityPhoneInput = document.getElementById('activityPhoneInput');
+  const activitySearchBtn = document.getElementById('activitySearchBtn');
+  const activitySearchSpinner = document.getElementById('activitySearchSpinner');
+
+  async function triggerActivitySearch(){
+    const phone = (activityPhoneInput.value || '').trim();
+    if(!phone){
+      alert('Enter a phone number to view activity.');
+      return;
+    }
+    activitySearchBtn.disabled = true;
+    activitySearchSpinner.classList.remove('d-none');
+    await loadCustomerActivity({ phone, customerId: '' });
+    activitySearchBtn.disabled = false;
+    activitySearchSpinner.classList.add('d-none');
+  }
+
+  if(activitySearchBtn){
+    activitySearchBtn.addEventListener('click', triggerActivitySearch);
+  }
+  if(activityPhoneInput){
+    activityPhoneInput.addEventListener('keydown', (e)=>{
+      if(e.key === 'Enter'){
+        e.preventDefault();
+        triggerActivitySearch();
+      }
+    });
+  }
+
+  // ===== Manual activity save =====
+  if(maForm){
+    maForm.addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      const customerId = maCustomerId.value || '';
+      const phone = (maPhone.value || '').trim();
+
+      if(!customerId && !phone){
+        maHint.textContent = 'Missing customer reference.';
+        return;
+      }
+      maHint.textContent = 'Saving...';
+      maSpinner.classList.remove('d-none');
+
+      try{
+        const fd = new FormData();
+        if(customerId) fd.append('customer_id', customerId);
+        if(phone) fd.append('phone', phone);
+        fd.append('title', (maTitle.value || '').trim());
+        fd.append('note', (maNote.value || '').trim());
+        fd.append('activity_type', (maType.value || 'manual').trim());
+
+        const res = await fetch('/complaints/customer_activity/manual', {
+          method:'POST',
+          body: fd,
+          headers:{'X-Requested-With':'XMLHttpRequest'}
+        });
+        const j = await res.json();
+        if(j.ok && j.activity){
+          maHint.textContent = 'Saved ✓';
+          setTimeout(()=> maHint.textContent = '', 1500);
+          const row = buildTimelineRow(j.activity);
+          timelineEmpty.classList.add('d-none');
+          timelineContainer.appendChild(row);
+          maNote.value = '';
+        }else{
+          maHint.textContent = j.message || 'Failed to save activity';
+        }
+      }catch(_){
+        maHint.textContent = 'Network error';
+      }finally{
+        maSpinner.classList.add('d-none');
+      }
+    });
+  }
+
+})();
+</script>
+  {% include 'app_footer.html' %}
+
+</body>
+</html>

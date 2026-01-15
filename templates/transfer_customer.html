@@ -1,0 +1,1141 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Transfer Customers ? SMARTLIVING EMPORIUM PLUS (Flux360)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0d6efd">
+  <link rel="icon" href="https://imagedelivery.net/h9fmMoa1o2c2P55TcWJGOg/10283f28-b9a0-4100-b254-19a854386800/public" type="image/png">
+
+  <!-- Bootstrap & Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg-color: #f5f7fb;
+      --card-bg: #ffffff;
+      --text-color: #111827;
+      --muted-color: #6b7280;
+      --border-color: rgba(15, 23, 42, 0.08);
+    }
+
+    body.dark-mode {
+      --bg-color: #020617;
+      --card-bg: #0b1120;
+      --text-color: #f9fafb;
+      --muted-color: #9ca3af;
+      --border-color: rgba(148, 163, 184, 0.3);
+    }
+
+    body {
+      background: radial-gradient(circle at top left, #e0ecff 0, #f5f7fb 45%, #edf2ff 100%);
+      color: var(--text-color);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    body.dark-mode {
+      background: radial-gradient(circle at top left, #020617 0, #020617 40%, #020617 100%);
+    }
+
+    .card {
+      border-radius: .9rem;
+      border: 1px solid var(--border-color);
+      background-color: var(--card-bg);
+      color: var(--text-color);
+      box-shadow: 0 6px 18px rgba(15, 23, 42, 0.06);
+    }
+
+    .card-header {
+      border-bottom: 0;
+      background: transparent;
+      padding-bottom: .35rem;
+      color: var(--text-color);
+    }
+
+    .text-muted {
+      color: var(--muted-color) !important;
+    }
+
+    .badge-soft {
+      padding: .25rem .6rem;
+      border-radius: 999px;
+      font-size: .7rem;
+      font-weight: 600;
+      background: rgba(59,130,246,.08);
+      color: #1d4ed8;
+    }
+
+    body.dark-mode .badge-soft {
+      background: rgba(59,130,246,.22);
+      color: #bfdbfe;
+    }
+
+    .avatar-circle {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #0d6efd, #4f46e5);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.3rem;
+      font-weight: 600;
+      overflow: hidden;
+      background-size: cover;
+      background-position: center;
+    }
+
+    .metric-label {
+      font-size: .78rem;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+      color: var(--muted-color);
+      margin-bottom: .2rem;
+      font-weight: 600;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: .25rem;
+      padding: .18rem .6rem;
+      border-radius: 999px;
+      font-size: .72rem;
+      border: 1px solid rgba(148, 163, 184, 0.4);
+      color: var(--muted-color);
+    }
+
+    .chip i {
+      font-size: .8rem;
+    }
+
+    .spinner-inline {
+      width: 1rem;
+      height: 1rem;
+      border-width: .16rem;
+    }
+
+    #transferContainer {
+      border-radius: 1rem;
+    }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: .25rem;
+      padding: .14rem .5rem;
+      border-radius: 999px;
+      font-size: .7rem;
+      font-weight: 500;
+      border: 1px solid rgba(148, 163, 184, 0.45);
+    }
+
+    .status-pill-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background-color: #22c55e;
+    }
+
+    .status-inactive .status-pill-dot {
+      background-color: #ef4444;
+    }
+
+    .progress {
+      height: 8px;
+      border-radius: 999px;
+      background-color: rgba(148, 163, 184, 0.35);
+      overflow: hidden;
+    }
+
+    .progress-bar {
+      background: linear-gradient(90deg, #22c55e, #16a34a, #22c55e);
+    }
+
+    .fade-soft {
+      animation: fadeSoft .35s ease-out;
+    }
+
+    @keyframes fadeSoft {
+      from { opacity: 0; transform: translateY(4px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .table thead th {
+      font-size: .78rem;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+      color: var(--muted-color);
+      border-bottom-width: 1px;
+    }
+
+    .table td {
+      font-size: .85rem;
+      vertical-align: middle;
+    }
+
+    .badge-status {
+      border-radius: 999px;
+      font-size: .7rem;
+      padding: .2rem .6rem;
+    }
+
+    .badge-status.completed {
+      background-color: rgba(22,163,74,.1);
+      color: #15803d;
+    }
+
+    .badge-status.pending,
+    .badge-status.active {
+      background-color: rgba(59,130,246,.1);
+      color: #1d4ed8;
+    }
+
+    .badge-status.cancelled,
+    .badge-status.inactive {
+      background-color: rgba(239,68,68,.1);
+      color: #b91c1c;
+    }
+
+    .customers-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: .75rem;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .customers-toolbar-left,
+    .customers-toolbar-right {
+      display: flex;
+      flex-wrap: wrap;
+      gap: .5rem;
+      align-items: center;
+    }
+
+    @media (max-width: 575.98px) {
+      .customers-toolbar {
+        align-items: flex-start;
+      }
+      .customers-toolbar-right {
+        justify-content: flex-start;
+      }
+    }
+    .brand-lockup{ display:flex; align-items:center; gap:10px; }
+    .brand-logo{ height:32px; width:auto; object-fit:contain; }
+    .platform-logo{ height:18px; width:auto; object-fit:contain; }
+    .brand-footer{
+      margin-top: 24px;
+      padding-top: 14px;
+      border-top: 1px solid var(--border-color);
+      color: var(--muted-color);
+      font-size:.85rem;
+      display:flex;
+      flex-wrap:wrap;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+    }
+    .brand-footer .brand-name-text{
+      font-weight:700;
+      letter-spacing:.04em;
+      text-transform:uppercase;
+      color: var(--text-color);
+      font-size:.8rem;
+    }
+  </style>
+</head>
+
+<body>
+    {% include 'manager_sidebar.html' %}
+
+<div class="container-fluid py-4">
+
+  <!-- Header -->
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+      <h3 class="mb-0 fw-semibold">Transfer Customers Between Agents</h3>
+      <small class="text-muted">
+        Move selected customers from one agent to another. Useful when reassigning territories, replacing staff, or restructuring teams.
+      </small>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+     <a href="{{ url_for('transfer_customer.transfer_logs_page') }}" class="btn btn-sm btn-outline-secondary">
+  <i class="bi bi-clipboard2-data me-1"></i> View transfer logs
+</a>
+
+      <button type="button" class="btn btn-sm btn-outline-secondary" onclick="toggleTheme()">
+        <i id="themeIcon" class="bi bi-moon-stars"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- Main container -->
+  <div id="transferContainer" class="card">
+    <div class="card-body">
+
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <span class="badge-soft">
+          <i class="bi bi-arrows-move me-1"></i> Customer Transfer
+        </span>
+        <div class="d-flex align-items-center gap-2 small text-muted">
+          <span class="chip">
+            <i class="bi bi-shield-check"></i>
+            Historical payments remain with original agent
+          </span>
+          <span class="chip">
+            <i class="bi bi-diagram-3"></i>
+            Manager aligns to destination agent
+          </span>
+        </div>
+      </div>
+
+      <!-- Alert area -->
+      <div id="alertArea" class="mb-3"></div>
+
+      <!-- Selection & info -->
+      <div class="row g-3 mb-4">
+        <!-- From agent -->
+        <div class="col-lg-6">
+          <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+              <span class="fw-semibold">Source agent (from)</span>
+              <small class="text-muted">Customers will be taken from this agent</small>
+            </div>
+            <div class="card-body">
+              <div class="mb-3">
+                <label class="form-label">From agent</label>
+                <select id="fromAgentSelect" class="form-select">
+                  <option value="">Select source agent</option>
+                </select>
+              </div>
+
+              <div class="d-flex align-items-center gap-3 small text-muted">
+                <div class="avatar-circle" id="fromAgentAvatar">
+                  <span>F</span>
+                </div>
+                <div>
+                  <div class="fw-semibold" id="fromAgentName">No agent selected</div>
+                  <div>
+                    <i class="bi bi-geo-alt me-1"></i>
+                    <span id="fromAgentBranch">Branch: -</span>
+                  </div>
+                  <div>
+                    <i class="bi bi-person-badge me-1"></i>
+                    <span id="fromAgentManager">Manager: -</span>
+                  </div>
+                  <div class="d-flex align-items-center gap-2 mt-1">
+                    <span><i class="bi bi-telephone me-1"></i><span id="fromAgentPhone">Phone: -</span></span>
+                    <span id="fromAgentStatusPill" class="status-pill status-inactive">
+                      <span class="status-pill-dot"></span>
+                      <span id="fromAgentStatusText">Status: -</span>
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+        <!-- To agent -->
+        <div class="col-lg-6">
+          <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+              <span class="fw-semibold">Destination agent (to)</span>
+              <small class="text-muted">Customers will be moved to this agent</small>
+            </div>
+            <div class="card-body">
+              <div class="mb-3">
+                <label class="form-label">To agent</label>
+                <select id="toAgentSelect" class="form-select">
+                  <option value="">Select destination agent</option>
+                </select>
+              </div>
+
+              <div class="d-flex align-items-center gap-3 small text-muted">
+                <div class="avatar-circle" id="toAgentAvatar">
+                  <span>T</span>
+                </div>
+                <div>
+                  <div class="fw-semibold" id="toAgentName">No agent selected</div>
+                  <div>
+                    <i class="bi bi-geo-alt me-1"></i>
+                    <span id="toAgentBranch">Branch: -</span>
+                  </div>
+                  <div>
+                    <i class="bi bi-person-badge me-1"></i>
+                    <span id="toAgentManager">Manager: -</span>
+                  </div>
+                  <div class="d-flex align-items-center gap-2 mt-1">
+                    <span><i class="bi bi-telephone me-1"></i><span id="toAgentPhone">Phone: -</span></span>
+                    <span id="toAgentStatusPill" class="status-pill status-inactive">
+                      <span class="status-pill-dot"></span>
+                      <span id="toAgentStatusText">Status: -</span>
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Agent search + customer list -->
+      <div class="card mb-4">
+        <div class="card-body">
+
+          <!-- Agent search -->
+          <div class="row g-3 align-items-end mb-3">
+            <div class="col-md-6">
+              <label class="form-label">Search agent</label>
+              <input id="agentSearch" type="text" class="form-control" placeholder="Search agent by name or phone">
+            </div>
+            <div class="col-md-6 text-md-end">
+              <div class="small text-muted mb-1">
+                <i class="bi bi-info-circle me-1"></i>
+                Use this page to move <strong>selected customers</strong> only. You can still select all if needed.
+              </div>
+            </div>
+          </div>
+
+          <!-- Customers toolbar -->
+          <div class="customers-toolbar mb-2">
+            <div class="customers-toolbar-left">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="selectAllCustomers">
+                <label class="form-check-label small" for="selectAllCustomers">
+                  Select all visible customers
+                </label>
+              </div>
+              <div class="small text-muted" id="customersCountLabel">
+                No source agent selected.
+              </div>
+            </div>
+            <div class="customers-toolbar-right">
+              <div class="input-group input-group-sm" style="max-width:260px;">
+                <span class="input-group-text"><i class="bi bi-search"></i></span>
+                <input id="customerSearch" type="text" class="form-control" placeholder="Search customer by name or phone">
+              </div>
+              <button type="button" class="btn btn-outline-secondary btn-sm" onclick="previewTransfer()">
+                <i class="bi bi-zoom-in me-1"></i> Preview selection
+              </button>
+              <button type="button" class="btn btn-danger btn-sm" onclick="confirmTransfer()">
+                <i class="bi bi-arrow-left-right me-1"></i> Transfer selected
+              </button>
+            </div>
+          </div>
+
+          <!-- Customers table -->
+          <div class="table-responsive" style="max-height:380px; overflow-y:auto; border-radius:.75rem; border:1px solid var(--border-color);">
+            <table class="table table-sm mb-0 align-middle">
+              <thead>
+                <tr>
+                  <th style="width:36px;"></th>
+                  <th>Customer</th>
+                  <th>Phone</th>
+                  <th>Location</th>
+                  <th>Comment</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="customersBody">
+              </tbody>
+            </table>
+          </div>
+          <div id="customersEmpty" class="small text-muted mt-2">
+            Select a source agent to load their customers.
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Progress & result -->
+      <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <span class="fw-semibold">Transfer progress</span>
+          <small class="text-muted">Live feedback while operation is running</small>
+        </div>
+        <div class="card-body">
+
+          <div id="progressArea" class="mb-3 d-none fade-soft">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <div class="d-flex align-items-center gap-2">
+                <span class="spinner-border spinner-inline" role="status" aria-hidden="true"></span>
+                <span id="progressLabel" class="small text-muted">Starting transfer…</span>
+              </div>
+              <div class="small fw-semibold" id="progressPercentLabel">0%</div>
+            </div>
+            <div class="progress">
+              <div id="progressBar" class="progress-bar" role="progressbar" style="width: 0%;" aria-valuemin="0" aria-valuemax="100"></div>
+            </div>
+          </div>
+
+          <div id="resultArea" class="d-none fade-soft">
+            <div class="alert alert-success mb-2" id="resultSummary"></div>
+            <div class="small text-muted" id="resultDetails"></div>
+          </div>
+
+          <div class="small text-muted mt-2">
+            Transfers run as a <strong>single batch</strong> operation. The percentage animation reflects the server progress
+            and will always end with the final counts from the database.
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<footer class="brand-footer container-fluid pb-3">
+  <div class="brand-lockup">
+    <img src="https://imagedelivery.net/h9fmMoa1o2c2P55TcWJGOg/10283f28-b9a0-4100-b254-19a854386800/public"
+         alt="SmartLiving Emporium Plus"
+         class="brand-logo">
+    <span class="brand-name-text">SMARTLIVING EMPORIUM PLUS</span>
+  </div>
+  <div class="brand-lockup">
+    <span>Powered by Flux360</span>
+    <img src="https://imagedelivery.net/h9fmMoa1o2c2P55TcWJGOg/237a407f-0df9-4a4b-b777-7ecbaacc0300/public"
+         alt="Flux360"
+         class="platform-logo">
+  </div>
+</footer>
+
+<!-- Agents data for JS -->
+<script id="agentsDataScript" type="application/json">
+  {{ agents|tojson|safe }}
+</script>
+
+<!-- JS: Bootstrap -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+  let ALL_AGENTS = [];
+  let FILTERED_AGENTS = [];
+  let SOURCE_CUSTOMERS = [];
+  let FILTERED_CUSTOMERS = [];
+  let SELECTED_CUSTOMERS = new Set();
+  let progressTimer = null;
+
+  function toggleTheme(){
+    const body = document.body;
+    const isDark = body.classList.toggle("dark-mode");
+    const icon = document.getElementById("themeIcon");
+    if(icon){
+      if(isDark){
+        icon.classList.remove("bi-moon-stars");
+        icon.classList.add("bi-sun");
+      }else{
+        icon.classList.remove("bi-sun");
+        icon.classList.add("bi-moon-stars");
+      }
+    }
+    try{
+      localStorage.setItem("meetingTheme", isDark ? "dark" : "light");
+    }catch(e){}
+  }
+
+  /* ---- Agents ---- */
+
+  function initAgents(){
+    try{
+      const raw = document.getElementById("agentsDataScript").textContent;
+      ALL_AGENTS = JSON.parse(raw) || [];
+      FILTERED_AGENTS = [...ALL_AGENTS];
+      rebuildAgentSelects();
+    }catch(e){
+      console.error("Failed to parse agents data", e);
+    }
+  }
+
+  function rebuildAgentSelects(){
+    const fromSelect = document.getElementById("fromAgentSelect");
+    const toSelect   = document.getElementById("toAgentSelect");
+    const searchInp  = document.getElementById("agentSearch");
+
+    const search = (searchInp?.value || "").toLowerCase();
+
+    FILTERED_AGENTS = ALL_AGENTS.filter(ag => {
+      if(search){
+        const txt = (ag.name + " " + (ag.phone || "")).toLowerCase();
+        if(!txt.includes(search)) return false;
+      }
+      return true;
+    });
+
+    const buildOptions = (selectEl) => {
+      if(!selectEl) return;
+      const previous = selectEl.value;
+      selectEl.innerHTML = "";
+
+      const optDefault = document.createElement("option");
+      optDefault.value = "";
+      optDefault.textContent = selectEl.id === "fromAgentSelect"
+        ? "Select source agent"
+        : "Select destination agent";
+      selectEl.appendChild(optDefault);
+
+      FILTERED_AGENTS.forEach(ag => {
+        const opt = document.createElement("option");
+        opt.value = ag.id;
+        opt.textContent = `${ag.name} - ${ag.branch || ""}`;
+        if(previous && previous === ag.id) {
+          opt.selected = true;
+        }
+        selectEl.appendChild(opt);
+      });
+    };
+
+    buildOptions(fromSelect);
+    buildOptions(toSelect);
+
+    onAgentChange("from");
+    onAgentChange("to");
+  }
+
+  function findAgentById(id){
+    return ALL_AGENTS.find(a => a.id === id) || null;
+  }
+
+  function setAvatar(el, nameInitial){
+    if(!el) return;
+    el.innerHTML = "";
+    const span = document.createElement("span");
+    span.textContent = (nameInitial || "A").charAt(0).toUpperCase();
+    el.appendChild(span);
+  }
+
+  function updateAgentInfoPanel(prefix, agent){
+    const nameEl   = document.getElementById(prefix + "AgentName");
+    const branchEl = document.getElementById(prefix + "AgentBranch");
+    const mgrEl    = document.getElementById(prefix + "AgentManager");
+    const phoneEl  = document.getElementById(prefix + "AgentPhone");
+    const avatar   = document.getElementById(prefix + "AgentAvatar");
+    const statusPill = document.getElementById(prefix + "AgentStatusPill");
+    const statusText = document.getElementById(prefix + "AgentStatusText");
+
+    if(!agent){
+      if(nameEl)   nameEl.textContent   = "No agent selected";
+      if(branchEl) branchEl.textContent = "Branch: -";
+      if(mgrEl)    mgrEl.textContent    = "Manager: -";
+      if(phoneEl)  phoneEl.textContent  = "Phone: -";
+      if(statusText) statusText.textContent = "Status: -";
+      if(statusPill) statusPill.classList.add("status-inactive");
+      if(avatar) setAvatar(avatar, "A");
+      return;
+    }
+
+    if(nameEl)   nameEl.textContent   = agent.name || "Unknown";
+    if(branchEl) branchEl.textContent = `Branch: ${agent.branch || "-"}`;
+    if(mgrEl)    mgrEl.textContent    = `Manager: ${agent.manager_name || "-"}`;
+    if(phoneEl)  phoneEl.textContent  = `Phone: ${agent.phone || "-"}`;
+    if(statusText) statusText.textContent = `Status: ${agent.status || "Unknown"}`;
+
+    if(statusPill){
+      statusPill.classList.remove("status-inactive");
+      const st = (agent.status || "").toLowerCase();
+      if(!st || st === "inactive"){
+        statusPill.classList.add("status-inactive");
+      }
+    }
+
+    if(avatar){
+      setAvatar(avatar, agent.name || "A");
+    }
+  }
+
+  function onAgentChange(which){
+    const select = document.getElementById(which === "from" ? "fromAgentSelect" : "toAgentSelect");
+    if(!select) return;
+    const id = select.value || "";
+    const ag = id ? findAgentById(id) : null;
+    updateAgentInfoPanel(which === "from" ? "from" : "to", ag);
+
+    if(which === "from"){
+      // whenever source agent changes, reload customers
+      loadCustomersForSourceAgent(id);
+    }
+  }
+
+  /* ---- Customers ---- */
+
+  function resetCustomersUI(){
+    SOURCE_CUSTOMERS = [];
+    FILTERED_CUSTOMERS = [];
+    SELECTED_CUSTOMERS = new Set();
+
+    const tbody = document.getElementById("customersBody");
+    const emptyEl = document.getElementById("customersEmpty");
+    const countLabel = document.getElementById("customersCountLabel");
+    const selAll = document.getElementById("selectAllCustomers");
+    const searchInput = document.getElementById("customerSearch");
+
+    if(tbody) tbody.innerHTML = "";
+    if(emptyEl) emptyEl.textContent = "Select a source agent to load their customers.";
+    if(countLabel) countLabel.textContent = "No source agent selected.";
+    if(selAll) selAll.checked = false;
+    if(searchInput) searchInput.value = "";
+  }
+
+  async function loadCustomersForSourceAgent(agentId){
+    resetCustomersUI();
+    if(!agentId) return;
+
+    const emptyEl = document.getElementById("customersEmpty");
+    if(emptyEl){
+      emptyEl.textContent = "Loading customers…";
+    }
+
+    try{
+      const res = await fetch(`/transfer-customers/customers?agent_id=${encodeURIComponent(agentId)}`, {
+        credentials: "same-origin"
+      });
+      if(!res.ok){
+        if(emptyEl) emptyEl.textContent = "Failed to load customers. Please try again.";
+        return;
+      }
+      const json = await res.json();
+      if(!json.ok){
+        if(emptyEl) emptyEl.textContent = json.message || "Unable to load customers for this agent.";
+        return;
+      }
+
+      SOURCE_CUSTOMERS = json.customers || [];
+      FILTERED_CUSTOMERS = [...SOURCE_CUSTOMERS];
+      SELECTED_CUSTOMERS = new Set();
+      renderCustomersTable();
+
+    }catch(e){
+      console.error(e);
+      if(emptyEl) emptyEl.textContent = "Error loading customers. Check your network and try again.";
+    }
+  }
+
+  function applyCustomerFilter(){
+    const searchInput = document.getElementById("customerSearch");
+    const term = (searchInput?.value || "").toLowerCase();
+
+    FILTERED_CUSTOMERS = SOURCE_CUSTOMERS.filter(c => {
+      if(!term) return true;
+      const name = (c.name || "").toLowerCase();
+      const phone = (c.phone_number || "").toLowerCase();
+      return name.includes(term) || phone.includes(term);
+    });
+
+    renderCustomersTable();
+  }
+
+  function renderCustomersTable(){
+    const tbody = document.getElementById("customersBody");
+    const emptyEl = document.getElementById("customersEmpty");
+    const countLabel = document.getElementById("customersCountLabel");
+    const selAll = document.getElementById("selectAllCustomers");
+
+    if(!tbody || !emptyEl || !countLabel || !selAll) return;
+
+    tbody.innerHTML = "";
+
+    const total = SOURCE_CUSTOMERS.length;
+    const filtered = FILTERED_CUSTOMERS.length;
+    const selectedCount = SELECTED_CUSTOMERS.size;
+
+    if(total === 0){
+      emptyEl.textContent = "No customers found for this source agent.";
+      countLabel.textContent = "No customers for this agent.";
+      selAll.checked = false;
+      return;
+    }
+
+    emptyEl.textContent = filtered === 0
+      ? "No customers match your search."
+      : "";
+
+    countLabel.textContent =
+      `Selected ${selectedCount} of ${total} customer(s)` +
+      (filtered !== total ? ` -  Showing ${filtered} filtered` : "");
+
+    FILTERED_CUSTOMERS.forEach(c => {
+      const id = c._id || c.id || c.customer_id; // backend should send _id as string
+      const isSelected = SELECTED_CUSTOMERS.has(id);
+
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>
+          <input type="checkbox" class="form-check-input customer-checkbox" data-id="${id}" ${isSelected ? "checked" : ""}>
+        </td>
+        <td>
+          <div class="fw-semibold">${c.name || "-"}</div>
+          <div class="small text-muted">${c.occupation || ""}</div>
+        </td>
+        <td>${c.phone_number || "-"}</td>
+        <td>${c.location || "-"}</td>
+        <td>${c.comment || ""}</td>
+        <td>${renderStatusBadge(c.status)}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    // Update "select all visible" checkbox
+    if(filtered > 0){
+      const allVisibleSelected = FILTERED_CUSTOMERS.every(c => {
+        const id = c._id || c.id || c.customer_id;
+        return SELECTED_CUSTOMERS.has(id);
+      });
+      selAll.checked = allVisibleSelected;
+    }else{
+      selAll.checked = false;
+    }
+
+    // attach change handlers
+    tbody.querySelectorAll(".customer-checkbox").forEach(input => {
+      input.addEventListener("change", (e) => {
+        const id = e.target.getAttribute("data-id");
+        if(!id) return;
+        if(e.target.checked){
+          SELECTED_CUSTOMERS.add(id);
+        }else{
+          SELECTED_CUSTOMERS.delete(id);
+        }
+        renderCustomersTable();
+      });
+    });
+  }
+
+  function renderStatusBadge(status){
+    const st = (status || "").toLowerCase();
+    let cls = "badge-status";
+    if(st === "completed"){
+      cls += " completed";
+    }else if(st === "pending" || st === "active" || st === "approved"){
+      cls += " pending";
+    }else if(st === "cancelled" || st === "inactive" || st === "rejected"){
+      cls += " cancelled";
+    }
+    const label = status || "-";
+    return `<span class="${cls}">${label}</span>`;
+  }
+
+  function toggleSelectAllCustomers(){
+    const selAll = document.getElementById("selectAllCustomers");
+    if(!selAll) return;
+    if(selAll.checked){
+      // select all visible filtered customers
+      FILTERED_CUSTOMERS.forEach(c => {
+        const id = c._id || c.id || c.customer_id;
+        if(id) SELECTED_CUSTOMERS.add(id);
+      });
+    }else{
+      // unselect all visible
+      FILTERED_CUSTOMERS.forEach(c => {
+        const id = c._id || c.id || c.customer_id;
+        if(id) SELECTED_CUSTOMERS.delete(id);
+      });
+    }
+    renderCustomersTable();
+  }
+
+  function getSelectedCustomerIds(){
+    return Array.from(SELECTED_CUSTOMERS);
+  }
+
+  /* ---- Alerts / progress / result ---- */
+
+  function showAlert(type, message){
+    const area = document.getElementById("alertArea");
+    if(!area) return;
+    const html = `
+      <div class="alert alert-${type} alert-dismissible fade show fade-soft" role="alert">
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      </div>
+    `;
+    area.innerHTML = html;
+  }
+
+  function resetProgress(){
+    const progressArea = document.getElementById("progressArea");
+    const resultArea   = document.getElementById("resultArea");
+    const bar          = document.getElementById("progressBar");
+    const label        = document.getElementById("progressLabel");
+    const pctLabel     = document.getElementById("progressPercentLabel");
+
+    if(progressArea) progressArea.classList.add("d-none");
+    if(resultArea)   resultArea.classList.add("d-none");
+
+    if(bar) bar.style.width = "0%";
+    if(label) label.textContent = "Starting transfer…";
+    if(pctLabel) pctLabel.textContent = "0%";
+
+    if(progressTimer){
+      clearInterval(progressTimer);
+      progressTimer = null;
+    }
+  }
+
+  function startProgressAnimation(){
+    const progressArea = document.getElementById("progressArea");
+    const bar      = document.getElementById("progressBar");
+    const pctLabel = document.getElementById("progressPercentLabel");
+    const label    = document.getElementById("progressLabel");
+
+    if(!progressArea || !bar || !pctLabel || !label) return;
+    progressArea.classList.remove("d-none");
+
+    let pct = 0;
+    label.textContent = "Transferring customers… please wait";
+    progressTimer = setInterval(() => {
+      // move up to 90% while waiting for server
+      if(pct < 90){
+        pct += Math.random() * 7; // small random increments
+        if(pct > 90) pct = 90;
+        bar.style.width = pct.toFixed(0) + "%";
+        pctLabel.textContent = pct.toFixed(0) + "%";
+      }
+    }, 180);
+  }
+
+  function completeProgress(finalPct){
+    const bar      = document.getElementById("progressBar");
+    const pctLabel = document.getElementById("progressPercentLabel");
+    const label    = document.getElementById("progressLabel");
+
+    if(progressTimer){
+      clearInterval(progressTimer);
+      progressTimer = null;
+    }
+    if(!bar || !pctLabel || !label) return;
+
+    const target = finalPct ?? 100;
+    let current = parseInt(pctLabel.textContent.replace("%","") || "0", 10);
+
+    const step = () => {
+      if(current >= target){
+        bar.style.width = target + "%";
+        pctLabel.textContent = target + "%";
+        label.textContent = "Transfer completed";
+        return;
+      }
+      current += 5;
+      if(current > target) current = target;
+      bar.style.width = current + "%";
+      pctLabel.textContent = current + "%";
+      requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  }
+
+  function showResult(summaryText, detailText, success=true){
+    const resultArea = document.getElementById("resultArea");
+    const resultSummary = document.getElementById("resultSummary");
+    const resultDetails = document.getElementById("resultDetails");
+
+    if(!resultArea || !resultSummary || !resultDetails) return;
+
+    resultArea.classList.remove("d-none");
+    resultSummary.classList.remove("alert-success", "alert-danger");
+    resultSummary.classList.add(success ? "alert-success" : "alert-danger");
+
+    resultSummary.textContent = summaryText || "";
+    resultDetails.textContent = detailText || "";
+  }
+
+  /* ---- API helpers ---- */
+
+  function getSelectedAgents(){
+    const fromId = document.getElementById("fromAgentSelect")?.value || "";
+    const toId   = document.getElementById("toAgentSelect")?.value || "";
+    const fromAg = fromId ? findAgentById(fromId) : null;
+    const toAg   = toId ? findAgentById(toId) : null;
+    return { fromId, toId, fromAg, toAg };
+  }
+
+  async function previewTransfer(){
+    resetProgress();
+    const { fromId, toId, fromAg, toAg } = getSelectedAgents();
+    const selectedCustomerIds = getSelectedCustomerIds();
+
+    if(!fromId || !toId){
+      showAlert("warning", "Please select both source and destination agents before previewing.");
+      return;
+    }
+    if(fromId === toId){
+      showAlert("warning", "Source and destination agents cannot be the same.");
+      return;
+    }
+    if(selectedCustomerIds.length === 0){
+      showAlert("warning", "Please select at least one customer to preview transfer.");
+      return;
+    }
+
+    try{
+      const res = await fetch("/transfer-customers/run", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({
+          from_agent_id: fromId,
+          to_agent_id: toId,
+          customer_ids: selectedCustomerIds,
+          dry_run: true
+        })
+      });
+
+      if(!res.ok){
+        showAlert("danger", "Failed to preview transfer. Please try again.");
+        return;
+      }
+      const json = await res.json();
+      if(!json.ok){
+        showAlert("danger", json.message || "Unable to preview transfer.");
+        return;
+      }
+
+      const total = json.total_customers ?? selectedCustomerIds.length;
+      const fromName = (fromAg && fromAg.name) || "source agent";
+      const toName   = (toAg && toAg.name) || "destination agent";
+
+      showAlert(
+        "info",
+        `Preview: <strong>${total}</strong> selected customer(s) will be moved from <strong>${fromName}</strong> to <strong>${toName}</strong>.`
+      );
+    }catch(e){
+      console.error(e);
+      showAlert("danger", "An error occurred while previewing. Check your network and try again.");
+    }
+  }
+
+  function confirmTransfer(){
+    resetProgress();
+    const { fromId, toId, fromAg, toAg } = getSelectedAgents();
+    const selectedCustomerIds = getSelectedCustomerIds();
+
+    if(!fromId || !toId){
+      showAlert("warning", "Please select both source and destination agents before starting a transfer.");
+      return;
+    }
+    if(fromId === toId){
+      showAlert("warning", "Source and destination agents cannot be the same.");
+      return;
+    }
+    if(selectedCustomerIds.length === 0){
+      showAlert("warning", "Please select at least one customer to transfer.");
+      return;
+    }
+
+    const fromName = (fromAg && fromAg.name) || "source agent";
+    const toName   = (toAg && toAg.name) || "destination agent";
+
+    const ok = window.confirm(
+      `Are you sure you want to move ${selectedCustomerIds.length} selected customer(s) from "${fromName}" to "${toName}"?\n\n` +
+      `This will update the agent_id (and manager_id) on those customer records. ` +
+      `Historical payments will remain with the original agent.`
+    );
+    if(!ok) return;
+
+    runTransfer(fromId, toId, selectedCustomerIds, fromName, toName);
+  }
+
+  async function runTransfer(fromId, toId, customerIds, fromName, toName){
+    startProgressAnimation();
+
+    try{
+      const res = await fetch("/transfer-customers/run", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({
+          from_agent_id: fromId,
+          to_agent_id: toId,
+          customer_ids: customerIds,
+          dry_run: false
+        })
+      });
+
+      if(!res.ok){
+        completeProgress(100);
+        showResult(
+          "Transfer failed.",
+          "The server returned an error. Please try again or contact your system administrator.",
+          false
+        );
+        return;
+      }
+
+      const json = await res.json();
+      if(!json.ok){
+        completeProgress(100);
+        showResult(
+          "Transfer could not be completed.",
+          json.message || "Unknown error occurred.",
+          false
+        );
+        return;
+      }
+
+      const total   = json.total_customers ?? customerIds.length;
+      const updated = json.updated_customers ?? customerIds.length;
+
+      completeProgress(100);
+
+      const summary = `Transfer completed: ${updated} of ${total} selected customer(s) moved.`;
+      const details =
+        `All selected customers previously assigned to "${fromName}" are now assigned to "${toName}". ` +
+        `Manager on those customers now matches the destination agent's manager.`;
+
+      showResult(summary, details, true);
+      showAlert("success", summary);
+
+      // Optionally refresh customer list for the source agent
+      loadCustomersForSourceAgent(fromId);
+
+    }catch(e){
+      console.error(e);
+      completeProgress(100);
+      showResult(
+        "Transfer failed.",
+        "A network or server error occurred during the operation. Please retry.",
+        false
+      );
+    }
+  }
+
+  /* ---- DOM ready ---- */
+
+  document.addEventListener("DOMContentLoaded", () => {
+    // Restore theme
+    try{
+      const saved = localStorage.getItem("meetingTheme");
+      if(saved === "dark"){
+        document.body.classList.add("dark-mode");
+        const icon = document.getElementById("themeIcon");
+        if(icon){
+          icon.classList.remove("bi-moon-stars");
+          icon.classList.add("bi-sun");
+        }
+      }
+    }catch(e){}
+
+    initAgents();
+    resetCustomersUI();
+
+    const fromSel = document.getElementById("fromAgentSelect");
+    const toSel   = document.getElementById("toAgentSelect");
+    if(fromSel) fromSel.addEventListener("change", () => onAgentChange("from"));
+    if(toSel)   toSel.addEventListener("change", () => onAgentChange("to"));
+
+    const agentSearch = document.getElementById("agentSearch");
+    if(agentSearch) agentSearch.addEventListener("input", rebuildAgentSelects);
+
+    const customerSearch = document.getElementById("customerSearch");
+    if(customerSearch) customerSearch.addEventListener("input", applyCustomerFilter);
+
+    const selAll = document.getElementById("selectAllCustomers");
+    if(selAll) selAll.addEventListener("change", toggleSelectAllCustomers);
+  });
+</script>
+</body>
+</html>

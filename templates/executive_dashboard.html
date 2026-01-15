@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Executive Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <!-- Bootstrap & Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+  <link rel="icon" href="https://res.cloudinary.com/dljpgzbto/image/upload/v1743993646/company-logo_dksb23.jpg" type="image/png" />
+
+  <style>
+    body {
+      background-color: #f8f9fa;
+      padding-left: 260px;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    @media (max-width: 768px) {
+      body {
+        padding-left: 0;
+      }
+    }
+
+    /* Page fade-in for main content */
+    .dashboard-main {
+      opacity: 0;
+      transform: translateY(6px);
+      transition: opacity 0.25s ease-out, transform 0.25s ease-out;
+    }
+    body.page-ready .dashboard-main {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* Metric cards */
+    .metric-card {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 2px 10px rgba(15, 23, 42, 0.06);
+      padding: 18px 18px 16px;
+      margin-bottom: 20px;
+      text-align: left;
+      border: 1px solid rgba(226, 232, 240, 0.9);
+    }
+    .metric-card h4 {
+      font-size: 0.9rem;
+      color: #6c757d;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    .metric-card h4 i {
+      color: #0d6efd;
+      font-size: 1.1rem;
+    }
+    .metric-card h2 {
+      font-weight: 700;
+      font-size: 1.6rem;
+      margin: 0;
+      color: #1f2937;
+    }
+    .mini-skeleton {
+      display: inline-block;
+      min-width: 80px;
+      height: 1rem;
+      border-radius: 6px;
+      background: linear-gradient(90deg, #f3f4f6 25%, #e5e7eb 37%, #f3f4f6 63%);
+      background-size: 400% 100%;
+      animation: shimmer 1.2s ease-in-out infinite;
+    }
+
+    .earned-card {
+      background-color: #ffffff;
+      border-radius: 12px;
+      padding: 20px 18px;
+      box-shadow: 0 2px 10px rgba(15, 23, 42, 0.06);
+      margin-bottom: 22px;
+      border: 1px solid rgba(226, 232, 240, 0.9);
+    }
+    .earned-card h5 {
+      font-size: 0.9rem;
+      color: #0d6efd;
+      margin-bottom: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    .earned-item {
+      font-size: 1rem;
+      margin-bottom: 6px;
+      color: #374151;
+    }
+
+    /* Chart cards */
+    .chart-card {
+      background: #ffffff;
+      border-radius: 12px;
+      box-shadow: 0 2px 10px rgba(15, 23, 42, 0.06);
+      padding: 18px 18px 14px;
+      border: 1px solid rgba(226, 232, 240, 0.9);
+      position: relative;
+      overflow: hidden;
+    }
+    .chart-card h4 {
+      font-size: 0.95rem;
+      color: #6b7280;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .chart-card h4 i {
+      color: #0d6efd;
+    }
+
+    /* Skeleton placeholders for charts */
+    .chart-skeleton {
+      position: relative;
+      width: 100%;
+      height: 200px;
+      background: linear-gradient(90deg, #f3f4f6 25%, #e5e7eb 37%, #f3f4f6 63%);
+      background-size: 400% 100%;
+      border-radius: 10px;
+      animation: shimmer 1.2s ease-in-out infinite;
+    }
+    @keyframes shimmer {
+      0% { background-position: -400px 0; }
+      100% { background-position: 400px 0; }
+    }
+    .chart-canvas {
+      display: none;
+    }
+
+    /* Small page header */
+    .page-header {
+      margin-bottom: 14px;
+    }
+    .page-header-title {
+      font-size: 1.4rem;
+      font-weight: 600;
+      color: #111827;
+    }
+    .page-header-sub {
+      font-size: 0.86rem;
+      color: #6b7280;
+    }
+    .kpi-card {
+      background: #fff;
+      border: 1px solid rgba(226, 232, 240, 0.9);
+      border-radius: 14px;
+      padding: 16px;
+      box-shadow: 0 8px 18px rgba(15, 23, 42, 0.06);
+      height: 100%;
+    }
+    .kpi-top {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .kpi-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 12px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(13, 110, 253, 0.12);
+      color: #0d6efd;
+      font-size: 1.1rem;
+    }
+    .kpi-label {
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #6b7280;
+      font-weight: 600;
+    }
+    .kpi-value {
+      font-size: 1.35rem;
+      font-weight: 700;
+      color: #111827;
+    }
+    .kpi-sub {
+      font-size: 0.8rem;
+      color: #6b7280;
+    }
+    .delta-badge {
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 4px 8px;
+      border-radius: 999px;
+    }
+    .delta-up { background: #dcfce7; color: #166534; }
+    .delta-down { background: #fee2e2; color: #b91c1c; }
+    .delta-neutral { background: #e5e7eb; color: #374151; }
+    .leaderboard-card {
+      background: #fff;
+      border: 1px solid rgba(226, 232, 240, 0.9);
+      border-radius: 14px;
+      padding: 16px;
+      box-shadow: 0 8px 18px rgba(15, 23, 42, 0.06);
+    }
+    .leaderboard-table th {
+      font-size: 0.75rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #6b7280;
+    }
+    .filter-pill {
+      border: 1px solid rgba(226, 232, 240, 0.9);
+      border-radius: 999px;
+      padding: 6px 12px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: #6b7280;
+      text-decoration: none;
+      background: #fff;
+    }
+    .filter-pill.active {
+      background: #0d6efd;
+      color: #fff;
+      border-color: #0d6efd;
+    }
+    .insight-card {
+      border: 1px solid rgba(226, 232, 240, 0.9);
+      border-radius: 12px;
+      background: #fff;
+      padding: 16px;
+      box-shadow: 0 2px 10px rgba(15, 23, 42, 0.06);
+    }
+    .insight-card h6 {
+      font-size: 0.8rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #6b7280;
+      margin-bottom: 6px;
+    }
+    .insight-card .value {
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: #111827;
+    }
+    .badge-up { background: #dcfce7; color: #166534; }
+    .badge-down { background: #fee2e2; color: #b91c1c; }
+    .badge-neutral { background: #e5e7eb; color: #374151; }
+  </style>
+</head>
+<body>
+
+  {% include 'executive_sidebar.html' %}
+
+  <div class="container mt-4 dashboard-main">
+    <div class="page-header">
+      <div class="page-header-title">Executive Overview</div>
+      <div class="page-header-sub">
+        Live executive insights across all branches and teams.
+      </div>
+    </div>
+
+    {% set range = request.args.get('range', 'today') %}
+
+    <!-- KPI Cards -->
+    <div class="row g-3 mb-3">
+      <div class="col-lg-3 col-md-4 col-sm-6">
+        <div class="kpi-card">
+          <div class="kpi-top">
+            <div class="kpi-icon"><i class="bi bi-cash-coin"></i></div>
+            <div>
+              <div class="kpi-label">Sales Today</div>
+              <div class="kpi-value" id="kpiSalesToday"><span class="mini-skeleton"></span></div>
+            </div>
+          </div>
+          <div class="kpi-sub">Payments excluding withdrawals.</div>
+        </div>
+      </div>
+      <div class="col-lg-3 col-md-4 col-sm-6">
+        <div class="kpi-card">
+          <div class="kpi-top">
+            <div class="kpi-icon"><i class="bi bi-calendar2-day"></i></div>
+            <div>
+              <div class="kpi-label">Sales Yesterday</div>
+              <div class="kpi-value" id="kpiSalesYesterday"><span class="mini-skeleton"></span></div>
+            </div>
+          </div>
+          <div class="kpi-sub">Previous day performance.</div>
+        </div>
+      </div>
+      <div class="col-lg-3 col-md-4 col-sm-6">
+        <div class="kpi-card">
+          <div class="kpi-top">
+            <div class="kpi-icon"><i class="bi bi-graph-up-arrow"></i></div>
+            <div>
+              <div class="kpi-label">% Change</div>
+              <div class="kpi-value d-flex align-items-center gap-2">
+                <span id="kpiSalesChange"><span class="mini-skeleton"></span></span>
+                <span id="kpiSalesChangeBadge" class="delta-badge delta-neutral">--</span>
+              </div>
+            </div>
+          </div>
+          <div class="kpi-sub" id="kpiSalesChangeNote">Compared to yesterday.</div>
+        </div>
+      </div>
+      <div class="col-lg-3 col-md-4 col-sm-6">
+        <div class="kpi-card">
+          <div class="kpi-top">
+            <div class="kpi-icon"><i class="bi bi-people"></i></div>
+            <div>
+              <div class="kpi-label">Customers Paid Today</div>
+              <div class="kpi-value" id="kpiCustomersPaid"><span class="mini-skeleton"></span></div>
+            </div>
+          </div>
+          <div class="kpi-sub">Distinct customers with payments.</div>
+        </div>
+      </div>
+      <div class="col-lg-3 col-md-4 col-sm-6">
+        <div class="kpi-card">
+          <div class="kpi-top">
+            <div class="kpi-icon"><i class="bi bi-receipt"></i></div>
+            <div>
+              <div class="kpi-label">Avg Payment Today</div>
+              <div class="kpi-value" id="kpiAvgPayment"><span class="mini-skeleton"></span></div>
+            </div>
+          </div>
+          <div class="kpi-sub" id="kpiPaymentsCount">--</div>
+        </div>
+      </div>
+      <div class="col-lg-3 col-md-4 col-sm-6">
+        <div class="kpi-card">
+          <div class="kpi-top">
+            <div class="kpi-icon"><i class="bi bi-receipt-cutoff"></i></div>
+            <div>
+              <div class="kpi-label">Expense Today</div>
+              <div class="kpi-value" id="kpiExpenseToday"><span class="mini-skeleton"></span></div>
+            </div>
+          </div>
+          <div class="kpi-sub">Approved expenses only.</div>
+        </div>
+      </div>
+      <div class="col-lg-3 col-md-4 col-sm-6">
+        <div class="kpi-card">
+          <div class="kpi-top">
+            <div class="kpi-icon"><i class="bi bi-pie-chart"></i></div>
+            <div>
+              <div class="kpi-label">Expense vs Sales %</div>
+              <div class="kpi-value" id="kpiExpenseVsSales"><span class="mini-skeleton"></span></div>
+            </div>
+          </div>
+          <div class="kpi-sub">Month-to-date ratio.</div>
+        </div>
+      </div>
+      <div class="col-lg-3 col-md-4 col-sm-6">
+        <div class="kpi-card">
+          <div class="kpi-top">
+            <div class="kpi-icon"><i class="bi bi-wallet2"></i></div>
+            <div>
+              <div class="kpi-label">Expense Week Total</div>
+              <div class="kpi-value" id="kpiExpenseWeek"><span class="mini-skeleton"></span></div>
+            </div>
+          </div>
+          <div class="kpi-sub">Approved week-to-date.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Expense Categories + Leaderboards -->
+    <div class="row g-3 mb-3">
+      <div class="col-lg-4">
+        <div class="leaderboard-card">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <div class="fw-semibold">Expense This Week by Category</div>
+          </div>
+          <div id="expenseCategoryList" class="text-muted">Loading...</div>
+        </div>
+      </div>
+      <div class="col-lg-8">
+        <div class="leaderboard-card">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <div class="fw-semibold">Top Managers by Sales</div>
+            <div class="d-flex gap-2">
+              <a class="filter-pill {% if range == 'today' %}active{% endif %}" href="?range=today">Today</a>
+              <a class="filter-pill {% if range == 'week' %}active{% endif %}" href="?range=week">Week</a>
+              <a class="filter-pill {% if range == 'month' %}active{% endif %}" href="?range=month">Month</a>
+            </div>
+          </div>
+          <div class="table-responsive">
+            <table class="table table-sm leaderboard-table mb-0">
+              <thead>
+                <tr>
+                  <th>Manager</th>
+                  <th class="text-end">Payments</th>
+                  <th class="text-end">Sales</th>
+                </tr>
+              </thead>
+              <tbody id="leaderboardManagers">
+                <tr><td colspan="3" class="text-muted">Loading...</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="mt-3">
+            <div class="fw-semibold mb-2">Top Agents Today</div>
+            <div class="table-responsive">
+              <table class="table table-sm leaderboard-table mb-0">
+                <thead>
+                  <tr>
+                    <th>Agent</th>
+                    <th class="text-end">Customers</th>
+                    <th class="text-end">Sales</th>
+                  </tr>
+                </thead>
+                <tbody id="leaderboardAgents">
+                  <tr><td colspan="3" class="text-muted">Loading...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Charts -->
+    <div class="row">
+      <div class="col-md-6 mb-4">
+        <div class="chart-card">
+          <h4><i class="bi bi-clock"></i> Hourly Today vs Yesterday</h4>
+          <div id="hourlySkeleton" class="chart-skeleton"></div>
+          <canvas id="hourlyChart" class="chart-canvas" height="200"></canvas>
+        </div>
+      </div>
+      <div class="col-md-6 mb-4">
+        <div class="chart-card">
+          <h4><i class="bi bi-graph-up"></i> Sales Trend (This Month)</h4>
+          <div id="salesTrendSkeleton" class="chart-skeleton"></div>
+          <canvas id="salesTrendChart" class="chart-canvas" height="200"></canvas>
+        </div>
+      </div>
+    </div>
+    <div class="row">
+      <div class="col-md-6 mb-4">
+        <div class="chart-card">
+          <h4><i class="bi bi-graph-down"></i> Expense Trend (This Month)</h4>
+          <div id="expenseTrendSkeleton" class="chart-skeleton"></div>
+          <canvas id="expenseTrendChart" class="chart-canvas" height="200"></canvas>
+        </div>
+      </div>
+      <div class="col-md-6 mb-4">
+        <div class="chart-card">
+          <h4><i class="bi bi-bar-chart"></i> Expense Week by Category</h4>
+          <div id="expenseWeekSkeleton" class="chart-skeleton"></div>
+          <canvas id="expenseWeekChart" class="chart-canvas" height="200"></canvas>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      // Let the shell appear smoothly
+      document.body.classList.add('page-ready');
+
+      const hourlyCanvas = document.getElementById('hourlyChart');
+      const salesTrendCanvas = document.getElementById('salesTrendChart');
+      const expenseTrendCanvas = document.getElementById('expenseTrendChart');
+      const expenseWeekCanvas = document.getElementById('expenseWeekChart');
+      const hourlySkeleton = document.getElementById('hourlySkeleton');
+      const salesTrendSkeleton = document.getElementById('salesTrendSkeleton');
+      const expenseTrendSkeleton = document.getElementById('expenseTrendSkeleton');
+      const expenseWeekSkeleton = document.getElementById('expenseWeekSkeleton');
+
+      const kpiSalesToday = document.getElementById('kpiSalesToday');
+      const kpiSalesYesterday = document.getElementById('kpiSalesYesterday');
+      const kpiSalesChange = document.getElementById('kpiSalesChange');
+      const kpiSalesChangeBadge = document.getElementById('kpiSalesChangeBadge');
+      const kpiSalesChangeNote = document.getElementById('kpiSalesChangeNote');
+      const kpiCustomersPaid = document.getElementById('kpiCustomersPaid');
+      const kpiAvgPayment = document.getElementById('kpiAvgPayment');
+      const kpiPaymentsCount = document.getElementById('kpiPaymentsCount');
+      const kpiExpenseToday = document.getElementById('kpiExpenseToday');
+      const kpiExpenseWeek = document.getElementById('kpiExpenseWeek');
+      const kpiExpenseVsSales = document.getElementById('kpiExpenseVsSales');
+
+      const expenseCategoryList = document.getElementById('expenseCategoryList');
+      const leaderboardManagers = document.getElementById('leaderboardManagers');
+      const leaderboardAgents = document.getElementById('leaderboardAgents');
+
+      let hourlyChart = null;
+      let salesTrendChart = null;
+      let expenseTrendChart = null;
+      let expenseWeekChart = null;
+
+      function fmtMoney(val) {
+        const num = Number(val || 0);
+        return `₵ ${num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+      }
+
+      function setBadge(el, dir) {
+        if (!el) return;
+        el.classList.remove('delta-up', 'delta-down', 'delta-neutral');
+        if (dir === 'up') {
+          el.classList.add('delta-up');
+          el.textContent = 'Up';
+        } else if (dir === 'down') {
+          el.classList.add('delta-down');
+          el.textContent = 'Down';
+        } else if (dir === 'new') {
+          el.classList.add('delta-up');
+          el.textContent = 'New';
+        } else {
+          el.classList.add('delta-neutral');
+          el.textContent = 'No change';
+        }
+      }
+
+      const range = new URLSearchParams(window.location.search).get('range') || 'today';
+
+      fetch(`{{ url_for('executive_dashboard.dashboard_insights') }}?range=${encodeURIComponent(range)}`, {
+        credentials: 'same-origin'
+      })
+        .then(res => res.json())
+        .then(data => {
+          if (!data.ok) return;
+
+          const kpis = data.kpis || {};
+          if (kpiSalesToday) kpiSalesToday.textContent = fmtMoney(kpis.sales_today);
+          if (kpiSalesYesterday) kpiSalesYesterday.textContent = fmtMoney(kpis.sales_yesterday);
+          if (kpiCustomersPaid) kpiCustomersPaid.textContent = Number(kpis.customers_paid_today || 0).toLocaleString();
+          if (kpiAvgPayment) kpiAvgPayment.textContent = fmtMoney(kpis.avg_payment_today);
+          if (kpiPaymentsCount) kpiPaymentsCount.textContent = `${Number(kpis.payments_count_today || 0).toLocaleString()} payments today`;
+          if (kpiExpenseToday) kpiExpenseToday.textContent = fmtMoney(kpis.expense_today_approved);
+          if (kpiExpenseWeek) kpiExpenseWeek.textContent = fmtMoney(kpis.expense_week_approved_total);
+          if (kpiExpenseVsSales) kpiExpenseVsSales.textContent = `${Number(kpis.expense_vs_sales_pct_mtd || 0).toFixed(1)}%`;
+
+          if (kpiSalesChange) {
+            const pct = Number(kpis.sales_change_pct || 0);
+            kpiSalesChange.textContent = `${Math.abs(pct).toFixed(1)}%`;
+          }
+          if (kpiSalesChangeNote) {
+            if (kpis.sales_change_dir === 'up' || kpis.sales_change_dir === 'down') {
+              const dirLabel = kpis.sales_change_dir === 'up' ? 'up' : 'down';
+              kpiSalesChangeNote.textContent = `${dirLabel} by ${Math.abs(Number(kpis.sales_change_pct || 0)).toFixed(1)}% compared to yesterday`;
+            } else {
+              kpiSalesChangeNote.textContent = 'No change compared to yesterday';
+            }
+          }
+          setBadge(kpiSalesChangeBadge, kpis.sales_change_dir);
+
+          if (expenseCategoryList) {
+            const cats = data.expense_week_categories || [];
+            if (!cats.length) {
+              expenseCategoryList.innerHTML = '<div class="text-muted">No approved expenses this week.</div>';
+            } else {
+              expenseCategoryList.innerHTML = cats.slice(0, 5).map(row => `
+                <div class="d-flex justify-content-between mb-1">
+                  <span>${row.category}</span>
+                  <strong>${fmtMoney(row.total)}</strong>
+                </div>
+              `).join('');
+            }
+          }
+
+          if (leaderboardManagers) {
+            const rows = (data.leaderboards && data.leaderboards.managers) || [];
+            leaderboardManagers.innerHTML = rows.length ? rows.map(row => `
+              <tr>
+                <td>${row.manager_name}</td>
+                <td class="text-end">${Number(row.count || 0).toLocaleString()}</td>
+                <td class="text-end">${fmtMoney(row.amount)}</td>
+              </tr>
+            `).join('') : '<tr><td colspan="3" class="text-muted">No data available.</td></tr>';
+          }
+
+          if (leaderboardAgents) {
+            const rows = (data.leaderboards && data.leaderboards.agents) || [];
+            leaderboardAgents.innerHTML = rows.length ? rows.map(row => `
+              <tr>
+                <td>${row.agent_name}</td>
+                <td class="text-end">${Number(row.customers || 0).toLocaleString()}</td>
+                <td class="text-end">${fmtMoney(row.amount)}</td>
+              </tr>
+            `).join('') : '<tr><td colspan="3" class="text-muted">No data available.</td></tr>';
+          }
+
+          const charts = data.charts || {};
+          if (hourlySkeleton) hourlySkeleton.style.display = 'none';
+          if (hourlyCanvas) hourlyCanvas.style.display = 'block';
+          if (salesTrendSkeleton) salesTrendSkeleton.style.display = 'none';
+          if (salesTrendCanvas) salesTrendCanvas.style.display = 'block';
+          if (expenseTrendSkeleton) expenseTrendSkeleton.style.display = 'none';
+          if (expenseTrendCanvas) expenseTrendCanvas.style.display = 'block';
+          if (expenseWeekSkeleton) expenseWeekSkeleton.style.display = 'none';
+          if (expenseWeekCanvas) expenseWeekCanvas.style.display = 'block';
+
+          if (hourlyChart) hourlyChart.destroy();
+          if (salesTrendChart) salesTrendChart.destroy();
+          if (expenseTrendChart) expenseTrendChart.destroy();
+          if (expenseWeekChart) expenseWeekChart.destroy();
+
+          if (hourlyCanvas) {
+            hourlyChart = new Chart(hourlyCanvas.getContext('2d'), {
+              type: 'line',
+              data: {
+                labels: (charts.hourly && charts.hourly.labels) || [],
+                datasets: [
+                  {
+                    label: 'Today',
+                    data: (charts.hourly && charts.hourly.today) || [],
+                    borderColor: '#0d6efd',
+                    backgroundColor: 'rgba(13, 110, 253, 0.18)',
+                    tension: 0.3,
+                    fill: true
+                  },
+                  {
+                    label: 'Yesterday',
+                    data: (charts.hourly && charts.hourly.yesterday) || [],
+                    borderColor: '#fd7e14',
+                    backgroundColor: 'rgba(253, 126, 20, 0.12)',
+                    tension: 0.3,
+                    fill: true
+                  }
+                ]
+              },
+              options: {
+                plugins: { legend: { display: true } },
+                responsive: true,
+                scales: { y: { beginAtZero: true } }
+              }
+            });
+          }
+
+          if (salesTrendCanvas) {
+            salesTrendChart = new Chart(salesTrendCanvas.getContext('2d'), {
+              type: 'line',
+              data: {
+                labels: (charts.sales_month && charts.sales_month.labels) || [],
+                datasets: [{
+                  label: 'Sales',
+                  data: (charts.sales_month && charts.sales_month.values) || [],
+                  borderColor: '#0d6efd',
+                  backgroundColor: 'rgba(13, 110, 253, 0.12)',
+                  tension: 0.3,
+                  fill: true
+                }]
+              },
+              options: {
+                plugins: { legend: { display: false } },
+                responsive: true,
+                scales: { y: { beginAtZero: true } }
+              }
+            });
+          }
+
+          if (expenseTrendCanvas) {
+            expenseTrendChart = new Chart(expenseTrendCanvas.getContext('2d'), {
+              type: 'line',
+              data: {
+                labels: (charts.expense_month && charts.expense_month.labels) || [],
+                datasets: [{
+                  label: 'Expenses',
+                  data: (charts.expense_month && charts.expense_month.values) || [],
+                  borderColor: '#dc2626',
+                  backgroundColor: 'rgba(220, 38, 38, 0.12)',
+                  tension: 0.3,
+                  fill: true
+                }]
+              },
+              options: {
+                plugins: { legend: { display: false } },
+                responsive: true,
+                scales: { y: { beginAtZero: true } }
+              }
+            });
+          }
+
+          if (expenseWeekCanvas) {
+            expenseWeekChart = new Chart(expenseWeekCanvas.getContext('2d'), {
+              type: 'bar',
+              data: {
+                labels: (charts.expense_week_by_cat && charts.expense_week_by_cat.labels) || [],
+                datasets: [{
+                  label: 'Expenses',
+                  data: (charts.expense_week_by_cat && charts.expense_week_by_cat.values) || [],
+                  backgroundColor: '#f59e0b'
+                }]
+              },
+              options: {
+                plugins: { legend: { display: false } },
+                responsive: true,
+                scales: { y: { beginAtZero: true } }
+              }
+            });
+          }
+        })
+        .catch(() => {
+          if (kpiSalesToday) kpiSalesToday.textContent = '--';
+          if (kpiSalesYesterday) kpiSalesYesterday.textContent = '--';
+          if (kpiSalesChange) kpiSalesChange.textContent = '--';
+          if (kpiSalesChangeBadge) kpiSalesChangeBadge.textContent = '--';
+          if (kpiCustomersPaid) kpiCustomersPaid.textContent = '--';
+          if (kpiAvgPayment) kpiAvgPayment.textContent = '--';
+          if (kpiPaymentsCount) kpiPaymentsCount.textContent = '--';
+          if (kpiExpenseToday) kpiExpenseToday.textContent = '--';
+          if (kpiExpenseWeek) kpiExpenseWeek.textContent = '--';
+          if (kpiExpenseVsSales) kpiExpenseVsSales.textContent = '--';
+          if (expenseCategoryList) expenseCategoryList.innerHTML = '<div class="text-muted">Unable to load data.</div>';
+          if (leaderboardManagers) leaderboardManagers.innerHTML = '<tr><td colspan="3" class="text-muted">No data available.</td></tr>';
+          if (leaderboardAgents) leaderboardAgents.innerHTML = '<tr><td colspan="3" class="text-muted">No data available.</td></tr>';
+          if (hourlySkeleton) hourlySkeleton.style.display = 'none';
+          if (salesTrendSkeleton) salesTrendSkeleton.style.display = 'none';
+          if (expenseTrendSkeleton) expenseTrendSkeleton.style.display = 'none';
+          if (expenseWeekSkeleton) expenseWeekSkeleton.style.display = 'none';
+        });
+    });
+  </script>
+    {% include 'app_footer.html' %}
+
+</body>
+</html>

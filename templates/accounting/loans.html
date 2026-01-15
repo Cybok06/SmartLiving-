@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en" class="light">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Loans · TRUEtype Services</title>
+  <script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  <style>
+    body { font-family: "Inter", sans-serif; }
+    .stat-label { font-size: 0.75rem; letter-spacing: 0.12em; text-transform: uppercase; color: #94a3b8; }
+    .stat-value { font-size: 1.75rem; font-weight: 700; }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-900">
+  {% include 'accounting/sidebar.html' %}
+  <main class="acc-with-sidebar min-h-screen p-6 lg:p-8">
+    <div class="max-w-6xl mx-auto space-y-6">
+      <header class="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
+        <div>
+          <h1 class="text-3xl font-bold">Loans</h1>
+          <p class="text-sm text-slate-500">Track long-term liabilities, amortization schedules, and interest postings.</p>
+        </div>
+        <div class="flex flex-wrap gap-2 items-center">
+          <button
+            class="px-4 py-2 rounded-full bg-slate-900 text-white text-xs font-semibold uppercase tracking-wide"
+            onclick="document.getElementById('loanForm').classList.toggle('hidden')"
+          >
+            Create Loan
+          </button>
+          <a
+            href="{{ url_for('acc_loans.loans_page') }}?export=1{% if as_of %}&as_of={{ as_of }}{% endif %}"
+            class="px-4 py-2 rounded-full border border-slate-300 text-xs font-semibold uppercase tracking-wide"
+          >
+            Export CSV
+          </a>
+        </div>
+      </header>
+
+      <section class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div class="rounded-2xl bg-white p-4 shadow-sm">
+          <div class="stat-label">Active Loans</div>
+          <div class="stat-value">{{ active_count }}</div>
+        </div>
+        <div class="rounded-2xl bg-white p-4 shadow-sm">
+          <div class="stat-label">Total Outstanding</div>
+          <div class="stat-value">GH¢ {{ "{:,.2f}".format(total_outstanding or 0) }}</div>
+        </div>
+        <div class="rounded-2xl bg-white p-4 shadow-sm">
+          <div class="stat-label">Interest Due This Month</div>
+          <div class="stat-value">GH¢ {{ "{:,.2f}".format(total_interest_due or 0) }}</div>
+        </div>
+        <div class="rounded-2xl bg-white p-4 shadow-sm">
+          <div class="stat-label">Next Due Date</div>
+          <div class="stat-value">
+            {{ next_due_date.strftime("%Y-%m-%d") if next_due_date else "--" }}
+          </div>
+        </div>
+      </section>
+
+      <section id="loanForm" class="hidden rounded-2xl bg-white p-6 shadow space-y-4">
+        <h2 class="text-lg font-semibold">Create new loan</h2>
+        <form method="post" action="{{ url_for('acc_loans.create_loan') }}" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="space-y-2">
+            <label class="text-xs font-semibold text-slate-500">Lender / Bank</label>
+            <input name="lender_name" required class="w-full border rounded-xl px-3 py-2 focus:border-slate-700 focus:ring-0"/>
+          </div>
+          <div class="space-y-2">
+            <label class="text-xs font-semibold text-slate-500">Lender Type</label>
+            <select name="lender_type" class="w-full border rounded-xl px-3 py-2 focus:border-slate-700 focus:ring-0">
+              <option value="bank">Bank</option>
+              <option value="individual">Individual</option>
+              <option value="institution">Institution</option>
+            </select>
+          </div>
+          <div class="space-y-2">
+            <label class="text-xs font-semibold text-slate-500">Principal (GH¢)</label>
+            <input name="principal" required class="w-full border rounded-xl px-3 py-2 focus:border-slate-700 focus:ring-0"/>
+          </div>
+          <div class="space-y-2">
+            <label class="text-xs font-semibold text-slate-500">Interest Rate (%)</label>
+            <input name="interest_rate" required value="24" class="w-full border rounded-xl px-3 py-2 focus:border-slate-700 focus:ring-0"/>
+          </div>
+          <div class="space-y-2">
+            <label class="text-xs font-semibold text-slate-500">Term (Months)</label>
+            <input name="term_months" required value="12" class="w-full border rounded-xl px-3 py-2 focus:border-slate-700 focus:ring-0"/>
+          </div>
+          <div class="space-y-2">
+            <label class="text-xs font-semibold text-slate-500">Start Date</label>
+            <input type="date" name="start_date" required class="w-full border rounded-xl px-3 py-2 focus:border-slate-700 focus:ring-0"/>
+          </div>
+          <div class="space-y-2">
+            <label class="text-xs font-semibold text-slate-500">Reference ID</label>
+            <input name="reference" class="w-full border rounded-xl px-3 py-2 focus:border-slate-700 focus:ring-0"/>
+          </div>
+          <div class="space-y-2">
+            <label class="text-xs font-semibold text-slate-500">Amortization</label>
+            <select name="amortization_method" class="w-full border rounded-xl px-3 py-2 focus:border-slate-700 focus:ring-0">
+              <option value="reducing_balance">Reducing Balance</option>
+              <option value="flat">Flat</option>
+              <option value="interest_only">Interest Only</option>
+            </select>
+          </div>
+          <div class="space-y-2">
+            <label class="text-xs font-semibold text-slate-500">Repayment Type</label>
+            <select name="repayment_type" class="w-full border rounded-xl px-3 py-2 focus:border-slate-700 focus:ring-0">
+              <option value="equal_installment">Equal Installment</option>
+            </select>
+          </div>
+          <div class="space-y-2 md:col-span-2">
+            <label class="text-xs font-semibold text-slate-500">Notes</label>
+            <textarea name="notes" rows="3" class="w-full border rounded-xl px-3 py-2 focus:border-slate-700 focus:ring-0"></textarea>
+          </div>
+          <div class="md:col-span-2 text-right">
+            <button type="submit" class="px-5 py-2 rounded-full bg-accent text-white font-semibold">Save Loan</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="rounded-2xl bg-white shadow p-6 space-y-4">
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+          <div>
+            <h2 class="text-xl font-semibold">Loan Register</h2>
+            <p class="text-sm text-slate-500">Filter by lender, status or reporting date.</p>
+          </div>
+          <form method="get" class="flex flex-wrap gap-2 text-sm">
+            <input type="date" name="as_of" value="{{ as_of }}" class="border rounded-full px-3 py-1 focus:border-slate-600 focus:ring-0"/>
+            <select name="status" class="border rounded-full px-3 py-1 focus:border-slate-600 focus:ring-0">
+              <option value="">All Statuses</option>
+              <option value="active" {% if request.args.get('status') == 'active' %}selected{% endif %}>Active</option>
+              <option value="closed" {% if request.args.get('status') == 'closed' %}selected{% endif %}>Closed</option>
+            </select>
+            <input name="q" value="{{ request.args.get('q','') }}" placeholder="Search lender or loan no" class="border rounded-full px-3 py-1 focus:border-slate-600 focus:ring-0"/>
+            <button class="px-3 py-1 rounded-full bg-slate-900 text-white">Apply</button>
+          </form>
+        </div>
+        <div class="grid grid-cols-1 gap-4">
+          {% for loan in loans %}
+            <article class="border border-slate-100 rounded-2xl p-5 shadow-sm space-y-4">
+              <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
+                <div>
+                  <p class="text-xs uppercase tracking-widest text-slate-400">{{ loan.lender_type }}</p>
+                  <h3 class="text-2xl font-semibold">{{ loan.loan_no }} · {{ loan.lender_name }}</h3>
+                  <p class="text-xs text-slate-500">Ref: {{ loan.reference }}</p>
+                </div>
+                <span class="px-4 py-1 rounded-full text-xs font-semibold {% if loan.status == 'active' %}bg-emerald-100 text-emerald-800{% else %}bg-slate-100 text-slate-600{% endif %}">
+                  {{ loan.status|title }}
+                </span>
+              </div>
+              <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-slate-500">
+                <div>
+                  <p class="text-xs uppercase">Principal</p>
+                  <p class="text-lg font-semibold text-slate-900">GH¢ {{ "{:,.2f}".format(loan.principal) }}</p>
+                </div>
+                <div>
+                  <p class="text-xs uppercase">Outstanding</p>
+                  <p class="text-lg font-semibold text-slate-900">GH¢ {{ "{:,.2f}".format(loan.outstanding) }}</p>
+                </div>
+                <div>
+                  <p class="text-xs uppercase">Monthly Payment</p>
+                  <p class="text-lg font-semibold text-slate-900">GH¢ {{ "{:,.2f}".format(loan.monthly_payment) }}</p>
+                </div>
+                <div>
+                  <p class="text-xs uppercase">Rate / Term</p>
+                  <p class="text-lg font-semibold text-slate-900">{{ "{:,.2f}".format(loan.annual_interest_rate) }}% · {{ loan.term_months }} mo</p>
+                </div>
+              </div>
+              <div class="flex flex-wrap gap-2 text-xs">
+                <a href="{{ url_for('acc_loans.loan_detail', loan_id=loan.id) }}" class="px-3 py-1 rounded-full border border-slate-200 hover:border-slate-400">View details</a>
+                <a href="{{ url_for('acc_loans.loan_detail', loan_id=loan.id) }}#interest-panel" class="px-3 py-1 rounded-full border border-slate-200 hover:border-slate-400">Post interest</a>
+                <a href="{{ url_for('acc_loans.loan_detail', loan_id=loan.id) }}#payment-panel" class="px-3 py-1 rounded-full border border-slate-200 hover:border-slate-400">Record payment</a>
+              </div>
+            </article>
+          {% else %}
+            <div class="text-center text-sm text-slate-500 py-10">No loans found yet. Create one to get started.</div>
+          {% endfor %}
+        </div>
+      </section>
+    </div>
+  </main>
+</body>
+</html>

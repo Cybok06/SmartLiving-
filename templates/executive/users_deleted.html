@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Recently Deleted Users</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+  <link rel="icon" href="https://res.cloudinary.com/dljpgzbto/image/upload/v1743993646/company-logo_dksb23.jpg" type="image/png" />
+  <style>
+    body {
+      background-color: #f8f9fa;
+      padding-left: 260px;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    @media (max-width: 768px) { body { padding-left: 0; } }
+    .page-wrap { opacity: 0; transform: translateY(6px); transition: opacity .25s ease-out, transform .25s ease-out; }
+    body.page-ready .page-wrap { opacity: 1; transform: translateY(0); }
+    .card-shell {
+      background: #fff;
+      border: 1px solid rgba(226, 232, 240, 0.9);
+      border-radius: 14px;
+      padding: 16px;
+      box-shadow: 0 6px 16px rgba(15, 23, 42, 0.06);
+    }
+    .table thead th {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #6b7280;
+    }
+  </style>
+</head>
+<body>
+  {% include 'executive_sidebar.html' %}
+
+  <div class="container mt-4 page-wrap">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <div>
+        <a href="/executive/users" class="text-decoration-none text-muted small"><i class="bi bi-arrow-left"></i> Back to Users</a>
+        <h4 class="mb-1">Recently Deleted Users</h4>
+        <div class="text-muted">Restore or purge deleted users.</div>
+      </div>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="mb-3">
+          {% for category, message in messages %}
+            <div class="alert alert-{{ 'danger' if category == 'error' else category }}">{{ message }}</div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    <div class="card-shell">
+      <div class="table-responsive">
+        <table class="table align-middle">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Username</th>
+              <th>Role</th>
+              <th>Branch</th>
+              <th>Deleted At</th>
+              <th>Deleted By</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% if rows %}
+              {% for row in rows %}
+                <tr>
+                  <td>{{ row.name }}</td>
+                  <td>{{ row.username }}</td>
+                  <td class="text-capitalize">{{ row.role }}</td>
+                  <td>{{ row.branch }}</td>
+                  <td>{{ row.deleted_at }}</td>
+                  <td>{{ row.deleted_by }}</td>
+                  <td>
+                    <form method="post" action="/executive/users/deleted/{{ row.id }}/restore" class="d-inline">
+                      <button class="btn btn-sm btn-outline-primary" type="submit">Restore</button>
+                    </form>
+                    <form method="post" action="/executive/users/deleted/{{ row.id }}/purge" class="d-inline" onsubmit="return confirm('Permanently delete this record?')">
+                      <button class="btn btn-sm btn-outline-danger" type="submit">Purge</button>
+                    </form>
+                  </td>
+                </tr>
+              {% endfor %}
+            {% else %}
+              <tr><td colspan="7" class="text-muted">No deleted users found.</td></tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script>document.addEventListener('DOMContentLoaded', () => document.body.classList.add('page-ready'));</script>
+  {% include 'app_footer.html' %}
+</body>
+</html>

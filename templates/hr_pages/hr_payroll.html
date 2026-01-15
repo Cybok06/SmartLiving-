@@ -1,0 +1,1048 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>HR Payroll Review</title>
+
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <link rel="icon"
+        href="https://imagedelivery.net/h9fmMoa1o2c2P55TcWJGOg/8744779c-1300-4a50-49de-b143d24da300/public"
+        type="image/png"/>
+
+  <style>
+    :root{
+      --ink:#0f172a;
+      --muted:#64748b;
+      --border:#e2e8f0;
+      --bg:#f8fafc;
+      --soft:#f1f5f9;
+      --brand:#0b63ce;
+    }
+
+    html, body { height: 100%; }
+    html{ scroll-behavior: smooth; }
+    body{
+      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      color: var(--ink);
+      background: var(--bg);
+      margin: 0;
+    }
+
+    .page{
+      max-width: 1300px;
+      margin: 0 auto;
+      padding: 18px 18px 40px;
+    }
+
+    .toolbar{
+      display:flex;
+      flex-wrap:wrap;
+      gap:12px;
+      align-items:center;
+      justify-content:space-between;
+      padding: 12px 14px;
+      border: 1px solid var(--border);
+      background: #fff;
+      border-radius: 12px;
+    }
+    .toolbar .group{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+
+    .summary{
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 10px 12px;
+      margin-top: 12px;
+    }
+    .summary .row{ gap: 12px; }
+    .summary .item{ font-size:.9rem; color: var(--muted); }
+    .summary .item b{ color: var(--ink); }
+
+    .mini{
+      display:flex;
+      gap:12px;
+      align-items:center;
+      padding: 8px 10px;
+      background: var(--soft);
+      border-radius: 10px;
+      font-size:.88rem;
+      color: var(--muted);
+    }
+    .mini b{ color: var(--ink); }
+
+    .table-wrap{
+      margin-top: 12px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: #fff;
+      overflow: hidden;
+    }
+
+    table{ width:100%; border-collapse: collapse; }
+    thead th{
+      position: sticky;
+      top: 0;
+      background: #fff;
+      border-bottom: 1px solid var(--border);
+      padding: 10px 8px;
+      font-size:.78rem;
+      text-transform: uppercase;
+      letter-spacing:.06em;
+      color: var(--muted);
+    }
+    tbody td{
+      padding: 10px 8px;
+      border-bottom: 1px solid var(--border);
+      font-size:.9rem;
+    }
+    tbody tr:nth-child(2n){ background: #fafafa; }
+
+    .mono{ font-variant-numeric: tabular-nums; }
+    .badge-role{ font-size:.72rem; }
+
+    .skeleton{
+      height: 12px;
+      border-radius: 8px;
+      background: linear-gradient(90deg, #eef2f7, #f8fafc, #eef2f7);
+      background-size: 220% 100%;
+      animation: shimmer 1s linear infinite;
+    }
+    @keyframes shimmer{
+      0%{ background-position: 100% 0; }
+      100%{ background-position: -120% 0; }
+    }
+
+    .btn-link{ color: var(--brand); text-decoration:none; }
+    .btn-link:hover{ text-decoration:underline; }
+
+    .modal-header{ border-bottom: 1px solid var(--border); }
+    .modal-footer{ border-top: 1px solid var(--border); }
+
+    .tab-strip{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      margin-top: 12px;
+    }
+    .tab-btn{
+      border:1px solid var(--border);
+      background:#fff;
+      padding:6px 10px;
+      border-radius:10px;
+      font-size:.88rem;
+      color: var(--muted);
+    }
+    .tab-btn.active{
+      color: var(--ink);
+      border-color: var(--brand);
+      box-shadow: 0 1px 0 rgba(11,99,206,.08);
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+      <h3 class="m-0">HR Payroll Review</h3>
+      <div class="small text-muted">{{ hr_name }}</div>
+    </div>
+
+    <div class="toolbar mt-3">
+      <div class="group">
+        <div>
+          <div class="small text-muted">Month</div>
+          <select class="form-select form-select-sm" id="monthSelect"></select>
+        </div>
+        <div>
+          <div class="small text-muted">Status</div>
+          <select class="form-select form-select-sm" id="statusSelect">
+            <option value="Submitted">Submitted</option>
+            <option value="Under Review">Under Review</option>
+            <option value="Approved">Approved</option>
+            <option value="Rejected">Rejected</option>
+            <option value="All">All</option>
+          </select>
+        </div>
+          <div>
+            <div class="small text-muted">Branch</div>
+            <select class="form-select form-select-sm" id="branchSelect">
+              <option value="">Select branch</option>
+              <option value="__all__">All Branches</option>
+            </select>
+          </div>
+        </div>
+
+      <div class="group">
+        <div>
+          <div class="small text-muted">Search</div>
+          <input class="form-control form-control-sm" id="searchInput" placeholder="Search name or role">
+        </div>
+        <button class="btn btn-sm btn-outline-secondary" id="btnOpenDeduction" data-auto-spinner="1">
+          <i class="bi bi-dash-circle me-1"></i>Add Deduction
+        </button>
+        <button class="btn btn-sm btn-outline-primary" id="btnExportPdf" data-auto-spinner="1" disabled>
+          <i class="bi bi-filetype-pdf me-1"></i>PDF
+        </button>
+        <button class="btn btn-sm btn-outline-success" id="btnExportXlsx" data-auto-spinner="1" disabled>
+          <i class="bi bi-file-earmark-excel me-1"></i>Excel
+        </button>
+      </div>
+    </div>
+
+    <div class="tab-strip">
+      <button class="tab-btn active" data-tab="section-payroll" data-auto-spinner="1">Payroll</button>
+      <button class="tab-btn" data-tab="section-manual" data-auto-spinner="1">Manual Payroll</button>
+      <button class="tab-btn" data-tab="section-deductions" data-auto-spinner="1">Deduction History</button>
+    </div>
+
+    <div id="section-payroll">
+      <div class="summary mt-3">
+      <div class="row align-items-center">
+        <div class="col-12 col-lg-8">
+          <div class="d-flex flex-wrap gap-3">
+            <div class="item">Branch: <b id="sumBranch">N/A</b></div>
+            <div class="item">Submitted: <b class="mono" id="sumSubmitted">GHS 0.00</b></div>
+            <div class="item">Gross: <b class="mono" id="sumGross">GHS 0.00</b></div>
+            <div class="item">Net: <b class="mono" id="sumNet">GHS 0.00</b></div>
+            <div class="item">Employees: <b id="sumEmployees">0</b></div>
+            <div class="item">Edited: <b id="sumEdited">0</b></div>
+            <div class="item">Tax: <b id="sumTax">No Tax</b></div>
+          </div>
+        </div>
+        <div class="col-12 col-lg-4 d-flex gap-2 mt-2 mt-lg-0">
+          <div class="mini flex-grow-1">
+            <span>Top Paid:</span> <b id="topPaid">N/A</b>
+          </div>
+          <div class="mini flex-grow-1">
+            <span>Lowest Paid:</span> <b id="lowPaid">N/A</b>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="table-wrap mt-3">
+      <div style="max-height: 540px; overflow:auto;">
+        <table>
+          <thead>
+            <tr>
+              <th>Employee</th>
+              <th>Role</th>
+              <th class="text-end">Gross</th>
+              <th class="text-end">Global Deds</th>
+              <th class="text-end">Other Deds</th>
+              <th class="text-end">Adjust</th>
+              <th class="text-end">NET</th>
+              <th>Notes</th>
+              <th class="text-end">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="payrollBody"></tbody>
+        </table>
+      </div>
+    </div>
+    </div>
+
+    <div id="section-manual" style="display:none;">
+      <div class="table-wrap mt-3">
+        <div class="p-3 border-bottom">
+          <div class="fw-semibold">Manual Payroll Entry</div>
+          <div class="small text-muted">Create payroll records for staff not submitted by managers.</div>
+        </div>
+        <div class="p-3">
+          <div class="row g-2">
+            <div class="col-12 col-md-5">
+              <label class="small text-muted mb-1">Employees</label>
+              <input class="form-control form-control-sm mb-2" id="manualSearch" placeholder="Search employee...">
+              <select class="form-select form-select-sm" id="manualEmployees" multiple size="6"></select>
+              <div class="small text-muted mt-1">Select one or more employees.</div>
+            </div>
+            <div class="col-6 col-md-2">
+            <label class="small text-muted mb-1">Month</label>
+            <input type="month" class="form-control form-control-sm mono" id="manualMonth">
+            </div>
+            <div class="col-6 col-md-2">
+              <label class="small text-muted mb-1">Amount (GHS)</label>
+              <input type="number" step="0.01" min="0" class="form-control form-control-sm mono" id="manualAmount">
+            </div>
+            <div class="col-12 col-md-3">
+              <label class="small text-muted mb-1">Note (optional)</label>
+              <input class="form-control form-control-sm" id="manualNote" placeholder="Optional note">
+            </div>
+            <div class="col-12 d-flex justify-content-end">
+              <button class="btn btn-sm btn-outline-primary" id="btnManualAdd" data-spinner-manual="1">
+                <i class="bi bi-plus-circle me-1"></i>Add to Payroll
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="table-wrap mt-3">
+        <div class="p-3 border-bottom">
+          <div class="fw-semibold">Manual Payroll History</div>
+          <div class="small text-muted">Employees added manually for the selected month.</div>
+        </div>
+        <div class="p-3">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <div class="small text-muted">Total Amount</div>
+            <div class="fw-semibold mono" id="manualHistoryTotal">GHS 0.00</div>
+          </div>
+          <div style="max-height: 360px; overflow:auto;">
+            <table>
+              <thead>
+                <tr>
+                  <th>Employee</th>
+                  <th>Role</th>
+                  <th>Branch</th>
+                  <th class="text-end">Amount</th>
+                  <th class="text-end">Net</th>
+                </tr>
+              </thead>
+              <tbody id="manualHistoryBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="section-deductions" style="display:none;">
+    <div class="table-wrap mt-3">
+      <div class="p-3 border-bottom" style="background:#fff;">
+        <div class="fw-semibold">Deductions Viewer</div>
+        <div class="small text-muted">Select an employee to view deductions for the current month.</div>
+      </div>
+      <div class="p-3">
+        <div class="row g-2 align-items-end">
+          <div class="col-12 col-md-5">
+            <label class="small text-muted mb-1">Employee</label>
+            <input class="form-control form-control-sm mb-2" id="dedViewSearch" placeholder="Search employee">
+            <select class="form-select form-select-sm" id="dedViewEmployeeSelect">
+              <option value="">Select employee</option>
+            </select>
+          </div>
+          <div class="col-12 col-md-3">
+            <label class="small text-muted mb-1">Month</label>
+            <input class="form-control form-control-sm" id="dedViewMonth" readonly>
+          </div>
+          <div class="col-12 col-md-4">
+            <div class="small text-muted mb-1">Total Deductions</div>
+            <div class="fw-semibold mono" id="dedViewTotal">GHS 0.00</div>
+          </div>
+        </div>
+        <div class="mt-3" id="dedViewList">No deductions selected.</div>
+      </div>
+    </div>
+    </div>
+  </div>
+
+  <!-- Edit Modal -->
+  <div class="modal fade" id="editModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-md modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header">
+          <div>
+            <div class="fw-semibold" id="editTitle">Edit Payroll</div>
+            <div class="small text-muted" id="editSub">N/A</div>
+          </div>
+          <button class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" id="editRowType">
+          <input type="hidden" id="editPayrollId">
+          <input type="hidden" id="editEmployeeId">
+
+          <div class="row g-2" id="editAgentFields">
+            <div class="col-6">
+              <label class="small text-muted mb-1">HR Amount</label>
+              <input type="number" step="0.01" min="0" class="form-control" id="editHrAmount">
+            </div>
+            <div class="col-6">
+              <label class="small text-muted mb-1">HR Note</label>
+              <input class="form-control" id="editHrNote">
+            </div>
+          </div>
+
+          <div class="row g-2 d-none" id="editManagerFields">
+            <div class="col-12">
+              <label class="small text-muted mb-1">Manager Pay Amount</label>
+              <input type="number" step="0.01" min="0" class="form-control" id="editManagerAmount">
+            </div>
+            <div class="col-12">
+              <label class="small text-muted mb-1">Note</label>
+              <input class="form-control" id="editManagerNote">
+            </div>
+          </div>
+
+          <div class="row g-2 d-none" id="editRecordFields">
+            <div class="col-4">
+              <label class="small text-muted mb-1">Basic</label>
+              <input type="number" step="0.01" min="0" class="form-control" id="editBasic">
+            </div>
+            <div class="col-4">
+              <label class="small text-muted mb-1">Allowances</label>
+              <input type="number" step="0.01" min="0" class="form-control" id="editAllowances">
+            </div>
+            <div class="col-4">
+              <label class="small text-muted mb-1">PAYE</label>
+              <input type="number" step="0.01" min="0" class="form-control" id="editPaye">
+            </div>
+            <div class="col-12">
+              <label class="small text-muted mb-1">Note</label>
+              <input class="form-control" id="editRecordNote">
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button class="btn btn-primary" id="btnSaveEdit" data-spinner-manual="1">Save</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Deduction Modal -->
+  <div class="modal fade" id="dedModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-sm">
+      <div class="modal-content">
+        <div class="modal-header">
+          <div class="fw-semibold">Add Deduction</div>
+          <button class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" id="dedEmployeeId">
+          <div class="mb-2">
+            <label class="small text-muted mb-1">Employee</label>
+            <input class="form-control form-control-sm mb-2" id="dedSearch" placeholder="Search employee">
+            <select class="form-select form-select-sm" id="dedEmployeeSelect">
+              <option value="">Select employee</option>
+            </select>
+          </div>
+          <div class="mb-2">
+            <label class="small text-muted mb-1">Amount</label>
+            <input type="number" step="0.01" min="0" class="form-control" id="dedAmount">
+          </div>
+          <div class="mb-2">
+            <label class="small text-muted mb-1">Reason</label>
+            <input class="form-control" id="dedReason">
+          </div>
+          <div class="mb-2">
+            <label class="small text-muted mb-1">Date</label>
+            <input type="date" class="form-control" id="dedDate">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button class="btn btn-primary" id="btnSaveDed" data-spinner-manual="1">Add</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast-container position-fixed top-0 end-0 p-3" style="z-index:2000;">
+    <div class="toast" id="appToast">
+      <div class="d-flex">
+        <div class="toast-body" id="toastMsg">Ready</div>
+        <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast"></button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    const monthSelect = document.getElementById("monthSelect");
+    const statusSelect = document.getElementById("statusSelect");
+    const branchSelect = document.getElementById("branchSelect");
+    const searchInput = document.getElementById("searchInput");
+    const btnExportPdf = document.getElementById("btnExportPdf");
+    const btnExportXlsx = document.getElementById("btnExportXlsx");
+
+    const sumBranch = document.getElementById("sumBranch");
+    const sumSubmitted = document.getElementById("sumSubmitted");
+    const sumGross = document.getElementById("sumGross");
+    const sumNet = document.getElementById("sumNet");
+    const sumEmployees = document.getElementById("sumEmployees");
+    const sumEdited = document.getElementById("sumEdited");
+    const sumTax = document.getElementById("sumTax");
+    const topPaid = document.getElementById("topPaid");
+    const lowPaid = document.getElementById("lowPaid");
+
+    const payrollBody = document.getElementById("payrollBody");
+
+    const editModal = new bootstrap.Modal(document.getElementById("editModal"));
+    const editTitle = document.getElementById("editTitle");
+    const editSub = document.getElementById("editSub");
+    const editRowType = document.getElementById("editRowType");
+    const editPayrollId = document.getElementById("editPayrollId");
+    const editEmployeeId = document.getElementById("editEmployeeId");
+
+    const editAgentFields = document.getElementById("editAgentFields");
+    const editManagerFields = document.getElementById("editManagerFields");
+    const editRecordFields = document.getElementById("editRecordFields");
+
+    const editHrAmount = document.getElementById("editHrAmount");
+    const editHrNote = document.getElementById("editHrNote");
+    const editManagerAmount = document.getElementById("editManagerAmount");
+    const editManagerNote = document.getElementById("editManagerNote");
+    const editBasic = document.getElementById("editBasic");
+    const editAllowances = document.getElementById("editAllowances");
+    const editPaye = document.getElementById("editPaye");
+    const editRecordNote = document.getElementById("editRecordNote");
+    const btnSaveEdit = document.getElementById("btnSaveEdit");
+
+    const btnOpenDeduction = document.getElementById("btnOpenDeduction");
+    const dedSearch = document.getElementById("dedSearch");
+    const dedEmployeeSelect = document.getElementById("dedEmployeeSelect");
+    const dedViewSearch = document.getElementById("dedViewSearch");
+    const dedViewEmployeeSelect = document.getElementById("dedViewEmployeeSelect");
+    const dedViewMonth = document.getElementById("dedViewMonth");
+    const dedViewTotal = document.getElementById("dedViewTotal");
+    const dedViewList = document.getElementById("dedViewList");
+
+    const dedModal = new bootstrap.Modal(document.getElementById("dedModal"));
+    const dedEmployeeId = document.getElementById("dedEmployeeId");
+    const dedAmount = document.getElementById("dedAmount");
+    const dedReason = document.getElementById("dedReason");
+    const dedDate = document.getElementById("dedDate");
+    const btnSaveDed = document.getElementById("btnSaveDed");
+
+    const manualSearch = document.getElementById("manualSearch");
+    const manualEmployees = document.getElementById("manualEmployees");
+    const manualMonth = document.getElementById("manualMonth");
+    const manualAmount = document.getElementById("manualAmount");
+    const manualNote = document.getElementById("manualNote");
+    const btnManualAdd = document.getElementById("btnManualAdd");
+    const manualHistoryTotal = document.getElementById("manualHistoryTotal");
+    const manualHistoryBody = document.getElementById("manualHistoryBody");
+
+    const toastEl = document.getElementById("appToast");
+    const toastMsg = document.getElementById("toastMsg");
+    const toast = new bootstrap.Toast(toastEl, {delay: 2200});
+
+    let STATE = {
+      month: "",
+      status: "Submitted",
+      branch: "",
+      rows: []
+    };
+    let EMPLOYEES = [];
+
+    function notify(msg){ toastMsg.innerText = msg; toast.show(); }
+    function esc(s){ return String(s||"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;"); }
+    function money(n){ try{ return "GHS " + Number(n||0).toLocaleString(undefined,{minimumFractionDigits:2, maximumFractionDigits:2}); }catch(e){ return "GHS " + Number(n||0).toFixed(2); } }
+    function setBtnLoading(btn, isLoading){
+      if (!btn) return;
+      if (isLoading) {
+        if (btn.dataset.loading === "1") return;
+        btn.dataset.loading = "1";
+        btn.disabled = true;
+        const spin = document.createElement("span");
+        spin.className = "spinner-border spinner-border-sm ms-2 btn-spin";
+        spin.setAttribute("role", "status");
+        spin.setAttribute("aria-hidden", "true");
+        btn.appendChild(spin);
+      } else {
+        btn.dataset.loading = "0";
+        btn.disabled = false;
+        const spin = btn.querySelector(".btn-spin");
+        if (spin) spin.remove();
+      }
+    }
+
+    function setActiveTab(targetId){
+      const tabs = document.querySelectorAll(".tab-btn");
+      tabs.forEach(t => t.classList.toggle("active", t.getAttribute("data-tab") === targetId));
+      const sections = ["section-payroll", "section-manual", "section-deductions"];
+      sections.forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.style.display = (id === targetId) ? "" : "none";
+      });
+      const target = document.getElementById(targetId);
+      if (target) target.scrollIntoView({behavior: "smooth", block: "start"});
+    }
+
+    document.addEventListener("click", (e) => {
+      const btn = e.target.closest("button");
+      if (!btn) return;
+      if (btn.classList.contains("btn-close")) return;
+      if (!btn.dataset.autoSpinner) return;
+      if (btn.dataset.spinnerManual === "1") return;
+      if (btn.dataset.loading === "1") return;
+      setBtnLoading(btn, true);
+      setTimeout(() => setBtnLoading(btn, false), 700);
+    });
+
+    document.querySelectorAll(".tab-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const target = btn.getAttribute("data-tab");
+        if (target) setActiveTab(target);
+      });
+    });
+
+    function renderSkeleton(){
+      payrollBody.innerHTML = `<tr><td colspan="9" class="py-4">
+        <div class="d-flex align-items-center gap-2 text-muted">
+          <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+          <span>Please wait...</span>
+        </div>
+      </td></tr>`;
+    }
+
+    function renderRows(){
+      const q = (searchInput.value || "").toLowerCase().trim();
+      const rows = STATE.rows.filter(r => {
+        if(!q) return true;
+        return String(r.name||"").toLowerCase().includes(q) || String(r.role||"").toLowerCase().includes(q);
+      });
+
+      if(!rows.length){
+        payrollBody.innerHTML = `<tr><td colspan="9" class="text-center text-muted py-4">No payroll rows found.</td></tr>`;
+        return;
+      }
+
+      payrollBody.innerHTML = rows.map(r => {
+        const roleBadge = `<span class="badge text-bg-light border badge-role">${esc(r.role||"Other")}</span>`;
+        const note = (r.note||"").slice(0, 40);
+        const editBtn = r.editable ? `<button class="btn btn-sm btn-outline-primary" data-auto-spinner="1" onclick="openEdit('${esc(r.row_type)}','${esc(r.employee_id)}','${esc(r.payroll_id||"")}')">Edit</button>` : ``;
+        const dedBtn = `<button class="btn btn-sm btn-outline-secondary" data-auto-spinner="1" onclick="openDeduction('${esc(r.employee_id)}')">Deduct</button>`;
+        return `
+          <tr>
+            <td>
+              <div class="fw-semibold">${esc(r.name||"Employee")}</div>
+              <div class="small text-muted">${esc(r.employee_id||"")}</div>
+            </td>
+            <td>${roleBadge}</td>
+            <td class="text-end mono">${money(r.gross)}</td>
+            <td class="text-end mono">${money(r.global_deductions_total||0)}</td>
+            <td class="text-end mono">${money(r.deductions_total||0)}</td>
+            <td class="text-end mono">${money((r.adjustments_add||0) - (r.adjustments_deduct||0))}</td>
+            <td class="text-end fw-semibold mono">${money(r.net)}</td>
+            <td>${esc(note)}</td>
+            <td class="text-end">
+              <div class="btn-group btn-group-sm">
+                ${editBtn}
+                ${dedBtn}
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join("");
+    }
+
+    async function loadMonths(){
+      const res = await fetch(`/hr/payroll/months`);
+      const data = await res.json();
+      if(!data.ok) return notify(data.message || "Failed to load months.");
+      monthSelect.innerHTML = data.months.map(m => `<option value="${esc(m.value)}">${esc(m.label)}</option>`).join("");
+      STATE.month = monthSelect.value;
+    }
+
+    async function loadBranches(){
+      const q = new URLSearchParams({month: STATE.month, status: STATE.status});
+      const res = await fetch(`/hr/payroll/branch-summary?` + q.toString());
+      const data = await res.json();
+      if(!data.ok){ notify(data.message || "Failed to load branches."); return; }
+
+      branchSelect.innerHTML = `<option value="">Select branch</option>` +
+        `<option value="__all__">All Branches</option>` +
+        (data.rows||[]).map(r =>
+          `<option value="${esc(r.branch)}">${esc(r.branch)}</option>`
+        ).join("");
+
+      if (!STATE.branch && data.rows && data.rows.length) {
+        STATE.branch = "__all__";
+        branchSelect.value = STATE.branch;
+      }
+    }
+
+    async function loadOverview(){
+      if(!STATE.branch || !STATE.month) return;
+      renderSkeleton();
+
+      const q = new URLSearchParams({month: STATE.month, status: STATE.status});
+      const isAllBranches = STATE.branch === "__all__";
+      const url = isAllBranches
+        ? `/hr/payroll/overview?` + q.toString()
+        : `/hr/payroll/branch/${encodeURIComponent(STATE.branch)}/overview?` + q.toString();
+      const res = await fetch(url);
+      const data = await res.json();
+      if(!data.ok){ notify(data.message || "Failed to load overview."); return; }
+
+      const summary = data.summary || {};
+      sumBranch.innerText = isAllBranches ? "All Branches" : (data.branch || "N/A");
+      sumSubmitted.innerText = money(summary.submitted_total || 0);
+      sumGross.innerText = money(summary.final_total || 0);
+      sumNet.innerText = money(summary.net_final_total || 0);
+      sumEmployees.innerText = summary.employee_count || 0;
+      sumEdited.innerText = summary.edited_count || 0;
+      sumTax.innerText = summary.has_default_tax ? "Tax Applied" : "No Tax";
+
+      const top = data.top_low?.top;
+      const low = data.top_low?.low;
+      topPaid.innerText = top ? `${top.name} - ${top.role} - ${money(top.net)}` : "N/A";
+      lowPaid.innerText = low ? `${low.name} - ${low.role} - ${money(low.net)}` : "N/A";
+
+      STATE.rows = data.rows || [];
+      renderRows();
+
+      btnExportPdf.disabled = !STATE.branch || isAllBranches;
+      btnExportXlsx.disabled = !STATE.branch || isAllBranches;
+    }
+
+    function openEdit(rowType, employeeId, payrollId){
+      const row = STATE.rows.find(r => r.employee_id === employeeId && r.row_type === rowType) || {};
+      editRowType.value = rowType;
+      editEmployeeId.value = employeeId || "";
+      editPayrollId.value = payrollId || row.payroll_id || "";
+
+      editAgentFields.classList.add("d-none");
+      editManagerFields.classList.add("d-none");
+      editRecordFields.classList.add("d-none");
+
+      editTitle.innerText = `Edit - ${row.name || "Employee"}`;
+      editSub.innerText = `${row.role || ""} - ${STATE.branch || "N/A"}`;
+
+      if(rowType === "agent"){
+        editAgentFields.classList.remove("d-none");
+        editHrAmount.value = row.hr_amount ?? "";
+        editHrNote.value = row.hr_note || "";
+      } else if(rowType === "manager"){
+        editManagerFields.classList.remove("d-none");
+        editManagerAmount.value = row.manager_pay_amount ?? "";
+        editManagerNote.value = row.note || "";
+      } else {
+        editRecordFields.classList.remove("d-none");
+        editBasic.value = row.basic_salary ?? 0;
+        editAllowances.value = row.allowances ?? 0;
+        editPaye.value = row.paye ?? 0;
+        editRecordNote.value = row.note || "";
+      }
+
+      editModal.show();
+    }
+
+    function openDeduction(employeeId){
+      dedEmployeeId.value = employeeId || "";
+      if (dedEmployeeSelect) {
+        dedEmployeeSelect.value = employeeId || "";
+      }
+      if (!dedDate.value) {
+        const now = new Date();
+        const yyyy = now.getFullYear();
+        const mm = String(now.getMonth()+1).padStart(2,'0');
+        const dd = String(now.getDate()).padStart(2,'0');
+        dedDate.value = `${yyyy}-${mm}-${dd}`;
+      }
+      dedModal.show();
+    }
+
+    btnSaveEdit.addEventListener("click", async () => {
+      const rowType = editRowType.value;
+      const payrollId = editPayrollId.value;
+      const employeeId = editEmployeeId.value;
+
+      setBtnLoading(btnSaveEdit, true);
+      try {
+        if(rowType === "agent"){
+          const resp = await fetch(`/hr/payroll/update-item`, {
+            method: "POST",
+            headers: {"Content-Type":"application/json"},
+            body: JSON.stringify({
+              payroll_id: payrollId,
+              agent_id: employeeId,
+              hr_amount: (editHrAmount.value === "" ? null : editHrAmount.value),
+              hr_note: editHrNote.value || ""
+            })
+          });
+          const out = await resp.json();
+          if(!out.ok) return notify(out.message || "Update failed.");
+        } else if(rowType === "manager"){
+          const resp = await fetch(`/hr/payroll/update-manager-pay`, {
+            method: "POST",
+            headers: {"Content-Type":"application/json"},
+            body: JSON.stringify({ payroll_id: payrollId, amount: editManagerAmount.value, note: editManagerNote.value || "" })
+          });
+          const out = await resp.json();
+          if(!out.ok) return notify(out.message || "Update failed.");
+        } else {
+          const resp = await fetch(`/hr/payroll/records/upsert`, {
+            method: "POST",
+            headers: {"Content-Type":"application/json"},
+            body: JSON.stringify({
+              employee_id: employeeId,
+              month: STATE.month,
+              basic_salary: editBasic.value,
+              allowances: editAllowances.value,
+              paye: editPaye.value,
+              note: editRecordNote.value || ""
+            })
+          });
+          const out = await resp.json();
+          if(!out.ok) return notify(out.message || "Update failed.");
+        }
+
+        editModal.hide();
+        await loadOverview();
+        notify("Updated.");
+      } finally {
+        setBtnLoading(btnSaveEdit, false);
+      }
+    });
+
+    btnSaveDed.addEventListener("click", async () => {
+      const employee_id = dedEmployeeId.value;
+      if(!employee_id) return;
+      if(!dedAmount.value || Number(dedAmount.value) <= 0) return notify("Enter amount.");
+      if(!dedReason.value) return notify("Reason is required.");
+      if(!dedDate.value) return notify("Select a date.");
+
+      setBtnLoading(btnSaveDed, true);
+      try {
+        const resp = await fetch(`/hr/payroll/deductions/add`, {
+          method: "POST",
+          headers: {"Content-Type":"application/json"},
+          body: JSON.stringify({
+            employee_id,
+            amount: dedAmount.value,
+            reason: dedReason.value,
+            date: dedDate.value,
+            month: STATE.month
+          })
+        });
+        const out = await resp.json();
+        if(!out.ok) return notify(out.message || "Failed to add deduction.");
+
+        dedModal.hide();
+        dedAmount.value = "";
+        dedReason.value = "";
+        await loadOverview();
+        notify("Deduction added.");
+      } finally {
+        setBtnLoading(btnSaveDed, false);
+      }
+    });
+
+    if (btnManualAdd) {
+      btnManualAdd.addEventListener("click", async () => {
+        const ids = manualEmployees ? Array.from(manualEmployees.selectedOptions).map(o => o.value).filter(Boolean) : [];
+        const month = (manualMonth && manualMonth.value) ? manualMonth.value : STATE.month;
+        if (!month) return notify("Select a month.");
+        if (!ids.length) return notify("Select employee(s).");
+        if (!manualAmount.value || Number(manualAmount.value) <= 0) return notify("Enter amount.");
+
+        setBtnLoading(btnManualAdd, true);
+        try {
+          let okCount = 0;
+          for (const id of ids) {
+            const resp = await fetch(`/hr/payroll/records/upsert`, {
+              method: "POST",
+              headers: {"Content-Type":"application/json"},
+              body: JSON.stringify({
+                employee_id: id,
+                month: month,
+                basic_salary: manualAmount.value,
+                allowances: 0,
+                paye: 0,
+                note: manualNote ? (manualNote.value || "") : ""
+              })
+            });
+            const out = await resp.json();
+            if (out.ok) okCount += 1;
+          }
+
+          if (manualAmount) manualAmount.value = "";
+          if (manualNote) manualNote.value = "";
+          notify(`Added ${okCount} record(s).`);
+          await loadOverview();
+          await loadManualHistory();
+        } finally {
+          setBtnLoading(btnManualAdd, false);
+        }
+      });
+    }
+
+    async function loadEmployees(q){
+      const qs = new URLSearchParams();
+      if (q) qs.set("q", q);
+      const res = await fetch(`/hr/payroll/employees?` + qs.toString());
+      const data = await res.json();
+      if(!data.ok) return;
+      EMPLOYEES = data.employees || [];
+      if (dedEmployeeSelect) {
+        dedEmployeeSelect.innerHTML = `<option value="">Select employee</option>` + EMPLOYEES.map(e => (
+          `<option value="${esc(e.id)}">${esc(e.name)} - ${esc(e.role || "role")} - ${esc(e.branch || "")}</option>`
+        )).join("");
+      }
+      if (manualEmployees) {
+        manualEmployees.innerHTML = EMPLOYEES.map(e => (
+          `<option value="${esc(e.id)}">${esc(e.name)} - ${esc(e.role || "role")} - ${esc(e.branch || "")}</option>`
+        )).join("");
+      }
+      if (dedViewEmployeeSelect) {
+        dedViewEmployeeSelect.innerHTML = `<option value="">Select employee</option>` + EMPLOYEES.map(e => (
+          `<option value="${esc(e.id)}">${esc(e.name)} - ${esc(e.role || "role")} - ${esc(e.branch || "")}</option>`
+        )).join("");
+      }
+    }
+
+    async function loadManualHistory(){
+      const month = (manualMonth && manualMonth.value) ? manualMonth.value : STATE.month;
+      if (!month || !manualHistoryBody) return;
+      manualHistoryBody.innerHTML = `
+        <tr><td colspan="5" class="py-3">
+          <div class="d-flex align-items-center gap-2 text-muted">
+            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+            <span>Please wait...</span>
+          </div>
+        </td></tr>
+      `;
+
+      const q = new URLSearchParams({month: month, status: "All"});
+      const res = await fetch(`/hr/payroll/records?` + q.toString());
+      const data = await res.json();
+      if (!data.ok) {
+        manualHistoryBody.innerHTML = `<tr><td colspan="5" class="text-danger py-3">${esc(data.message || "Failed to load history.")}</td></tr>`;
+        if (manualHistoryTotal) manualHistoryTotal.innerText = "GHS 0.00";
+        return;
+      }
+
+      const rows = (data.rows || []).filter(r =>
+        String(r.created_by || "").toLowerCase() === "hr" && Number(r.basic_salary || 0) > 0
+      );
+
+      if (!rows.length) {
+        manualHistoryBody.innerHTML = `<tr><td colspan="5" class="text-muted py-3">No manual payroll history for this month.</td></tr>`;
+        if (manualHistoryTotal) manualHistoryTotal.innerText = "GHS 0.00";
+        return;
+      }
+
+      const total = rows.reduce((sum, r) => sum + Number(r.gross || r.basic_salary || 0), 0);
+      if (manualHistoryTotal) manualHistoryTotal.innerText = money(total);
+      manualHistoryBody.innerHTML = rows.map(r => `
+        <tr>
+          <td>
+            <div class="fw-semibold">${esc(r.employee_name || "Employee")}</div>
+            <div class="small text-muted">${esc(r.employee_id || "")}</div>
+          </td>
+          <td>${esc(r.role || "Role")}</td>
+          <td>${esc(r.branch || "Branch")}</td>
+          <td class="text-end mono">${money(r.basic_salary || 0)}</td>
+          <td class="text-end mono">${money(r.net_pay || 0)}</td>
+        </tr>
+      `).join("");
+    }
+
+    if (btnOpenDeduction) {
+      btnOpenDeduction.addEventListener("click", async () => {
+        await loadEmployees("");
+        if (dedSearch) dedSearch.value = "";
+        if (dedEmployeeSelect) dedEmployeeSelect.value = "";
+        openDeduction("");
+      });
+    }
+
+    if (dedSearch) {
+      dedSearch.addEventListener("input", () => loadEmployees(dedSearch.value));
+    }
+
+    if (dedEmployeeSelect) {
+      dedEmployeeSelect.addEventListener("change", () => {
+        dedEmployeeId.value = dedEmployeeSelect.value || "";
+      });
+    }
+
+    async function loadDeductionViewer(){
+      if (!dedViewEmployeeSelect || !dedViewList) return;
+      const employeeId = dedViewEmployeeSelect.value || "";
+      if (!employeeId || !STATE.month) {
+        dedViewList.innerText = "No deductions selected.";
+        if (dedViewTotal) dedViewTotal.innerText = "GHS 0.00";
+        return;
+      }
+      const q = new URLSearchParams({ employee_id: employeeId, month: STATE.month });
+      const res = await fetch(`/hr/payroll/deductions?` + q.toString());
+      const data = await res.json();
+      if (!data.ok) {
+        dedViewList.innerText = data.message || "Failed to load deductions.";
+        if (dedViewTotal) dedViewTotal.innerText = "GHS 0.00";
+        return;
+      }
+      const list = data.deductions || [];
+      if (!list.length) {
+        dedViewList.innerText = "No deductions found.";
+        if (dedViewTotal) dedViewTotal.innerText = "GHS 0.00";
+        return;
+      }
+      const total = list.reduce((sum, d) => sum + Number(d.amount || 0), 0);
+      if (dedViewTotal) dedViewTotal.innerText = money(total);
+      dedViewList.innerHTML = list.map(d => (
+        `<div class="d-flex justify-content-between border-bottom py-1">
+          <div>${esc(d.reason || "Deduction")}</div>
+          <div class="mono">${money(d.amount || 0)}</div>
+        </div>`
+      )).join("");
+    }
+
+    searchInput.addEventListener("input", renderRows);
+    monthSelect.addEventListener("change", async () => {
+      STATE.month = monthSelect.value;
+      if (dedViewMonth) dedViewMonth.value = STATE.month;
+      await loadBranches();
+      await loadOverview();
+      await loadDeductionViewer();
+      await loadManualHistory();
+    });
+    statusSelect.addEventListener("change", async () => {
+      STATE.status = statusSelect.value;
+      await loadBranches();
+      await loadOverview();
+    });
+    branchSelect.addEventListener("change", async () => {
+      STATE.branch = branchSelect.value;
+      await loadOverview();
+    });
+
+    btnExportPdf.addEventListener("click", () => {
+      if(!STATE.branch) return;
+      const q = new URLSearchParams({month: STATE.month, status: STATE.status});
+      window.open(`/hr/payroll/branch/${encodeURIComponent(STATE.branch)}/export/pdf?` + q.toString(), "_blank");
+    });
+    btnExportXlsx.addEventListener("click", () => {
+      if(!STATE.branch) return;
+      const q = new URLSearchParams({month: STATE.month, status: STATE.status});
+      window.open(`/hr/payroll/branch/${encodeURIComponent(STATE.branch)}/export/xlsx?` + q.toString(), "_blank");
+    });
+
+    (async function init(){
+      await loadMonths();
+      await loadBranches();
+      if (dedViewMonth) dedViewMonth.value = STATE.month;
+      if (manualMonth && !manualMonth.value) manualMonth.value = STATE.month;
+      await loadOverview();
+      await loadEmployees("");
+      await loadManualHistory();
+    })();
+
+    if (dedViewSearch) {
+      dedViewSearch.addEventListener("input", () => loadEmployees(dedViewSearch.value));
+    }
+    if (dedViewEmployeeSelect) {
+      dedViewEmployeeSelect.addEventListener("change", loadDeductionViewer);
+    }
+    if (manualSearch) {
+      manualSearch.addEventListener("input", () => loadEmployees(manualSearch.value));
+    }
+    if (manualMonth) {
+      manualMonth.addEventListener("change", loadManualHistory);
+    }
+  </script>
+    {% include 'app_footer.html' %}
+
+</body>
+</html>

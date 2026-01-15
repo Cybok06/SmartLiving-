@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Add Product</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="icon" href="https://res.cloudinary.com/dljpgzbto/image/upload/v1743993646/company-logo_dksb23.jpg" type="image/png">
+  <style>
+    body { font-family: 'Segoe UI', sans-serif; background-color: #f0f2f5; margin: 0; padding: 20px; }
+    body.dark-mode { background-color: #181818; color: #f0f0f0; }
+    .container { max-width: 1000px; margin: auto; background: #fff; padding: 30px; border-radius: 14px; box-shadow: 0 8px 24px rgba(0,0,0,0.08); position: relative; }
+    body.dark-mode .container { background-color: #242424; color: #f0f0f0; }
+    h2 { text-align: center; color: #4e54c8; margin-bottom: 25px; letter-spacing: .3px; }
+    label { font-weight: 600; margin-top: 10px; display: block; }
+    input, textarea, select, button { width: 100%; padding: 10px; margin: 8px 0 15px; box-sizing: border-box; }
+    button { background-color: #4e54c8; color: #fff; border: none; border-radius: 8px; cursor: pointer; transition: transform .04s ease; }
+    button:hover { background-color: #3a40a4; }
+    button:active { transform: translateY(1px); }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; }
+    .inventory-item, .manager-item { background: #f9f9f9; border: 1px solid #eaeaea; padding: 12px; border-radius: 10px; text-align: center; }
+    body.dark-mode .inventory-item, body.dark-mode .manager-item { background-color: #2b2b2b; border-color: #444; }
+    .inventory-item img { width: 60px; height: 60px; object-fit: cover; border-radius: 6px; margin-bottom: 8px; }
+    .qty-input { width: 80px; margin-top: 8px; display: none; }
+    .select-all-btn { background-color: #ff9800; border-radius: 8px; margin: 10px 0; border: none; }
+    .flash { padding: 10px; margin-bottom: 15px; border-radius: 8px; color: #fff; }
+    .flash.success { background-color: #28a745; } .flash.danger { background-color: #dc3545; }
+
+    #upload-status { min-height: 28px; display: flex; align-items: center; gap: 10px; font-weight: 600; color: #6b7280; }
+    .spinner-border { width: 1.25rem; height: 1.25rem; }
+    .thumb-wrap { display: flex; align-items: center; gap: 12px; margin-top: 6px; }
+    .thumb { width: 120px; height: 120px; object-fit: cover; border-radius: 10px; display: none; border: 1px solid #e5e7eb; box-shadow: 0 4px 16px rgba(0,0,0,.08); }
+    .jump-btn { position: absolute; top: 20px; right: 20px; background: #4e54c8; color: #fff; border-radius: 50%; border: none; width: 42px; height: 42px; font-size: 20px; cursor: pointer; }
+    @media (max-width: 600px) { .qty-input { width: 100%; } }
+
+    select.form-select { background-color: #fff; border: 1px solid #e5e7eb; border-radius: 8px; color: #333; padding: 10px; font-size: 16px; transition: border-color .2s, box-shadow .2s; }
+    body.dark-mode select.form-select { background-color: #2a2a2a; border-color: #555; color: #f0f0f0; }
+    select.form-select:focus { border-color: #4e54c8; box-shadow: 0 0 0 3px rgba(78,84,200,.15); outline: none; }
+    #customProductType, #customCategory { background-color: #f9f9f9; border: 1px solid #e5e7eb; border-radius: 8px; padding: 10px; margin-top: -8px; font-size: 15px; color: #333; }
+    body.dark-mode #customProductType, body.dark-mode #customCategory { background-color: #333; border-color: #555; color: #f0f0f0; }
+    .status-ok { color: #16a34a; }
+    .status-fail { color: #dc2626; }
+
+    .calc {
+      border:1px solid #e5e7eb; border-radius:10px; padding:10px;
+      background:#f8fafc; margin:-4px 0 14px;
+      font-size:.92rem;
+    }
+    body.dark-mode .calc{ background:#1f2937; border-color:#374151; }
+    .calc b{ float:right; }
+    .missing-card{
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+      padding: 12px;
+      background: #fff;
+    }
+    body.dark-mode .missing-card{ background:#2b2b2b; border-color:#444; }
+    .missing-thumb{
+      width: 60px;
+      height: 60px;
+      border-radius: 8px;
+      object-fit: cover;
+      background: #f1f5f9;
+      border: 1px solid #e5e7eb;
+      flex: 0 0 auto;
+    }
+  </style>
+</head>
+<body>
+  {% include 'inventory_sidebar.html' %}
+
+  <div class="container">
+    <button class="jump-btn" onclick="document.querySelector('.manager-item').scrollIntoView({behavior: 'smooth'})">➤</button>
+
+    <h2>Add New Product</h2>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="flash {{ category }}">{{ message }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <ul class="nav nav-tabs" role="tablist" style="margin-bottom:16px;">
+      <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="tab-new-btn" data-bs-toggle="tab" data-bs-target="#tab-new" type="button" role="tab">
+          New Product
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="tab-missing-btn" data-bs-toggle="tab" data-bs-target="#tab-missing" type="button" role="tab">
+          Missing Product
+        </button>
+      </li>
+    </ul>
+
+    <div class="tab-content">
+      <div class="tab-pane fade show active" id="tab-new" role="tabpanel" aria-labelledby="tab-new-btn">
+        <form id="productForm" method="POST" enctype="multipart/form-data" oninput="storeInputs()">
+      <label>Product Name:</label>
+      <input type="text" name="name" required id="name" autocomplete="off">
+
+      <label>Product Type:</label>
+      <select name="product_type" id="product_type" class="form-select" onchange="toggleCustomInput(this, 'customProductType')">
+        <option value="">-- Select existing --</option>
+        {% for pt in product_types %}
+          <option value="{{ pt }}">{{ pt }}</option>
+        {% endfor %}
+        <option value="__custom__">Add new product type</option>
+      </select>
+      <input type="text" id="customProductType" name="custom_product_type" placeholder="Enter new product type" style="display:none;">
+
+      <label>Category (Optional):</label>
+      <select name="category" id="category" class="form-select" onchange="toggleCustomInput(this, 'customCategory')">
+        <option value="">-- Select existing --</option>
+        {% for cat in categories %}
+          <option value="{{ cat }}">{{ cat }}</option>
+        {% endfor %}
+        <option value="__custom__">Add new category</option>
+      </select>
+      <input type="text" id="customCategory" name="custom_category" placeholder="Enter new category" style="display:none;">
+
+      <label>Package Name (Optional):</label>
+      <input type="text" name="package_name" id="package_name" autocomplete="off">
+
+      <label>Default Installment Term (Months):</label>
+      <select name="default_term_months" id="default_term_months" class="form-select">
+        <option value="">-- Optional --</option>
+        <option value="1">1 month</option>
+        <option value="2">2 months</option>
+        <option value="3">3 months</option>
+        <option value="4">4 months</option>
+        <option value="5">5 months</option>
+        <option value="6" selected>6 months</option>
+        <option value="9">9 months</option>
+        <option value="12">12 months</option>
+        <option value="18">18 months</option>
+        <option value="24">24 months</option>
+      </select>
+      <div class="text-muted small" style="margin-top:-8px;margin-bottom:12px;">
+        Used to auto-fill Layaway/Installment end term at selling.
+      </div>
+
+      <label> Installment Price (GHS):</label>
+      <input type="number" step="0.01" name="price" required id="price" inputmode="decimal">
+
+      <label>Cash Price (GHS):</label>
+      <input type="number" step="0.01" name="cash_price" required id="cash_price" inputmode="decimal">
+
+      <!-- ✅ NEW: Cost Price -->
+      <label>Cost Price (GHS):</label>
+      <input type="number" step="0.01" name="cost_price" required id="cost_price" inputmode="decimal">
+
+      <!-- ✅ Live calc (does not affect price/cash inputs) -->
+      <div class="calc">
+        Main Profit: <b id="pProfit">GHS 0.00</b><br>
+        Main Margin: <b id="pMargin">0%</b><br><br>
+        Cash Profit: <b id="cProfit">GHS 0.00</b><br>
+        Cash Margin: <b id="cMargin">0%</b>
+      </div>
+
+      <label>Upload Product Image:</label>
+      <input type="file" id="image" accept="image/*" required>
+      <input type="hidden" id="image_url" name="image_url">
+      <input type="hidden" id="image_id" name="image_id">
+
+      <div id="upload-status" aria-live="polite"></div>
+      <div class="thumb-wrap">
+        <img id="thumb" class="thumb" alt="Preview">
+        <div id="uploadMessage" class="small text-muted"></div>
+      </div>
+
+      <label>Description:</label>
+      <textarea name="description" rows="3" required id="description"></textarea>
+
+      <label>Search Inventory Components:</label>
+      <input type="text" class="search-bar" id="inventorySearch" placeholder="Search component by name...">
+
+      <label>Select Inventory Components (with quantity):</label>
+      <div class="grid" id="inventoryGrid">
+        {% for key, inv in inventory.items() %}
+          {% set encoded_key = key | urlencode %}
+          <div class="inventory-item" data-name="{{ inv.name | lower }}">
+            <img src="{{ inv.image_url }}" alt="Item">
+            <div><strong>{{ inv.name }}</strong></div>
+            <div>Price: GHS {{ inv.price }}</div>
+            <div class="text-muted small"> {{ inv.description }} </div>
+            <input type="checkbox" name="components" value="{{ encoded_key }}" onchange="toggleQty(this)">
+            <input type="number" name="qty_{{ encoded_key }}" class="qty-input" min="1" placeholder="Qty">
+          </div>
+        {% endfor %}
+      </div>
+
+      <label>Select Managers:</label>
+      <button type="button" class="select-all-btn" onclick="selectAllManagers()">Select All Managers</button>
+      <div class="grid">
+        {% for manager in managers %}
+          <div class="manager-item">
+            <div><strong>{{ manager.name }}</strong></div>
+            <small class="text-muted">{{ manager.branch }}</small>
+            <input type="checkbox" class="manager-checkbox" name="managers" value="{{ manager._id }}">
+          </div>
+        {% endfor %}
+      </div>
+
+          <button id="submitBtn" type="submit" disabled>Add Product</button>
+        </form>
+      </div>
+
+      <div class="tab-pane fade" id="tab-missing" role="tabpanel" aria-labelledby="tab-missing-btn">
+        <div class="grid" style="grid-template-columns: 1fr;">
+          <div class="manager-item" style="text-align:left;">
+            <div style="width:100%;">
+              <label>Target Manager:</label>
+              <select id="missingManagerSelect" class="form-select">
+                <option value="">-- Select Manager --</option>
+                {% for manager in managers %}
+                  <option value="{{ manager._id }}">{{ manager.name }} ({{ manager.branch }})</option>
+                {% endfor %}
+              </select>
+              <button type="button" id="findMissingBtn" style="margin-top:10px;" disabled>Find Missing Products</button>
+              <div class="text-muted small" style="margin-top:6px;">
+                Find products that exist for other managers but are missing for this branch.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Missing Products Modal -->
+  <div class="modal fade" id="missingProductsModal" tabindex="-1" aria-hidden="true"
+       data-missing-url="{{ url_for('add_product.missing_products') }}"
+       data-add-url="{{ url_for('add_product.add_missing_products') }}">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-fullscreen-sm-down">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Missing Products</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="d-flex flex-wrap gap-2 mb-3 align-items-center justify-content-between">
+            <input id="missingSearch" class="form-control" placeholder="Search missing products..." style="max-width:360px;">
+            <div class="d-flex gap-2">
+              <button type="button" class="btn btn-outline-secondary btn-sm" id="missingSelectAll">Select All</button>
+              <button type="button" class="btn btn-outline-secondary btn-sm" id="missingClear">Clear</button>
+            </div>
+          </div>
+          <div id="missingStatus" class="small text-muted mb-2"></div>
+          <div id="missingLoading" class="text-center py-4 d-none">
+            <div class="spinner-border text-primary" role="status" aria-hidden="true"></div>
+            <div class="small text-muted mt-2">Loading missing products...</div>
+          </div>
+          <div id="missingList" class="grid"></div>
+          <div id="missingEmpty" class="text-center py-5 d-none">
+            <div class="text-muted">No missing products found.</div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <div class="me-auto text-muted small" id="missingSummary"></div>
+          <button type="button" class="btn btn-primary" id="addMissingBtn" disabled>
+            Add Selected to Manager
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+  <script>
+    function toggleQty(cb){
+      const qty = cb.nextElementSibling;
+      qty.style.display = cb.checked ? 'inline-block' : 'none';
+      if(!cb.checked) qty.value = '';
+    }
+
+    let isSubmitting = false;
+
+    function selectAllManagers(){
+      document.querySelectorAll('.manager-checkbox').forEach(cb => cb.checked = true);
+    }
+
+    function storeInputs(){
+      const fields = ['name','product_type','price','cash_price','cost_price','description'];
+      fields.forEach(id => { const el = document.getElementById(id); if(el) localStorage.setItem(id, el.value); });
+    }
+
+    function loadInputs(){
+      const fields = ['name','product_type','price','cash_price','cost_price','description'];
+      fields.forEach(id => { const el = document.getElementById(id); const v = localStorage.getItem(id); if(el && v) el.value = v; });
+    }
+
+    function toggleCustomInput(selectEl, inputId){
+      const input = document.getElementById(inputId);
+      if(selectEl.value === "__custom__"){
+        input.style.display = "block";
+        input.name = selectEl.name;
+        selectEl.name = "old_" + selectEl.name;
+      } else {
+        input.style.display = "none";
+        input.name = "ignore_" + selectEl.name;
+        selectEl.name = input.name.replace("ignore_", "");
+      }
+    }
+
+    function enableSubmitIfReady(){
+      const ok = !!document.getElementById('image_url').value;
+      document.getElementById('submitBtn').disabled = !ok;
+    }
+
+    function fmt(n){
+      n = Number(n || 0);
+      return "GHS " + n.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+    }
+
+    function calcMargins(){
+      const price = Number(document.getElementById('price')?.value || 0);
+      const cash  = Number(document.getElementById('cash_price')?.value || 0);
+      const cost  = Number(document.getElementById('cost_price')?.value || 0);
+
+      const pProfit = price - cost;
+      const cProfit = cash - cost;
+
+      const pMargin = (cost > 0) ? ((pProfit / cost) * 100) : 0;
+      const cMargin = (cost > 0) ? ((cProfit / cost) * 100) : 0;
+
+      document.getElementById('pProfit').textContent = fmt(pProfit);
+      document.getElementById('cProfit').textContent = fmt(cProfit);
+      document.getElementById('pMargin').textContent = (isFinite(pMargin) ? pMargin.toFixed(2) : "0.00") + "%";
+      document.getElementById('cMargin').textContent = (isFinite(cMargin) ? cMargin.toFixed(2) : "0.00") + "%";
+    }
+
+    document.addEventListener("DOMContentLoaded", function(){
+      loadInputs();
+      calcMargins();
+
+      ['price','cash_price','cost_price'].forEach(id=>{
+        const el = document.getElementById(id);
+        if(el) el.addEventListener('input', calcMargins);
+      });
+
+      const inventorySearch = document.getElementById('inventorySearch');
+      if(inventorySearch){
+        inventorySearch.addEventListener('input', function () {
+          const q = this.value.toLowerCase();
+          document.querySelectorAll('#inventoryGrid .inventory-item').forEach(item => {
+            const name = item.getAttribute('data-name') || '';
+            item.style.display = name.includes(q) ? 'block' : 'none';
+          });
+        });
+      }
+
+      // === Upload via backend ===
+      const imageInput = document.getElementById('image');
+      const uploadStatus = document.getElementById('upload-status');
+      const uploadMsg = document.getElementById('uploadMessage');
+      const thumb = document.getElementById('thumb');
+
+      imageInput.addEventListener('change', async function(e){
+        const file = e.target.files[0];
+
+        document.getElementById('image_url').value = '';
+        document.getElementById('image_id').value = '';
+        thumb.style.display = 'none';
+        uploadMsg.textContent = '';
+        enableSubmitIfReady();
+
+        if(!file) return;
+
+        uploadStatus.innerHTML = '<div class="spinner-border" role="status" aria-hidden="true"></div><span>Uploading image…</span>';
+
+        const fd = new FormData();
+        fd.append('image', file);
+
+        try{
+          const resp = await fetch('/products/upload_image', { method:'POST', body: fd });
+          const data = await resp.json();
+
+          if(data.success){
+            document.getElementById('image_url').value = data.image_url;
+            document.getElementById('image_id').value = data.image_id || '';
+            thumb.src = data.image_url;
+            thumb.style.display = 'block';
+            uploadStatus.innerHTML = '<span class="status-ok">✔ Image uploaded</span>';
+            enableSubmitIfReady();
+          } else {
+            console.error('Upload failed:', data);
+            uploadStatus.innerHTML = '<span class="status-fail">✖ Upload failed</span>';
+            uploadMsg.textContent = (data.error || 'Please try again.');
+          }
+        }catch(err){
+          console.error(err);
+          uploadStatus.innerHTML = '<span class="status-fail">✖ Upload failed</span>';
+          uploadMsg.textContent = 'Network error. Please try again.';
+        }
+      });
+
+      document.getElementById('productForm').addEventListener('submit', function(e){
+        if(!document.getElementById('image_url').value){
+          e.preventDefault();
+          alert('Please upload an image before submitting.');
+          return;
+        }
+        if (isSubmitting) {
+          e.preventDefault();
+          return;
+        }
+        isSubmitting = true;
+        const submitBtn = document.getElementById('submitBtn');
+        if (submitBtn) {
+          submitBtn.disabled = true;
+          submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Adding...';
+        }
+      });
+
+      const missingManagerSelect = document.getElementById('missingManagerSelect');
+      const findMissingBtn = document.getElementById('findMissingBtn');
+      const missingModalEl = document.getElementById('missingProductsModal');
+      const missingModal = missingModalEl ? new bootstrap.Modal(missingModalEl) : null;
+      const missingListUrl = missingModalEl?.dataset.missingUrl || '';
+      const missingAddUrl = missingModalEl?.dataset.addUrl || '';
+      const missingList = document.getElementById('missingList');
+      const missingSearch = document.getElementById('missingSearch');
+      const missingStatus = document.getElementById('missingStatus');
+      const missingLoadingEl = document.getElementById('missingLoading');
+      const missingEmpty = document.getElementById('missingEmpty');
+      const missingSummary = document.getElementById('missingSummary');
+      const missingSelectAll = document.getElementById('missingSelectAll');
+      const missingClear = document.getElementById('missingClear');
+      const addMissingBtn = document.getElementById('addMissingBtn');
+      let missingItems = [];
+      let missingLoading = false;
+      let missingAdding = false;
+
+      if (missingManagerSelect) {
+        missingManagerSelect.addEventListener('change', () => {
+          findMissingBtn.disabled = !missingManagerSelect.value;
+        });
+      }
+
+      function renderMissingList() {
+        const query = (missingSearch?.value || '').trim().toLowerCase();
+        missingList.innerHTML = '';
+        let visible = 0;
+        missingItems.forEach(item => {
+          const hay = `${item.name || ''} ${item.product_type || ''} ${item.category || ''}`.toLowerCase();
+          if (query && !hay.includes(query)) return;
+          visible += 1;
+          const card = document.createElement('div');
+          card.className = 'missing-card';
+          const img = item.image_url
+            ? `<img src="${item.image_url}" class="missing-thumb" alt="">`
+            : `<div class="missing-thumb"></div>`;
+          const typePill = item.product_type ? `<span class="badge bg-light text-dark me-1">${item.product_type}</span>` : '';
+          const catPill = item.category ? `<span class="badge bg-light text-dark">${item.category}</span>` : '';
+          const term = item.default_term_months ? `${item.default_term_months} months` : '--';
+          card.innerHTML = `
+            <div class="d-flex gap-2 align-items-start">
+              ${img}
+              <div class="flex-grow-1">
+                <div><strong>${item.name || '-'}</strong></div>
+                <div class="text-muted small">${item.description || ''}</div>
+                <div class="text-muted small">
+                  Price: GHS ${Number(item.price || 0).toFixed(2)} · Cash: GHS ${Number(item.cash_price || 0).toFixed(2)}
+                </div>
+                <div class="text-muted small">Default term: ${term}</div>
+                <div class="mt-1">${typePill}${catPill}</div>
+              </div>
+              <div>
+                <input type="checkbox" class="form-check-input missing-check" data-id="${item._id}">
+              </div>
+            </div>
+          `;
+          missingList.appendChild(card);
+        });
+        missingEmpty.classList.toggle('d-none', visible > 0);
+        updateMissingSummary();
+      }
+
+      function updateMissingSummary() {
+        const checks = missingList.querySelectorAll('.missing-check:checked').length;
+        missingSummary.textContent = `${checks} selected`;
+        addMissingBtn.disabled = checks === 0 || missingAdding;
+      }
+
+      function renderMissingSkeletons(count = 6) {
+        missingList.innerHTML = '';
+        for (let i = 0; i < count; i += 1) {
+          const card = document.createElement('div');
+          card.className = 'missing-card placeholder-glow';
+          card.innerHTML = `
+            <div class="d-flex gap-2 align-items-start">
+              <div class="placeholder" style="width:60px;height:60px;border-radius:8px;"></div>
+              <div class="flex-grow-1">
+                <div class="placeholder col-6 mb-2"></div>
+                <div class="placeholder col-9 mb-2"></div>
+                <div class="placeholder col-5"></div>
+              </div>
+            </div>
+          `;
+          missingList.appendChild(card);
+        }
+      }
+
+      async function readJsonSafe(resp) {
+        const contentType = resp.headers.get('content-type') || '';
+        const text = await resp.text();
+        if (!contentType.includes('application/json')) {
+          const lower = text.toLowerCase();
+          if (lower.includes('<!doctype') || lower.includes('<html')) {
+            throw new Error('Session expired or route not found. Please refresh/login.');
+          }
+          throw new Error(text || 'Unexpected response from server.');
+        }
+        try {
+          return JSON.parse(text);
+        } catch (err) {
+          throw new Error('Invalid JSON response from server.');
+        }
+      }
+
+      async function loadMissingProducts() {
+        if (missingLoading) return;
+        const managerId = missingManagerSelect?.value;
+        if (!managerId) return;
+        missingLoading = true;
+        missingStatus.textContent = 'Loading missing products...';
+        missingLoadingEl?.classList.remove('d-none');
+        missingEmpty.classList.add('d-none');
+        renderMissingSkeletons();
+        missingSummary.textContent = '';
+        addMissingBtn.disabled = true;
+        try {
+          const url = `${missingListUrl}?manager_id=${encodeURIComponent(managerId)}`;
+          const res = await fetch(url);
+          if (res.status === 401 || res.status === 403) {
+            throw new Error('You are logged out. Please refresh and login.');
+          }
+          const data = await readJsonSafe(res);
+          if (!data.ok) throw new Error(data.message || 'Failed to load missing products.');
+          missingItems = data.results || [];
+          missingStatus.textContent = `Missing products for ${data.manager_name || 'manager'}: ${missingItems.length}`;
+          renderMissingList();
+        } catch (err) {
+          missingStatus.textContent = err.message || 'Failed to load missing products.';
+        } finally {
+          missingLoading = false;
+          missingLoadingEl?.classList.add('d-none');
+        }
+      }
+
+      findMissingBtn?.addEventListener('click', async () => {
+        if (!missingModal) return;
+        missingSearch.value = '';
+        missingModal.show();
+        await loadMissingProducts();
+      });
+
+      missingSearch?.addEventListener('input', renderMissingList);
+      missingList?.addEventListener('change', updateMissingSummary);
+
+      missingSelectAll?.addEventListener('click', () => {
+        missingList.querySelectorAll('.missing-check').forEach(cb => { cb.checked = true; });
+        updateMissingSummary();
+      });
+
+      missingClear?.addEventListener('click', () => {
+        missingList.querySelectorAll('.missing-check').forEach(cb => { cb.checked = false; });
+        updateMissingSummary();
+      });
+
+      addMissingBtn?.addEventListener('click', async () => {
+        const managerId = missingManagerSelect?.value;
+        if (!managerId) return;
+        if (missingAdding) return;
+        const ids = Array.from(missingList.querySelectorAll('.missing-check:checked')).map(cb => cb.dataset.id);
+        if (!ids.length) return;
+        missingAdding = true;
+        addMissingBtn.disabled = true;
+        addMissingBtn.textContent = 'Adding...';
+        try {
+          const res = await fetch(missingAddUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ manager_id: managerId, product_ids: ids })
+          });
+          if (res.status === 401 || res.status === 403) {
+            throw new Error('You are logged out. Please refresh and login.');
+          }
+          const data = await readJsonSafe(res);
+          if (!data.ok) throw new Error(data.message || 'Failed to add missing products.');
+          missingStatus.textContent = `Added ${data.added_count} products to ${data.manager_name || 'manager'} (Skipped ${data.skipped_count}).`;
+          await loadMissingProducts();
+        } catch (err) {
+          missingStatus.textContent = err.message || 'Failed to add missing products.';
+        } finally {
+          missingAdding = false;
+          addMissingBtn.textContent = 'Add Selected to Manager';
+        }
+      });
+    });
+  </script>
+
+  {% include 'app_footer.html' %}
+
+</body>
+</html>

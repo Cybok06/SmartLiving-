@@ -1,0 +1,828 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Flux 360 -- Agent Dashboard</title>
+
+  <!-- Favicon / PWA -->
+  <link rel="icon"
+        href="https://imagedelivery.net/h9fmMoa1o2c2P55TcWJGOg/8744779c-1300-4a50-49de-b143d24da300/public"
+        type="image/png"/>
+  <link rel="apple-touch-icon"
+        href="https://imagedelivery.net/h9fmMoa1o2c2P55TcWJGOg/8744779c-1300-4a50-49de-b143d24da300/public"/>
+  <link rel="manifest" href="/manifest.json" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Axelera Flux CRM" />
+  <meta name="theme-color" content="#074073" />
+
+  <!-- Bootstrap 5 + Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+
+  <style>
+    :root{
+      --ax-navy:#074073;
+      --ax-gold:#facc15;
+
+      --ax-bg:#f5f7fb;
+      --ax-surface:#ffffff;
+      --ax-ink:#0b1220;
+      --ax-muted:#64748b;
+      --ax-border:rgba(148,163,184,.35);
+
+      --ax-navy-2: rgba(7,64,115,.10);
+      --ax-gold-2: rgba(250,204,21,.18);
+
+      --shadow-1: 0 10px 30px rgba(2, 8, 23, .08);
+      --shadow-2: 0 18px 45px rgba(2, 8, 23, .10);
+
+      --radius-1: 16px;
+      --radius-2: 22px;
+      --radius-3: 28px;
+
+      --ring: 0 0 0 .25rem rgba(250,204,21,.22);
+    }
+
+    *{ -webkit-tap-highlight-color: transparent; }
+
+    body{
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--ax-ink);
+      background:
+        radial-gradient(1100px 650px at 15% 5%, var(--ax-navy-2), transparent 60%),
+        radial-gradient(900px 550px at 85% 95%, var(--ax-gold-2), transparent 55%),
+        var(--ax-bg);
+    }
+
+    a{ text-decoration:none; }
+    .money{ font-variant-numeric: tabular-nums; letter-spacing: .2px; }
+    .text-muted-2{ color: var(--ax-muted); }
+
+    /* Sticky header */
+    .ax-header{
+      position: sticky;
+      top: 0;
+      z-index: 1020;
+      backdrop-filter: blur(10px);
+      background: rgba(255,255,255,.72);
+      border-bottom: 1px solid rgba(148,163,184,.22);
+    }
+    .ax-header-inner{
+      padding: .85rem 1rem;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap: 1rem;
+    }
+    .ax-header-left{ display:flex; align-items:center; gap:.75rem; min-width:0; }
+    .ax-app-mark{
+      width: 40px; height: 40px;
+      border-radius: 14px;
+      background: linear-gradient(145deg, rgba(7,64,115,.08), rgba(250,204,21,.18));
+      border: 1px solid rgba(148,163,184,.35);
+      display:grid; place-items:center;
+      overflow:hidden;
+      box-shadow: 0 8px 18px rgba(2,8,23,.06);
+    }
+    .ax-app-mark img{ width: 70%; height: 70%; object-fit: contain; }
+    .ax-app-text{ line-height: 1.2; min-width: 0; }
+    .ax-app-text .brand{
+      font-weight: 800;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      font-size: .78rem;
+      color: var(--ax-navy);
+      white-space: nowrap;
+      overflow:hidden;
+      text-overflow: ellipsis;
+    }
+    .ax-app-text .sub{
+      font-size: .80rem;
+      color: var(--ax-muted);
+      white-space: nowrap;
+      overflow:hidden;
+      text-overflow: ellipsis;
+    }
+    .ax-header-right{
+      display:flex;
+      align-items:center;
+      gap:.6rem;
+      flex-wrap: wrap;
+      justify-content:flex-end;
+    }
+
+    .btn-ax{
+      border-radius: 999px;
+      font-weight: 650;
+      border: 1px solid rgba(7,64,115,.22);
+      background: rgba(255,255,255,.86);
+    }
+    .btn-ax:hover{ box-shadow: var(--shadow-1); }
+    .btn-ax:focus{ box-shadow: var(--ring); }
+
+    .btn-ax-primary{
+      border: none;
+      background: linear-gradient(180deg, rgba(7,64,115,1), rgba(5,50,90,1));
+      color: #fff;
+    }
+    .btn-ax-primary:hover{ filter: brightness(1.05); box-shadow: var(--shadow-2); }
+
+    .btn-ax-gold{
+      border: 1px solid rgba(250,204,21,.35);
+      background: rgba(250,204,21,.16);
+      color: var(--ax-navy);
+    }
+    .btn-ax-danger{
+      border: 1px solid rgba(185,28,28,.25);
+      background: rgba(185,28,28,.08);
+      color: #991b1b;
+    }
+
+    .agent-pic{
+      width: 40px; height: 40px;
+      border-radius: 999px;
+      object-fit: cover;
+      border: 2px solid rgba(250,204,21,.55);
+      box-shadow: 0 8px 18px rgba(2,8,23,.12);
+    }
+    .ax-user-meta{
+      display:flex;
+      flex-direction:column;
+      align-items:flex-end;
+      line-height:1.15;
+    }
+    .ax-user-meta .name{ font-size: .92rem; font-weight: 750; color: var(--ax-ink); }
+    .ax-user-meta .date{ font-size: .78rem; color: var(--ax-muted); }
+
+    @media (max-width: 576px){
+      .ax-user-meta{ display:none; }
+      .ax-app-text .sub{ display:none; }
+      .ax-header-inner{ padding-inline: .75rem; }
+    }
+
+    /* Cards */
+    .card-ax{
+      border-radius: var(--radius-2);
+      border: 1px solid rgba(148,163,184,.30);
+      background: rgba(255,255,255,.92);
+      box-shadow: var(--shadow-1);
+    }
+
+    /* Section header */
+    .section-h{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap: 1rem;
+      margin-bottom: .6rem;
+    }
+    .section-title{
+      font-size: .85rem;
+      letter-spacing: .20em;
+      text-transform: uppercase;
+      font-weight: 900;
+      color: rgba(7,64,115,.85);
+    }
+    .section-note{
+      font-size: .85rem;
+      color: var(--ax-muted);
+    }
+
+    /* Premium "bank app" balance card */
+    .bank-card{
+      position: relative;
+      overflow: hidden;
+      border-radius: var(--radius-3);
+      border: 1px solid rgba(148,163,184,.28);
+      background:
+        radial-gradient(900px 380px at 15% 10%, rgba(250,204,21,.22), transparent 55%),
+        radial-gradient(900px 420px at 85% 90%, rgba(7,64,115,.22), transparent 55%),
+        linear-gradient(180deg, rgba(255,255,255,.92), rgba(255,255,255,.86));
+      box-shadow: var(--shadow-2);
+    }
+    .bank-card::before{
+      content:"";
+      position:absolute;
+      inset:-120px -140px auto auto;
+      width: 420px;
+      height: 420px;
+      background: radial-gradient(circle at 30% 30%, rgba(7,64,115,.28), transparent 60%);
+      transform: rotate(12deg);
+      pointer-events:none;
+      filter: blur(.2px);
+    }
+    .bank-card::after{
+      content:"";
+      position:absolute;
+      inset:auto auto -160px -160px;
+      width: 520px;
+      height: 520px;
+      background: radial-gradient(circle at 35% 35%, rgba(250,204,21,.35), transparent 62%);
+      transform: rotate(-10deg);
+      pointer-events:none;
+    }
+    .bank-inner{
+      position: relative;
+      z-index: 1;
+      padding: 1.05rem;
+    }
+
+    .bank-top{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap: 1rem;
+      margin-bottom: .75rem;
+    }
+    .bank-badge{
+      display:inline-flex;
+      align-items:center;
+      gap:.5rem;
+      padding:.38rem .70rem;
+      border-radius: 999px;
+      background: rgba(7,64,115,.08);
+      border: 1px solid rgba(7,64,115,.14);
+      font-weight: 850;
+      letter-spacing: .10em;
+      text-transform: uppercase;
+      font-size: .72rem;
+      color: rgba(7,64,115,.92);
+    }
+
+    .bank-grid{
+      display:grid;
+      grid-template-columns: 1.35fr .65fr;
+      gap: .85rem;
+      align-items: stretch;
+    }
+
+    /* Emphasize Unclosed */
+    .focus-block{
+      border-radius: 22px;
+      border: 1px solid rgba(185,28,28,.18);
+      background: linear-gradient(180deg, rgba(185,28,28,.07), rgba(255,255,255,.55));
+      padding: .95rem 1rem;
+      box-shadow: 0 12px 28px rgba(153, 27, 27, .08);
+    }
+    .focus-label{
+      display:flex;
+      align-items:center;
+      gap:.5rem;
+      font-weight: 850;
+      color: #991b1b;
+      font-size: .88rem;
+      margin-bottom: .25rem;
+    }
+    .focus-amount{
+      font-weight: 950;
+      line-height: 1.05;
+      font-size: clamp(1.8rem, 3.4vw, 2.5rem);
+      color: #7f1d1d;
+    }
+    .focus-note{
+      color: rgba(127, 29, 29, .78);
+      font-size: .86rem;
+      margin-top: .2rem;
+    }
+
+    /* Today block */
+    .today-block{
+      border-radius: 22px;
+      border: 1px solid rgba(7,64,115,.16);
+      background: linear-gradient(180deg, rgba(7,64,115,.06), rgba(255,255,255,.55));
+      padding: .95rem 1rem;
+    }
+    .today-label{
+      display:flex;
+      align-items:center;
+      gap:.5rem;
+      font-weight: 850;
+      color: rgba(7,64,115,.92);
+      font-size: .88rem;
+      margin-bottom: .25rem;
+    }
+    .today-amount{
+      font-weight: 950;
+      line-height: 1.05;
+      font-size: clamp(1.35rem, 2.6vw, 1.85rem);
+      color: var(--ax-navy);
+    }
+    .today-note{
+      color: var(--ax-muted);
+      font-size: .86rem;
+      margin-top: .2rem;
+    }
+
+    .bank-actions{
+      margin-top: .85rem;
+      display:flex;
+      flex-wrap: wrap;
+      gap: .55rem;
+      align-items:center;
+      justify-content: space-between;
+    }
+    .bank-actions .left,
+    .bank-actions .right{
+      display:flex;
+      flex-wrap: wrap;
+      gap: .55rem;
+      align-items:center;
+    }
+
+    @media (max-width: 992px){
+      .bank-grid{ grid-template-columns: 1fr; }
+    }
+
+    /* Progress bars */
+    .pbar{
+      height: 10px;
+      background: rgba(148,163,184,.20);
+      border-radius: 999px;
+      overflow:hidden;
+    }
+    .pbar > div{
+      height: 100%;
+      width: 0%;
+      border-radius: 999px;
+      transition: width .7s ease;
+    }
+    .p-navy{ background: linear-gradient(90deg, var(--ax-navy), rgba(7,64,115,.85)); }
+    .p-gold{ background: linear-gradient(90deg, rgba(250,204,21,.95), rgba(250,204,21,.65)); }
+    .p-green{ background: linear-gradient(90deg, #16a34a, rgba(22,163,74,.75)); }
+
+    /* Loader */
+    .page-loader{
+      position: fixed;
+      inset: 0;
+      background: rgba(255,255,255,.96);
+      z-index:1055;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      transition: transform .7s ease, opacity .7s ease;
+    }
+    .page-loader__swipe{
+      position:absolute;
+      inset:0;
+      background: linear-gradient(120deg, rgba(7,64,115,.18), rgba(250,204,21,.18));
+      transform: translateX(0);
+      transition: transform .7s ease;
+    }
+    .page-loader__content{
+      position:relative;
+      z-index:1;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      gap:.6rem;
+      font-weight: 800;
+      letter-spacing:.12em;
+      text-transform:uppercase;
+      color: var(--ax-navy);
+      font-size:.72rem;
+    }
+    .page-loader--hide{
+      opacity:0;
+      transform: translateX(100%);
+      pointer-events:none;
+    }
+    .page-loader--hide .page-loader__swipe{
+      transform: translateX(100%);
+    }
+    @media print{
+      .page-loader{ display:none !important; }
+    }
+
+    /* ----------- Section "fall down" animation ----------- */
+    .fall{
+      opacity: 0;
+      transform: translateY(-18px);
+      filter: blur(0.2px);
+      transition:
+        transform .65s cubic-bezier(.2,.9,.2,1),
+        opacity .65s ease;
+      will-change: transform, opacity;
+    }
+    .fall.is-in{
+      opacity: 1;
+      transform: translateY(0);
+    }
+    /* Stagger delays */
+    .fall.d1{ transition-delay: .05s; }
+    .fall.d2{ transition-delay: .12s; }
+    .fall.d3{ transition-delay: .18s; }
+    .fall.d4{ transition-delay: .24s; }
+
+    @media (prefers-reduced-motion: reduce){
+      .pbar > div{ transition: none; }
+      .fall{ transition: none; opacity: 1; transform: none; }
+    }
+  </style>
+</head>
+
+<body>
+  {% include 'side_bar.html' %}
+
+  <!-- Fullscreen Loader -->
+  <div id="pageLoader" class="page-loader">
+    <div class="page-loader__swipe"></div>
+    <div class="page-loader__content">
+      <div class="spinner-border" style="color:var(--ax-navy)" role="status" aria-hidden="true"></div>
+      <div>Loading</div>
+    </div>
+  </div>
+
+  <!-- Header -->
+  <header class="ax-header">
+    <div class="ax-header-inner container-fluid">
+      <div class="ax-header-left">
+        <div class="ax-app-mark">
+          <img src="https://imagedelivery.net/h9fmMoa1o2c2P55TcWJGOg/8744779c-1300-4a50-49de-b143d24da300/public"
+               alt="Axelera Flux Logo">
+        </div>
+        <div class="ax-app-text">
+        </div>
+      </div>
+
+      <div class="ax-header-right">
+        <!-- Refresh button (new) -->
+        <button type="button"
+                id="refreshBtn"
+                class="btn btn-sm btn-ax d-inline-flex align-items-center gap-2"
+                title="Refresh">
+          <i class="bi bi-arrow-clockwise"></i>
+          <span class="d-none d-sm-inline">Refresh</span>
+        </button>
+
+        {% if user.has_pending_tasks %}
+          <a href="{{ url_for('agent_tasks.view_tasks') }}"
+             class="btn btn-sm btn-ax btn-ax-danger d-inline-flex align-items-center gap-2 loading-trigger">
+            <i class="bi bi-bell-fill"></i>
+            <span class="d-none d-sm-inline">Tasks</span>
+            <span class="badge rounded-pill"
+                  style="background:rgba(185,28,28,.12); color:#991b1b; border:1px solid rgba(185,28,28,.2)">
+              {{ user.pending_task_count or 1 }}
+            </span>
+          </a>
+        {% endif %}
+
+        <a href="{{ url_for('issues.new_issue') }}"
+           class="btn btn-sm btn-ax btn-ax-gold d-inline-flex align-items-center gap-2 loading-trigger">
+          <i class="bi bi-exclamation-circle"></i>
+          <span class="d-none d-sm-inline">Report Issue</span>
+        </a>
+
+        <div class="d-flex align-items-center gap-2">
+          <div class="ax-user-meta">
+            <div class="name">Welcome back, {{ user.name }}!</div>
+            <div class="date">Today: <span class="fw-semibold">{{ today }}</span></div>
+          </div>
+
+          <!-- Default avatar updated (new) -->
+          <img class="agent-pic"
+               src="{{ user.image_url or 'https://imagedelivery.net/h9fmMoa1o2c2P55TcWJGOg/f1b8f81c-1aac-4580-6b1c-869ffafcb400/public' }}"
+               alt="Agent avatar">
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main -->
+  <main class="container py-4">
+
+    <!-- Top Overview (Bank-style card with focused Unclosed) -->
+    <section class="mb-4 fall d1">
+      <div class="section-h">
+        <div class="section-title">Financial Snapshot</div>
+        <div class="section-note d-none d-md-block">Your key balances and actions</div>
+      </div>
+
+      <div class="bank-card">
+        <div class="bank-inner">
+          <div class="bank-top">
+            <div class="bank-badge">
+              <i class="bi bi-bank2"></i>
+              <span>Balance Overview</span>
+            </div>
+            <div class="text-muted-2 small fw-semibold d-none d-md-block">
+              <i class="bi bi-shield-check me-1"></i>Clean. Fast. Secure workflow.
+            </div>
+          </div>
+
+          <div class="bank-grid">
+            <!-- Unclosed money (more focused / dominant) -->
+            <div class="focus-block">
+              <div class="focus-label">
+                <i class="bi bi-exclamation-octagon"></i>
+                <span>Unclosed Account Money</span>
+              </div>
+              <div class="focus-amount money">GH₵ {{ (account_money_total or 0)|format_money }}</div>
+              <div class="focus-note">
+                Priority balance -- money still sitting in your sales close (all dates).
+              </div>
+            </div>
+
+            <!-- Today's collections -->
+            <div class="today-block">
+              <div class="today-label">
+                <i class="bi bi-cash-coin"></i>
+                <span>Today's Collections</span>
+              </div>
+              <div class="today-amount money">GH₵ {{ (today_collections or 0)|format_money }}</div>
+              <div class="today-note">
+                Payments received today (excluding withdrawals).
+              </div>
+            </div>
+          </div>
+
+          <!-- Actions -->
+          <div class="bank-actions">
+            <div class="left">
+              <a href="/customer/register"
+                 class="btn btn-sm btn-ax-primary d-inline-flex align-items-center gap-2 loading-trigger">
+                <i class="bi bi-person-plus"></i>
+                <span>Register Customer</span>
+              </a>
+
+              <a href="/payment/add_payment"
+                 class="btn btn-sm btn-ax btn-ax-gold d-inline-flex align-items-center gap-2 loading-trigger">
+                <i class="bi bi-receipt-cutoff"></i>
+                <span>Record Payment</span>
+              </a>
+            </div>
+
+            <div class="right">
+              <a href="{{ url_for('dashboard_agent.post_today_collections_whatsapp') }}"
+                 class="btn btn-sm btn-ax d-inline-flex align-items-center gap-2 loading-trigger">
+                <i class="bi bi-whatsapp"></i>
+                <span>Post Today's Collections</span>
+              </a>
+
+              <a href="#targets"
+                 class="btn btn-sm btn-ax d-inline-flex align-items-center gap-2">
+                <i class="bi bi-bullseye"></i>
+                <span>View Targets</span>
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- COMMISSION SUMMARY -->
+    {% if commission_summary %}
+    <section class="mb-4 fall d2">
+      <div class="section-h">
+        <div class="section-title">Commission Summary</div>
+        <div class="section-note">Surplus-based commission breakdown</div>
+      </div>
+
+      <div class="row g-3">
+        <div class="col-12 col-md-4">
+          <div class="card-ax p-3 h-100">
+            <div class="d-flex gap-3 align-items-start">
+              <div class="p-2 rounded-4"
+                   style="width:46px;height:46px;display:grid;place-items:center;background:rgba(250,204,21,.20);border:1px solid rgba(148,163,184,.25);">
+                <i class="bi bi-percent" style="color:#7a5b00"></i>
+              </div>
+              <div class="min-w-0">
+                <div class="text-muted-2 small fw-semibold">My Commission Rate</div>
+                <div class="fs-4" style="font-weight:900;">
+                  {{ (commission_summary.commission_pct or 0)|format_number(2) }}%
+                </div>
+                <div class="text-muted-2 small mt-1">
+                  Applied on surplus cash above your cash target.
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-12 col-md-4">
+          <div class="card-ax p-3 h-100">
+            <div class="d-flex gap-3 align-items-start">
+              <div class="p-2 rounded-4"
+                   style="width:46px;height:46px;display:grid;place-items:center;background:rgba(7,64,115,.10);border:1px solid rgba(148,163,184,.25);">
+                <i class="bi bi-graph-up-arrow" style="color:var(--ax-navy)"></i>
+              </div>
+              <div class="min-w-0">
+                <div class="text-muted-2 small fw-semibold">Total Surplus Cash</div>
+                <div class="fs-4 money" style="font-weight:900;">
+                  GH₵ {{ (commission_summary.total_surplus_cash or 0)|format_money }}
+                </div>
+                <div class="text-muted-2 small mt-1">
+                  Sum of (Cash Achieved − Cash Quota), never below GH₵ 0.00.
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-12 col-md-4">
+          <div class="card-ax p-3 h-100">
+            <div class="d-flex gap-3 align-items-start">
+              <div class="p-2 rounded-4"
+                   style="width:46px;height:46px;display:grid;place-items:center;background:rgba(250,204,21,.20);border:1px solid rgba(148,163,184,.25);">
+                <i class="bi bi-trophy" style="color:#7a5b00"></i>
+              </div>
+              <div class="min-w-0">
+                <div class="text-muted-2 small fw-semibold">Total Commission Earned</div>
+                <div class="fs-4 money" style="font-weight:900;">
+                  GH₵ {{ (commission_summary.total_commission or 0)|format_money }}
+                </div>
+                <div class="text-muted-2 small mt-1">
+                  Commission % × Surplus Cash.
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+    {% endif %}
+
+    <!-- Agent Targets Progress -->
+    <section id="targets" class="mt-2 fall d3">
+      <div class="section-h">
+        <div class="section-title">My Targets</div>
+        <div class="section-note d-none d-md-block">Track product, cash, and customers</div>
+      </div>
+
+      {% if agent_targets and agent_targets|length > 0 %}
+        <div class="row g-3">
+          {% for t in agent_targets %}
+          <div class="col-12 col-md-6 col-xl-4">
+            <div class="card-ax h-100">
+              <div class="p-3 pb-2">
+                <div class="d-flex align-items-start justify-content-between gap-2">
+                  <div class="min-w-0">
+                    <div class="text-muted-2 small fw-semibold">
+                      <i class="bi bi-calendar-event me-1"></i>{{ t.duration|capitalize }}
+                      <span class="text-secondary ms-2">{{ t.start_date }} to {{ t.end_date }}</span>
+                    </div>
+                    <div class="fs-5 mt-1" style="font-weight:900;">
+                      {{ t.title }}
+                    </div>
+                  </div>
+
+                  <span class="badge rounded-pill"
+                        style="background:rgba(7,64,115,.10); color:var(--ax-navy); border:1px solid rgba(7,64,115,.18); font-weight:800;">
+                    {{ t.overall }}%
+                  </span>
+                </div>
+              </div>
+
+              <div class="px-3 pb-3">
+                <!-- Product -->
+                <div class="d-flex justify-content-between align-items-center small fw-semibold mb-1">
+                  <span>🛒 Product</span>
+                  <span>{{ t.product_achieved }} / {{ t.product_quota }}</span>
+                </div>
+                <div class="pbar mb-3" role="progressbar" aria-label="Product progress">
+                  <div class="p-green js-pbar" data-width="{{ t.product_pct|default(0) }}"></div>
+                </div>
+
+                <!-- Cash -->
+                <div class="d-flex justify-content-between align-items-center small fw-semibold mb-1">
+                  <span>💰 Cash</span>
+                  <span class="money">
+                    GH₵ {{ (t.cash_achieved or 0)|format_money }} / GH₵ {{ (t.cash_quota or 0)|format_money }}
+                  </span>
+                </div>
+                <div class="pbar mb-3" role="progressbar" aria-label="Cash progress">
+                  <div class="p-navy js-pbar" data-width="{{ t.payment_pct|default(0) }}"></div>
+                </div>
+
+                <!-- Customers -->
+                <div class="d-flex justify-content-between align-items-center small fw-semibold mb-1">
+                  <span>👥 Customers</span>
+                  <span>{{ t.customer_achieved }} / {{ t.customer_quota }}</span>
+                </div>
+                <div class="pbar mb-3" role="progressbar" aria-label="Customer progress">
+                  <div class="p-gold js-pbar" data-width="{{ t.customer_pct|default(0) }}"></div>
+                </div>
+
+                <!-- Commission box -->
+                <div class="p-3 rounded-4"
+                     style="border:1px solid rgba(148,163,184,.25); background: rgba(255,255,255,.78);">
+                  <div class="d-flex justify-content-between small mb-1">
+                    <span class="text-muted-2 fw-semibold">📈 Surplus Cash</span>
+                    <span class="money" style="font-weight:900;">
+                      GH₵ {{ (t.surplus_cash or 0)|format_money }}
+                    </span>
+                  </div>
+                  <div class="d-flex justify-content-between small mb-1">
+                    <span class="text-muted-2 fw-semibold">🧮 Commission Rate</span>
+                    <span class="fw-semibold">{{ (t.commission_pct or 0)|format_number(2) }}%</span>
+                  </div>
+                  <div class="d-flex justify-content-between small">
+                    <span class="text-muted-2 fw-semibold">💼 Commission Earned</span>
+                    <span class="money" style="font-weight:900; color:var(--ax-navy);">
+                      GH₵ {{ (t.commission_amount or 0)|format_money }}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="alert alert-info mb-0">
+          No targets assigned to you yet.
+        </div>
+      {% endif %}
+    </section>
+
+  </main>
+
+  <script src="{{ url_for('static', filename='js/ui-utils.js') }}"></script>
+  <!-- Bootstrap JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" defer></script>
+
+  <script>
+    (function(){
+      var loader = document.getElementById('pageLoader');
+      function showLoader(){
+        if (!loader) return;
+        loader.classList.remove('page-loader--hide');
+      }
+      function hideLoader(){
+        if (!loader) return;
+        loader.classList.add('page-loader--hide');
+        document.body.classList.add('page-ready');
+      }
+      window.hidePageLoader = hideLoader;
+      window.showPageLoader = showLoader;
+      if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", hideLoader);
+      } else {
+        hideLoader();
+      }
+    })();
+
+    // Apply progress widths from data-width (targets) + fall animation + refresh button
+    document.addEventListener('DOMContentLoaded', function () {
+      function clamp(v){ v = Number(v)||0; return Math.max(0, Math.min(100, v)); }
+
+      if (window.formatAllNumbers) {
+        window.formatAllNumbers();
+      }
+
+      // Targets progress bars
+      var bars = document.querySelectorAll('.js-pbar');
+      for (var i = 0; i < bars.length; i++) {
+        var v = clamp(bars[i].getAttribute('data-width'));
+        bars[i].style.width = v + '%';
+        bars[i].setAttribute('aria-valuenow', v);
+      }
+
+      // "Fall" animation: bring sections in
+      var fallEls = document.querySelectorAll('.fall');
+      for (var j = 0; j < fallEls.length; j++) {
+        // small stagger safety (in case user adds more sections)
+        (function(el, idx){
+          setTimeout(function(){
+            el.classList.add('is-in');
+          }, 40 + (idx * 70));
+        })(fallEls[j], j);
+      }
+
+      // Refresh button
+      var refreshBtn = document.getElementById('refreshBtn');
+      if (refreshBtn) {
+        refreshBtn.addEventListener('click', function(){
+          if (window.showPageLoader) window.showPageLoader();
+          // hard refresh (keeps it simple + reliable)
+          window.location.reload();
+        });
+      }
+    });
+
+    // Page loader on links with .loading-trigger
+    window.addEventListener("DOMContentLoaded", function () {
+      var links = document.querySelectorAll("a.loading-trigger");
+      for (var i = 0; i < links.length; i++) {
+        links[i].addEventListener("click", function (e) {
+          var href = this.getAttribute("href");
+          if (!href) return;
+          if (window.showPageLoader) window.showPageLoader();
+          setTimeout(function () { window.location.href = href; }, 80);
+          e.preventDefault();
+        });
+      }
+    });
+  </script>
+
+  <!-- Chat widget -->
+  <script>
+    window.cbConfig = { chatId: "acac0de2-5c91-4eae-9354-1376e3093d91" };
+  </script>
+  <script src="https://app.chatbit.co/embed.min.js" defer></script>
+
+  {% include 'app_footer.html' %}
+</body>
+</html>

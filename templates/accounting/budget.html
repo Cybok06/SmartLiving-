@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html class="light" lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Budget Planner - Income & Expense</title>
+
+  <!-- Tailwind + Fonts + Icons -->
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+  <script>
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            primary: "#16a34a",
+            navy: "#0f172a",
+            "background-light": "#f9fafb",
+            "background-dark": "#020617",
+          },
+          fontFamily: {
+            display: ["Inter", "sans-serif"],
+          },
+          borderRadius: {
+            xl: "1.2rem",
+          },
+          boxShadow: {
+            soft: "0 10px 30px rgba(15,23,42,0.08)",
+          },
+        },
+      },
+    };
+  </script>
+
+  <style>
+    .material-symbols-outlined {
+      font-variation-settings:
+        'FILL' 0,
+        'wght' 400,
+        'GRAD' 0,
+        'opsz' 24;
+    }
+  </style>
+</head>
+
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100">
+  {% include 'accounting/sidebar.html' %}
+
+  <main class="min-h-screen p-4 sm:p-6 lg:p-10 acc-with-sidebar">
+    <div class="max-w-7xl mx-auto space-y-6">
+      <!-- Header + Filters -->
+      <header class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <div>
+          <h1 class="text-3xl sm:text-4xl font-extrabold tracking-tight text-navy dark:text-white flex items-center gap-2">
+            <span class="material-symbols-outlined text-primary text-3xl">analytics</span>
+            <span>Budget Planner (Income & Expense)</span>
+          </h1>
+          <p class="mt-1 text-sm text-gray-600 dark:text-gray-400 max-w-xl">
+            Plan yearly income and expense budgets, then compare them against actual inflows
+            (bank, cash & MoMo) and total expenses (accounting + manager) for a selected period.
+          </p>
+        </div>
+
+        <div class="flex flex-col sm:flex-row gap-3 sm:items-center">
+          <!-- Year select -->
+          <form method="get" class="flex flex-wrap items-center gap-2">
+            <input type="hidden" name="start" value="{{ start_str }}">
+            <input type="hidden" name="end" value="{{ end_str }}">
+
+            <label for="year" class="text-xs font-semibold text-gray-600 dark:text-gray-300">
+              Year
+            </label>
+            <select
+              id="year"
+              name="year"
+              class="h-10 rounded-full border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 text-sm text-navy dark:text-gray-100 shadow-soft focus:ring-primary focus:border-primary"
+              onchange="this.form.submit()"
+            >
+              {% for y in year_options %}
+                <option value="{{ y }}" {% if y == year %}selected{% endif %}>{{ y }}</option>
+              {% endfor %}
+            </select>
+          </form>
+
+          <!-- Date range for actuals -->
+          <form method="get" class="flex flex-wrap items-center gap-2">
+            <input type="hidden" name="year" value="{{ year }}">
+
+            <label class="text-xs font-semibold text-gray-600 dark:text-gray-300">
+              Actual Period
+            </label>
+            <input
+              type="date"
+              name="start"
+              value="{{ start_str }}"
+              class="h-9 rounded-lg border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 text-xs focus:ring-primary focus:border-primary"
+            />
+            <span class="text-xs text-gray-500">to</span>
+            <input
+              type="date"
+              name="end"
+              value="{{ end_str }}"
+              class="h-9 rounded-lg border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 text-xs focus:ring-primary focus:border-primary"
+            />
+
+            <button
+              type="submit"
+              class="inline-flex items-center justify-center gap-1 rounded-full h-9 px-4 bg-primary text-white text-xs font-semibold shadow-soft hover:bg-emerald-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            >
+              <span class="material-symbols-outlined text-xs">refresh</span>
+              <span>Apply</span>
+            </button>
+          </form>
+        </div>
+      </header>
+
+      <!-- Top KPI Cards -->
+      <!-- Expected from backend:
+           total_income_budget, total_expense_budget,
+           total_income_actual, total_expense_actual,
+           net_budget, net_actual -->
+      <section class="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-6 gap-4">
+        <div class="rounded-xl bg-white dark:bg-slate-900 border border-gray-200/80 dark:border-slate-800 shadow-soft p-4">
+          <p class="text-[11px] uppercase tracking-wide text-gray-500">Budgeted Income ({{ year }})</p>
+          <p class="mt-1 text-2xl font-extrabold tracking-tight">
+            {{ total_income_budget | default(0) | round(2) }}
+          </p>
+          <p class="mt-1 text-[11px] text-gray-500 dark:text-gray-400">
+            All income budget lines for the year.
+          </p>
+        </div>
+
+        <div class="rounded-xl bg-white dark:bg-slate-900 border border-gray-200/80 dark:border-slate-800 shadow-soft p-4">
+          <p class="text-[11px] uppercase tracking-wide text-gray-500">Budgeted Expense ({{ year }})</p>
+          <p class="mt-1 text-2xl font-extrabold tracking-tight">
+            {{ total_expense_budget | default(0) | round(2) }}
+          </p>
+          <p class="mt-1 text-[11px] text-gray-500 dark:text-gray-400">
+            All expense budget lines for the year.
+          </p>
+        </div>
+
+        <div class="rounded-xl bg-white dark:bg-slate-900 border border-gray-200/80 dark:border-slate-800 shadow-soft p-4">
+          <p class="text-[11px] uppercase tracking-wide text-gray-500">
+            Actual Income ({{ start_str }} → {{ end_str }})
+          </p>
+          <p class="mt-1 text-2xl font-extrabold tracking-tight">
+            {{ total_income_actual | default(0) | round(2) }}
+          </p>
+          <p class="mt-1 text-[11px] text-gray-500 dark:text-gray-400">
+            Bank + Cash + MoMo inflows for the period.
+          </p>
+        </div>
+
+        <div class="rounded-xl bg-white dark:bg-slate-900 border border-gray-200/80 dark:border-slate-800 shadow-soft p-4">
+          <p class="text-[11px] uppercase tracking-wide text-gray-500">
+            Actual Expense ({{ start_str }} → {{ end_str }})
+          </p>
+          <p class="mt-1 text-2xl font-extrabold tracking-tight">
+            {{ total_expense_actual | default(0) | round(2) }}
+          </p>
+          <p class="mt-1 text-[11px] text-gray-500 dark:text-gray-400">
+            Accounting + Approved manager expenses.
+          </p>
+        </div>
+
+        <div class="rounded-xl bg-white dark:bg-slate-900 border border-gray-200/80 dark:border-slate-800 shadow-soft p-4">
+          <p class="text-[11px] uppercase tracking-wide text-gray-500">Net Budget (Income - Expense)</p>
+          <p class="mt-1 text-2xl font-extrabold tracking-tight
+                     {% if net_budget | default(0) < 0 %}text-red-600{% else %}text-emerald-600{% endif %}">
+            {{ net_budget | default(0) | round(2) }}
+          </p>
+          <p class="mt-1 text-[11px] text-gray-500 dark:text-gray-400">
+            Target surplus/deficit based on the yearly plan.
+          </p>
+        </div>
+
+        <div class="rounded-xl bg-white dark:bg-slate-900 border border-gray-200/80 dark:border-slate-800 shadow-soft p-4 flex flex-col justify-between">
+          <div>
+            <p class="text-[11px] uppercase tracking-wide text-gray-500 flex items-center gap-1">
+              <span class="material-symbols-outlined text-xs text-blue-500">description</span>
+              Export
+            </p>
+            <p class="mt-1 text-[11px] text-gray-500 dark:text-gray-400">
+              Download Excel-friendly income & expense budget vs actual.
+            </p>
+          </div>
+          <div class="mt-3 flex justify-end">
+            <a
+              href="{{ url_for('acc_budget.budget_export', year=year, start=start_str, end=end_str) }}"
+              class="inline-flex items-center justify-center gap-1 rounded-full h-9 px-4 bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-700 text-xs font-semibold text-navy dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-slate-700"
+            >
+              <span class="material-symbols-outlined text-xs">download</span>
+              <span>Export CSV</span>
+            </a>
+          </div>
+        </div>
+      </section>
+
+      <!-- Summary Charts: Income vs Expense -->
+      <!-- Expected from backend:
+           chart_totals: { labels: [...], income_budget: [...], income_actual: [...],
+                           expense_budget: [...], expense_actual: [...] } (optional) -->
+      <section class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div class="rounded-xl bg-white dark:bg-slate-900 border border-gray-200/80 dark:border-slate-800 shadow-soft p-4">
+          <div class="flex items-center justify-between mb-3">
+            <h2 class="text-sm font-semibold text-navy dark:text-white flex items-center gap-2">
+              <span class="material-symbols-outlined text-primary text-base">stacked_bar_chart</span>
+              <span>Income vs Expense (Budget vs Actual)</span>
+            </h2>
+            <p class="text-[11px] text-gray-500 dark:text-gray-400">
+              High-level comparison for the selected period/year.
+            </p>
+          </div>
+          <div class="h-72">
+            <canvas id="summaryBarChart"></canvas>
+          </div>
+        </div>
+
+        <div class="rounded-xl bg-white dark:bg-slate-900 border border-gray-200/80 dark:border-slate-800 shadow-soft p-4">
+          <h2 class="text-sm font-semibold text-navy dark:text-white mb-3 flex items-center gap-2">
+            <span class="material-symbols-outlined text-amber-500 text-base">donut_large</span>
+            <span>Expense Budget Allocation</span>
+          </h2>
+          <div class="h-72">
+            <canvas id="expensePieChart"></canvas>
+          </div>
+        </div>
+      </section>
+
+      <!-- Expense Details Table -->
+      <!-- Expected from backend:
+           expense_rows: list of { category, budget_amount, actual_amount, variance, usage_pct } -->
+      <section class="rounded-xl bg-white dark:bg-slate-900 border border-gray-200/80 dark:border-slate-800 shadow-soft p-4 sm:p-5">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="text-sm font-semibold text-navy dark:text-white flex items-center gap-2">
+            <span class="material-symbols-outlined text-sky-500 text-base">table</span>
+            <span>Expense Budget Detail by Category</span>
+          </h2>
+          <p class="text-[11px] text-gray-500 dark:text-gray-400">
+            Manager expense categories + accounting categories + any custom categories.
+          </p>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="min-w-full text-xs">
+            <thead class="bg-gray-50 dark:bg-slate-950/60">
+              <tr>
+                <th class="px-3 py-2 text-left font-semibold text-gray-500 uppercase tracking-wide">Category</th>
+                <th class="px-3 py-2 text-right font-semibold text-gray-500 uppercase tracking-wide">Budget</th>
+                <th class="px-3 py-2 text-right font-semibold text-gray-500 uppercase tracking-wide">Actual</th>
+                <th class="px-3 py-2 text-right font-semibold text-gray-500 uppercase tracking-wide">Variance</th>
+                <th class="px-3 py-2 text-right font-semibold text-gray-500 uppercase tracking-wide">% Used</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100 dark:divide-slate-800">
+              {% for r in expense_rows | default([]) %}
+              <tr class="hover:bg-gray-50/70 dark:hover:bg-slate-800/60">
+                <td class="px-3 py-2 font-medium text-navy dark:text-gray-100">
+                  {{ r.category }}
+                </td>
+                <td class="px-3 py-2 text-right text-gray-800 dark:text-gray-100">
+                  {{ r.budget_amount | round(2) }}
+                </td>
+                <td class="px-3 py-2 text-right text-gray-800 dark:text-gray-100">
+                  {{ r.actual_amount | round(2) }}
+                </td>
+                <td class="px-3 py-2 text-right
+                           {% if r.variance < 0 %}text-red-600{% else %}text-emerald-600{% endif %}">
+                  {{ r.variance | round(2) }}
+                </td>
+                <td class="px-3 py-2 text-right text-gray-800 dark:text-gray-100">
+                  {{ r.usage_pct | round(2) }}%
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Income Details Table -->
+      <!-- Expected from backend:
+           income_rows: list of { category, budget_amount, actual_amount, variance, usage_pct } -->
+      <section class="rounded-xl bg-white dark:bg-slate-900 border border-gray-200/80 dark:border-slate-800 shadow-soft p-4 sm:p-5">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="text-sm font-semibold text-navy dark:text-white flex items-center gap-2">
+            <span class="material-symbols-outlined text-emerald-500 text-base">dataset</span>
+            <span>Income Budget Detail</span>
+          </h2>
+          <p class="text-[11px] text-gray-500 dark:text-gray-400">
+            E.g. Sales collections, manager deposits, other income sources.
+          </p>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="min-w-full text-xs">
+            <thead class="bg-gray-50 dark:bg-slate-950/60">
+              <tr>
+                <th class="px-3 py-2 text-left font-semibold text-gray-500 uppercase tracking-wide">Category</th>
+                <th class="px-3 py-2 text-right font-semibold text-gray-500 uppercase tracking-wide">Budget</th>
+                <th class="px-3 py-2 text-right font-semibold text-gray-500 uppercase tracking-wide">Actual</th>
+                <th class="px-3 py-2 text-right font-semibold text-gray-500 uppercase tracking-wide">Variance</th>
+                <th class="px-3 py-2 text-right font-semibold text-gray-500 uppercase tracking-wide">% Achieved</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100 dark:divide-slate-800">
+              {% for r in income_rows | default([]) %}
+              <tr class="hover:bg-gray-50/70 dark:hover:bg-slate-800/60">
+                <td class="px-3 py-2 font-medium text-navy dark:text-gray-100">
+                  {{ r.category }}
+                </td>
+                <td class="px-3 py-2 text-right text-gray-800 dark:text-gray-100">
+                  {{ r.budget_amount | round(2) }}
+                </td>
+                <td class="px-3 py-2 text-right text-gray-800 dark:text-gray-100">
+                  {{ r.actual_amount | round(2) }}
+                </td>
+                <td class="px-3 py-2 text-right
+                           {% if r.variance < 0 %}text-red-600{% else %}text-emerald-600{% endif %}">
+                  {{ r.variance | round(2) }}
+                </td>
+                <td class="px-3 py-2 text-right text-gray-800 dark:text-gray-100">
+                  {{ r.usage_pct | round(2) }}%
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Budget entry forms: Income + Expense -->
+      <section class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <!-- Income Budget Form -->
+        <div class="rounded-xl bg-white dark:bg-slate-900 border border-gray-200/80 dark:border-slate-800 shadow-soft p-4 sm:p-5 space-y-4">
+          <div class="flex items-center justify-between">
+            <h2 class="text-sm font-semibold text-navy dark:text-white flex items-center gap-2">
+              <span class="material-symbols-outlined text-emerald-500 text-base">trending_up</span>
+              <span>Add / Update Income Budget</span>
+            </h2>
+            <p class="text-[11px] text-gray-500 dark:text-gray-400 max-w-xs text-right">
+              Use this for income lines (e.g. collections, deposits, other inflows)
+              for the selected year. Re-saving the same category + year updates it.
+            </p>
+          </div>
+
+          <form method="post" action="{{ url_for('acc_budget.budget_create') }}" class="space-y-3">
+            <input type="hidden" name="kind" value="income" />
+
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div>
+                <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">
+                  Year
+                </label>
+                <input
+                  type="number"
+                  name="year"
+                  value="{{ year }}"
+                  class="w-full h-10 rounded-lg border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 text-sm focus:ring-primary focus:border-primary"
+                />
+              </div>
+
+              <div class="sm:col-span-2">
+                <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">
+                  Income Category
+                </label>
+                <input
+                  type="text"
+                  name="category"
+                  list="income-categories"
+                  placeholder="e.g. Sales collections, MoMo deposits"
+                  class="w-full h-10 rounded-lg border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 text-sm focus:ring-primary focus:border-primary"
+                />
+                <!-- You can pass income_categories from backend, or leave datalist empty -->
+                <datalist id="income-categories">
+                  {% for c in income_categories | default([]) %}
+                    <option value="{{ c }}">{{ c }}</option>
+                  {% endfor %}
+                </datalist>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">
+                  Budget Amount
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  name="amount"
+                  placeholder="0.00"
+                  class="w-full h-10 rounded-lg border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 text-sm focus:ring-primary focus:border-primary"
+                />
+              </div>
+
+              <div>
+                <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">
+                  Notes (optional)
+                </label>
+                <input
+                  type="text"
+                  name="notes"
+                  placeholder="e.g. Target collections for all branches"
+                  class="w-full h-10 rounded-lg border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 text-sm focus:ring-primary focus:border-primary"
+                />
+              </div>
+            </div>
+
+            <div class="flex justify-end pt-2">
+              <button
+                type="submit"
+                class="inline-flex items-center justify-center gap-2 rounded-full h-10 px-6 bg-primary text-white text-sm font-semibold shadow-soft hover:bg-emerald-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+              >
+                <span class="material-symbols-outlined text-sm">save</span>
+                <span>Save Income Budget</span>
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Expense Budget Form -->
+        <div class="rounded-xl bg-white dark:bg-slate-900 border border-gray-200/80 dark:border-slate-800 shadow-soft p-4 sm:p-5 space-y-4">
+          <div class="flex items-center justify-between">
+            <h2 class="text-sm font-semibold text-navy dark:text-white flex items-center gap-2">
+              <span class="material-symbols-outlined text-red-500 text-base">edit</span>
+              <span>Add / Update Expense Budget</span>
+            </h2>
+            <p class="text-[11px] text-gray-500 dark:text-gray-400 max-w-xs text-right">
+              Choose from existing manager expense categories or type a new one.
+              Saving again for the same category + year replaces the previous amount.
+            </p>
+          </div>
+
+          <form method="post" action="{{ url_for('acc_budget.budget_create') }}" class="space-y-3">
+            <input type="hidden" name="kind" value="expense" />
+
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div>
+                <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">
+                  Year
+                </label>
+                <input
+                  type="number"
+                  name="year"
+                  value="{{ year }}"
+                  class="w-full h-10 rounded-lg border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 text-sm focus:ring-primary focus:border-primary"
+                />
+              </div>
+
+              <div class="sm:col-span-2">
+                <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">
+                  Expense Category
+                </label>
+                <input
+                  type="text"
+                  name="category"
+                  list="expense-categories"
+                  placeholder="e.g. Fuel, Assets, Rent, Delivery"
+                  class="w-full h-10 rounded-lg border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 text-sm focus:ring-primary focus:border-primary"
+                />
+                <!-- Merge of manager allowed categories + accounting categories -->
+                <datalist id="expense-categories">
+                  {% for c in categories_all | default([]) %}
+                    <option value="{{ c }}">{{ c }}</option>
+                  {% endfor %}
+                </datalist>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">
+                  Budget Amount
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  name="amount"
+                  placeholder="0.00"
+                  class="w-full h-10 rounded-lg border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 text-sm focus:ring-primary focus:border-primary"
+                />
+              </div>
+
+              <div>
+                <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">
+                  Notes (optional)
+                </label>
+                <input
+                  type="text"
+                  name="notes"
+                  placeholder="e.g. Fuel for all branches"
+                  class="w-full h-10 rounded-lg border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 text-sm focus:ring-primary focus:border-primary"
+                />
+              </div>
+            </div>
+
+            <div class="flex justify-end pt-2">
+              <button
+                type="submit"
+                class="inline-flex items-center justify-center gap-2 rounded-full h-10 px-6 bg-primary text-white text-sm font-semibold shadow-soft hover:bg-emerald-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+              >
+                <span class="material-symbols-outlined text-sm">save</span>
+                <span>Save Expense Budget</span>
+              </button>
+            </div>
+          </form>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <!-- Charts Script (no syntax errors, safe Jinja usage) -->
+  <script>
+    // --------- Chart data from Flask (with safe defaults) ---------
+    // Expense per-category chart
+    const expLabels = JSON.parse('{{ (chart_exp.labels if chart_exp is defined else []) | tojson | safe }}');
+    const expBudget = JSON.parse('{{ (chart_exp.budget if chart_exp is defined else []) | tojson | safe }}');
+    const expActual = JSON.parse('{{ (chart_exp.actual if chart_exp is defined else []) | tojson | safe }}');
+
+    // Income per-category chart (optional, if you want to use it later)
+    const incLabels = JSON.parse('{{ (chart_inc.labels if chart_inc is defined else []) | tojson | safe }}');
+    const incBudget = JSON.parse('{{ (chart_inc.budget if chart_inc is defined else []) | tojson | safe }}');
+    const incActual = JSON.parse('{{ (chart_inc.actual if chart_inc is defined else []) | tojson | safe }}');
+
+    // Summary income vs expense chart (single x-axis with 4 bars)
+    // Example labels: ["Income", "Expense"]
+    // Example data arrays length = 2
+    const summaryLabels = JSON.parse('{{ (chart_totals.labels if chart_totals is defined else []) | tojson | safe }}');
+    const summaryIncomeBudget = JSON.parse('{{ (chart_totals.income_budget if chart_totals is defined else []) | tojson | safe }}');
+    const summaryIncomeActual = JSON.parse('{{ (chart_totals.income_actual if chart_totals is defined else []) | tojson | safe }}');
+    const summaryExpenseBudget = JSON.parse('{{ (chart_totals.expense_budget if chart_totals is defined else []) | tojson | safe }}');
+    const summaryExpenseActual = JSON.parse('{{ (chart_totals.expense_actual if chart_totals is defined else []) | tojson | safe }}');
+
+    // --------- Summary Bar Chart: Income vs Expense ---------
+    const summaryCtx = document.getElementById('summaryBarChart');
+    if (summaryCtx && summaryLabels.length > 0) {
+      new Chart(summaryCtx, {
+        type: 'bar',
+        data: {
+          labels: summaryLabels,
+          datasets: [
+            {
+              label: 'Income Budget',
+              data: summaryIncomeBudget,
+            },
+            {
+              label: 'Income Actual',
+              data: summaryIncomeActual,
+            },
+            {
+              label: 'Expense Budget',
+              data: summaryExpenseBudget,
+            },
+            {
+              label: 'Expense Actual',
+              data: summaryExpenseActual,
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            x: {
+              ticks: { autoSkip: false },
+            },
+            y: {
+              beginAtZero: true,
+            }
+          },
+          plugins: {
+            legend: { position: 'bottom' }
+          }
+        }
+      });
+    }
+
+    // --------- Expense Pie (Budget Allocation) ---------
+    const expensePieCtx = document.getElementById('expensePieChart');
+    if (expensePieCtx && expLabels.length > 0) {
+      new Chart(expensePieCtx, {
+        type: 'doughnut',
+        data: {
+          labels: expLabels,
+          datasets: [
+            {
+              label: 'Budget',
+              data: expBudget,
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'bottom' }
+          }
+        }
+      });
+    }
+  </script>
+</body>
+</html>

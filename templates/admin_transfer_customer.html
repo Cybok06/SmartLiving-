@@ -1,0 +1,1145 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Admin - Transfer Customers</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <!-- Bootstrap & Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg-color: #f5f7fb;
+      --card-bg: #ffffff;
+      --text-color: #111827;
+      --muted-color: #6b7280;
+      --border-color: rgba(15, 23, 42, 0.08);
+    }
+
+    body.dark-mode {
+      --bg-color: #020617;
+      --card-bg: #0b1120;
+      --text-color: #f9fafb;
+      --muted-color: #9ca3af;
+      --border-color: rgba(148, 163, 184, 0.3);
+    }
+
+    body {
+      background: radial-gradient(circle at top left, #e0ecff 0, #f5f7fb 45%, #edf2ff 100%);
+      color: var(--text-color);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    body.dark-mode {
+      background: radial-gradient(circle at top left, #020617 0, #020617 40%, #020617 100%);
+    }
+
+    .card {
+      border-radius: .9rem;
+      border: 1px solid var(--border-color);
+      background-color: var(--card-bg);
+      color: var(--text-color);
+      box-shadow: 0 6px 18px rgba(15, 23, 42, 0.06);
+    }
+
+    .card-header {
+      border-bottom: 0;
+      background: transparent;
+      padding-bottom: .35rem;
+      color: var(--text-color);
+    }
+
+    .text-muted {
+      color: var(--muted-color) !important;
+    }
+
+    .badge-soft {
+      padding: .25rem .6rem;
+      border-radius: 999px;
+      font-size: .7rem;
+      font-weight: 600;
+      background: rgba(59,130,246,.08);
+      color: #1d4ed8;
+    }
+
+    body.dark-mode .badge-soft {
+      background: rgba(59,130,246,.22);
+      color: #bfdbfe;
+    }
+
+    .avatar-circle {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #0d6efd, #4f46e5);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.3rem;
+      font-weight: 600;
+      overflow: hidden;
+      background-size: cover;
+      background-position: center;
+    }
+
+    .metric-label {
+      font-size: .78rem;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+      color: var(--muted-color);
+      margin-bottom: .2rem;
+      font-weight: 600;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: .25rem;
+      padding: .18rem .6rem;
+      border-radius: 999px;
+      font-size: .72rem;
+      border: 1px solid rgba(148, 163, 184, 0.4);
+      color: var(--muted-color);
+    }
+
+    .chip i {
+      font-size: .8rem;
+    }
+
+    .spinner-inline {
+      width: 1rem;
+      height: 1rem;
+      border-width: .16rem;
+    }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: .25rem;
+      padding: .14rem .5rem;
+      border-radius: 999px;
+      font-size: .7rem;
+      font-weight: 500;
+      border: 1px solid rgba(148, 163, 184, 0.45);
+    }
+
+    .status-pill-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background-color: #22c55e;
+    }
+
+    .status-inactive .status-pill-dot {
+      background-color: #ef4444;
+    }
+
+    .progress {
+      height: 8px;
+      border-radius: 999px;
+      background-color: rgba(148, 163, 184, 0.35);
+      overflow: hidden;
+    }
+
+    .progress-bar {
+      background: linear-gradient(90deg, #22c55e, #16a34a, #22c55e);
+    }
+
+    .fade-soft {
+      animation: fadeSoft .35s ease-out;
+    }
+
+    @keyframes fadeSoft {
+      from { opacity: 0; transform: translateY(4px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .table,
+    .table th,
+    .table td {
+      color: var(--text-color);
+    }
+
+    .table-light {
+      background-color: rgba(148, 163, 184, 0.15) !important;
+      color: var(--text-color) !important;
+    }
+
+    body.dark-mode .table-light {
+      background-color: rgba(15, 23, 42, 0.9) !important;
+      color: var(--text-color) !important;
+    }
+  </style>
+</head>
+
+<body>
+      {% include 'admin_sidebar.html' %}
+
+<div class="container-fluid py-4">
+
+  <!-- Header -->
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+      <h3 class="mb-0 fw-semibold">Admin - Transfer Customers Between Agents</h3>
+      <small class="text-muted">
+        As admin, you can move customers between agents across all managers and branches.
+      </small>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+      <a href="{{ url_for('transfer_customer.transfer_logs_page') }}" class="btn btn-sm btn-outline-secondary">
+        <i class="bi bi-clipboard2-data me-1"></i> View transfer logs
+      </a>
+      <button type="button" class="btn btn-sm btn-outline-secondary" onclick="toggleTheme()">
+        <i id="themeIcon" class="bi bi-moon-stars"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- Main container -->
+  <div class="card mb-3">
+    <div class="card-body">
+
+      <!-- Top badge + chips -->
+      <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+        <span class="badge-soft">
+          <i class="bi bi-arrows-move me-1"></i> Customer Transfer (Admin)
+        </span>
+        <div class="d-flex align-items-center gap-2 small text-muted flex-wrap">
+          <span class="chip">
+            <i class="bi bi-shield-check"></i>
+            Historical payments stay with original agent
+          </span>
+          <span class="chip">
+            <i class="bi bi-diagram-3"></i>
+            Manager on customers aligns to destination agent
+          </span>
+          <span class="chip">
+            <i class="bi bi-person-lock"></i>
+            Admin can transfer across all managers / branches
+          </span>
+        </div>
+      </div>
+
+      <!-- Alerts -->
+      <div id="alertArea" class="mb-3"></div>
+
+      <!-- Manager & Agents selection -->
+      <div class="row g-3 mb-4">
+        <!-- Manager selector -->
+        <div class="col-12">
+          <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+              <span class="fw-semibold">Manager filter</span>
+              <small class="text-muted">
+                Select a manager to narrow the agents list (or keep "All managers" to see every agent).
+              </small>
+            </div>
+            <div class="card-body">
+              <div class="row g-3 align-items-end">
+                <div class="col-md-4">
+                  <label class="form-label">Manager</label>
+                  <select id="managerFilter" class="form-select">
+                    <option value="">All managers</option>
+                    {% for m in managers %}
+                      <option value="{{ m.id }}">{{ m.name }}{% if m.branch %} - {{ m.branch }}{% endif %}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+                <div class="col-md-8">
+                  <div id="managerInfo" class="d-flex align-items-center gap-3 small text-muted">
+                    <div class="avatar-circle" id="managerAvatar">
+                      <span>M</span>
+                    </div>
+                    <div>
+                      <div class="fw-semibold" id="managerName">All managers</div>
+                      <div>
+                        <i class="bi bi-geo-alt me-1"></i>
+                        <span id="managerBranch">Branch: -</span>
+                      </div>
+                      <div>
+                        <i class="bi bi-telephone me-1"></i>
+                        <span id="managerPhone">Phone: -</span>
+                      </div>
+                      <div class="mt-1">
+                        <span id="managerStatusPill" class="status-pill status-inactive">
+                          <span class="status-pill-dot"></span>
+                          <span id="managerStatusText">Status: -</span>
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div> <!-- /row -->
+            </div>
+          </div>
+        </div>
+
+        <!-- From agent -->
+        <div class="col-lg-6">
+          <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+              <span class="fw-semibold">Source agent (from)</span>
+              <small class="text-muted">Customers will be taken from this agent</small>
+            </div>
+            <div class="card-body">
+              <div class="mb-3">
+                <label class="form-label">From agent</label>
+                <select id="fromAgentSelect" class="form-select">
+                  <option value="">Select source agent</option>
+                </select>
+              </div>
+
+              <div id="fromAgentInfo" class="d-flex align-items-center gap-3 small text-muted">
+                <div class="avatar-circle" id="fromAgentAvatar">
+                  <span>F</span>
+                </div>
+                <div>
+                  <div class="fw-semibold" id="fromAgentName">No agent selected</div>
+                  <div>
+                    <i class="bi bi-geo-alt me-1"></i>
+                    <span id="fromAgentBranch">Branch: -</span>
+                  </div>
+                  <div>
+                    <i class="bi bi-person-badge me-1"></i>
+                    <span id="fromAgentManager">Manager: -</span>
+                  </div>
+                  <div class="d-flex align-items-center gap-2 mt-1">
+                    <span><i class="bi bi-telephone me-1"></i><span id="fromAgentPhone">Phone: -</span></span>
+                    <span id="fromAgentStatusPill" class="status-pill status-inactive">
+                      <span class="status-pill-dot"></span>
+                      <span id="fromAgentStatusText">Status: -</span>
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+        <!-- To agent -->
+        <div class="col-lg-6">
+          <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+              <span class="fw-semibold">Destination agent (to)</span>
+              <small class="text-muted">Customers will be moved to this agent</small>
+            </div>
+            <div class="card-body">
+              <div class="mb-3">
+                <label class="form-label">To agent</label>
+                <select id="toAgentSelect" class="form-select">
+                  <option value="">Select destination agent</option>
+                </select>
+              </div>
+
+              <div id="toAgentInfo" class="d-flex align-items-center gap-3 small text-muted">
+                <div class="avatar-circle" id="toAgentAvatar">
+                  <span>T</span>
+                </div>
+                <div>
+                  <div class="fw-semibold" id="toAgentName">No agent selected</div>
+                  <div>
+                    <i class="bi bi-geo-alt me-1"></i>
+                    <span id="toAgentBranch">Branch: -</span>
+                  </div>
+                  <div>
+                    <i class="bi bi-person-badge me-1"></i>
+                    <span id="toAgentManager">Manager: -</span>
+                  </div>
+                  <div class="d-flex align-items-center gap-2 mt-1">
+                    <span><i class="bi bi-telephone me-1"></i><span id="toAgentPhone">Phone: -</span></span>
+                    <span id="toAgentStatusPill" class="status-pill status-inactive">
+                      <span class="status-pill-dot"></span>
+                      <span id="toAgentStatusText">Status: -</span>
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      </div> <!-- /row manager & agents -->
+
+      <!-- Customers selection -->
+      <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+          <div>
+            <span class="fw-semibold">Customers of selected source agent</span><br>
+            <small class="text-muted">
+              Search and select specific customers or select all.
+            </small>
+          </div>
+          <div class="d-flex align-items-center gap-2">
+            <input id="customerSearch" type="text" class="form-control form-control-sm" placeholder="Search by name or phone">
+            <div class="form-check ms-2">
+              <input class="form-check-input" type="checkbox" id="selectAllCustomers">
+              <label class="form-check-label small" for="selectAllCustomers">
+                Select all
+              </label>
+            </div>
+          </div>
+        </div>
+        <div class="card-body">
+          <div id="customersLoading" class="small text-muted mb-2 d-none">
+            <span class="spinner-border spinner-inline me-1" role="status"></span>
+            Loading customers for source agent…
+          </div>
+
+          <div class="table-responsive" style="max-height: 320px;">
+            <table class="table table-sm align-middle mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th style="width:36px;"></th>
+                  <th>Customer</th>
+                  <th>Phone</th>
+                  <th>Location</th>
+                  <th>Occupation</th>
+                  <th>Comment</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="customersBody">
+              </tbody>
+            </table>
+          </div>
+          <div id="customersEmpty" class="text-muted small mt-2 d-none">
+            No customers found for this agent.
+          </div>
+
+          <div class="d-flex justify-content-between align-items-center mt-3 flex-wrap gap-2">
+            <div class="small text-muted">
+              Selected: <span id="selectedCount">0</span> customer(s)
+              <span class="text-muted">- </span>
+              Total loaded: <span id="totalCount">0</span>
+            </div>
+            <div class="d-flex flex-wrap gap-2">
+              <button type="button" class="btn btn-outline-secondary btn-sm" onclick="previewTransfer()">
+                <i class="bi bi-zoom-in me-1"></i> Preview transfer impact
+              </button>
+              <button type="button" class="btn btn-danger btn-sm" onclick="confirmTransfer()">
+                <i class="bi bi-arrow-left-right me-1"></i> Transfer customers
+              </button>
+            </div>
+          </div>
+
+          <div class="small text-muted mt-2">
+            If no specific customers are selected, the transfer will apply to
+            <strong>all customers</strong> of the source agent.
+          </div>
+        </div>
+      </div>
+
+      <!-- Progress & result -->
+      <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <span class="fw-semibold">Transfer progress</span>
+          <small class="text-muted">Live feedback while operation is running</small>
+        </div>
+        <div class="card-body">
+
+          <div id="progressArea" class="mb-3 d-none fade-soft">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <div class="d-flex align-items-center gap-2">
+                <span class="spinner-border spinner-inline" role="status" aria-hidden="true"></span>
+                <span id="progressLabel" class="small text-muted">Starting transfer…</span>
+              </div>
+              <div class="small fw-semibold" id="progressPercentLabel">0%</div>
+            </div>
+            <div class="progress">
+              <div id="progressBar" class="progress-bar" role="progressbar" style="width: 0%;" aria-valuemin="0" aria-valuemax="100"></div>
+            </div>
+          </div>
+
+          <div id="resultArea" class="d-none fade-soft">
+            <div class="alert alert-success mb-2" id="resultSummary"></div>
+            <div class="small text-muted" id="resultDetails"></div>
+          </div>
+
+          <div class="small text-muted mt-2">
+            Transfers run as a single batch update. The percentage animation reflects overall progress
+            and ends with final counts from the database.
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Data for JS -->
+<script id="managersDataScript" type="application/json">
+  {{ managers|tojson|safe }}
+</script>
+<script id="agentsDataScript" type="application/json">
+  {{ agents|tojson|safe }}
+</script>
+
+<!-- JS: Bootstrap -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+  let ALL_MANAGERS = [];
+  let ALL_AGENTS = [];
+  let FILTERED_AGENTS = [];
+
+  let currentCustomers = [];
+  let filteredCustomers = [];
+  let progressTimer = null;
+
+  function toggleTheme(){
+    const body = document.body;
+    const isDark = body.classList.toggle("dark-mode");
+    const icon = document.getElementById("themeIcon");
+    if(icon){
+      if(isDark){
+        icon.classList.remove("bi-moon-stars");
+        icon.classList.add("bi-sun");
+      }else{
+        icon.classList.remove("bi-sun");
+        icon.classList.add("bi-moon-stars");
+      }
+    }
+    try{
+      localStorage.setItem("meetingTheme", isDark ? "dark" : "light");
+    }catch(e){}
+  }
+
+  function initData(){
+    try{
+      const mRaw = document.getElementById("managersDataScript").textContent;
+      const aRaw = document.getElementById("agentsDataScript").textContent;
+      ALL_MANAGERS = JSON.parse(mRaw) || [];
+      ALL_AGENTS   = JSON.parse(aRaw) || [];
+      FILTERED_AGENTS = [...ALL_AGENTS];
+      rebuildAgentSelects();
+    }catch(e){
+      console.error("Failed to parse admin transfer data", e);
+    }
+  }
+
+  function setAvatar(el, nameInitial){
+    if(!el) return;
+    el.innerHTML = "";
+    const span = document.createElement("span");
+    span.textContent = (nameInitial || "A").charAt(0).toUpperCase();
+    el.appendChild(span);
+  }
+
+  function findManagerById(id){
+    return ALL_MANAGERS.find(m => m.id === id) || null;
+  }
+
+  function findAgentById(id){
+    return ALL_AGENTS.find(a => a.id === id) || null;
+  }
+
+  function updateManagerInfo(){
+    const sel = document.getElementById("managerFilter");
+    if(!sel) return;
+    const id = sel.value || "";
+    const mgr = id ? findManagerById(id) : null;
+
+    const nameEl   = document.getElementById("managerName");
+    const branchEl = document.getElementById("managerBranch");
+    const phoneEl  = document.getElementById("managerPhone");
+    const avatar   = document.getElementById("managerAvatar");
+    const statusPill = document.getElementById("managerStatusPill");
+    const statusText = document.getElementById("managerStatusText");
+
+    if(!mgr){
+      if(nameEl)   nameEl.textContent   = "All managers";
+      if(branchEl) branchEl.textContent = "Branch: -";
+      if(phoneEl)  phoneEl.textContent  = "Phone: -";
+      if(statusText) statusText.textContent = "Status: -";
+      if(statusPill) statusPill.classList.add("status-inactive");
+      if(avatar) setAvatar(avatar, "M");
+      return;
+    }
+
+    if(nameEl)   nameEl.textContent   = mgr.name || "Unknown manager";
+    if(branchEl) branchEl.textContent = `Branch: ${mgr.branch || "-"}`;
+    if(phoneEl)  phoneEl.textContent  = `Phone: ${mgr.phone || "-"}`;
+    if(statusText) statusText.textContent = `Status: ${mgr.status || "Unknown"}`;
+
+    if(statusPill){
+      statusPill.classList.remove("status-inactive");
+      const st = (mgr.status || "").toLowerCase();
+      if(!st || st === "inactive"){
+        statusPill.classList.add("status-inactive");
+      }
+    }
+    if(avatar){
+      setAvatar(avatar, mgr.name || "M");
+    }
+  }
+
+  function rebuildAgentSelects(){
+    const managerSel = document.getElementById("managerFilter");
+    const fromSel    = document.getElementById("fromAgentSelect");
+    const toSel      = document.getElementById("toAgentSelect");
+    if(!managerSel || !fromSel || !toSel) return;
+
+    const managerId = managerSel.value || "";
+
+    FILTERED_AGENTS = ALL_AGENTS.filter(ag => {
+      if(!managerId) return true; // all managers
+      return ag.manager_id === managerId;
+    });
+
+    const rebuild = (selectEl, type) => {
+      const prev = selectEl.value || "";
+      selectEl.innerHTML = "";
+      const optDefault = document.createElement("option");
+      optDefault.value = "";
+      optDefault.textContent = type === "from"
+        ? "Select source agent"
+        : "Select destination agent";
+      selectEl.appendChild(optDefault);
+
+      FILTERED_AGENTS.forEach(ag => {
+        const opt = document.createElement("option");
+        opt.value = ag.id;
+        opt.textContent = `${ag.name} - ${ag.branch || ""} (${ag.manager_name || "No manager"})`;
+        if(prev && prev === ag.id){
+          opt.selected = true;
+        }
+        selectEl.appendChild(opt);
+      });
+    };
+
+    rebuild(fromSel, "from");
+    rebuild(toSel, "to");
+
+    // Refresh info cards
+    onAgentChange("from");
+    onAgentChange("to");
+  }
+
+  function updateAgentInfoPanel(prefix, agent){
+    const nameEl   = document.getElementById(prefix + "AgentName");
+    const branchEl = document.getElementById(prefix + "AgentBranch");
+    const mgrEl    = document.getElementById(prefix + "AgentManager");
+    const phoneEl  = document.getElementById(prefix + "AgentPhone");
+    const avatar   = document.getElementById(prefix + "AgentAvatar");
+    const statusPill = document.getElementById(prefix + "AgentStatusPill");
+    const statusText = document.getElementById(prefix + "AgentStatusText");
+
+    if(!agent){
+      if(nameEl)   nameEl.textContent   = "No agent selected";
+      if(branchEl) branchEl.textContent = "Branch: -";
+      if(mgrEl)    mgrEl.textContent    = "Manager: -";
+      if(phoneEl)  phoneEl.textContent  = "Phone: -";
+      if(statusText) statusText.textContent = "Status: -";
+      if(statusPill) statusPill.classList.add("status-inactive");
+      if(avatar) setAvatar(avatar, prefix === "from" ? "F" : "T");
+      return;
+    }
+
+    if(nameEl)   nameEl.textContent   = agent.name || "Unknown";
+    if(branchEl) branchEl.textContent = `Branch: ${agent.branch || "-"}`;
+    if(mgrEl)    mgrEl.textContent    = `Manager: ${agent.manager_name || "-"}`;
+    if(phoneEl)  phoneEl.textContent  = `Phone: ${agent.phone || "-"}`;
+    if(statusText) statusText.textContent = `Status: ${agent.status || "Unknown"}`;
+
+    if(statusPill){
+      statusPill.classList.remove("status-inactive");
+      const st = (agent.status || "").toLowerCase();
+      if(!st || st === "inactive"){
+        statusPill.classList.add("status-inactive");
+      }
+    }
+    if(avatar){
+      setAvatar(avatar, agent.name || (prefix === "from" ? "F" : "T"));
+    }
+  }
+
+  function onAgentChange(which){
+    const sel = document.getElementById(which === "from" ? "fromAgentSelect" : "toAgentSelect");
+    if(!sel) return;
+    const id = sel.value || "";
+    const ag = id ? findAgentById(id) : null;
+    updateAgentInfoPanel(which === "from" ? "from" : "to", ag);
+
+    if(which === "from"){
+      // Load customers for this agent
+      loadCustomersForAgent(id);
+    }
+  }
+
+  function showAlert(type, message){
+    const area = document.getElementById("alertArea");
+    if(!area) return;
+    area.innerHTML = `
+      <div class="alert alert-${type} alert-dismissible fade show fade-soft" role="alert">
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      </div>
+    `;
+  }
+
+  // ---- Customers loading / selection ----
+
+  function setCustomersLoading(show){
+    const el = document.getElementById("customersLoading");
+    if(!el) return;
+    el.classList.toggle("d-none", !show);
+  }
+
+  function resetCustomers(){
+    currentCustomers = [];
+    filteredCustomers = [];
+    renderCustomersTable();
+  }
+
+  async function loadCustomersForAgent(agentId){
+    resetCustomers();
+    const emptyEl = document.getElementById("customersEmpty");
+    if(emptyEl) emptyEl.classList.add("d-none");
+
+    if(!agentId){
+      return;
+    }
+
+    setCustomersLoading(true);
+    try{
+      const res = await fetch(`/transfer-customers/customers?agent_id=${encodeURIComponent(agentId)}`, {
+        credentials: "same-origin"
+      });
+      if(!res.ok){
+        showAlert("danger", "Failed to load customers for the selected agent.");
+        return;
+      }
+      const json = await res.json();
+      if(!json.ok){
+        showAlert("danger", json.message || "Unable to load customers.");
+        return;
+      }
+
+      currentCustomers = json.customers || [];
+      filteredCustomers = [...currentCustomers];
+      renderCustomersTable();
+    }catch(e){
+      console.error(e);
+      showAlert("danger", "Network error while loading customers.");
+    }finally{
+      setCustomersLoading(false);
+    }
+  }
+
+  function renderCustomersTable(){
+    const tbody = document.getElementById("customersBody");
+    const emptyEl = document.getElementById("customersEmpty");
+    const totalCountEl = document.getElementById("totalCount");
+    const selectedCountEl = document.getElementById("selectedCount");
+    const selectAllChk = document.getElementById("selectAllCustomers");
+
+    if(!tbody || !emptyEl || !totalCountEl || !selectedCountEl) return;
+
+    tbody.innerHTML = "";
+
+    if(!filteredCustomers.length){
+      emptyEl.classList.remove("d-none");
+    }else{
+      emptyEl.classList.add("d-none");
+    }
+
+    filteredCustomers.forEach(c => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>
+          <input type="checkbox" class="form-check-input customer-checkbox" data-id="${c._id}">
+        </td>
+        <td>${c.name || ""}</td>
+        <td>${c.phone_number || ""}</td>
+        <td>${c.location || ""}</td>
+        <td>${c.occupation || ""}</td>
+        <td>${c.comment || ""}</td>
+        <td>
+          <span class="badge bg-light text-dark border border-1">${c.status || ""}</span>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    totalCountEl.textContent = currentCustomers.length.toString();
+    selectedCountEl.textContent = "0";
+    if(selectAllChk){
+      selectAllChk.checked = false;
+    }
+
+    // Bind change handlers for checkboxes
+    document.querySelectorAll(".customer-checkbox").forEach(cb => {
+      cb.addEventListener("change", updateSelectedCount);
+    });
+  }
+
+  function updateSelectedCount(){
+    const checkboxes = document.querySelectorAll(".customer-checkbox");
+    let selected = 0;
+    checkboxes.forEach(cb => {
+      if(cb.checked) selected += 1;
+    });
+    const selectedCountEl = document.getElementById("selectedCount");
+    if(selectedCountEl){
+      selectedCountEl.textContent = selected.toString();
+    }
+
+    const selectAllChk = document.getElementById("selectAllCustomers");
+    if(selectAllChk){
+      if(checkboxes.length && selected === checkboxes.length){
+        selectAllChk.checked = true;
+      }else{
+        selectAllChk.checked = false;
+      }
+    }
+  }
+
+  function onSelectAllCustomersChanged(){
+    const selectAllChk = document.getElementById("selectAllCustomers");
+    if(!selectAllChk) return;
+    const checked = selectAllChk.checked;
+
+    document.querySelectorAll(".customer-checkbox").forEach(cb => {
+      cb.checked = checked;
+    });
+
+    const selectedCountEl = document.getElementById("selectedCount");
+    if(selectedCountEl){
+      selectedCountEl.textContent = checked
+        ? filteredCustomers.length.toString()
+        : "0";
+    }
+  }
+
+  function applyCustomerSearch(){
+    const inp = document.getElementById("customerSearch");
+    if(!inp){
+      filteredCustomers = [...currentCustomers];
+      renderCustomersTable();
+      return;
+    }
+    const term = (inp.value || "").toLowerCase();
+
+    if(!term){
+      filteredCustomers = [...currentCustomers];
+    }else{
+      filteredCustomers = currentCustomers.filter(c => {
+        const text = `${c.name || ""} ${c.phone_number || ""} ${c.location || ""}`.toLowerCase();
+        return text.includes(term);
+      });
+    }
+    renderCustomersTable();
+  }
+
+  function getSelectedCustomerIds(){
+    const ids = [];
+    document.querySelectorAll(".customer-checkbox").forEach(cb => {
+      if(cb.checked){
+        const id = cb.getAttribute("data-id");
+        if(id) ids.push(id);
+      }
+    });
+    return ids;
+  }
+
+  // ---- Progress UI ----
+
+  function resetProgress(){
+    const progressArea = document.getElementById("progressArea");
+    const resultArea   = document.getElementById("resultArea");
+    const bar          = document.getElementById("progressBar");
+    const label        = document.getElementById("progressLabel");
+    const pctLabel     = document.getElementById("progressPercentLabel");
+
+    if(progressArea) progressArea.classList.add("d-none");
+    if(resultArea)   resultArea.classList.add("d-none");
+
+    if(bar) bar.style.width = "0%";
+    if(label) label.textContent = "Starting transfer…";
+    if(pctLabel) pctLabel.textContent = "0%";
+
+    if(progressTimer){
+      clearInterval(progressTimer);
+      progressTimer = null;
+    }
+  }
+
+  function startProgressAnimation(){
+    const progressArea = document.getElementById("progressArea");
+    const bar      = document.getElementById("progressBar");
+    const pctLabel = document.getElementById("progressPercentLabel");
+    const label    = document.getElementById("progressLabel");
+
+    if(!progressArea || !bar || !pctLabel || !label) return;
+    progressArea.classList.remove("d-none");
+
+    let pct = 0;
+    label.textContent = "Transferring customers… please wait";
+    progressTimer = setInterval(() => {
+      if(pct < 90){
+        pct += Math.random() * 7;
+        if(pct > 90) pct = 90;
+        bar.style.width = pct.toFixed(0) + "%";
+        pctLabel.textContent = pct.toFixed(0) + "%";
+      }
+    }, 180);
+  }
+
+  function completeProgress(finalPct){
+    const bar      = document.getElementById("progressBar");
+    const pctLabel = document.getElementById("progressPercentLabel");
+    const label    = document.getElementById("progressLabel");
+
+    if(progressTimer){
+      clearInterval(progressTimer);
+      progressTimer = null;
+    }
+    if(!bar || !pctLabel || !label) return;
+
+    const target = finalPct ?? 100;
+    let current = parseInt(pctLabel.textContent.replace("%","") || "0", 10);
+
+    const step = () => {
+      if(current >= target){
+        bar.style.width = target + "%";
+        pctLabel.textContent = target + "%";
+        label.textContent = target >= 100 ? "Transfer completed" : "Transfer finished";
+        return;
+      }
+      current += 5;
+      if(current > target) current = target;
+      bar.style.width = current + "%";
+      pctLabel.textContent = current + "%";
+      requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  }
+
+  function showResult(summaryText, detailText, success=true){
+    const resultArea = document.getElementById("resultArea");
+    const resultSummary = document.getElementById("resultSummary");
+    const resultDetails = document.getElementById("resultDetails");
+
+    if(!resultArea || !resultSummary || !resultDetails) return;
+
+    resultArea.classList.remove("d-none");
+    resultSummary.classList.remove("alert-success", "alert-danger");
+    resultSummary.classList.add(success ? "alert-success" : "alert-danger");
+
+    resultSummary.textContent = summaryText || "";
+    resultDetails.textContent = detailText || "";
+  }
+
+  // ---- API helpers ----
+
+  function getSelectedAgents(){
+    const fromId = document.getElementById("fromAgentSelect")?.value || "";
+    const toId   = document.getElementById("toAgentSelect")?.value || "";
+    const fromAg = fromId ? findAgentById(fromId) : null;
+    const toAg   = toId ? findAgentById(toId) : null;
+    return { fromId, toId, fromAg, toAg };
+  }
+
+  async function previewTransfer(){
+    resetProgress();
+    const { fromId, toId, fromAg, toAg } = getSelectedAgents();
+
+    if(!fromId || !toId){
+      showAlert("warning", "Please select both source and destination agents before previewing.");
+      return;
+    }
+    if(fromId === toId){
+      showAlert("warning", "Source and destination agents cannot be the same.");
+      return;
+    }
+
+    const selectedCustomers = getSelectedCustomerIds();
+
+    try{
+      const res = await fetch("/transfer-customers/run", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({
+          from_agent_id: fromId,
+          to_agent_id: toId,
+          customer_ids: selectedCustomers,
+          dry_run: true
+        })
+      });
+
+      if(!res.ok){
+        showAlert("danger", "Failed to preview transfer. Please try again.");
+        return;
+      }
+      const json = await res.json();
+      if(!json.ok){
+        showAlert("danger", json.message || "Unable to preview transfer.");
+        return;
+      }
+
+      const total = json.total_customers ?? 0;
+      const selectionCount = json.selection_count ?? total;
+      const fromName = (fromAg && fromAg.name) || "source agent";
+      const toName   = (toAg && toAg.name) || "destination agent";
+
+      showAlert(
+        "info",
+        `Preview: <strong>${selectionCount}</strong> selected / matched customer(s) ` +
+        `will be moved from <strong>${fromName}</strong> to <strong>${toName}</strong>. ` +
+        `(Total customers found for criteria: ${total})`
+      );
+    }catch(e){
+      console.error(e);
+      showAlert("danger", "An error occurred while previewing. Check your network and try again.");
+    }
+  }
+
+  function confirmTransfer(){
+    resetProgress();
+    const { fromId, toId, fromAg, toAg } = getSelectedAgents();
+
+    if(!fromId || !toId){
+      showAlert("warning", "Please select both source and destination agents before starting a transfer.");
+      return;
+    }
+    if(fromId === toId){
+      showAlert("warning", "Source and destination agents cannot be the same.");
+      return;
+    }
+
+    const selectedCustomers = getSelectedCustomerIds();
+    const fromName = (fromAg && fromAg.name) || "source agent";
+    const toName   = (toAg && toAg.name) || "destination agent";
+
+    const selectionNote = selectedCustomers.length
+      ? `${selectedCustomers.length} explicitly selected customers`
+      : "ALL customers of the source agent";
+
+    const ok = window.confirm(
+      `Are you sure you want to move ${selectionNote} from "${fromName}" to "${toName}"?\n\n` +
+      `This will update the agent_id (and manager_id) on those customer records. ` +
+      `Historical payments will remain with the original agent.`
+    );
+    if(!ok) return;
+
+    runTransfer(fromId, toId, fromName, toName, selectedCustomers);
+  }
+
+  async function runTransfer(fromId, toId, fromName, toName, selectedCustomers){
+    startProgressAnimation();
+
+    try{
+      const res = await fetch("/transfer-customers/run", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({
+          from_agent_id: fromId,
+          to_agent_id: toId,
+          customer_ids: selectedCustomers,
+          dry_run: false
+        })
+      });
+
+      if(!res.ok){
+        completeProgress(100);
+        showResult(
+          "Transfer failed.",
+          "The server returned an error. Please try again or contact your system administrator.",
+          false
+        );
+        return;
+      }
+
+      const json = await res.json();
+      if(!json.ok){
+        completeProgress(100);
+        showResult(
+          "Transfer could not be completed.",
+          json.message || "Unknown error occurred.",
+          false
+        );
+        return;
+      }
+
+      const total   = json.total_customers ?? 0;
+      const updated = json.updated_customers ?? 0;
+      const selectionCount = json.selection_count ?? total;
+
+      completeProgress(100);
+
+      const summary = `Transfer completed: ${updated} of ${selectionCount} customer(s) updated (out of ${total} matched).`;
+      const details =
+        `All transferred customers previously assigned to "${fromName}" are now assigned to "${toName}". ` +
+        `Manager on those customers now matches the destination agent's manager.`;
+
+      showResult(summary, details, true);
+      showAlert("success", summary);
+
+      // Refresh customers for the source agent to reflect new state
+      loadCustomersForAgent(fromId);
+
+    }catch(e){
+      console.error(e);
+      completeProgress(100);
+      showResult(
+        "Transfer failed.",
+        "A network or server error occurred during the operation. Please retry.",
+        false
+      );
+    }
+  }
+
+  // ---- Init ----
+  document.addEventListener("DOMContentLoaded", () => {
+    // Restore theme
+    try{
+      const saved = localStorage.getItem("meetingTheme");
+      if(saved === "dark"){
+        document.body.classList.add("dark-mode");
+        const icon = document.getElementById("themeIcon");
+        if(icon){
+          icon.classList.remove("bi-moon-stars");
+          icon.classList.add("bi-sun");
+        }
+      }
+    }catch(e){}
+
+    initData();
+    updateManagerInfo();
+    resetProgress();
+    resetCustomers();
+
+    const managerSel = document.getElementById("managerFilter");
+    if(managerSel){
+      managerSel.addEventListener("change", () => {
+        updateManagerInfo();
+        rebuildAgentSelects();
+      });
+    }
+
+    const fromSel = document.getElementById("fromAgentSelect");
+    const toSel   = document.getElementById("toAgentSelect");
+    if(fromSel) fromSel.addEventListener("change", () => onAgentChange("from"));
+    if(toSel)   toSel.addEventListener("change", () => onAgentChange("to"));
+
+    const selectAllChk = document.getElementById("selectAllCustomers");
+    if(selectAllChk){
+      selectAllChk.addEventListener("change", onSelectAllCustomersChanged);
+    }
+
+    const searchInp = document.getElementById("customerSearch");
+    if(searchInp){
+      searchInp.addEventListener("input", applyCustomerSearch);
+    }
+  });
+</script>
+  {% include 'app_footer.html' %}
+
+</body>
+</html>

@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Create User</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+  <link rel="icon" href="https://res.cloudinary.com/dljpgzbto/image/upload/v1743993646/company-logo_dksb23.jpg" type="image/png" />
+  <style>
+    body {
+      background-color: #f8f9fa;
+      padding-left: 260px;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    @media (max-width: 768px) { body { padding-left: 0; } }
+    .page-wrap { opacity: 0; transform: translateY(6px); transition: opacity .25s ease-out, transform .25s ease-out; }
+    body.page-ready .page-wrap { opacity: 1; transform: translateY(0); }
+    .card-shell {
+      background: #fff;
+      border: 1px solid rgba(226, 232, 240, 0.9);
+      border-radius: 14px;
+      padding: 18px;
+      box-shadow: 0 8px 18px rgba(15, 23, 42, 0.06);
+    }
+    .profile-avatar {
+      width: 90px;
+      height: 90px;
+      border-radius: 50%;
+      object-fit: cover;
+      background: #e5e7eb;
+    }
+  </style>
+</head>
+<body>
+  {% include 'executive_sidebar.html' %}
+
+  <div class="container mt-4 page-wrap">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <div>
+        <a href="/executive/users" class="text-decoration-none text-muted small"><i class="bi bi-arrow-left"></i> Back to Users</a>
+        <h4 class="mb-1">Create User</h4>
+        <div class="text-muted">Add new HR, Accounting, Inventory, Manager, Admin, or Executive user.</div>
+      </div>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="mb-3">
+          {% for category, message in messages %}
+            <div class="alert alert-{{ 'danger' if category == 'error' else category }}">{{ message }}</div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    <div class="card-shell">
+      <form method="post" action="/executive/users/new">
+        <div class="row g-3">
+          <div class="col-md-4">
+            <label class="form-label">Avatar</label>
+            <div class="d-flex flex-column gap-2">
+              <img id="avatarPreview" src="{{ DEFAULT_PROFILE_IMAGE_URL }}" class="profile-avatar" alt="Avatar" onerror="this.src='{{ DEFAULT_PROFILE_IMAGE_URL }}'">
+              <input type="file" id="avatarInput" class="form-control" accept="image/*">
+              <input type="hidden" name="image_url" id="imageUrl">
+              <input type="hidden" name="image_id" id="imageId">
+              <div class="text-muted small" id="avatarStatus">Upload to set profile image.</div>
+            </div>
+          </div>
+          <div class="col-md-8">
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label">Username</label>
+                <input class="form-control" name="username" required>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Password</label>
+                <input type="password" class="form-control" name="password" required>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Role</label>
+                <select class="form-select" name="role" required>
+                  {% for role in roles %}
+                    <option value="{{ role }}">{{ role.title() }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Status</label>
+                <select class="form-select" name="status">
+                  <option value="Active">Active</option>
+                  <option value="Not Active">Not Active</option>
+                </select>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Name</label>
+                <input class="form-control" name="name">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Phone</label>
+                <input class="form-control" name="phone">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Email</label>
+                <input class="form-control" name="email">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Gender</label>
+                <select class="form-select" name="gender">
+                  <option value="">Select</option>
+                  <option value="Male">Male</option>
+                  <option value="Female">Female</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Branch</label>
+                <input class="form-control" name="branch">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Position</label>
+                <input class="form-control" name="position">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Location</label>
+                <input class="form-control" name="location">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Start Date</label>
+                <input type="date" class="form-control" name="start_date">
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="d-flex justify-content-end mt-3">
+          <button type="submit" class="btn btn-primary">Create User</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      document.body.classList.add('page-ready');
+      const avatarInput = document.getElementById('avatarInput');
+      const avatarPreview = document.getElementById('avatarPreview');
+      const imageUrl = document.getElementById('imageUrl');
+      const imageId = document.getElementById('imageId');
+      const statusEl = document.getElementById('avatarStatus');
+      const defaultAvatar = "{{ DEFAULT_PROFILE_IMAGE_URL }}";
+
+      avatarInput.addEventListener('change', () => {
+        const file = avatarInput.files && avatarInput.files[0];
+        if (!file) return;
+        statusEl.textContent = 'Uploading...';
+        const form = new FormData();
+        form.append('image', file);
+        fetch('/products/upload_image', { method: 'POST', body: form })
+          .then(res => res.json())
+          .then(data => {
+            if (!data.success) {
+              statusEl.textContent = data.error || 'Upload failed';
+              return;
+            }
+            avatarPreview.src = data.image_url || defaultAvatar;
+            imageUrl.value = data.image_url || '';
+            imageId.value = data.image_id || '';
+            statusEl.textContent = 'Uploaded';
+          })
+          .catch(() => { statusEl.textContent = 'Upload failed'; });
+      });
+    });
+  </script>
+  {% include 'app_footer.html' %}
+</body>
+</html>

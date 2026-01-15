@@ -1,0 +1,867 @@
+{% extends "hr_pages/hr_shell.html" %}
+
+{% block hr_content %}
+
+<style>
+  /* ================================
+     View vs Edit toggle
+  =================================*/
+  .hr-profile-card.hr-view-mode .hr-field-edit { display:none !important; }
+  .hr-profile-card.hr-view-mode .hr-field-view { display:block !important; }
+
+  .hr-profile-card.hr-edit-mode .hr-field-edit { display:block !important; }
+  .hr-profile-card.hr-edit-mode .hr-field-view { display:none !important; }
+
+  .hr-field-view.form-control{
+    background:#f8fafc;
+    border-style:dashed;
+    border-color:#e2e8f0;
+  }
+
+  /* ================================
+     Premium Header
+  =================================*/
+  .hr-hero{
+    border:1px solid rgba(2,6,23,.08);
+    background: linear-gradient(135deg, rgba(59,130,246,.10), rgba(249,115,22,.08), rgba(34,197,94,.08));
+    border-radius: 18px;
+    padding: 16px;
+    box-shadow: 0 10px 30px rgba(2,6,23,.06);
+  }
+  .hr-hero .meta-pill{
+    border:1px solid rgba(2,6,23,.10);
+    background: rgba(255,255,255,.65);
+    backdrop-filter: blur(10px);
+    border-radius: 999px;
+    padding: 6px 10px;
+    font-size: .82rem;
+    color:#0f172a;
+    display:inline-flex;
+    gap:.45rem;
+    align-items:center;
+  }
+  .hr-avatar{
+    width:78px;height:78px;
+    border-radius: 999px;
+    border: 2px solid rgba(255,255,255,.9);
+    box-shadow: 0 8px 20px rgba(2,6,23,.12);
+    overflow:hidden;
+    cursor:pointer;
+    position:relative;
+  }
+  .hr-avatar img{ width:100%;height:100%;object-fit:cover; display:block; }
+  .hr-avatar .fallback{
+    width:100%;height:100%;
+    display:flex;align-items:center;justify-content:center;
+    font-weight:800;font-size:1.6rem;
+    background: rgba(255,255,255,.70);
+    color:#1d4ed8;
+  }
+  .hr-avatar:hover::after{
+    content:"Change";
+    position:absolute;
+    inset:auto 8px 8px 8px;
+    background:rgba(15,23,42,.78);
+    color:#fff;
+    font-size:.72rem;
+    text-align:center;
+    border-radius: 999px;
+    padding:4px 8px;
+  }
+
+  /* avatar actions dropdown card */
+  .hr-avatar-actions{
+    position:absolute;
+    top: 90px;
+    left: 0;
+    width: 260px;
+    background: rgba(255,255,255,.92);
+    border: 1px solid rgba(2,6,23,.10);
+    border-radius: 14px;
+    box-shadow: 0 18px 45px rgba(2,6,23,.15);
+    padding: 10px;
+    z-index: 15;
+    display:none;
+  }
+  .hr-avatar-actions.show{ display:block; animation: fadeInUp .18s ease-out; }
+  @keyframes fadeInUp{
+    from{ opacity:0; transform: translateY(8px); }
+    to{ opacity:1; transform: translateY(0); }
+  }
+
+  /* hidden upload area slides down */
+  .hr-upload-wrap{
+    max-height:0;
+    overflow:hidden;
+    transition: max-height .25s ease;
+  }
+  .hr-upload-wrap.open{
+    max-height: 200px;
+  }
+
+  /* Tabs look premium */
+  .hr-tabs{
+    border-bottom: 1px solid rgba(2,6,23,.10);
+    gap: .35rem;
+  }
+  .hr-tabs .nav-link{
+    border: 1px solid transparent;
+    border-radius: 999px;
+    padding: .45rem .8rem;
+    color:#0f172a;
+    background: rgba(255,255,255,.65);
+    backdrop-filter: blur(10px);
+  }
+  .hr-tabs .nav-link:hover{ border-color: rgba(2,6,23,.12); }
+  .hr-tabs .nav-link.active{
+    background: #0b3a82;
+    color:#fff;
+    border-color: rgba(2,6,23,.10);
+    box-shadow: 0 10px 24px rgba(11,58,130,.20);
+  }
+
+  /* Print rules */
+  @media print {
+    .hr-actions-bar,
+    .hr-hero,
+    .hr-tabs,
+    .btn,
+    .navbar,
+    .sidebar,
+    .hr-topbar,
+    .hr-sidebar,
+    #hr-profile-image-form,
+    .hr-avatar-actions,
+    .hr-upload-wrap,
+    .nav-tabs{
+      display:none !important;
+    }
+
+    .hr-profile-card{
+      box-shadow:none !important;
+      border: 1px solid #e2e8f0 !important;
+    }
+
+    body{ background:#fff !important; }
+    #hr-overview-collapse{ display:block !important; opacity:1 !important; }
+  }
+</style>
+
+
+{# =========================
+   HERO HEADER (PRO)
+========================= #}
+<div class="hr-hero mb-3 hr-actions-bar">
+  <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
+
+    <div class="d-flex align-items-center gap-3 position-relative">
+      <!-- Avatar (click opens actions) -->
+      <div class="hr-avatar" id="hrAvatarBtn" title="Click for image options">
+        {% if employee.image_url %}
+          <img id="hrAvatarImg" src="{{ employee.image_url }}" alt="{{ employee.name }}">
+        {% else %}
+          <div class="fallback" id="hrAvatarFallback">{{ employee.name[:2]|upper }}</div>
+        {% endif %}
+      </div>
+
+      <!-- Avatar actions card -->
+      <div class="hr-avatar-actions" id="hrAvatarActions" aria-hidden="true">
+        <div class="d-flex align-items-center justify-content-between mb-2">
+          <div class="fw-semibold">Profile Photo</div>
+          <button class="btn btn-sm btn-light border" type="button" id="hrCloseAvatarActions">
+            <i class="bi bi-x-lg"></i>
+          </button>
+        </div>
+
+        <div class="d-grid gap-2">
+          <button class="btn btn-sm btn-outline-secondary" type="button" id="hrPreviewImageBtn">
+            <i class="bi bi-eye me-1"></i> Preview
+          </button>
+
+          <button class="btn btn-sm btn-primary" type="button" id="hrToggleUploadBtn">
+            <i class="bi bi-image me-1"></i> Change image
+          </button>
+        </div>
+
+        <div class="hr-upload-wrap mt-2" id="hrUploadWrap">
+          <form id="hr-profile-image-form" enctype="multipart/form-data">
+            <div class="input-group input-group-sm">
+              <input type="file" name="file" accept="image/*" class="form-control" id="hrImageInput">
+              <button type="submit" class="btn btn-outline-primary">
+                <span class="spinner-border spinner-border-sm me-1 d-none" id="hr-profile-image-spinner" role="status"></span>
+                Upload
+              </button>
+            </div>
+            <div class="small text-muted mt-1">PNG / JPG / JPEG / GIF only</div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Name + meta -->
+      <div>
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+          <h1 class="h5 mb-0 fw-bold">{{ employee.name }}</h1>
+
+          <span class="meta-pill">
+            <i class="bi bi-person-badge"></i>
+            {{ employee.role|replace('_', ' ')|title if employee.role else "Role not set" }}
+          </span>
+
+          {% if employee.employee_id %}
+            <span class="meta-pill">
+              <i class="bi bi-fingerprint"></i>
+              ID: {{ employee.employee_id }}
+            </span>
+          {% endif %}
+
+          {% set status = employee.employment_status %}
+          {% if status == "Probation" %}
+            <span class="meta-pill"><i class="bi bi-hourglass-split"></i> Probation</span>
+          {% elif status == "Exited" %}
+            <span class="meta-pill"><i class="bi bi-box-arrow-right"></i> Exited</span>
+          {% elif status == "Rejected" %}
+            <span class="meta-pill"><i class="bi bi-x-octagon"></i> Rejected</span>
+          {% else %}
+            <span class="meta-pill"><i class="bi bi-check2-circle"></i> Active</span>
+          {% endif %}
+        </div>
+
+        <div class="small text-muted mt-1">
+          <i class="bi bi-geo-alt me-1"></i>
+          {{ employee.branch or "No Branch" }} -  {{ employee.department or "No Department" }}
+          {% if age %} -  Age: {{ age }}{% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick actions -->
+    <div class="d-flex align-items-center gap-2 flex-wrap">
+      <a href="{{ url_for('hr.employees') }}" class="btn btn-sm btn-outline-secondary">
+        <i class="bi bi-arrow-left me-1"></i> Directory
+      </a>
+      <button type="button" class="btn btn-sm btn-outline-dark" data-bs-toggle="collapse" data-bs-target="#hr-overview-collapse">
+        <i class="bi bi-person-lines-fill me-1"></i> Overview
+      </button>
+      <button type="button" class="btn btn-sm btn-outline-secondary" id="hr-print-btn">
+        <i class="bi bi-printer me-1"></i> Print
+      </button>
+      <button type="button" class="btn btn-sm btn-primary" id="hr-edit-btn">
+        <i class="bi bi-pencil-square me-1"></i> Edit
+      </button>
+      <button type="button" class="btn btn-sm btn-outline-secondary d-none" id="hr-cancel-edit-btn">
+        <i class="bi bi-x-circle me-1"></i> Cancel
+      </button>
+    </div>
+
+  </div>
+</div>
+
+
+{% if employee_error %}
+  <div class="alert alert-danger">{{ employee_error|safe }}</div>
+{% else %}
+
+{# ==========================================
+   OVERVIEW (collapsed by default)
+========================================== #}
+<div id="hr-overview-collapse" class="collapse">
+  <div class="card border-0 shadow-sm mb-4 hr-profile-card hr-view-mode" id="hr-profile-card">
+    <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+      <div>
+        <h2 class="h6 mb-0">Overview &amp; Basic Details</h2>
+        <p class="small text-muted mb-0">
+          Core information captured during registration. In view mode this layout is ready to print as a PDF.
+        </p>
+      </div>
+      <div class="d-flex align-items-center gap-2">
+        <button type="button" class="btn btn-sm btn-outline-secondary" id="hr-print-btn-2">
+          <i class="bi bi-printer me-1"></i> Print Profile
+        </button>
+      </div>
+    </div>
+
+    {# ===== YOUR ORIGINAL FORM (kept intact) ===== #}
+    <form method="post" action="{{ url_for('hr.update_employee_overview', employee_id=employee._id) }}">
+      <div class="card-body">
+        <div class="row g-3">
+
+          <!-- Identity -->
+          <div class="col-12 col-md-4">
+            <label class="form-label small mb-1">Full Name</label>
+            <div class="form-control form-control-sm hr-field-view">{{ employee.name or "--" }}</div>
+            <input type="text" name="name" value="{{ employee.name }}" class="form-control form-control-sm hr-field-edit" required>
+          </div>
+
+          <div class="col-12 col-md-4">
+            <label class="form-label small mb-1">Username</label>
+            <div class="form-control form-control-sm hr-field-view">{{ employee.username or "--" }}</div>
+            <input type="text" name="username" value="{{ employee.username }}" class="form-control form-control-sm hr-field-edit">
+          </div>
+
+          <div class="col-12 col-md-4">
+            <label class="form-label small mb-1">Employee ID</label>
+            <div class="form-control form-control-sm hr-field-view">{{ employee.employee_id or "--" }}</div>
+            <input type="text" name="employee_id" value="{{ employee.employee_id }}" class="form-control form-control-sm hr-field-edit">
+          </div>
+
+          <!-- Contact -->
+          <div class="col-12 col-md-4">
+            <label class="form-label small mb-1">Phone</label>
+            <div class="form-control form-control-sm hr-field-view">{{ employee.phone or "--" }}</div>
+            <input type="text" name="phone" value="{{ employee.phone }}" class="form-control form-control-sm hr-field-edit">
+          </div>
+
+          <div class="col-12 col-md-4">
+            <label class="form-label small mb-1">Email</label>
+            <div class="form-control form-control-sm hr-field-view">{{ employee.email or "--" }}</div>
+            <input type="email" name="email" value="{{ employee.email }}" class="form-control form-control-sm hr-field-edit">
+          </div>
+
+          <div class="col-6 col-md-2">
+            <label class="form-label small mb-1">Gender</label>
+            <div class="form-control form-control-sm hr-field-view">{{ employee.gender or "--" }}</div>
+            <select name="gender" class="form-select form-select-sm hr-field-edit">
+              <option value="">Not set</option>
+              <option value="Male"   {% if employee.gender == "Male" %}selected{% endif %}>Male</option>
+              <option value="Female" {% if employee.gender == "Female" %}selected{% endif %}>Female</option>
+              <option value="Other"  {% if employee.gender == "Other" %}selected{% endif %}>Other</option>
+            </select>
+          </div>
+
+          <div class="col-6 col-md-2">
+            <label class="form-label small mb-1">Date of Birth</label>
+            <div class="form-control form-control-sm hr-field-view">
+              {% if dob is not none and dob.__class__.__name__ == 'datetime' %}
+                {{ dob.strftime('%Y-%m-%d') }}
+              {% else %} -- {% endif %}
+            </div>
+            <input type="date" name="dob"
+                   value="{% if dob is not none and dob.__class__.__name__ == 'datetime' %}{{ dob.strftime('%Y-%m-%d') }}{% endif %}"
+                   class="form-control form-control-sm hr-field-edit">
+          </div>
+
+          <!-- Location -->
+          <div class="col-12 col-md-4">
+            <label class="form-label small mb-1">Current Location / Town</label>
+            <div class="form-control form-control-sm hr-field-view">{{ employee.location or "--" }}</div>
+            <input type="text" name="location" value="{{ employee.location }}" class="form-control form-control-sm hr-field-edit">
+          </div>
+
+          <div class="col-12 col-md-4">
+            <label class="form-label small mb-1">GPS Address</label>
+            <div class="form-control form-control-sm hr-field-view">{{ employee.gps_address or "--" }}</div>
+            <input type="text" name="gps_address" value="{{ employee.gps_address }}" class="form-control form-control-sm hr-field-edit">
+          </div>
+
+          <div class="col-12 col-md-4">
+            <label class="form-label small mb-1">Ghana Card / ID</label>
+            <div class="form-control form-control-sm hr-field-view">{{ employee.ghana_card or "--" }}</div>
+            <input type="text" name="ghana_card" value="{{ employee.ghana_card }}" class="form-control form-control-sm hr-field-edit">
+          </div>
+
+          <!-- Org / Employment -->
+          <div class="col-12 col-md-4">
+            <label class="form-label small mb-1">Branch</label>
+            <div class="form-control form-control-sm hr-field-view">{{ employee.branch or "--" }}</div>
+            <input type="text" name="branch" value="{{ employee.branch }}" class="form-control form-control-sm hr-field-edit">
+          </div>
+
+          <div class="col-12 col-md-4">
+            <label class="form-label small mb-1">Department</label>
+            <div class="form-control form-control-sm hr-field-view">{{ employee.department or "--" }}</div>
+            <input type="text" name="department" value="{{ employee.department }}" class="form-control form-control-sm hr-field-edit">
+          </div>
+
+          <div class="col-12 col-md-4">
+            <label class="form-label small mb-1">Role</label>
+            <div class="form-control form-control-sm hr-field-view">{{ employee.role or "--" }}</div>
+            <input type="text" name="role" value="{{ employee.role }}" class="form-control form-control-sm hr-field-edit">
+          </div>
+
+          <div class="col-6 col-md-3">
+            <label class="form-label small mb-1">Employment Status</label>
+            <div class="form-control form-control-sm hr-field-view">{{ employee.employment_status or "--" }}</div>
+            <select name="employment_status" class="form-select form-select-sm hr-field-edit">
+              {% set es = employee.employment_status %}
+              <option value="">Not set</option>
+              <option value="Active"     {% if es == "Active" %}selected{% endif %}>Active</option>
+              <option value="Probation"  {% if es == "Probation" %}selected{% endif %}>Probation</option>
+              <option value="Exited"     {% if es == "Exited" %}selected{% endif %}>Exited</option>
+              <option value="Rejected"   {% if es == "Rejected" %}selected{% endif %}>Rejected</option>
+            </select>
+          </div>
+
+          <div class="col-6 col-md-3">
+            <label class="form-label small mb-1">Start Date</label>
+            <div class="form-control form-control-sm hr-field-view">{{ start_date or "--" }}</div>
+            <input type="date" name="start_date" value="{{ start_date }}" class="form-control form-control-sm hr-field-edit">
+          </div>
+
+          <div class="col-6 col-md-3">
+            <label class="form-label small mb-1">Exit Date</label>
+            <div class="form-control form-control-sm hr-field-view">{{ exit_date or "--" }}</div>
+            <input type="date" name="exit_date" value="{{ exit_date }}" class="form-control form-control-sm hr-field-edit">
+          </div>
+
+          <div class="col-6 col-md-3">
+            <label class="form-label small mb-1">Other Income / Side Work</label>
+            <div class="form-control form-control-sm hr-field-view">{{ employee.other_income or "--" }}</div>
+            <input type="text" name="other_income" value="{{ employee.other_income }}" class="form-control form-control-sm hr-field-edit">
+          </div>
+
+          <!-- Recruitment source -->
+          <div class="col-12 mt-2">
+            <h6 class="small text-uppercase text-muted mb-2">Recruitment Source</h6>
+          </div>
+
+          <div class="col-12 col-md-3">
+            <label class="form-label small mb-1">Source Type</label>
+            <div class="form-control form-control-sm hr-field-view">
+              {{ recruitment_source.type if recruitment_source.type is defined and recruitment_source.type else "--" }}
+            </div>
+            <input type="text" name="source_type"
+                   value="{{ recruitment_source.type if recruitment_source.type is defined else '' }}"
+                   class="form-control form-control-sm hr-field-edit"
+                   placeholder="Referral, Walk-in, Online...">
+          </div>
+
+          <div class="col-12 col-md-3">
+            <label class="form-label small mb-1">Referrer Name</label>
+            <div class="form-control form-control-sm hr-field-view">
+              {{ recruitment_source.referrer_name if recruitment_source.referrer_name is defined and recruitment_source.referrer_name else "--" }}
+            </div>
+            <input type="text" name="referrer_name"
+                   value="{{ recruitment_source.referrer_name if recruitment_source.referrer_name is defined else '' }}"
+                   class="form-control form-control-sm hr-field-edit">
+          </div>
+
+          <div class="col-12 col-md-3">
+            <label class="form-label small mb-1">Referrer Phone</label>
+            <div class="form-control form-control-sm hr-field-view">
+              {{ recruitment_source.referrer_phone if recruitment_source.referrer_phone is defined and recruitment_source.referrer_phone else "--" }}
+            </div>
+            <input type="text" name="referrer_phone"
+                   value="{{ recruitment_source.referrer_phone if recruitment_source.referrer_phone is defined else '' }}"
+                   class="form-control form-control-sm hr-field-edit">
+          </div>
+
+          <!-- Guarantor -->
+          <div class="col-12 mt-3">
+            <h6 class="small text-uppercase text-muted mb-2">Guarantor Details</h6>
+          </div>
+
+          <div class="col-12 col-md-3">
+            <label class="form-label small mb-1">Guarantor Name</label>
+            <div class="form-control form-control-sm hr-field-view">
+              {{ guarantor.name if guarantor.name is defined and guarantor.name else "--" }}
+            </div>
+            <input type="text" name="guarantor_name"
+                   value="{{ guarantor.name if guarantor.name is defined else '' }}"
+                   class="form-control form-control-sm hr-field-edit">
+          </div>
+
+          <div class="col-12 col-md-3">
+            <label class="form-label small mb-1">Guarantor Phone</label>
+            <div class="form-control form-control-sm hr-field-view">
+              {{ guarantor.phone if guarantor.phone is defined and guarantor.phone else "--" }}
+            </div>
+            <input type="text" name="guarantor_phone"
+                   value="{{ guarantor.phone if guarantor.phone is defined else '' }}"
+                   class="form-control form-control-sm hr-field-edit">
+          </div>
+
+          <div class="col-12 col-md-3">
+            <label class="form-label small mb-1">Relationship</label>
+            <div class="form-control form-control-sm hr-field-view">
+              {{ guarantor.relationship if guarantor.relationship is defined and guarantor.relationship else "--" }}
+            </div>
+            <input type="text" name="guarantor_relationship"
+                   value="{{ guarantor.relationship if guarantor.relationship is defined else '' }}"
+                   class="form-control form-control-sm hr-field-edit">
+          </div>
+
+          <div class="col-12 col-md-3">
+            <label class="form-label small mb-1">Guarantor Address</label>
+            <div class="form-control form-control-sm hr-field-view">
+              {{ guarantor.address if guarantor.address is defined and guarantor.address else "--" }}
+            </div>
+            <input type="text" name="guarantor_address"
+                   value="{{ guarantor.address if guarantor.address is defined else '' }}"
+                   class="form-control form-control-sm hr-field-edit">
+          </div>
+
+          <!-- Custom fields -->
+          <div class="col-12 mt-3">
+            <h6 class="small text-uppercase text-muted mb-2 d-flex justify-content-between align-items-center">
+              <span>Custom Fields</span>
+              <button type="button" class="btn btn-xs btn-outline-secondary hr-field-edit" id="hr-add-custom-field-btn">
+                <i class="bi bi-plus-circle me-1"></i>Add custom field
+              </button>
+            </h6>
+
+            <div class="hr-field-view">
+              {% if custom_fields %}
+                <div class="table-responsive">
+                  <table class="table table-sm table-borderless mb-0">
+                    <tbody>
+                      {% for cf in custom_fields %}
+                        <tr>
+                          <th class="text-muted small" style="width:35%;">{{ cf.label }}</th>
+                          <td class="small">{{ cf.value }}</td>
+                        </tr>
+                      {% endfor %}
+                    </tbody>
+                  </table>
+                </div>
+              {% else %}
+                <div class="text-muted small fst-italic">No custom fields yet.</div>
+              {% endif %}
+            </div>
+
+            <div id="hr-custom-fields-wrapper" class="row g-2 hr-field-edit">
+              {% if custom_fields %}
+                {% for cf in custom_fields %}
+                  <div class="col-12 col-md-6 hr-custom-field-row">
+                    <div class="input-group input-group-sm">
+                      <input type="text" name="custom_field_label[]" value="{{ cf.label }}" class="form-control" placeholder="Label (e.g. NIA Number)">
+                      <input type="text" name="custom_field_value[]" value="{{ cf.value }}" class="form-control" placeholder="Value">
+                      <button type="button" class="btn btn-outline-danger hr-remove-custom-field"><i class="bi bi-x"></i></button>
+                    </div>
+                  </div>
+                {% endfor %}
+              {% endif %}
+            </div>
+
+            <small class="text-muted extra-small">
+              Use custom fields for any special notes: languages, special skills, zones handled, etc.
+            </small>
+          </div>
+
+        </div>
+      </div>
+
+      <div class="card-footer d-flex justify-content-between align-items-center">
+        <span class="text-muted small">
+          <i class="bi bi-shield-lock me-1"></i> Flux360 HR -- Employee record
+        </span>
+
+        <div class="d-flex gap-2">
+          <button type="button" class="btn btn-sm btn-outline-secondary d-none" id="hr-cancel-edit-btn-footer">
+            Cancel
+          </button>
+          <button type="submit" class="btn btn-sm btn-primary" id="hr-save-btn" disabled>
+            <i class="bi bi-save me-1"></i> Save changes
+          </button>
+        </div>
+      </div>
+    </form>
+
+  </div>
+</div>
+
+
+{# =========================
+   TABS (WITH RATINGS ADDED)
+========================= #}
+<ul class="nav hr-tabs nav-pills small mb-3" id="hr-profile-tabs" role="tablist">
+  <li class="nav-item" role="presentation">
+    <button class="nav-link active" id="tab-recruitment" data-bs-toggle="tab" data-bs-target="#pane-recruitment" type="button" role="tab">
+      <i class="bi bi-list-check me-1"></i> Recruitment
+    </button>
+  </li>
+
+  <li class="nav-item" role="presentation">
+    <button class="nav-link" id="tab-ratings" data-bs-toggle="tab" data-bs-target="#pane-ratings" type="button" role="tab">
+      <i class="bi bi-stars me-1"></i> Ratings
+    </button>
+  </li>
+
+  <li class="nav-item" role="presentation">
+    <button class="nav-link" id="tab-wages" data-bs-toggle="tab" data-bs-target="#pane-wages" type="button" role="tab">
+      <i class="bi bi-cash-stack me-1"></i> Wages &amp; Tips
+    </button>
+  </li>
+
+  <li class="nav-item" role="presentation">
+    <button class="nav-link" id="tab-attendance" data-bs-toggle="tab" data-bs-target="#pane-attendance" type="button" role="tab">
+      <i class="bi bi-calendar2-check me-1"></i> Attendance
+    </button>
+  </li>
+
+  <li class="nav-item" role="presentation">
+    <button class="nav-link" id="tab-assets" data-bs-toggle="tab" data-bs-target="#pane-assets" type="button" role="tab">
+      <i class="bi bi-box-seam me-1"></i> Assets &amp; Debts
+    </button>
+  </li>
+
+  <li class="nav-item" role="presentation">
+    <button class="nav-link" id="tab-files" data-bs-toggle="tab" data-bs-target="#pane-hr-files" type="button" role="tab">
+      <i class="bi bi-folder2-open me-1"></i> HR Files
+    </button>
+  </li>
+
+  <li class="nav-item" role="presentation">
+    <button class="nav-link" id="tab-performance" data-bs-toggle="tab" data-bs-target="#pane-performance" type="button" role="tab">
+      <i class="bi bi-graph-up-arrow me-1"></i> Performance
+    </button>
+  </li>
+</ul>
+
+<div class="tab-content">
+  <div class="tab-pane fade show active" id="pane-recruitment" role="tabpanel">
+    {% include "hr_pages/partials/employee_recruitment_tab.html" %}
+  </div>
+
+  {# ✅ NEW RATINGS TAB #}
+  <div class="tab-pane fade" id="pane-ratings" role="tabpanel">
+    {# Use the ratings partial you created earlier #}
+    {% include "hr_pages/partials/employee_rating.html" %}
+  </div>
+
+  <div class="tab-pane fade" id="pane-wages" role="tabpanel">
+    {% include "hr_pages/partials/employee_wages_tab.html" %}
+  </div>
+
+  <div class="tab-pane fade" id="pane-attendance" role="tabpanel">
+    {% include "hr_pages/partials/employee_attendance_tab.html" %}
+  </div>
+
+  <div class="tab-pane fade" id="pane-assets" role="tabpanel">
+    {% include "hr_pages/partials/employee_assets_debts_tab.html" %}
+  </div>
+
+  <div class="tab-pane fade" id="pane-hr-files" role="tabpanel">
+    {% include "hr_pages/partials/employee_hr_files_tab.html" %}
+  </div>
+
+  <div class="tab-pane fade" id="pane-performance" role="tabpanel">
+    {% include "hr_pages/partials/employee_performance_cases_tab.html" %}
+  </div>
+</div>
+
+{% endif %}
+
+
+<!-- =========================
+     IMAGE PREVIEW MODAL
+========================== -->
+<div class="modal fade" id="hrImagePreviewModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-md">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Profile Image Preview</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body text-center">
+        {% if employee.image_url %}
+          <img src="{{ employee.image_url }}" alt="{{ employee.name }}" class="img-fluid rounded-4 border">
+        {% else %}
+          <div class="text-muted">No image uploaded yet.</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<script>
+(function () {
+
+  // =========================================
+  // AVATAR ACTIONS (Preview / Change Image)
+  // =========================================
+  const avatarBtn = document.getElementById("hrAvatarBtn");
+  const actions   = document.getElementById("hrAvatarActions");
+  const closeActionsBtn = document.getElementById("hrCloseAvatarActions");
+  const toggleUploadBtn = document.getElementById("hrToggleUploadBtn");
+  const uploadWrap = document.getElementById("hrUploadWrap");
+  const previewBtn = document.getElementById("hrPreviewImageBtn");
+
+  function openActions(){
+    if(!actions) return;
+    actions.classList.add("show");
+    actions.setAttribute("aria-hidden", "false");
+  }
+  function closeActions(){
+    if(!actions) return;
+    actions.classList.remove("show");
+    actions.setAttribute("aria-hidden", "true");
+    if(uploadWrap) uploadWrap.classList.remove("open");
+  }
+
+  if(avatarBtn){
+    avatarBtn.addEventListener("click", function(e){
+      e.stopPropagation();
+      if(actions && actions.classList.contains("show")) closeActions();
+      else openActions();
+    });
+  }
+
+  if(closeActionsBtn){
+    closeActionsBtn.addEventListener("click", function(e){
+      e.preventDefault();
+      closeActions();
+    });
+  }
+
+  if(toggleUploadBtn){
+    toggleUploadBtn.addEventListener("click", function(){
+      if(uploadWrap) uploadWrap.classList.toggle("open");
+    });
+  }
+
+  if(previewBtn){
+    previewBtn.addEventListener("click", function(){
+      const modal = new bootstrap.Modal(document.getElementById("hrImagePreviewModal"));
+      modal.show();
+    });
+  }
+
+  // click outside closes
+  document.addEventListener("click", function(e){
+    if(!actions) return;
+    if(actions.classList.contains("show") && !actions.contains(e.target) && e.target !== avatarBtn){
+      closeActions();
+    }
+  });
+
+  // =========================================
+  // PROFILE IMAGE UPLOAD (AJAX)
+  // =========================================
+  const imageForm    = document.getElementById('hr-profile-image-form');
+  const imageSpinner = document.getElementById('hr-profile-image-spinner');
+
+  if (imageForm) {
+    imageForm.addEventListener('submit', function (e) {
+      e.preventDefault();
+
+      const fileInput = document.getElementById("hrImageInput");
+      if (!fileInput || !fileInput.files.length) {
+        window.showToast && window.showToast('warning', 'Choose an image first.');
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('file', fileInput.files[0]);
+
+      if (imageSpinner) imageSpinner.classList.remove('d-none');
+
+      fetch("{{ url_for('hr.upload_profile_image', employee_id=employee._id) }}", {
+        method: 'POST',
+        body: formData
+      }).then(resp => resp.json())
+        .then(data => {
+          if (!data.ok) throw new Error(data.message || 'Upload failed');
+
+          // Update avatar image live
+          const avatarImg = document.getElementById("hrAvatarImg");
+          const fallback  = document.getElementById("hrAvatarFallback");
+
+          if (fallback) fallback.remove();
+
+          if (avatarImg) {
+            avatarImg.src = data.image_url;
+          } else {
+            // create new img if none existed
+            const img = document.createElement("img");
+            img.id = "hrAvatarImg";
+            img.alt = "{{ employee.name }}";
+            img.src = data.image_url;
+            avatarBtn.innerHTML = "";
+            avatarBtn.appendChild(img);
+          }
+
+          window.showToast && window.showToast('success', 'Profile image updated.');
+          closeActions();
+        })
+        .catch(err => {
+          console.error(err);
+          window.showToast && window.showToast('danger', err.message || 'Image upload failed.');
+        })
+        .finally(() => {
+          if (imageSpinner) imageSpinner.classList.add('d-none');
+        });
+    });
+  }
+
+  // =========================================
+  // CUSTOM FIELDS (Dynamic rows)
+  // =========================================
+  const customWrapper = document.getElementById('hr-custom-fields-wrapper');
+  const addCustomBtn  = document.getElementById('hr-add-custom-field-btn');
+
+  function createCustomFieldRow(label = '', value = '') {
+    const col = document.createElement('div');
+    col.className = 'col-12 col-md-6 hr-custom-field-row';
+    col.innerHTML = `
+      <div class="input-group input-group-sm">
+        <input type="text" name="custom_field_label[]" value="${label}" class="form-control" placeholder="Label (e.g. Zone)">
+        <input type="text" name="custom_field_value[]" value="${value}" class="form-control" placeholder="Value">
+        <button type="button" class="btn btn-outline-danger hr-remove-custom-field"><i class="bi bi-x"></i></button>
+      </div>
+    `;
+    return col;
+  }
+
+  if (addCustomBtn && customWrapper) {
+    addCustomBtn.addEventListener('click', function () {
+      customWrapper.appendChild(createCustomFieldRow());
+    });
+
+    customWrapper.addEventListener('click', function (e) {
+      const btn = e.target.closest('.hr-remove-custom-field');
+      if (!btn) return;
+      const row = btn.closest('.hr-custom-field-row');
+      if (row) row.remove();
+    });
+  }
+
+  // =========================================
+  // VIEW / EDIT TOGGLE + PRINT
+  // =========================================
+  const card          = document.getElementById('hr-profile-card');
+  const editBtn       = document.getElementById('hr-edit-btn');
+  const headerCancel  = document.getElementById('hr-cancel-edit-btn');
+  const footerCancel  = document.getElementById('hr-cancel-edit-btn-footer');
+  const saveBtn       = document.getElementById('hr-save-btn');
+  const printBtn      = document.getElementById('hr-print-btn');
+  const printBtn2     = document.getElementById('hr-print-btn-2');
+  const form          = card ? card.querySelector('form') : null;
+
+  function enterEditMode() {
+    if (!card) return;
+    card.classList.remove('hr-view-mode');
+    card.classList.add('hr-edit-mode');
+    if (saveBtn) saveBtn.disabled = false;
+    if (headerCancel) headerCancel.classList.remove('d-none');
+    if (footerCancel) footerCancel.classList.remove('d-none');
+    if (editBtn) editBtn.classList.add('d-none');
+
+    if (customWrapper && !customWrapper.querySelector('.hr-custom-field-row')) {
+      customWrapper.appendChild(createCustomFieldRow());
+    }
+  }
+
+  function exitEditMode(reset) {
+    if (!card) return;
+    card.classList.add('hr-view-mode');
+    card.classList.remove('hr-edit-mode');
+    if (saveBtn) saveBtn.disabled = true;
+    if (headerCancel) headerCancel.classList.add('d-none');
+    if (footerCancel) footerCancel.classList.add('d-none');
+    if (editBtn) editBtn.classList.remove('d-none');
+    if (reset && form) form.reset();
+  }
+
+  if (editBtn) editBtn.addEventListener('click', enterEditMode);
+  if (headerCancel) headerCancel.addEventListener('click', () => exitEditMode(true));
+  if (footerCancel) footerCancel.addEventListener('click', () => exitEditMode(true));
+
+  function doPrint(){ window.print(); }
+  if (printBtn)  printBtn.addEventListener('click', doPrint);
+  if (printBtn2) printBtn2.addEventListener('click', doPrint);
+
+})();
+</script>
+
+{% endblock %}

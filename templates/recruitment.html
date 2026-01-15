@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Users Overview</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" href="https://res.cloudinary.com/dljpgzbto/image/upload/v1743993646/company-logo_dksb23.jpg" type="image/png" />
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet"/>
+  <style>
+    :root{
+      --ink:#0f172a;
+      --muted:#64748b;
+      --panel:#ffffff;
+      --edge:#e2e8f0;
+      --accent:#2563eb;
+      --soft:#f1f5f9;
+    }
+    body{
+      font-family:"Segoe UI", system-ui, -apple-system, sans-serif;
+      background:#f5f6fb;
+      color:var(--ink);
+      min-height:100vh;
+    }
+    .page-shell{ padding:1.5rem 1.25rem 3rem; }
+    .page-header{
+      background:linear-gradient(120deg,#0f172a,#1e3a8a);
+      color:#fff;
+      border-radius:18px;
+      padding:1.2rem 1.4rem;
+      box-shadow:0 16px 30px rgba(15,23,42,.18);
+      margin-bottom:1.25rem;
+    }
+    .page-header h1{ font-size:1.35rem; margin:0; font-weight:700; }
+    .card-soft{
+      background:var(--panel);
+      border:1px solid var(--edge);
+      border-radius:16px;
+      padding:1rem 1.1rem;
+      box-shadow:0 10px 24px rgba(15,23,42,.08);
+    }
+    .stat-label{ font-size:.75rem; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); font-weight:700; }
+    .stat-value{ font-size:1.5rem; font-weight:800; margin-top:.2rem; }
+    .filter-bar{
+      display:flex;
+      flex-wrap:wrap;
+      gap:.75rem;
+      align-items:center;
+      justify-content:space-between;
+      margin-bottom:1.25rem;
+    }
+    .branch-grid{
+      display:grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap:1rem;
+      margin-bottom:1.5rem;
+    }
+    .branch-card{
+      border:1px solid var(--edge);
+      border-radius:14px;
+      padding:.9rem 1rem;
+      background:#fff;
+      text-decoration:none;
+      color:inherit;
+      box-shadow:0 10px 20px rgba(15,23,42,.06);
+      transition:transform .15s ease, box-shadow .15s ease;
+    }
+    .branch-card:hover{ transform:translateY(-2px); box-shadow:0 14px 24px rgba(15,23,42,.12); }
+    .agent-table td, .agent-table th{ vertical-align:middle; }
+    .avatar{
+      width:44px;
+      height:44px;
+      border-radius:50%;
+      object-fit:cover;
+      border:1px solid #e2e8f0;
+    }
+    .status-pill{
+      padding:.2rem .6rem;
+      border-radius:999px;
+      font-size:.75rem;
+      font-weight:600;
+    }
+    .status-active{ background:#dcfce7; color:#166534; }
+    .status-not-active{ background:#fee2e2; color:#b91c1c; }
+    .page-loader{
+      position:fixed;
+      inset:0;
+      background:rgba(255,255,255,.85);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      flex-direction:column;
+      z-index:2000;
+    }
+  </style>
+</head>
+<body>
+  {% include 'admin_sidebar.html' %}
+
+  <div class="page-shell">
+    <div class="page-header d-flex align-items-center justify-content-between">
+      <div>
+        <div class="small text-white-50">Admin</div>
+        <h1>Users Overview</h1>
+      </div>
+      <div class="badge bg-light text-dark">Managers + Agents</div>
+    </div>
+
+    <div class="row g-3 mb-4">
+      <div class="col-md-4">
+        <div class="card-soft">
+          <div class="stat-label">Total Managers</div>
+          <div class="stat-value">{{ managers|length }}</div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="card-soft">
+          <div class="stat-label">Total Agents</div>
+          <div class="stat-value">{{ total_agents }}</div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="card-soft">
+          <div class="stat-label">Active Agents</div>
+          <div class="stat-value text-success">{{ total_active }}</div>
+        </div>
+      </div>
+    </div>
+
+    <form method="get" action="{{ url_for('recruitment.recruitment') }}" class="card-soft filter-bar">
+      <div class="d-flex flex-wrap gap-2 align-items-center">
+        <select name="manager_id" class="form-select" style="min-width:220px;">
+          <option value="">All Branches</option>
+          {% for manager in managers %}
+            <option value="{{ manager._id }}" {% if selected_manager_id == manager._id|string %}selected{% endif %}>
+              {{ manager.username or manager.name }} ({{ manager.branch }})
+            </option>
+          {% endfor %}
+        </select>
+        <input type="text" name="search" class="form-control" style="min-width:240px;" placeholder="Search by name or phone" value="{{ search }}">
+      </div>
+      <div class="d-flex gap-2">
+        <button class="btn btn-primary" type="submit"><i class="bi bi-search"></i> Apply</button>
+        <a class="btn btn-outline-secondary" href="{{ url_for('recruitment.recruitment') }}">Clear</a>
+      </div>
+    </form>
+
+    <h5 class="mb-3">Branch Summary</h5>
+    <div class="branch-grid">
+      {% for b in branch_cards %}
+        <a class="branch-card" href="{{ url_for('recruitment.recruitment', manager_id=b.manager._id) }}">
+          <div class="fw-semibold">{{ b.manager.username or b.manager.name }}</div>
+          <div class="text-muted small">{{ b.manager.branch }}</div>
+          <div class="mt-2"><span class="badge bg-light text-dark">Agents: {{ b.agent_count }}</span></div>
+        </a>
+      {% endfor %}
+    </div>
+
+    <div class="card-soft">
+      <div class="d-flex align-items-center justify-content-between mb-3">
+        <div class="fw-semibold">Agents</div>
+        <div class="text-muted small">Showing {{ agents|length }} of {{ total_agents_in_view }}</div>
+      </div>
+      <div class="table-responsive">
+        <table class="table agent-table mb-0">
+          <thead class="text-muted small">
+            <tr>
+              <th>Agent</th>
+              <th>Phone</th>
+              <th>Email</th>
+              <th>Branch</th>
+              <th>Status</th>
+              <th class="text-end">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% set default_avatar = "https://imagedelivery.net/h9fmMoa1o2c2P55TcWJGOg/f1b8f81c-1aac-4580-6b1c-869ffafcb400/public" %}
+            {% if agents %}
+              {% for agent in agents %}
+                {% set is_active = agent.status in ['Active','active'] %}
+                <tr>
+                  <td>
+                    <div class="d-flex align-items-center gap-2">
+                      <img src="{{ agent.image_url or default_avatar }}"
+                           class="avatar"
+                           alt="Agent"
+                           onerror="this.onerror=null;this.src='{{ default_avatar }}';">
+                      <div>
+                        <div class="fw-semibold">{{ agent.name }}</div>
+                        <div class="text-muted small">{{ agent.username or '--' }}</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td>{{ agent.phone }}</td>
+                  <td>{{ agent.email }}</td>
+                  <td>{{ agent.branch }}</td>
+                  <td>
+                    <span class="status-pill {{ 'status-active' if is_active else 'status-not-active' }}">
+                      {{ agent.status or 'Not Active' }}
+                    </span>
+                  </td>
+                  <td class="text-end">
+                    <button type="button"
+                            class="btn btn-outline-primary btn-sm preview-btn"
+                            data-bs-toggle="modal"
+                            data-bs-target="#agentPreviewModal"
+                            data-name="{{ agent.name }}"
+                            data-phone="{{ agent.phone }}"
+                            data-email="{{ agent.email }}"
+                            data-branch="{{ agent.branch }}"
+                            data-status="{{ agent.status or 'Not Active' }}"
+                            data-image="{{ agent.image_url or default_avatar }}">
+                      Preview
+                    </button>
+                  </td>
+                </tr>
+              {% endfor %}
+            {% else %}
+              <tr>
+                <td colspan="6" class="text-center text-muted py-4">No agents found.</td>
+              </tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    {% if total_pages > 1 %}
+      <nav class="mt-4">
+        <ul class="pagination justify-content-center">
+          <li class="page-item {% if not has_prev %}disabled{% endif %}">
+            <a class="page-link" href="{{ url_for('recruitment.recruitment', page=page-1, manager_id=selected_manager_id, search=search) }}">Prev</a>
+          </li>
+          {% set start_page = 1 if page - 2 < 1 else page - 2 %}
+          {% set end_page = total_pages if page + 2 > total_pages else page + 2 %}
+          {% for p in range(start_page, end_page + 1) %}
+            <li class="page-item {% if p == page %}active{% endif %}">
+              <a class="page-link" href="{{ url_for('recruitment.recruitment', page=p, manager_id=selected_manager_id, search=search) }}">{{ p }}</a>
+            </li>
+          {% endfor %}
+          <li class="page-item {% if not has_next %}disabled{% endif %}">
+            <a class="page-link" href="{{ url_for('recruitment.recruitment', page=page+1, manager_id=selected_manager_id, search=search) }}">Next</a>
+          </li>
+        </ul>
+      </nav>
+    {% endif %}
+  </div>
+
+  <div id="pageLoader" class="page-loader">
+    <div class="spinner-border text-primary" role="status" aria-hidden="true"></div>
+    <div class="mt-2 text-muted">Loading users…</div>
+  </div>
+
+  <div class="modal fade" id="agentPreviewModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Agent Preview</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="d-flex align-items-center gap-3">
+            <img id="previewImage" class="avatar" alt="Agent">
+            <div>
+              <div class="fw-semibold" id="previewName">--</div>
+              <div class="text-muted small" id="previewPhone">--</div>
+              <div class="text-muted small" id="previewEmail">--</div>
+            </div>
+          </div>
+          <div class="mt-3">
+            <div class="text-muted small">Branch</div>
+            <div id="previewBranch">--</div>
+          </div>
+          <div class="mt-2">
+            <div class="text-muted small">Status</div>
+            <div id="previewStatus">--</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    const defaultAvatar = "https://imagedelivery.net/h9fmMoa1o2c2P55TcWJGOg/f1b8f81c-1aac-4580-6b1c-869ffafcb400/public";
+    document.querySelectorAll('.preview-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const img = btn.dataset.image || defaultAvatar;
+        document.getElementById('previewImage').src = img;
+        document.getElementById('previewImage').onerror = function(){
+          this.onerror = null;
+          this.src = defaultAvatar;
+        };
+        document.getElementById('previewName').textContent = btn.dataset.name || '--';
+        document.getElementById('previewPhone').textContent = btn.dataset.phone || '--';
+        document.getElementById('previewEmail').textContent = btn.dataset.email || '--';
+        document.getElementById('previewBranch').textContent = btn.dataset.branch || '--';
+        document.getElementById('previewStatus').textContent = btn.dataset.status || '--';
+      });
+    });
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const loader = document.getElementById('pageLoader');
+      if (!loader) return;
+      setTimeout(() => loader.style.display = 'none', 250);
+    });
+  </script>
+
+  {% include 'app_footer.html' %}
+</body>
+</html>

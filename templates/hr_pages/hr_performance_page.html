@@ -1,0 +1,461 @@
+{# templates/hr_pages/hr_performance_page.html #}
+{% extends "hr_pages/hr_shell.html" %}
+{% block hr_content %}
+
+<style>
+  .kpi-card{
+    border:1px solid rgba(0,0,0,.06);
+    border-radius:16px;
+    background:#fff;
+    box-shadow:0 .45rem 1.2rem rgba(0,0,0,.06);
+  }
+  .soft{
+    border:1px solid rgba(0,0,0,.06);
+    border-radius:16px;
+    background:#fff;
+    box-shadow:0 .3rem 1rem rgba(0,0,0,.05);
+  }
+  .extra-small{ font-size:.74rem; }
+  .star{ color:#f0ad4e; }
+  .muted{ color:#6c757d; }
+</style>
+
+<div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
+  <div>
+    <h4 class="mb-1">Performance Analytics</h4>
+    <div class="text-muted small">
+      Global view of all performance records captured inside employee profiles (Performance tab).
+    </div>
+  </div>
+
+  <div class="d-flex gap-2">
+    <button class="btn btn-outline-secondary btn-sm" id="perfExportCsvBtn">
+      <i class="bi bi-filetype-csv me-1"></i>Export CSV
+    </button>
+    <button class="btn btn-outline-secondary btn-sm" onclick="window.print()">
+      <i class="bi bi-printer me-1"></i>Print
+    </button>
+    <button class="btn btn-primary btn-sm" id="perfRefreshBtn">
+      <i class="bi bi-arrow-clockwise me-1"></i>Refresh
+    </button>
+  </div>
+</div>
+
+<!-- KPI row -->
+<div class="row g-3 mb-3">
+  <div class="col-12 col-md-4">
+    <div class="kpi-card p-3">
+      <div class="small text-muted">Total Performance Records</div>
+      <div class="h3 mb-0" id="kpiRecords">--</div>
+      <div class="extra-small text-muted mt-1">Filtered result count</div>
+    </div>
+  </div>
+  <div class="col-12 col-md-4">
+    <div class="kpi-card p-3">
+      <div class="small text-muted">Average Rating</div>
+      <div class="h3 mb-0" id="kpiAvg">--</div>
+      <div class="extra-small text-muted mt-1">0-5 stars</div>
+    </div>
+  </div>
+  <div class="col-12 col-md-4">
+    <div class="kpi-card p-3">
+      <div class="small text-muted">Top Employee (Avg)</div>
+      <div class="h5 mb-0" id="kpiTop">--</div>
+      <div class="extra-small text-muted mt-1">
+        Avg: <span class="fw-semibold" id="kpiTopAvg">--</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Filters -->
+<div class="soft p-3 mb-3">
+  <div class="row g-2 align-items-end">
+    <div class="col-12 col-md-3">
+      <label class="form-label small mb-1">Branch</label>
+      <select class="form-select form-select-sm" id="fBranch">
+        <option value="">All branches</option>
+      </select>
+    </div>
+
+    <div class="col-12 col-md-3">
+      <label class="form-label small mb-1">Role</label>
+      <select class="form-select form-select-sm" id="fRole">
+        <option value="">All roles</option>
+      </select>
+    </div>
+
+    <div class="col-6 col-md-2">
+      <label class="form-label small mb-1">Rating Min</label>
+      <select class="form-select form-select-sm" id="fRMin">
+        {% for i in range(0,6) %}
+          <option value="{{ i }}">{{ i }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="col-6 col-md-2">
+      <label class="form-label small mb-1">Rating Max</label>
+      <select class="form-select form-select-sm" id="fRMax">
+        {% for i in range(0,6) %}
+          <option value="{{ i }}" {% if i==5 %}selected{% endif %}>{{ i }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="col-6 col-md-2">
+      <label class="form-label small mb-1">From</label>
+      <input type="date" class="form-control form-control-sm" id="fFrom">
+    </div>
+
+    <div class="col-6 col-md-2">
+      <label class="form-label small mb-1">To</label>
+      <input type="date" class="form-control form-control-sm" id="fTo">
+    </div>
+
+    <div class="col-12 col-md-4">
+      <label class="form-label small mb-1">Search</label>
+      <div class="input-group input-group-sm">
+        <span class="input-group-text"><i class="bi bi-search"></i></span>
+        <input type="text" class="form-control" id="fQ" placeholder="Employee, title, details, recorded by...">
+        <button class="btn btn-outline-secondary" id="fApply">
+          <i class="bi bi-funnel me-1"></i>Apply
+        </button>
+      </div>
+    </div>
+
+    <div class="col-12 col-md-2">
+      <button class="btn btn-light border btn-sm w-100" id="fReset">
+        <i class="bi bi-x-circle me-1"></i>Reset
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Charts + Leaderboard -->
+<div class="row g-3 mb-3">
+  <div class="col-12 col-lg-4">
+    <div class="soft p-3 h-100">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <div class="fw-semibold">Rating Distribution</div>
+        <div class="extra-small text-muted">count by stars</div>
+      </div>
+      <canvas id="chartDist" height="200"></canvas>
+    </div>
+  </div>
+
+  <div class="col-12 col-lg-4">
+    <div class="soft p-3 h-100">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <div class="fw-semibold">Avg Rating by Branch</div>
+        <div class="extra-small text-muted">top 12</div>
+      </div>
+      <canvas id="chartBranch" height="200"></canvas>
+    </div>
+  </div>
+
+  <div class="col-12 col-lg-4">
+    <div class="soft p-3 h-100">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <div class="fw-semibold">Monthly Avg Trend</div>
+        <div class="extra-small text-muted">last 12 months</div>
+      </div>
+      <canvas id="chartMonth" height="200"></canvas>
+    </div>
+  </div>
+
+  <div class="col-12">
+    <div class="soft p-3">
+      <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
+        <div>
+          <div class="fw-semibold">Top Performers</div>
+          <div class="small text-muted">Ranked by average rating (with record count).</div>
+        </div>
+      </div>
+
+      <div class="table-responsive">
+        <table class="table table-sm align-middle mb-0">
+          <thead class="table-light small">
+            <tr>
+              <th style="width:40%;">Employee</th>
+              <th style="width:15%;" class="text-end">Avg</th>
+              <th style="width:15%;" class="text-end">Records</th>
+              <th style="width:30%;" class="text-end">Action</th>
+            </tr>
+          </thead>
+          <tbody id="leaderBody" class="small">
+            <tr><td colspan="4" class="text-muted fst-italic">Loading...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Records table -->
+<div class="soft p-3">
+  <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
+    <div>
+      <div class="fw-semibold">All Performance Records</div>
+      <div class="small text-muted">Newest first (filtered).</div>
+    </div>
+    <div class="small text-muted" id="recHint">--</div>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table table-sm align-middle mb-0">
+      <thead class="table-light small">
+        <tr>
+          <th style="width:22%;">Employee</th>
+          <th style="width:12%;">Branch</th>
+          <th style="width:12%;">Date</th>
+          <th style="width:10%;" class="text-end">Rating</th>
+          <th style="width:22%;">Title</th>
+          <th>Details</th>
+        </tr>
+      </thead>
+      <tbody id="recordsBody" class="small"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+<script>
+(function(){
+  const refreshBtn = document.getElementById('perfRefreshBtn');
+  const exportBtn  = document.getElementById('perfExportCsvBtn');
+
+  // filters
+  const fBranch = document.getElementById('fBranch');
+  const fRole   = document.getElementById('fRole');
+  const fRMin   = document.getElementById('fRMin');
+  const fRMax   = document.getElementById('fRMax');
+  const fFrom   = document.getElementById('fFrom');
+  const fTo     = document.getElementById('fTo');
+  const fQ      = document.getElementById('fQ');
+  const fApply  = document.getElementById('fApply');
+  const fReset  = document.getElementById('fReset');
+
+  // KPIs
+  const kpiRecords = document.getElementById('kpiRecords');
+  const kpiAvg     = document.getElementById('kpiAvg');
+  const kpiTop     = document.getElementById('kpiTop');
+  const kpiTopAvg  = document.getElementById('kpiTopAvg');
+
+  // tables
+  const leaderBody = document.getElementById('leaderBody');
+  const recordsBody= document.getElementById('recordsBody');
+  const recHint    = document.getElementById('recHint');
+
+  // charts
+  let chartDist = null, chartBranch = null, chartMonth = null;
+  let cacheRecords = [];
+
+  function buildQuery(){
+    const params = new URLSearchParams();
+    if(fQ.value.trim()) params.set('q', fQ.value.trim());
+    if(fBranch.value) params.set('branch', fBranch.value);
+    if(fRole.value) params.set('role', fRole.value);
+    params.set('rating_min', fRMin.value || '0');
+    params.set('rating_max', fRMax.value || '5');
+    if(fFrom.value) params.set('from', fFrom.value);
+    if(fTo.value) params.set('to', fTo.value);
+    params.set('limit', '1000');
+    return params.toString();
+  }
+
+  function starsHTML(n){
+    n = parseInt(n || 0, 10);
+    let s = '';
+    for(let i=1;i<=5;i++){
+      s += (i<=n) ? '<i class="bi bi-star-fill star me-1"></i>' : '<i class="bi bi-star muted me-1"></i>';
+    }
+    return s;
+  }
+
+  function setKpis(k){
+    kpiRecords.textContent = k?.records ?? 0;
+    kpiAvg.textContent     = k?.avg_rating ?? 0;
+    kpiTop.textContent     = k?.top_employee ?? '--';
+    kpiTopAvg.textContent  = (k?.top_employee_avg ?? '--');
+  }
+
+  function renderLeaderboard(list){
+    leaderBody.innerHTML = '';
+    if(!list || !list.length){
+      leaderBody.innerHTML = `<tr><td colspan="4" class="text-muted fst-italic">No data.</td></tr>`;
+      return;
+    }
+    list.forEach((x, idx) => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>
+          <div class="fw-semibold">${idx+1}. ${x.name || '--'}</div>
+        </td>
+        <td class="text-end fw-semibold">${x.avg ?? 0}</td>
+        <td class="text-end">${x.count ?? 0}</td>
+        <td class="text-end">
+          <a class="btn btn-sm btn-outline-primary"
+             href="/hr/employee/${x.employee_id}/profile">
+            <i class="bi bi-person-lines-fill me-1"></i>Open Profile
+          </a>
+        </td>
+      `;
+      leaderBody.appendChild(tr);
+    });
+  }
+
+  function renderRecords(list){
+    cacheRecords = list || [];
+    recordsBody.innerHTML = '';
+
+    recHint.textContent = `${cacheRecords.length} record(s)`;
+
+    if(!cacheRecords.length){
+      recordsBody.innerHTML = `<tr><td colspan="6" class="text-muted fst-italic">No performance records found.</td></tr>`;
+      return;
+    }
+
+    cacheRecords.forEach(r => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>
+          <div class="fw-semibold">${r.employee_name || '--'}</div>
+          <div class="extra-small text-muted">${r.employee_code || ''} -  ${r.role || ''}</div>
+        </td>
+        <td>${r.branch || '--'}</td>
+        <td>${(r.created_at || '').slice(0,16)}</td>
+        <td class="text-end">
+          <div class="d-inline-block">${starsHTML(r.rating)}</div>
+          <div class="extra-small text-muted">${r.rating ?? 0}/5</div>
+        </td>
+        <td class="fw-semibold">${r.title || '--'}</td>
+        <td class="text-muted">${r.details || '--'}</td>
+      `;
+      recordsBody.appendChild(tr);
+    });
+  }
+
+  function renderFiltersMeta(charts){
+    // branches (from data)
+    const branches = charts?.branches || [];
+    fBranch.innerHTML = `<option value="">All branches</option>` + branches.map(b => `<option value="${b}">${b}</option>`).join('');
+
+    // roles from records
+    const roles = charts?.roles || [];
+    fRole.innerHTML = `<option value="">All roles</option>` + roles.map(r => `<option value="${r}">${r}</option>`).join('');
+  }
+
+  function chartifyDist(dist){
+    const ctx = document.getElementById('chartDist');
+    const labels = dist.map(x => x.label);
+    const data = dist.map(x => x.value);
+
+    if(chartDist) chartDist.destroy();
+    chartDist = new Chart(ctx, {
+      type: 'bar',
+      data: { labels, datasets: [{ label: 'Count', data }] },
+      options: { responsive:true, plugins:{ legend:{ display:false } } }
+    });
+  }
+
+  function chartifyBranch(list){
+    const ctx = document.getElementById('chartBranch');
+    const labels = list.map(x => x.label);
+    const data = list.map(x => x.value);
+
+    if(chartBranch) chartBranch.destroy();
+    chartBranch = new Chart(ctx, {
+      type: 'bar',
+      data: { labels, datasets: [{ label: 'Avg Rating', data }] },
+      options: {
+        responsive:true,
+        plugins:{ legend:{ display:false } },
+        scales:{ y:{ suggestedMin:0, suggestedMax:5 } }
+      }
+    });
+  }
+
+  function chartifyMonth(list){
+    const ctx = document.getElementById('chartMonth');
+    const labels = list.map(x => x.label);
+    const data = list.map(x => x.value);
+
+    if(chartMonth) chartMonth.destroy();
+    chartMonth = new Chart(ctx, {
+      type: 'line',
+      data: { labels, datasets: [{ label: 'Avg Rating', data, tension:.35 }] },
+      options: {
+        responsive:true,
+        plugins:{ legend:{ display:false } },
+        scales:{ y:{ suggestedMin:0, suggestedMax:5 } }
+      }
+    });
+  }
+
+  function load(){
+    const qs = buildQuery();
+    return fetch(`{{ url_for('hr.performance_list') }}?${qs}`)
+      .then(r => r.json())
+      .then(d => {
+        if(!d.ok) throw new Error(d.message || 'Failed to load performance');
+
+        setKpis(d.kpis || {});
+        renderFiltersMeta(d.charts || {});
+        renderLeaderboard(d.charts?.leaderboard || []);
+        renderRecords(d.records || []);
+
+        chartifyDist(d.charts?.rating_dist || []);
+        chartifyBranch(d.charts?.branch_avg || []);
+        chartifyMonth(d.charts?.monthly_avg || []);
+      })
+      .catch(err => {
+        console.error(err);
+        window.showToast && window.showToast('danger', err.message || 'Failed to load performance');
+      });
+  }
+
+  function resetFilters(){
+    fBranch.value = '';
+    fRole.value = '';
+    fRMin.value = '0';
+    fRMax.value = '5';
+    fFrom.value = '';
+    fTo.value = '';
+    fQ.value = '';
+  }
+
+  // apply/reset
+  fApply.addEventListener('click', (e) => { e.preventDefault(); load(); });
+  fReset.addEventListener('click', (e) => { e.preventDefault(); resetFilters(); load(); });
+  refreshBtn.addEventListener('click', () => load());
+
+  // Export CSV
+  exportBtn.addEventListener('click', () => {
+    if(!cacheRecords.length){
+      window.showToast && window.showToast('warning', 'Nothing to export.');
+      return;
+    }
+    const cols = ["employee_name","employee_code","branch","role","created_at","rating","title","details","recorded_by"];
+    const esc = (v) => `"${String(v ?? '').replaceAll('"','""')}"`;
+    const lines = [cols.join(",")];
+    cacheRecords.forEach(r => lines.push(cols.map(c => esc(r[c])).join(",")));
+    const blob = new Blob([lines.join("\n")], {type:'text/csv;charset=utf-8;'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `performance_export_${new Date().toISOString().slice(0,10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  });
+
+  // initial
+  load();
+})();
+</script>
+
+{% endblock %}

@@ -1,0 +1,1569 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Customers - Smart Living CRM</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="icon" href="https://res.cloudinary.com/dljpgzbto/image/upload/v1743993646/company-logo_dksb23.jpg" type="image/png" />
+
+  <!-- Bootstrap & Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet" />
+
+  <style>
+    :root{
+      /* WHITE UI */
+      --bg:#f6f7fb;
+      --card:#ffffff;
+      --ink:#0f172a;
+      --muted:#64748b;
+      --border:rgba(15,23,42,.10);
+      --border2:rgba(15,23,42,.14);
+      --shadow:0 18px 45px rgba(2,6,23,.08);
+
+      --brand:#0b63ce;
+      --brand2:#0ea5e9;
+
+      --ok:#16a34a;
+      --warn:#f59e0b;
+      --bad:#dc2626;
+      --slate:#475569;
+
+      --chip:#f1f5f9;
+      --chip2:#e2e8f0;
+
+      --radius:18px;
+      --radius2:14px;
+    }
+
+    body[data-theme="dark"]{
+      --bg:#0b1220;
+      --card:#0f172a;
+      --ink:#e5e7eb;
+      --muted:#94a3b8;
+      --border:rgba(148,163,184,.16);
+      --border2:rgba(148,163,184,.22);
+      --shadow:0 18px 55px rgba(0,0,0,.42);
+
+      --chip:rgba(148,163,184,.12);
+      --chip2:rgba(148,163,184,.18);
+    }
+
+    *{ box-sizing:border-box; }
+    body{
+      margin:0;
+      min-height:100vh;
+      background:
+        radial-gradient(circle at 10% 0%, rgba(14,165,233,.10), transparent 45%),
+        radial-gradient(circle at 85% 25%, rgba(11,99,206,.10), transparent 45%),
+        var(--bg);
+      color:var(--ink);
+      font-family: system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    }
+
+    .screen-only{display:block;}
+    .print-only{display:none;}
+
+    .app-shell{
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 16px 16px 28px;
+    }
+
+    /* Topbar */
+    .topbar{
+      position: sticky;
+      top: 10px;
+      z-index: 50;
+      background: rgba(255,255,255,.75);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(12px);
+      padding: 12px 14px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+    }
+    body[data-theme="dark"] .topbar{ background: rgba(15,23,42,.72); }
+
+    .brand{
+      display:flex;
+      align-items:center;
+      gap:12px;
+      min-width: 260px;
+    }
+    .logo{
+      width: 42px; height: 42px;
+      border-radius: 14px;
+      background: linear-gradient(135deg, var(--brand), var(--brand2));
+      padding: 2px;
+      box-shadow: 0 10px 28px rgba(2,6,23,.12);
+      display:flex; align-items:center; justify-content:center;
+      flex-shrink:0;
+    }
+    .logo img{
+      width:100%; height:100%;
+      border-radius: 12px;
+      object-fit: cover;
+      background: #fff;
+    }
+    .brand h1{
+      font-size: 1.05rem;
+      margin:0;
+      font-weight: 800;
+      letter-spacing: .2px;
+      display:flex;
+      align-items:center;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+    .pill{
+      border-radius: 999px;
+      padding: 4px 10px;
+      font-size: .70rem;
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      border: 1px solid var(--border2);
+      background: var(--chip);
+      color: var(--muted);
+    }
+    .brand .sub{
+      margin:0;
+      font-size: .82rem;
+      color: var(--muted);
+      margin-top:2px;
+      line-height: 1.2;
+    }
+
+    .top-actions{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      flex-wrap:wrap;
+      justify-content:flex-end;
+    }
+    .btn-soft{
+      border: 1px solid var(--border2);
+      background: var(--card);
+      color: var(--ink);
+      border-radius: 999px;
+      padding: 8px 12px;
+      font-size: .84rem;
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      text-decoration:none;
+      transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease;
+      box-shadow: 0 10px 22px rgba(2,6,23,.06);
+      white-space:nowrap;
+    }
+    body[data-theme="dark"] .btn-soft{ background: rgba(148,163,184,.08); box-shadow:none; }
+    .btn-soft:hover{ transform: translateY(-1px); border-color: rgba(11,99,206,.35); }
+
+    .btn-brand{
+      border: 1px solid rgba(11,99,206,.35);
+      background: linear-gradient(135deg, var(--brand), var(--brand2));
+      color:#fff;
+      border-radius: 999px;
+      padding: 8px 12px;
+      font-size: .84rem;
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      text-decoration:none;
+      box-shadow: 0 16px 30px rgba(11,99,206,.18);
+      white-space:nowrap;
+    }
+    .btn-icon{
+      width: 38px; height: 38px;
+      border-radius: 999px;
+      border: 1px solid var(--border2);
+      background: var(--card);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      cursor:pointer;
+      transition: transform .12s ease, border-color .12s ease;
+    }
+    body[data-theme="dark"] .btn-icon{ background: rgba(148,163,184,.08); }
+    .btn-icon:hover{ transform: translateY(-1px); border-color: rgba(11,99,206,.35); }
+    .btn-icon i{ font-size: 1.05rem; }
+
+    /* Layout */
+    .layout{
+      margin-top: 14px;
+      display:grid;
+      grid-template-columns: minmax(0, 1.35fr) minmax(0, 2.65fr);
+      gap: 14px;
+    }
+    @media (max-width: 1100px){ .layout{ grid-template-columns: 1fr; } }
+
+    .panel{
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 14px;
+    }
+    body[data-theme="dark"] .panel{ box-shadow:none; }
+
+    .panel-title{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      margin-bottom: 8px;
+    }
+    .panel-title h2{
+      font-size: .98rem;
+      margin:0;
+      font-weight: 800;
+      display:flex;
+      align-items:center;
+      gap:8px;
+    }
+    .panel-title small{
+      color: var(--muted);
+      font-size: .78rem;
+    }
+
+    /* KPI row */
+    .kpis{
+      display:grid;
+      grid-template-columns: repeat(3, minmax(0,1fr));
+      gap: 10px;
+      margin-top: 10px;
+      margin-bottom: 10px;
+    }
+    @media (max-width: 520px){ .kpis{ grid-template-columns: repeat(2, minmax(0,1fr)); } }
+
+    .kpi{
+      border: 1px solid var(--border);
+      border-radius: var(--radius2);
+      padding: 10px 10px 9px;
+      background:
+        radial-gradient(circle at 20% 0%, rgba(14,165,233,.12), transparent 45%),
+        var(--card);
+    }
+    .kpi.primary{
+      border-color: rgba(11,99,206,.22);
+      background:
+        radial-gradient(circle at 25% 0%, rgba(11,99,206,.18), transparent 52%),
+        radial-gradient(circle at 85% 60%, rgba(14,165,233,.12), transparent 48%),
+        var(--card);
+    }
+    .kpi .label{
+      color: var(--muted);
+      font-size: .74rem;
+      display:flex;
+      align-items:center;
+      gap:6px;
+    }
+    .kpi .val{
+      font-weight: 900;
+      font-size: 1.15rem;
+      letter-spacing: .2px;
+      margin-top: 2px;
+    }
+    .kpi .hint{
+      color: var(--muted);
+      font-size: .72rem;
+      margin-top: 3px;
+      display:flex;
+      align-items:center;
+      gap:6px;
+    }
+
+    /* Status mini chips */
+    .status-row{
+      display:flex;
+      flex-wrap:wrap;
+      gap: 8px;
+      margin: 10px 0 12px;
+    }
+    .mini-chip{
+      border: 1px solid var(--border);
+      background: var(--chip);
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size: .76rem;
+      color: var(--muted);
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      white-space:nowrap;
+    }
+    .dot{ width: 9px; height: 9px; border-radius: 999px; }
+    .dot.ok{ background: var(--ok); }
+    .dot.warn{ background: var(--warn); }
+    .dot.bad{ background: var(--bad); }
+    .dot.slate{ background: var(--slate); }
+    .dot.brand{ background: linear-gradient(135deg, var(--brand), var(--brand2)); }
+
+    /* Filter meta */
+    .meta{
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+      align-items:center;
+      color: var(--muted);
+      font-size: .80rem;
+      margin-bottom: 10px;
+    }
+    .meta .badge{
+      border: 1px solid var(--border);
+      background: var(--chip);
+      color: var(--muted);
+      font-size: .72rem;
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-weight: 700;
+    }
+
+    /* Form */
+    .form-grid{
+      display:grid;
+      grid-template-columns: repeat(3, minmax(0,1fr)) auto;
+      gap: 10px;
+      align-items:end;
+    }
+    @media (min-width: 992px){
+      .form-grid{ grid-template-columns: 0.9fr 2.1fr 1fr auto; }
+    }
+    @media (max-width: 900px){ .form-grid{ grid-template-columns: 1fr; } }
+
+    .form-label{
+      color: var(--muted);
+      font-size: .74rem;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+    .control{
+      border-radius: 12px;
+      border: 1px solid var(--border2);
+      background: var(--card);
+      color: var(--ink);
+      padding: 10px 12px;
+      font-size: .88rem;
+      outline: none;
+      width: 100%;
+    }
+    body[data-theme="dark"] .control{ background: rgba(148,163,184,.08); }
+    .control:focus{
+      border-color: rgba(11,99,206,.45);
+      box-shadow: 0 0 0 4px rgba(11,99,206,.12);
+    }
+
+    .search-wrap{
+      position: relative;
+    }
+    .search-wrap .bi-search{
+      position:absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--muted);
+      font-size: .95rem;
+      pointer-events:none;
+    }
+    .search-wrap input{
+      padding-left: 36px;
+      padding-right: 44px;
+    }
+    .search-wrap .control{
+      border-color: rgba(11,99,206,.35);
+      box-shadow: 0 10px 22px rgba(2,6,23,.10);
+    }
+    .clear-btn{
+      position:absolute;
+      right: 8px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 34px; height: 34px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--chip);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      cursor:pointer;
+      color: var(--muted);
+    }
+
+    .form-actions{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+    .btn-outline-soft{
+      border: 1px solid var(--border2);
+      background: transparent;
+      color: var(--muted);
+      border-radius: 12px;
+      padding: 10px 12px;
+      font-size: .86rem;
+      font-weight: 800;
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      text-decoration:none;
+    }
+    .btn-outline-soft:hover{ border-color: rgba(11,99,206,.35); color: var(--ink); }
+
+    /* Filter chips */
+    .chipbar{
+      display:flex;
+      flex-wrap:wrap;
+      gap: 8px;
+      margin-top: 12px;
+    }
+    .chip{
+      border: 1px solid var(--border);
+      background: var(--chip);
+      color: var(--muted);
+      border-radius: 999px;
+      padding: 7px 12px;
+      font-size: .80rem;
+      font-weight: 800;
+      text-decoration:none;
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      transition: transform .12s ease, border-color .12s ease;
+    }
+    .chip:hover{ transform: translateY(-1px); border-color: rgba(11,99,206,.35); }
+    .chip.active{
+      background: rgba(11,99,206,.10);
+      border-color: rgba(11,99,206,.35);
+      color: var(--ink);
+    }
+    .chip .count{
+      background: rgba(15,23,42,.08);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 2px 8px;
+      font-size: .74rem;
+      font-weight: 900;
+      color: var(--muted);
+    }
+    body[data-theme="dark"] .chip .count{ background: rgba(148,163,184,.14); }
+
+    /* Tag chips */
+    .tagbar{
+      display:flex;
+      flex-wrap:wrap;
+      gap: 8px;
+      margin-top: 10px;
+      align-items:center;
+    }
+    .tagbar .label{
+      color: var(--muted);
+      font-weight: 800;
+      font-size: .78rem;
+    }
+    .tag{
+      border: 1px solid var(--border);
+      background: var(--chip);
+      color: var(--muted);
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size: .78rem;
+      font-weight: 800;
+      text-decoration:none;
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      transition: transform .12s ease, border-color .12s ease;
+    }
+    .tag:hover{ transform: translateY(-1px); border-color: rgba(14,165,233,.35); }
+    .tag.active{
+      background: rgba(14,165,233,.10);
+      border-color: rgba(14,165,233,.35);
+      color: var(--ink);
+    }
+
+    /* Customers area */
+    .right-head{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:10px;
+      flex-wrap:wrap;
+      margin-bottom: 10px;
+    }
+    .right-head .sub{
+      margin:0;
+      color: var(--muted);
+      font-size: .84rem;
+      line-height: 1.2;
+    }
+
+    .customer-grid{
+      display:grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 12px;
+    }
+
+    .cust-link{ text-decoration:none; color:inherit; }
+    .cust{
+      border: 1px solid var(--border);
+      border-radius: var(--radius2);
+      background: var(--card);
+      padding: 12px;
+      box-shadow: 0 14px 30px rgba(2,6,23,.06);
+      transition: transform .12s ease, border-color .12s ease, box-shadow .12s ease;
+      display:flex;
+      gap: 12px;
+      align-items: stretch;
+      min-height: 120px;
+      position: relative;
+      overflow:hidden;
+    }
+    body[data-theme="dark"] .cust{ box-shadow:none; }
+    .cust:hover{
+      transform: translateY(-2px);
+      border-color: rgba(11,99,206,.30);
+      box-shadow: 0 22px 45px rgba(2,6,23,.10);
+    }
+    .cust::before{
+      content:"";
+      position:absolute;
+      inset:-40%;
+      background:
+        radial-gradient(circle at 15% 5%, rgba(11,99,206,.14), transparent 55%),
+        radial-gradient(circle at 90% 70%, rgba(14,165,233,.10), transparent 55%);
+      opacity: 0;
+      transition: opacity .15s ease;
+      pointer-events:none;
+    }
+    .cust:hover::before{ opacity: 1; }
+
+    .avatar{
+      width: 54px; height: 54px;
+      border-radius: 16px;
+      background: linear-gradient(135deg, rgba(11,99,206,.18), rgba(14,165,233,.18));
+      border: 1px solid var(--border);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      overflow:hidden;
+      flex-shrink:0;
+      position: relative;
+    }
+    .avatar img{ width:100%; height:100%; object-fit:cover; }
+    .initials{
+      font-weight: 900;
+      font-size: 1.05rem;
+      color: var(--brand);
+      letter-spacing: .5px;
+    }
+    .initials.hidden{ display:none; }
+
+    .cust-main{ flex:1; display:flex; flex-direction:column; gap:6px; position: relative; z-index: 2; }
+    .cust-top{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:10px;
+    }
+    .cust-name{
+      margin:0;
+      font-weight: 900;
+      font-size: .98rem;
+      line-height: 1.2;
+      word-break: break-word;
+    }
+
+    .status{
+      border-radius: 999px;
+      padding: 5px 10px;
+      font-size: .72rem;
+      font-weight: 900;
+      border: 1px solid var(--border);
+      background: var(--chip);
+      color: var(--muted);
+      white-space: nowrap;
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      flex-shrink:0;
+    }
+    .status.ok{ background: rgba(22,163,74,.10); border-color: rgba(22,163,74,.25); color: var(--ok); }
+    .status.warn{ background: rgba(245,158,11,.10); border-color: rgba(245,158,11,.25); color: var(--warn); }
+    .status.bad{ background: rgba(220,38,38,.10); border-color: rgba(220,38,38,.25); color: var(--bad); }
+    .status.done{ background: rgba(14,165,233,.10); border-color: rgba(14,165,233,.25); color: var(--brand2); }
+
+    .cust-meta{
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      color: var(--muted);
+      font-size: .80rem;
+      align-items:center;
+    }
+    .cust-meta span{
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+    }
+
+    .tag-mini{
+      display:flex;
+      flex-wrap:wrap;
+      gap: 6px;
+      margin-top: 2px;
+    }
+    .tag-mini .t{
+      border: 1px solid var(--border);
+      background: var(--chip);
+      color: var(--muted);
+      border-radius: 999px;
+      padding: 3px 8px;
+      font-size: .70rem;
+      font-weight: 800;
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+    }
+    .t .tdot{ width: 7px; height: 7px; border-radius: 999px; background: var(--brand2); }
+
+    .cust-footer{
+      margin-top:auto;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:10px;
+      color: var(--muted);
+      font-size: .76rem;
+      border-top: 1px dashed var(--border);
+      padding-top: 8px;
+    }
+    .cust-footer .strong{ color: var(--ink); font-weight: 900; }
+
+    /* Pagination */
+    .pagination .page-link{
+      border-color: var(--border2);
+      color: var(--muted);
+      background: var(--card);
+      border-radius: 12px;
+      margin: 0 3px;
+      font-weight: 800;
+      font-size: .84rem;
+    }
+    .pagination .page-link:hover{
+      border-color: rgba(11,99,206,.35);
+      color: var(--ink);
+      background: rgba(11,99,206,.06);
+    }
+    .pagination .active .page-link{
+      background: linear-gradient(135deg, var(--brand), var(--brand2));
+      border-color: transparent;
+      color: #fff;
+    }
+
+    /* Loader */
+    .page-loader{
+      position: fixed;
+      inset: 0;
+      background: rgba(246,247,251,.85);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      z-index: 2000;
+      backdrop-filter: blur(8px);
+      transition: opacity .25s ease;
+    }
+    body[data-theme="dark"] .page-loader{ background: rgba(11,18,32,.80); }
+    .page-loader.hidden{ opacity:0; pointer-events:none; }
+
+    /* Skeleton blocks */
+    .skeleton{
+      border: 1px solid var(--border);
+      background: linear-gradient(90deg, rgba(148,163,184,.12), rgba(148,163,184,.22), rgba(148,163,184,.12));
+      background-size: 200% 100%;
+      animation: shimmer 1.05s infinite linear;
+    }
+    @keyframes shimmer { 0%{background-position:200% 0;} 100%{background-position:-200% 0;} }
+    .skeleton-card{
+      border-radius: var(--radius2);
+      height: 126px;
+    }
+
+    /* PRINT */
+    @media print{
+      @page{ size:A4 portrait; margin: 14mm; }
+      body{ background:#fff !important; color:#111827 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .screen-only{ display:none !important; }
+      .print-only{ display:block !important; }
+      .page-loader{ display:none !important; }
+
+      body::before{
+        content:"";
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        width: 70%;
+        height: 70%;
+        transform: translate(-50%, -50%);
+        background: url("https://res.cloudinary.com/dljpgzbto/image/upload/v1743993646/company-logo_dksb23.jpg") no-repeat center center;
+        background-size: 260px 260px;
+        opacity: 0.06;
+        z-index: -1;
+      }
+
+      .print-header h1{ font-size: 18px; margin-bottom: 2px; }
+      .print-header .meta{ font-size: 10px; color:#4b5563; }
+
+      .print-table{
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 12px;
+        font-size: 10px;
+      }
+      .print-table th, .print-table td{
+        border: 1px solid #d1d5db;
+        padding: 6px 4px;
+        text-align: left;
+      }
+      .print-table thead{ background: #f3f4f6; }
+      .print-table th{ font-weight: 700; }
+      .print-table tbody tr:nth-child(even){ background: #f9fafb; }
+    }
+  </style>
+</head>
+
+<body>
+{% if role == 'admin' %}
+  {% include 'admin_sidebar.html' %}
+{% else %}
+  {% include 'manager_sidebar.html' %}
+{% endif %}
+
+<!-- Loader -->
+<div id="pageLoader" class="page-loader screen-only">
+  <div class="text-center">
+    <div class="spinner-border" role="status" aria-label="Loading"></div>
+    <div class="mt-2 small" style="color:var(--muted);font-weight:800;">Loading customers & metrics…</div>
+  </div>
+</div>
+
+<!-- PRINT-ONLY REPORT (for PDF) -->
+<div class="print-only">
+  <div class="print-header">
+    <h1>Customers Report - Smart Living</h1>
+    <div class="meta">
+      {% if selected_status %}
+        Status: <strong>{{ selected_status|title }}</strong> &middot;
+      {% endif %}
+      {% if search_term %}
+        Search: "<strong>{{ search_term }}</strong>" &middot;
+      {% endif %}
+      {% if selected_tag %}
+        Tag: <strong>{{ selected_tag }}</strong> &middot;
+      {% endif %}
+      Total customers: <strong>{{ customers_for_print|length }}</strong>
+    </div>
+    <div class="mt-2 small" style="color:#6b7280;">
+      Note: Print mode uses the server-rendered dataset. For fully accurate print with async loading, we'll wire a "Download PDF" endpoint next.
+    </div>
+  </div>
+
+  <table class="print-table">
+    <thead>
+      <tr>
+        <th style="width: 40px;">#</th>
+        <th>Customer Name</th>
+        <th>Phone</th>
+          <th>Agent</th>
+          <th>Branch</th>
+          <th>Status</th>
+          <th>Last Paid</th>
+          <th>Days Since Last Pay</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% if customers_for_print and customers_for_print|length > 0 %}
+        {% for c in customers_for_print %}
+          <tr>
+            <td>{{ loop.index }}</td>
+            <td>{{ c.name }}</td>
+            <td>{{ c.phone }}</td>
+              <td>{{ c.agent_name }}</td>
+              <td>{{ c.agent_branch or 'N/A' }}</td>
+              <td>{{ c.status }}</td>
+              <td>{% if c.last_payment_date %}{{ c.last_payment_date }}{% else %}--{% endif %}</td>
+              <td>{% if c.days_since_last_payment is not none %}{{ c.days_since_last_payment }}{% else %}--{% endif %}</td>
+            </tr>
+          {% endfor %}
+        {% else %}
+          <tr>
+            <td colspan="8">No customers for the selected filters.</td>
+          </tr>
+        {% endif %}
+    </tbody>
+  </table>
+</div>
+
+<!-- MAIN APP (SCREEN ONLY) -->
+<div class="app-shell screen-only">
+
+  <!-- Topbar -->
+  <div class="topbar">
+    <div class="brand">
+      <div class="logo">
+        <img src="https://res.cloudinary.com/dljpgzbto/image/upload/v1743993646/company-logo_dksb23.jpg" alt="Smart Living logo">
+      </div>
+      <div>
+        <h1>
+          Customers
+          <span class="pill">Manager View</span>
+        </h1>
+        <p class="sub">Search, filter, and monitor lifecycle across your portfolio.</p>
+      </div>
+    </div>
+
+    <div class="top-actions">
+      <a class="btn-soft" href="{{ url_for('manager_dashboard.manager_dashboard_view') }}">
+        <i class="bi bi-grid-1x2"></i> Dashboard
+      </a>
+      <button id="printBtn" class="btn-brand" type="button">
+        <i class="bi bi-printer"></i> Print / PDF
+      </button>
+      <button id="themeToggle" class="btn-icon" type="button" title="Toggle theme">
+        <i class="bi bi-moon-stars"></i>
+      </button>
+    </div>
+  </div>
+
+  <div class="layout">
+    <!-- LEFT -->
+    <section class="panel">
+      <div class="panel-title">
+        <div>
+          <h2><i class="bi bi-activity"></i> Portfolio</h2>
+          <small>Snapshot, quick filters, and tags.</small>
+        </div>
+      </div>
+
+      <!-- KPI values will be hydrated via /customers/data -->
+      <div class="kpis">
+        <div class="kpi primary">
+          <div class="label"><i class="bi bi-people-fill"></i> Total Customers</div>
+          <div class="val" id="kpiTotal">{{ total_customers }}</div>
+          <div class="hint"><i class="bi bi-broadcast"></i> Live base</div>
+        </div>
+        <div class="kpi">
+          <div class="label"><i class="bi bi-check2-circle"></i> Active (≤ 14 days)</div>
+          <div class="val" id="kpiActive">{{ total_active }}</div>
+          <div class="hint"><i class="bi bi-graph-up-arrow"></i> Paying recently</div>
+        </div>
+        <div class="kpi">
+          <div class="label"><i class="bi bi-exclamation-triangle"></i> Closed / Overdue</div>
+          <div class="val" id="kpiClosed">{{ total_closed }}</div>
+          <div class="hint"><i class="bi bi-shield-exclamation"></i> Needs attention</div>
+        </div>
+      </div>
+
+      <div class="status-row">
+        <span class="mini-chip"><span class="dot ok"></span> Active: <strong id="mActive">{{ total_active }}</strong></span>
+        <span class="mini-chip"><span class="dot warn"></span> Inactive (15-30d): <strong id="mInactive">{{ total_inactive }}</strong></span>
+        <span class="mini-chip"><span class="dot slate"></span> Dormant (31+d): <strong id="mDormant">{{ total_dormant }}</strong></span>
+        <span class="mini-chip"><span class="dot bad"></span> Churned: <strong id="mChurned">{{ total_churned }}</strong></span>
+        <span class="mini-chip"><span class="dot bad"></span> Closed: <strong id="mClosed">{{ total_closed }}</strong></span>
+        <span class="mini-chip"><span class="dot brand"></span> Completed: <strong id="mCompleted">{{ total_completed }}</strong></span>
+      </div>
+
+      <div class="meta">
+        <span>Showing <strong id="metaShowing">{{ customers|length }}</strong> of <strong id="metaTotal">{{ total_customers }}</strong></span>
+        <span class="badge" id="metaState" style="display:none;"></span>
+      </div>
+
+      <!-- Filter Form (kept, but we intercept submit for AJAX) -->
+      <form method="GET" class="form-grid" id="filterForm">
+        <div>
+          <label for="agentSelect" class="form-label">Agent</label>
+          <select name="agent_id" id="agentSelect" class="control">
+            <option value="">All agents</option>
+            <option value="all" {% if selected_agent == 'all' %}selected{% endif %}>All agents</option>
+            {% for agent in agents %}
+              <option value="{{ agent._id }}" {% if selected_agent == agent._id|string %}selected{% endif %}>{{ agent.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        {% if role == 'admin' %}
+        <div>
+          <label for="branchSelect" class="form-label">Branch</label>
+          <select name="branch" id="branchSelect" class="control">
+            <option value="">All branches</option>
+            {% for b in branches %}
+              <option value="{{ b }}" {% if selected_branch == b %}selected{% endif %}>{{ b }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        {% endif %}
+
+        <div>
+          <label class="form-label">Search</label>
+          <div class="search-wrap">
+            <i class="bi bi-search"></i>
+            <input
+              id="searchInput"
+              type="text"
+              name="search"
+              class="control"
+              placeholder="Search customer name or phone…"
+              value="{{ search_term }}"
+              autocomplete="off"
+            />
+            <button type="button" id="clearSearch" class="clear-btn" title="Clear">
+              <i class="bi bi-x-lg"></i>
+            </button>
+          </div>
+          <div class="mt-1" style="color:var(--muted);font-size:.74rem;">
+            Tip: press <strong>Enter</strong> to search. Auto-submit after you stop typing.
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button class="btn-brand" type="submit" style="border-radius:12px;">
+            <i class="bi bi-funnel"></i> Apply
+          </button>
+          <a class="btn-outline-soft" href="{{ url_for(customers_route or 'customers.customers_list') }}">
+            <i class="bi bi-arrow-counterclockwise"></i> Reset
+          </a>
+        </div>
+
+        <input type="hidden" name="status" id="statusHidden" value="{{ selected_status or '' }}">
+        <input type="hidden" name="tag" id="tagHidden" value="{{ selected_tag or '' }}">
+        <input type="hidden" name="page" id="pageHidden" value="{{ page or 1 }}">
+        <input type="hidden" name="per_page" id="perPageHidden" value="{{ per_page or 12 }}">
+      </form>
+
+      <!-- Status Chips (now buttons with data-status; no page reload) -->
+      <div class="chipbar" id="statusChips">
+        <a class="chip {% if not selected_status %}active{% endif %}" href="#" data-status="">
+          <span class="dot brand"></span> All <span class="count" id="cAll">{{ total_customers }}</span>
+        </a>
+
+        <a class="chip {% if selected_status == 'active' %}active{% endif %}" href="#" data-status="active">
+          <span class="dot ok"></span> Active <span class="count" id="cActive">{{ total_active }}</span>
+        </a>
+
+        <a class="chip {% if selected_status == 'inactive' %}active{% endif %}" href="#" data-status="inactive">
+          <span class="dot warn"></span> Inactive <span class="count" id="cInactive">{{ total_inactive }}</span>
+        </a>
+
+        <a class="chip {% if selected_status == 'dormant' %}active{% endif %}" href="#" data-status="dormant">
+          <span class="dot slate"></span> Dormant <span class="count" id="cDormant">{{ total_dormant }}</span>
+        </a>
+
+        <a class="chip {% if selected_status == 'churned' %}active{% endif %}" href="#" data-status="churned">
+          <span class="dot bad"></span> Churned <span class="count" id="cChurned">{{ total_churned }}</span>
+        </a>
+
+        <a class="chip {% if selected_status == 'closed' %}active{% endif %}" href="#" data-status="closed">
+          <span class="dot bad"></span> Closed <span class="count" id="cClosed">{{ total_closed }}</span>
+        </a>
+
+        <a class="chip {% if selected_status == 'completed' %}active{% endif %}" href="#" data-status="completed">
+          <span class="dot brand"></span> Completed <span class="count" id="cCompleted">{{ total_completed }}</span>
+        </a>
+      </div>
+
+      <!-- Tags (hydrated via /customers/data) -->
+      <div class="tagbar" id="tagsBar" style="display:none;">
+        <span class="label">Tags:</span>
+        <a class="tag active" href="#" data-tag="">
+          <span class="dot" style="background:linear-gradient(135deg,var(--brand),var(--brand2));"></span>
+          All tags
+        </a>
+        <!-- tags injected here -->
+      </div>
+
+      <!-- Small KPIs (server-rendered, already fast) -->
+      <div class="mt-3" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;">
+        <div class="kpi" style="padding:10px;">
+          <div class="label"><i class="bi bi-box-seam"></i> In Packaging Queue</div>
+          <div class="val" style="font-size:1rem;">{{ total_packages }}</div>
+        </div>
+        <div class="kpi" style="padding:10px;">
+          <div class="label"><i class="bi bi-file-earmark-lock2"></i> Closed Cards (Archived)</div>
+          <div class="val" style="font-size:1rem;">{{ total_closed_cards }}</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- RIGHT -->
+    <section class="panel">
+      <div class="right-head">
+        <div>
+          <h2 class="m-0" style="font-weight:900;font-size:1.02rem;display:flex;align-items:center;gap:8px;">
+            <i class="bi bi-people"></i> Customers List
+          </h2>
+          <p class="sub">Click a customer to open full profile & payment history.</p>
+        </div>
+
+        <button class="btn-soft" id="refreshBtn" type="button">
+          <i class="bi bi-arrow-repeat"></i> Refresh
+        </button>
+      </div>
+
+      <!-- Skeletons while loading -->
+      <div id="skeletonWrap" class="customer-grid" style="display:none;">
+        <div class="skeleton skeleton-card"></div>
+        <div class="skeleton skeleton-card"></div>
+        <div class="skeleton skeleton-card"></div>
+        <div class="skeleton skeleton-card"></div>
+        <div class="skeleton skeleton-card"></div>
+        <div class="skeleton skeleton-card"></div>
+      </div>
+
+      <div id="customersGrid" class="customer-grid">
+        <!-- server initial (empty) or old render -->
+        {% if customers and customers|length > 0 %}
+          {% for customer in customers %}
+            <a class="cust-link" href="{{ url_for(customer_profile_route or 'customers.customer_profile', customer_id=customer.id) }}">
+              <div class="cust">
+                <div class="avatar">
+                  {% if customer.image_url %}
+                    <img
+                      src="{{ customer.image_url }}"
+                      alt="{{ customer.name }}"
+                      loading="lazy"
+                      onerror="this.onerror=null;this.src=window.CUSTOMER_FALLBACK_IMG;this.parentElement.querySelector('.initials').classList.add('hidden');"
+                    >
+                  {% else %}
+                    <img
+                      src="https://imagedelivery.net/h9fmMoa1o2c2P55TcWJGOg/f1b8f81c-1aac-4580-6b1c-869ffafcb400/public"
+                      alt="{{ customer.name }}"
+                      loading="lazy"
+                    >
+                  {% endif %}
+                  <span class="initials hidden">{{ customer.initials }}</span>
+                </div>
+
+                <div class="cust-main">
+                  <div class="cust-top">
+                    <p class="cust-name">{{ customer.name }}</p>
+
+                    {% set s = customer.status %}
+                    <span class="status
+                      {% if s == 'Active' %}ok
+                      {% elif s == 'Inactive' or s == 'Dormant' %}warn
+                      {% elif s == 'Churned' or s == 'Closed' %}bad
+                      {% elif s == 'Completed' %}done
+                      {% else %}{% endif %}">
+                      <i class="bi bi-activity"></i> {{ s }}
+                    </span>
+                  </div>
+
+                  <div class="cust-meta">
+                    <span><i class="bi bi-telephone-outbound"></i> {{ customer.phone }}</span>
+                    <span><i class="bi bi-person-badge"></i> {{ customer.agent_name }}</span>
+                    <span><i class="bi bi-diagram-3"></i> {{ customer.agent_branch or 'N/A' }}</span>
+                  </div>
+
+                  {% if customer.tags and customer.tags|length > 0 %}
+                    <div class="tag-mini">
+                      {% set max_tags = 3 %}
+                      {% for t in customer.tags[:max_tags] %}
+                        <span class="t"><span class="tdot" data-color="{{ t.color }}"></span>{{ t.label }}</span>
+                      {% endfor %}
+                      {% if customer.tags|length > max_tags %}
+                        <span class="t">+{{ customer.tags|length - max_tags }}</span>
+                      {% endif %}
+                    </div>
+                  {% endif %}
+
+                  <div class="cust-footer">
+                    <span><i class="bi bi-card-text"></i> View profile</span>
+                    {% if customer.last_payment_date %}
+                      <span>Last pay: <span class="strong">{{ customer.last_payment_date }}</span></span>
+                    {% else %}
+                      <span class="strong">No payment yet</span>
+                    {% endif %}
+                  </div>
+                </div>
+              </div>
+            </a>
+          {% endfor %}
+        {% else %}
+          <div id="emptyState" class="text-center py-4" style="color:var(--muted);font-weight:800;">
+            <i class="bi bi-inbox me-2"></i> Loading customers…
+          </div>
+        {% endif %}
+      </div>
+
+      <nav aria-label="Pagination" class="mt-3" id="pagerWrap" style="display:none;">
+        <ul class="pagination justify-content-center mb-0" id="pager">
+          <!-- injected -->
+        </ul>
+      </nav>
+    </section>
+  </div>
+</div>
+
+<script>
+  window.CUSTOMER_FALLBACK_IMG = "https://imagedelivery.net/h9fmMoa1o2c2P55TcWJGOg/f1b8f81c-1aac-4580-6b1c-869ffafcb400/public";
+  document.addEventListener('DOMContentLoaded', function () {
+    // ===== Theme toggle (persist) =====
+    const themeToggle = document.getElementById('themeToggle');
+    const saved = localStorage.getItem('sl_theme');
+    if (saved === 'dark') {
+      document.body.setAttribute('data-theme', 'dark');
+      if (themeToggle) themeToggle.innerHTML = '<i class="bi bi-sun"></i>';
+    }
+
+    if (themeToggle) {
+      themeToggle.addEventListener('click', () => {
+        const isDark = document.body.getAttribute('data-theme') === 'dark';
+        if (isDark) {
+          document.body.removeAttribute('data-theme');
+          localStorage.setItem('sl_theme', 'light');
+          themeToggle.innerHTML = '<i class="bi bi-moon-stars"></i>';
+        } else {
+          document.body.setAttribute('data-theme', 'dark');
+          localStorage.setItem('sl_theme', 'dark');
+          themeToggle.innerHTML = '<i class="bi bi-sun"></i>';
+        }
+      });
+    }
+
+    // ===== Print/PDF =====
+    const printBtn = document.getElementById('printBtn');
+    if (printBtn) printBtn.addEventListener('click', () => window.print());
+
+    // ===== Loader (shell) =====
+    const loader = document.getElementById('pageLoader');
+    if (loader) {
+      setTimeout(() => loader.classList.add('hidden'), 200);
+      setTimeout(() => loader.remove(), 520);
+    }
+
+    // Apply existing tag colors (server leftovers)
+    document.querySelectorAll('[data-color]').forEach(el => {
+      const c = el.getAttribute('data-color');
+      if (c) el.style.background = c;
+    });
+
+    // ===== Elements =====
+    const form = document.getElementById('filterForm');
+    const agentSelect = document.getElementById('agentSelect');
+    const branchSelect = document.getElementById('branchSelect');
+    const searchInput = document.getElementById('searchInput');
+    const clearSearch = document.getElementById('clearSearch');
+    const statusHidden = document.getElementById('statusHidden');
+    const tagHidden = document.getElementById('tagHidden');
+    const pageHidden = document.getElementById('pageHidden');
+    const perPageHidden = document.getElementById('perPageHidden');
+
+    const grid = document.getElementById('customersGrid');
+    const skeleton = document.getElementById('skeletonWrap');
+    const emptyState = document.getElementById('emptyState');
+
+    const pagerWrap = document.getElementById('pagerWrap');
+    const pager = document.getElementById('pager');
+
+    const tagsBar = document.getElementById('tagsBar');
+    const statusChips = document.getElementById('statusChips');
+
+    const refreshBtn = document.getElementById('refreshBtn');
+
+    // KPI refs
+    const kpiTotal = document.getElementById('kpiTotal');
+    const kpiActive = document.getElementById('kpiActive');
+    const kpiClosed = document.getElementById('kpiClosed');
+
+    const mActive = document.getElementById('mActive');
+    const mInactive = document.getElementById('mInactive');
+    const mDormant = document.getElementById('mDormant');
+    const mChurned = document.getElementById('mChurned');
+    const mClosed = document.getElementById('mClosed');
+    const mCompleted = document.getElementById('mCompleted');
+
+    const cAll = document.getElementById('cAll');
+    const cActive = document.getElementById('cActive');
+    const cInactive = document.getElementById('cInactive');
+    const cDormant = document.getElementById('cDormant');
+    const cChurned = document.getElementById('cChurned');
+    const cClosed = document.getElementById('cClosed');
+    const cCompleted = document.getElementById('cCompleted');
+
+    const metaShowing = document.getElementById('metaShowing');
+    const metaTotal = document.getElementById('metaTotal');
+    const metaState = document.getElementById('metaState');
+
+    // ===== Helpers =====
+    function debounce(fn, wait) {
+      let t;
+      return (...args) => {
+        clearTimeout(t);
+        t = setTimeout(() => fn.apply(null, args), wait);
+      };
+    }
+
+    function qsFromForm() {
+      const params = new URLSearchParams();
+      params.set('agent_id', (agentSelect?.value || '').trim());
+      if (branchSelect) params.set('branch', (branchSelect.value || '').trim());
+      params.set('search', (searchInput?.value || '').trim());
+      params.set('status', (statusHidden?.value || '').trim());
+      params.set('tag', (tagHidden?.value || '').trim());
+      params.set('page', (pageHidden?.value || '1').trim());
+      params.set('per_page', (perPageHidden?.value || '12').trim());
+      // clean empties
+      ['agent_id','branch','search','status','tag'].forEach(k => {
+        if (!params.get(k)) params.delete(k);
+      });
+      return params.toString();
+    }
+
+    function setLoading(isLoading, msg) {
+      if (isLoading) {
+        if (skeleton) skeleton.style.display = 'grid';
+        if (grid) grid.style.display = 'none';
+        if (pagerWrap) pagerWrap.style.display = 'none';
+        if (metaState) {
+          metaState.style.display = 'inline-flex';
+          metaState.innerHTML = `<i class="bi bi-arrow-repeat me-1"></i> ${msg || 'Loading…'}`;
+        }
+      } else {
+        if (skeleton) skeleton.style.display = 'none';
+        if (grid) grid.style.display = 'grid';
+        if (metaState) metaState.style.display = 'none';
+      }
+    }
+
+    function statusClass(status) {
+      const s = (status || '').toLowerCase();
+      if (s === 'active') return 'ok';
+      if (s === 'inactive' || s === 'dormant') return 'warn';
+      if (s === 'churned' || s === 'closed') return 'bad';
+      if (s === 'completed') return 'done';
+      return '';
+    }
+
+    function esc(s) {
+      return String(s ?? '')
+        .replaceAll('&','&amp;')
+        .replaceAll('<','&lt;')
+        .replaceAll('>','&gt;')
+        .replaceAll('"','&quot;')
+        .replaceAll("'",'&#039;');
+    }
+
+    function renderCustomers(customers) {
+      if (!grid) return;
+      if (!customers || customers.length === 0) {
+        grid.innerHTML = `
+          <div class="text-center py-4" style="color:var(--muted);font-weight:800;">
+            <i class="bi bi-inbox me-2"></i> No customers found with the current filters.
+          </div>
+        `;
+        return;
+      }
+
+      grid.innerHTML = customers.map(c => {
+        const tags = (c.tags || []).slice(0,3);
+        const extra = (c.tags || []).length - tags.length;
+        const lastPay = c.last_payment_date ? `<span>Last pay: <span class="strong">${esc(c.last_payment_date)}</span></span>` : `<span class="strong">No payment yet</span>`;
+
+        const tagHtml = (tags.length > 0) ? `
+          <div class="tag-mini">
+            ${tags.map(t => `
+              <span class="t"><span class="tdot" style="background:${esc(t.color || '#0ea5e9')}"></span>${esc(t.label || '')}</span>
+            `).join('')}
+            ${extra > 0 ? `<span class="t">+${extra}</span>` : ``}
+          </div>
+        ` : ``;
+
+        return `
+          <a class="cust-link" href="${esc("{{ url_for(customer_profile_route or 'customers.customer_profile', customer_id='__ID__') }}".replace('__ID__', c.id))}">
+            <div class="cust">
+              <div class="avatar">
+                ${c.image_url
+                  ? `<img src="${esc(c.image_url)}" alt="${esc(c.name)}" loading="lazy" onerror="this.onerror=null;this.src=window.CUSTOMER_FALLBACK_IMG;this.parentElement.querySelector('.initials').classList.add('hidden');">`
+                  : `<img src="${window.CUSTOMER_FALLBACK_IMG}" alt="${esc(c.name)}" loading="lazy">`}
+                <span class="initials hidden">${esc(c.initials || (c.name||'?')[0] || '?')}</span>
+              </div>
+
+              <div class="cust-main">
+                <div class="cust-top">
+                  <p class="cust-name">${esc(c.name)}</p>
+                  <span class="status ${statusClass(c.status)}"><i class="bi bi-activity"></i> ${esc(c.status)}</span>
+                </div>
+
+                <div class="cust-meta">
+                  <span><i class="bi bi-telephone-outbound"></i> ${esc(c.phone || 'N/A')}</span>
+                  <span><i class="bi bi-person-badge"></i> ${esc(c.agent_name || 'Unassigned')}</span>
+                  <span><i class="bi bi-diagram-3"></i> ${esc(c.agent_branch || 'N/A')}</span>
+                </div>
+
+                ${tagHtml}
+
+                <div class="cust-footer">
+                  <span><i class="bi bi-card-text"></i> View profile</span>
+                  ${lastPay}
+                </div>
+              </div>
+            </div>
+          </a>
+        `;
+      }).join('');
+    }
+
+    function renderPager(page, totalPages) {
+      if (!pager || !pagerWrap) return;
+
+      if (!totalPages || totalPages <= 1) {
+        pagerWrap.style.display = 'none';
+        pager.innerHTML = '';
+        return;
+      }
+
+      // compact pager
+      const pages = [];
+      const start = Math.max(1, page - 2);
+      const end = Math.min(totalPages, page + 2);
+
+      if (start > 1) pages.push(1);
+      if (start > 2) pages.push('…');
+      for (let p = start; p <= end; p++) pages.push(p);
+      if (end < totalPages - 1) pages.push('…');
+      if (end < totalPages) pages.push(totalPages);
+
+      pager.innerHTML = `
+        ${page > 1 ? `<li class="page-item"><a class="page-link" href="#" data-page="${page-1}">Previous</a></li>` : ``}
+        ${pages.map(p => {
+          if (p === '…') return `<li class="page-item disabled"><span class="page-link">…</span></li>`;
+          const active = (p === page) ? 'active' : '';
+          return `<li class="page-item ${active}"><a class="page-link" href="#" data-page="${p}">${p}</a></li>`;
+        }).join('')}
+        ${page < totalPages ? `<li class="page-item"><a class="page-link" href="#" data-page="${page+1}">Next</a></li>` : ``}
+      `;
+      pagerWrap.style.display = 'block';
+    }
+
+    function renderTags(availableTags) {
+      if (!tagsBar) return;
+
+      // keep first "All tags" link
+      const allLink = tagsBar.querySelector('[data-tag=""]');
+      tagsBar.innerHTML = `
+        <span class="label">Tags:</span>
+        <a class="tag ${!tagHidden.value ? 'active':''}" href="#" data-tag="">
+          <span class="dot" style="background:linear-gradient(135deg,var(--brand),var(--brand2));"></span>
+          All tags
+        </a>
+      `;
+
+      if (!availableTags || availableTags.length === 0) {
+        tagsBar.style.display = 'none';
+        return;
+      }
+
+      const current = (tagHidden.value || '').trim();
+      availableTags.forEach(t => {
+        const a = document.createElement('a');
+        a.className = 'tag ' + (current === (t.key || '') ? 'active' : '');
+        a.href = '#';
+        a.setAttribute('data-tag', t.key || '');
+        a.innerHTML = `
+          <span class="dot" style="background:${esc(t.color || '#0ea5e9')};"></span>
+          ${esc(t.label || t.key || 'Tag')} (${esc(t.count || 0)})
+        `;
+        tagsBar.appendChild(a);
+      });
+
+      tagsBar.style.display = 'flex';
+    }
+
+    function setChipActive(container, attr, value) {
+      container.querySelectorAll('a['+attr+']').forEach(a => {
+        const v = a.getAttribute(attr) || '';
+        if ((v || '') === (value || '')) a.classList.add('active');
+        else a.classList.remove('active');
+      });
+    }
+
+    // ===== Fetch data =====
+    let inflight = null;
+    async function fetchAndRender(reason) {
+      const qs = qsFromForm();
+      const url = "{{ url_for(customers_data_route or 'customers.customers_data') }}" + (qs ? `?${qs}` : '');
+      if (inflight) try { inflight.abort(); } catch(e){}
+      inflight = new AbortController();
+
+      setLoading(true, reason || 'Loading…');
+
+      try {
+        const res = await fetch(url, { signal: inflight.signal, headers: { 'Accept': 'application/json' }});
+        const data = await res.json();
+
+        if (!data.ok) {
+          renderCustomers([]);
+          setLoading(false);
+          return;
+        }
+
+        // Metrics
+        const m = data.metrics || {};
+        const total = data.total_customers ?? 0;
+        const active = m.total_active ?? 0;
+        const inactive = m.total_inactive ?? 0;
+        const dormant = m.total_dormant ?? 0;
+        const churned = m.total_churned ?? 0;
+        const closed = m.total_closed ?? 0;
+        const completed = m.total_completed ?? 0;
+
+        if (kpiTotal) kpiTotal.textContent = total;
+        if (kpiActive) kpiActive.textContent = active;
+        if (kpiClosed) kpiClosed.textContent = closed;
+
+        if (mActive) mActive.textContent = active;
+        if (mInactive) mInactive.textContent = inactive;
+        if (mDormant) mDormant.textContent = dormant;
+        if (mChurned) mChurned.textContent = churned;
+        if (mClosed) mClosed.textContent = closed;
+        if (mCompleted) mCompleted.textContent = completed;
+
+        if (cAll) cAll.textContent = total;
+        if (cActive) cActive.textContent = active;
+        if (cInactive) cInactive.textContent = inactive;
+        if (cDormant) cDormant.textContent = dormant;
+        if (cChurned) cChurned.textContent = churned;
+        if (cClosed) cClosed.textContent = closed;
+        if (cCompleted) cCompleted.textContent = completed;
+
+        // Customers
+        renderCustomers(data.customers || []);
+        if (metaShowing) metaShowing.textContent = (data.customers || []).length;
+        if (metaTotal) metaTotal.textContent = total;
+
+        // Tags
+        renderTags(data.available_tags || []);
+
+        // Pager
+        renderPager(data.page || 1, data.total_pages || 1);
+
+        // active chips
+        if (statusChips) setChipActive(statusChips, 'data-status', (statusHidden.value || '').trim());
+        if (tagsBar) setChipActive(tagsBar, 'data-tag', (tagHidden.value || '').trim());
+
+        // update URL (no reload)
+        const cleanQs = qsFromForm();
+        const newUrl = window.location.pathname + (cleanQs ? `?${cleanQs}` : '');
+        window.history.replaceState({}, '', newUrl);
+
+        setLoading(false);
+      } catch (e) {
+        if (e && e.name === 'AbortError') return;
+        setLoading(false);
+        renderCustomers([]);
+      }
+    }
+
+    // ===== Events =====
+    // Intercept form submit to avoid full reload
+    if (form) {
+      form.addEventListener('submit', (ev) => {
+        ev.preventDefault();
+        pageHidden.value = '1';
+        fetchAndRender('Filtering…');
+      });
+    }
+
+    // Auto submit search (debounced)
+    const autoSubmit = debounce(() => {
+      pageHidden.value = '1';
+      fetchAndRender('Searching…');
+    }, 450);
+
+    if (searchInput) {
+      searchInput.addEventListener('input', () => {
+        const v = (searchInput.value || '').trim();
+        if (v.length === 0 || v.length >= 2) autoSubmit();
+      });
+      searchInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          pageHidden.value = '1';
+          fetchAndRender('Searching…');
+        }
+      });
+    }
+
+    if (clearSearch && searchInput) {
+      clearSearch.addEventListener('click', () => {
+        searchInput.value = '';
+        searchInput.focus();
+        pageHidden.value = '1';
+        fetchAndRender('Clearing…');
+      });
+    }
+
+    if (agentSelect) {
+      agentSelect.addEventListener('change', () => {
+        pageHidden.value = '1';
+        fetchAndRender('Filtering…');
+      });
+    }
+    if (branchSelect) {
+      branchSelect.addEventListener('change', () => {
+        pageHidden.value = '1';
+        fetchAndRender('Filtering…');
+      });
+    }
+
+    // Status chip click
+    if (statusChips) {
+      statusChips.addEventListener('click', (e) => {
+        const a = e.target.closest('a[data-status]');
+        if (!a) return;
+        e.preventDefault();
+        statusHidden.value = (a.getAttribute('data-status') || '').trim();
+        pageHidden.value = '1';
+        fetchAndRender('Filtering…');
+      });
+    }
+
+    // Tag click
+    if (tagsBar) {
+      tagsBar.addEventListener('click', (e) => {
+        const a = e.target.closest('a[data-tag]');
+        if (!a) return;
+        e.preventDefault();
+        tagHidden.value = (a.getAttribute('data-tag') || '').trim();
+        pageHidden.value = '1';
+        fetchAndRender('Filtering…');
+      });
+    }
+
+    // Pager click
+    if (pager) {
+      pager.addEventListener('click', (e) => {
+        const a = e.target.closest('a[data-page]');
+        if (!a) return;
+        e.preventDefault();
+        const p = a.getAttribute('data-page');
+        if (!p) return;
+        pageHidden.value = String(p);
+        fetchAndRender('Loading page…');
+      });
+    }
+
+    if (refreshBtn) refreshBtn.addEventListener('click', () => fetchAndRender('Refreshing…'));
+
+    // ===== Initial async hydration =====
+    // Load fast: show shell immediately, then pull data.
+    fetchAndRender('Loading…');
+  });
+</script>
+  {% include 'app_footer.html' %}
+
+</body>
+</html>

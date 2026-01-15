@@ -1,0 +1,184 @@
+<div class="exec-card p-3 p-md-4 mb-3">
+  <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
+    <div>
+      <a href="/executive/users" data-ajax="true" class="btn btn-sm btn-outline-secondary mb-2">
+        <i class="bi bi-arrow-left"></i> Back
+      </a>
+      <div class="text-muted small">Users Reports</div>
+      <h4 class="mb-1">Executive User Reports</h4>
+      <div class="text-muted">Behavior, activity, and security overview.</div>
+    </div>
+  </div>
+</div>
+
+<div class="exec-card p-3 p-md-4 mb-3">
+  <form class="row g-2 align-items-end" method="get" action="/executive/users/reports" data-ajax="true">
+    <div class="col-md-3">
+      <label class="form-label small text-muted">Range</label>
+      <select class="form-select" name="range">
+        <option value="7d" {% if filters.range == '7d' %}selected{% endif %}>7d</option>
+        <option value="30d" {% if filters.range == '30d' %}selected{% endif %}>30d</option>
+        <option value="90d" {% if filters.range == '90d' %}selected{% endif %}>90d</option>
+      </select>
+    </div>
+    <div class="col-md-3">
+      <label class="form-label small text-muted">Role</label>
+      <select class="form-select" name="role">
+        <option value="">All roles</option>
+        {% for r in roles %}
+          <option value="{{ r }}" {% if filters.role == r %}selected{% endif %}>{{ r.title() }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-3">
+      <label class="form-label small text-muted">Branch</label>
+      <select class="form-select" name="branch">
+        <option value="">All branches</option>
+        {% for b in branches %}
+          <option value="{{ b }}" {% if filters.branch == b %}selected{% endif %}>{{ b }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-2">
+      <label class="form-label small text-muted">Status</label>
+      <select class="form-select" name="status">
+        <option value="">All statuses</option>
+        {% for s in statuses %}
+          <option value="{{ s }}" {% if filters.status == s %}selected{% endif %}>{{ s }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-1 d-grid">
+      <button type="submit" class="btn btn-primary">Apply</button>
+    </div>
+  </form>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-6">
+    <div class="exec-card p-3">
+      <div class="fw-semibold mb-2">Most Active Accounts</div>
+      {% if reports.most_active %}
+        <div class="list-group">
+          {% for row in reports.most_active %}
+            <div class="list-group-item d-flex justify-content-between align-items-center">
+              <div>
+                <div class="fw-semibold">{{ row.name }}</div>
+                <div class="text-muted small">{{ row.role|title }} * {{ row.branch or 'Unassigned' }}</div>
+              </div>
+              <div class="text-end">
+                <div class="fw-semibold">Score {{ row.score }}</div>
+                <div class="text-muted small">Logins {{ row.logins }} * Act {{ row.activities }}</div>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="text-muted">No data.</div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="col-lg-6">
+    <div class="exec-card p-3">
+      <div class="fw-semibold mb-2">Most Dormant Accounts</div>
+      {% if reports.most_dormant %}
+        <div class="list-group">
+          {% for row in reports.most_dormant %}
+            <div class="list-group-item d-flex justify-content-between align-items-center">
+              <div>
+                <div class="fw-semibold">{{ row.name }}</div>
+                <div class="text-muted small">{{ row.role|title }} * {{ row.branch or 'Unassigned' }}</div>
+              </div>
+              <div class="text-end text-muted small">
+                <div>Last login: {{ row.last_login.strftime('%Y-%m-%d') if row.last_login else '-' }}</div>
+                <div>Last activity: {{ row.last_activity.strftime('%Y-%m-%d') if row.last_activity else '-' }}</div>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="text-muted">No data.</div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<div class="row g-3 mt-1">
+  <div class="col-lg-6">
+    <div class="exec-card p-3">
+      <div class="fw-semibold mb-2">Risk &amp; Security</div>
+      {% if reports.risk_rows %}
+        <div class="list-group">
+          {% for row in reports.risk_rows %}
+            <div class="list-group-item d-flex justify-content-between align-items-center">
+              <div>
+                <div class="fw-semibold">{{ row.name }}</div>
+                <div class="text-muted small">{{ row.role|title }} * {{ row.branch or 'Unassigned' }}</div>
+              </div>
+              <div class="text-muted small">IPs in range: {{ row.ip_count }}</div>
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="text-muted">No risk indicators available.</div>
+      {% endif %}
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <div class="exec-card p-3">
+      <div class="fw-semibold mb-2">Role/Status Overview</div>
+      <div class="row">
+        <div class="col-sm-6">
+          <div class="text-muted small">Roles</div>
+          {% for role, count in reports.role_counts.items() %}
+            <div class="d-flex justify-content-between"><span>{{ role|title }}</span><strong>{{ count }}</strong></div>
+          {% endfor %}
+        </div>
+        <div class="col-sm-6">
+          <div class="text-muted small">Status</div>
+          {% for status, count in reports.status_counts.items() %}
+            <div class="d-flex justify-content-between"><span>{{ status }}</span><strong>{{ count }}</strong></div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3 mt-1">
+  <div class="col-lg-6">
+    <div class="exec-card p-3">
+      <div class="fw-semibold mb-2">New Accounts (Range)</div>
+      {% if reports.new_accounts %}
+        <ul class="list-group">
+          {% for row in reports.new_accounts[:10] %}
+            <li class="list-group-item d-flex justify-content-between">
+              <span>{{ row.name }} ({{ row.role|title }})</span>
+              <span class="text-muted small">{{ row.created_at.strftime('%Y-%m-%d') if row.created_at else '-' }}</span>
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <div class="text-muted">No new accounts in this range.</div>
+      {% endif %}
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <div class="exec-card p-3">
+      <div class="fw-semibold mb-2">Active Status but Dormant</div>
+      {% if reports.inactive_active %}
+        <ul class="list-group">
+          {% for row in reports.inactive_active %}
+            <li class="list-group-item d-flex justify-content-between">
+              <span>{{ row.name }} ({{ row.role|title }})</span>
+              <span class="text-muted small">Last login {{ row.last_login.strftime('%Y-%m-%d') if row.last_login else '-' }}</span>
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <div class="text-muted">No dormant active users found.</div>
+      {% endif %}
+    </div>
+  </div>
+</div>

@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Executive Users</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+  <link rel="icon" href="https://res.cloudinary.com/dljpgzbto/image/upload/v1743993646/company-logo_dksb23.jpg" type="image/png" />
+  <style>
+    :root {
+      --sl-blue: #0d6efd;
+      --sl-blue-900: #0b1f44;
+      --sl-orange: #f97316;
+      --sl-ink: #0f172a;
+      --sl-muted: #64748b;
+      --sl-card: #ffffff;
+      --sl-border: rgba(226, 232, 240, 0.9);
+      --sl-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
+    }
+    body {
+      background: radial-gradient(circle at top left, rgba(13,110,253,0.12), transparent 45%),
+                  radial-gradient(circle at top right, rgba(249,115,22,0.12), transparent 40%),
+                  #f8fafc;
+      padding-left: 260px;
+      font-family: "Sora", system-ui, -apple-system, "Segoe UI", sans-serif;
+      color: var(--sl-ink);
+    }
+    @media (max-width: 768px) {
+      body { padding-left: 0; }
+    }
+    .page-wrap { opacity: 0; transform: translateY(6px); transition: opacity .25s ease-out, transform .25s ease-out; }
+    body.page-ready .page-wrap { opacity: 1; transform: translateY(0); }
+
+    .hero-card {
+      background: linear-gradient(120deg, rgba(13,110,253,0.12), rgba(249,115,22,0.12));
+      border: 1px solid rgba(148, 163, 184, 0.25);
+      border-radius: 18px;
+      padding: 22px;
+      box-shadow: var(--sl-shadow);
+      position: relative;
+      overflow: hidden;
+    }
+    .hero-card::after {
+      content: "";
+      position: absolute;
+      inset: -30% -20% auto auto;
+      width: 200px;
+      height: 200px;
+      background: radial-gradient(circle, rgba(249,115,22,0.2), transparent 70%);
+      pointer-events: none;
+    }
+    .hero-sub {
+      color: var(--sl-muted);
+      font-size: 0.95rem;
+    }
+
+    .kpi-card {
+      background: var(--sl-card);
+      border: 1px solid var(--sl-border);
+      border-radius: 16px;
+      padding: 16px;
+      box-shadow: 0 10px 22px rgba(15, 23, 42, 0.06);
+      height: 100%;
+    }
+    .kpi-label {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--sl-muted);
+      font-weight: 600;
+    }
+    .kpi-value {
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: var(--sl-ink);
+    }
+    .kpi-icon {
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(13, 110, 253, 0.15);
+      color: var(--sl-blue);
+      font-size: 1.05rem;
+    }
+    .section-card {
+      background: var(--sl-card);
+      border: 1px solid var(--sl-border);
+      border-radius: 16px;
+      padding: 16px;
+      box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+    }
+    .table thead th {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--sl-muted);
+    }
+    .table tbody tr {
+      transition: background-color 0.2s ease;
+    }
+    .table tbody tr:hover {
+      background-color: rgba(15, 23, 42, 0.03);
+    }
+    .avatar {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      object-fit: cover;
+      background: #e2e8f0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--sl-ink);
+      font-weight: 700;
+      font-size: 0.8rem;
+    }
+    .badge-status {
+      font-size: 0.7rem;
+      padding: 4px 8px;
+      border-radius: 999px;
+      font-weight: 700;
+    }
+    .badge-active { background: #dcfce7; color: #166534; }
+    .badge-inactive { background: #fee2e2; color: #b91c1c; }
+    .btn-soft {
+      background: rgba(13, 110, 253, 0.12);
+      color: var(--sl-blue);
+      border: 1px solid rgba(13, 110, 253, 0.25);
+    }
+    .btn-soft:hover { background: rgba(13, 110, 253, 0.18); }
+    .btn-primary {
+      background: linear-gradient(135deg, #0d6efd, #2563eb);
+      border: none;
+      box-shadow: 0 10px 18px rgba(37, 99, 235, 0.18);
+    }
+    .btn-outline-secondary {
+      border-color: rgba(148, 163, 184, 0.6);
+    }
+    .mini-skeleton {
+      display: inline-block;
+      width: 80px;
+      height: 0.8rem;
+      border-radius: 6px;
+      background: linear-gradient(90deg, #f3f4f6 25%, #e5e7eb 37%, #f3f4f6 63%);
+      background-size: 400% 100%;
+      animation: shimmer 1.2s ease-in-out infinite;
+    }
+    @keyframes shimmer {
+      0% { background-position: -400px 0; }
+      100% { background-position: 400px 0; }
+    }
+    .filter-label {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--sl-muted);
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  {% include 'executive_sidebar.html' %}
+
+  <div class="container mt-4 page-wrap">
+    <div class="hero-card mb-3">
+      <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+        <div>
+          <div class="text-uppercase small text-muted">Executive Control</div>
+          <h3 class="mb-1">Users Command Center</h3>
+          <div class="hero-sub">Role visibility, access health, and activity coverage in one place.</div>
+        </div>
+        <div class="d-flex flex-wrap gap-2 align-items-center">
+          <div class="text-muted small">Total users: <strong>{{ total_users }}</strong></div>
+          {% if can_manage %}
+            <a class="btn btn-primary" href="{{ url_for('executive_users.executive_user_create') }}">
+              <i class="bi bi-person-plus"></i> Add User
+            </a>
+            <a class="btn btn-outline-secondary" href="{{ url_for('executive_users.executive_users_deleted') }}">
+              <i class="bi bi-archive"></i> Recently Deleted
+            </a>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="mb-3">
+          {% for category, message in messages %}
+            <div class="alert alert-{{ 'danger' if category == 'error' else category }}">{{ message }}</div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    <div class="row g-3 mb-3">
+      <div class="col-md-3 col-sm-6">
+        <div class="kpi-card">
+          <div class="d-flex align-items-center gap-2">
+            <div class="kpi-icon"><i class="bi bi-shield-lock"></i></div>
+            <div>
+              <div class="kpi-label">Admins</div>
+              <div class="kpi-value">{{ role_counts.get('admin', 0) }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3 col-sm-6">
+        <div class="kpi-card">
+          <div class="d-flex align-items-center gap-2">
+            <div class="kpi-icon"><i class="bi bi-diagram-3"></i></div>
+            <div>
+              <div class="kpi-label">Managers</div>
+              <div class="kpi-value">{{ role_counts.get('manager', 0) }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3 col-sm-6">
+        <div class="kpi-card">
+          <div class="d-flex align-items-center gap-2">
+            <div class="kpi-icon"><i class="bi bi-person-badge"></i></div>
+            <div>
+              <div class="kpi-label">Agents</div>
+              <div class="kpi-value">{{ role_counts.get('agent', 0) }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3 col-sm-6">
+        <div class="kpi-card">
+          <div class="d-flex align-items-center gap-2">
+            <div class="kpi-icon"><i class="bi bi-award"></i></div>
+            <div>
+              <div class="kpi-label">Executives</div>
+              <div class="kpi-value">{{ role_counts.get('executive', 0) }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3 col-sm-6">
+        <div class="kpi-card">
+          <div class="d-flex align-items-center gap-2">
+            <div class="kpi-icon"><i class="bi bi-box-seam"></i></div>
+            <div>
+              <div class="kpi-label">Inventory</div>
+              <div class="kpi-value">{{ role_counts.get('inventory', 0) }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3 col-sm-6">
+        <div class="kpi-card">
+          <div class="d-flex align-items-center gap-2">
+            <div class="kpi-icon"><i class="bi bi-people"></i></div>
+            <div>
+              <div class="kpi-label">HR</div>
+              <div class="kpi-value">{{ role_counts.get('hr', 0) }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3 col-sm-6">
+        <div class="kpi-card">
+          <div class="d-flex align-items-center gap-2">
+            <div class="kpi-icon"><i class="bi bi-calculator"></i></div>
+            <div>
+              <div class="kpi-label">Accounting</div>
+              <div class="kpi-value">{{ role_counts.get('accounting', 0) }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3 col-sm-6">
+        <div class="kpi-card">
+          <div class="d-flex align-items-center gap-2">
+            <div class="kpi-icon"><i class="bi bi-question-circle"></i></div>
+            <div>
+              <div class="kpi-label">Unknown</div>
+              <div class="kpi-value">{{ role_counts.get('unknown', 0) }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-card mb-3">
+      <form id="filtersForm" class="row g-2 align-items-end">
+        <div class="col-md-2">
+          <label class="filter-label">Role</label>
+          <select class="form-select" id="filterRole">
+            <option value="">All roles</option>
+            {% for role in roles %}
+              <option value="{{ role }}">{{ role.title() }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label class="filter-label">Branch</label>
+          <select class="form-select" id="filterBranch">
+            <option value="">All branches</option>
+            {% for branch in branches %}
+              <option value="{{ branch }}">{{ branch }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-2">
+          <label class="filter-label">Status</label>
+          <select class="form-select" id="filterStatus">
+            <option value="">All statuses</option>
+            {% for status in statuses %}
+              <option value="{{ status }}">{{ status }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label class="filter-label">Search</label>
+          <input type="search" class="form-control" id="filterSearch" placeholder="Name, username, phone, email">
+        </div>
+        <div class="col-md-2 d-flex gap-2">
+          <button type="submit" class="btn btn-primary w-100">Apply</button>
+          <button type="button" class="btn btn-light w-100" id="resetFilters">Reset</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="section-card">
+      <div class="d-flex flex-wrap justify-content-between align-items-center mb-2">
+        <div class="fw-semibold">User Directory</div>
+        <div class="text-muted small" id="pagerMeta"><span class="mini-skeleton"></span></div>
+      </div>
+      <div class="table-responsive">
+        <table class="table align-middle">
+          <thead>
+            <tr>
+              <th>Avatar</th>
+              <th>Name</th>
+              <th>Username</th>
+              <th>Role</th>
+              <th>Branch</th>
+              <th>Status</th>
+              <th>Last Login</th>
+              <th>Total Logins (30d)</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="usersTable">
+            <tr><td colspan="9" class="text-muted">Loading users...</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="d-flex justify-content-between align-items-center mt-2">
+        <button class="btn btn-outline-secondary btn-sm" id="prevPage">Previous</button>
+        <button class="btn btn-outline-secondary btn-sm" id="nextPage">Next</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      document.body.classList.add('page-ready');
+
+      const state = {
+        page: 1,
+        pageSize: 20,
+        role: '',
+        branch: '',
+        status: '',
+        search: ''
+      };
+
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('page')) state.page = Number(params.get('page')) || 1;
+      if (params.get('role')) state.role = params.get('role');
+      if (params.get('branch')) state.branch = params.get('branch');
+      if (params.get('status')) state.status = params.get('status');
+      if (params.get('search')) state.search = params.get('search');
+
+      const filterRole = document.getElementById('filterRole');
+      const filterBranch = document.getElementById('filterBranch');
+      const filterStatus = document.getElementById('filterStatus');
+      const filterSearch = document.getElementById('filterSearch');
+      const usersTable = document.getElementById('usersTable');
+      const pagerMeta = document.getElementById('pagerMeta');
+      const prevPage = document.getElementById('prevPage');
+      const nextPage = document.getElementById('nextPage');
+
+      filterRole.value = state.role;
+      filterBranch.value = state.branch;
+      filterStatus.value = state.status;
+      filterSearch.value = state.search;
+
+      function formatDate(value) {
+        if (!value) return '---';
+        const dt = new Date(value);
+        if (Number.isNaN(dt.getTime())) return '---';
+        return dt.toLocaleString();
+      }
+
+      const defaultAvatar = "{{ DEFAULT_PROFILE_IMAGE_URL }}";
+
+      function avatarCell(row) {
+        const url = row.image_url || defaultAvatar;
+        return `<img src="${url}" class="avatar" alt="${row.name}" onerror="this.src='${defaultAvatar}'">`;
+      }
+
+      function statusBadge(status) {
+        const isActive = status === 'Active';
+        return `<span class="badge-status ${isActive ? 'badge-active' : 'badge-inactive'}">${status}</span>`;
+      }
+
+      function setQueryParams() {
+        const next = new URLSearchParams();
+        if (state.page > 1) next.set('page', state.page);
+        if (state.role) next.set('role', state.role);
+        if (state.branch) next.set('branch', state.branch);
+        if (state.status) next.set('status', state.status);
+        if (state.search) next.set('search', state.search);
+        history.replaceState(null, '', `${window.location.pathname}?${next.toString()}`);
+      }
+
+      function loadData() {
+        setQueryParams();
+        usersTable.innerHTML = '<tr><td colspan="9" class="text-muted">Loading users...</td></tr>';
+        const qs = new URLSearchParams({
+          page: state.page,
+          page_size: state.pageSize,
+          role: state.role,
+          branch: state.branch,
+          status: state.status,
+          search: state.search
+        });
+
+        fetch(`/executive/users/data?${qs.toString()}`, { credentials: 'same-origin' })
+          .then(res => res.json())
+          .then(data => {
+            if (!data.ok) {
+              usersTable.innerHTML = '<tr><td colspan="9" class="text-danger">Unable to load users.</td></tr>';
+              return;
+            }
+            const rows = data.rows || [];
+            if (!rows.length) {
+              usersTable.innerHTML = '<tr><td colspan="9" class="text-muted">No users found.</td></tr>';
+            } else {
+              usersTable.innerHTML = rows.map(row => `
+                <tr>
+                  <td>${avatarCell(row)}</td>
+                  <td>${row.name}</td>
+                  <td>${row.username || '---'}</td>
+                  <td class="text-capitalize">${row.role}</td>
+                  <td>${row.branch}</td>
+                  <td>${statusBadge(row.status)}</td>
+                  <td>${formatDate(row.last_login)}</td>
+                  <td>${Number(row.logins_30d || 0).toLocaleString()}</td>
+                  <td>
+                    <div class="d-flex gap-2 flex-wrap">
+                      <a class="btn btn-sm btn-outline-primary" href="/executive/users/${row.id}">View</a>
+                      {% if can_manage %}
+                        <button class="btn btn-sm btn-soft" data-action="toggle" data-id="${row.id}" data-status="${row.status}">
+                          ${row.status === 'Active' ? 'Deactivate' : 'Activate'}
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger" data-action="delete" data-id="${row.id}" data-name="${row.name}">Delete</button>
+                      {% endif %}
+                    </div>
+                  </td>
+                </tr>
+              `).join('');
+            }
+
+            const total = data.pagination ? Number(data.pagination.total || 0) : 0;
+            const page = data.pagination ? Number(data.pagination.page || 1) : 1;
+            const pageSize = data.pagination ? Number(data.pagination.page_size || 20) : 20;
+            const start = total === 0 ? 0 : (page - 1) * pageSize + 1;
+            const end = Math.min(page * pageSize, total);
+            pagerMeta.textContent = `Showing ${start}-${end} of ${total}`;
+
+            prevPage.disabled = page <= 1;
+            nextPage.disabled = end >= total;
+
+            document.querySelectorAll('[data-action="toggle"]').forEach(btn => {
+              btn.addEventListener('click', () => {
+                const userId = btn.getAttribute('data-id');
+                const current = btn.getAttribute('data-status');
+                const proceed = confirm(`Toggle status for this user? Current: ${current}`);
+                if (!proceed) return;
+
+                const body = new URLSearchParams({ next: window.location.pathname + window.location.search });
+                fetch(`/executive/users/${userId}/toggle_status`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                  body,
+                  credentials: 'same-origin'
+                }).then(() => window.location.reload());
+              });
+            });
+
+            document.querySelectorAll('[data-action="delete"]').forEach(btn => {
+              btn.addEventListener('click', () => {
+                const userId = btn.getAttribute('data-id');
+                const name = btn.getAttribute('data-name') || 'this user';
+                const proceed = confirm(`Delete ${name}? This cannot be undone unless restored from Recently Deleted.`);
+                if (!proceed) return;
+                const body = new URLSearchParams({ next: window.location.pathname + window.location.search });
+                fetch(`/executive/users/${userId}/delete`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                  body,
+                  credentials: 'same-origin'
+                }).then(() => window.location.reload());
+              });
+            });
+          })
+          .catch(() => {
+            usersTable.innerHTML = '<tr><td colspan="9" class="text-danger">Unable to load users.</td></tr>';
+          });
+      }
+
+      document.getElementById('filtersForm').addEventListener('submit', (e) => {
+        e.preventDefault();
+        state.page = 1;
+        state.role = filterRole.value;
+        state.branch = filterBranch.value;
+        state.status = filterStatus.value;
+        state.search = filterSearch.value.trim();
+        loadData();
+      });
+
+      document.getElementById('resetFilters').addEventListener('click', () => {
+        state.page = 1;
+        state.role = '';
+        state.branch = '';
+        state.status = '';
+        state.search = '';
+        filterRole.value = '';
+        filterBranch.value = '';
+        filterStatus.value = '';
+        filterSearch.value = '';
+        loadData();
+      });
+
+      prevPage.addEventListener('click', () => {
+        if (state.page > 1) {
+          state.page -= 1;
+          loadData();
+        }
+      });
+
+      nextPage.addEventListener('click', () => {
+        state.page += 1;
+        loadData();
+      });
+
+      loadData();
+    });
+  </script>
+  {% include 'app_footer.html' %}
+</body>
+</html>

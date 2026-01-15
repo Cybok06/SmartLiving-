@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Journal Entries -  TRUEtype Services</title>
+
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link rel="icon" href="https://res.cloudinary.com/dljpgzbto/image/upload/v1743993646/company-logo_dksb23.jpg" type="image/png">
+
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+  <style>.material-symbols-outlined{font-variation-settings:'FILL'0,'wght'400,'GRAD'0,'opsz'24}</style>
+  <script>
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: { primary:"#16a34a", secondary:"#0f172a", "neutral-0":"#f9fafb", "neutral-1":"#e5e7eb", "neutral-9":"#111827" },
+          fontFamily:{ display:["Inter","system-ui","sans-serif"] },
+          borderRadius:{ xl:"1.125rem" },
+          boxShadow:{ soft:"0 4px 16px rgba(0,0,0,.06)" }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="min-h-full bg-neutral-0 dark:bg-neutral-9 text-neutral-9 dark:text-white font-display">
+  {% include 'accounting/sidebar.html' %}
+
+<main class="max-w-7xl mx-auto px-4 lg:px-8 py-6 lg:py-8">
+
+  <header class="flex flex-wrap items-center justify-between gap-3 mb-6">
+    <div>
+      <h1 class="text-3xl lg:text-4xl font-black tracking-tight">Journal Entries</h1>
+      <p class="text-sm text-slate-500 dark:text-slate-400">Browse, add, view details</p>
+    </div>
+    <div class="flex gap-2">
+      <button class="h-10 px-4 rounded-full border font-semibold hover:bg-neutral-0 dark:hover:bg-white/10 flex items-center gap-2">
+        <span class="material-symbols-outlined">ios_share</span> Export
+      </button>
+      <!-- Open modal -->
+      <button id="openModalBtn" class="h-10 px-4 rounded-full bg-primary text-white font-bold hover:bg-primary/90 flex items-center gap-1">
+        <span class="material-symbols-outlined">add</span> New Journal
+      </button>
+    </div>
+  </header>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    <div class="mb-4 space-y-2">
+      {% for cat, msg in messages %}
+        {% set clr = 'bg-green-50 text-green-700 border-green-200' if cat=='success'
+                     else ('bg-yellow-50 text-yellow-700 border-yellow-200' if cat=='warning'
+                     else ('bg-red-50 text-red-700 border-red-200' if cat=='danger'
+                     else 'bg-blue-50 text-blue-700 border-blue-200')) %}
+        <div class="px-4 py-2 rounded-lg border {{ clr }}">{{ msg }}</div>
+      {% endfor %}
+    </div>
+  {% endif %}
+  {% endwith %}
+
+  <!-- Table -->
+  <section class="overflow-hidden rounded-xl border border-neutral-1/60 dark:border-neutral-9 shadow-soft bg-white dark:bg-neutral-9/60">
+    <div class="overflow-x-auto">
+      <table class="w-full text-left">
+        <thead class="bg-neutral-0 dark:bg-neutral-900/60">
+          <tr class="text-xs uppercase text-slate-600 dark:text-slate-300">
+            <th class="px-6 py-3">Date</th>
+            <th class="px-6 py-3">Ref</th>
+            <th class="px-6 py-3">Source</th>
+            <th class="px-6 py-3">Memo</th>
+            <th class="px-6 py-3 text-right">Total DR</th>
+            <th class="px-6 py-3 text-right">Total CR</th>
+            <th class="px-6 py-3">Status</th>
+            <th class="px-6 py-3 text-center">Actions</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y">
+          {% for r in rows %}
+          <tr class="odd:bg-white dark:odd:bg-neutral-900 even:bg-neutral-0 dark:even:bg-neutral-950 hover:bg-primary/5 dark:hover:bg-primary/10">
+            <td class="px-6 py-3 text-sm font-medium">{{ r.date }}</td>
+            <td class="px-6 py-3 text-sm text-slate-600 dark:text-slate-300">{{ r.ref }}</td>
+            <td class="px-6 py-3 text-sm text-slate-600 dark:text-slate-300">{{ r.source }}</td>
+            <td class="px-6 py-3 text-sm text-slate-600 dark:text-slate-300 max-w-[360px] truncate">{{ r.memo }}</td>
+            <td class="px-6 py-3 text-sm text-right">{{ "%.2f"|format(r.total_dr) }}</td>
+            <td class="px-6 py-3 text-sm text-right">{{ "%.2f"|format(r.total_cr) }}</td>
+            <td class="px-6 py-3 text-sm">
+              {% set st = r.status %}
+              {% set cls = 'text-green-700 bg-green-100' if st=='posted'
+                           else ('text-yellow-800 bg-yellow-100' if st=='draft'
+                           else 'text-red-700 bg-red-100') %}
+              <span class="px-3 py-1 rounded-full text-xs font-semibold {{ cls }}">{{ st|title }}</span>
+            </td>
+            <td class="px-6 py-3 text-sm text-center">
+              <a class="inline-flex items-center gap-1 text-primary hover:underline"
+                 href="{{ url_for('journals.journal_view', id=r.id) }}">
+                <span class="material-symbols-outlined text-sm">visibility</span> View
+              </a>
+            </td>
+          </tr>
+          {% else %}
+          <tr><td colspan="8" class="px-6 py-10 text-center text-slate-500">No journal entries yet.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- Pagination -->
+  {% if pager and pager.pages > 1 %}
+  <nav class="mt-6 flex items-center justify-between">
+    <a class="px-3 py-2 rounded-lg border {{ 'pointer-events-none opacity-50' if not pager.prev_url else '' }}"
+       href="{{ pager.prev_url or '#' }}">Previous</a>
+    <div class="text-sm text-slate-500">Page {{ pager.page }} of {{ pager.pages }}</div>
+    <a class="px-3 py-2 rounded-lg border {{ 'pointer-events-none opacity-50' if not pager.next_url else '' }}"
+       href="{{ pager.next_url or '#' }}">Next</a>
+  </nav>
+  {% endif %}
+
+  <!-- Clear all (POST only, small danger section) -->
+  <form method="post" action="{{ url_for('journals.journals_clear') }}" class="mt-8">
+    <div class="p-4 rounded-xl border bg-red-50 text-red-800">
+      <div class="flex items-center justify-between">
+        <div>
+          <div class="font-bold">Danger Zone</div>
+          <div class="text-sm">Clear all journal entries (irreversible).</div>
+        </div>
+        <button type="submit" class="px-4 py-2 rounded-lg border border-red-300 bg-white hover:bg-red-100">
+          Clear All
+        </button>
+      </div>
+    </div>
+  </form>
+</main>
+
+<!-- ===== MODAL: New Journal ===== -->
+<div id="journalModal" class="fixed inset-0 hidden items-end sm:items-center justify-center z-50">
+  <div class="absolute inset-0 bg-black/40" id="modalBackdrop"></div>
+  <div class="relative w-full sm:max-w-4xl bg-white dark:bg-neutral-900 rounded-t-2xl sm:rounded-2xl shadow-soft">
+    <div class="flex items-center justify-between px-5 py-3 border-b border-neutral-200 dark:border-neutral-800">
+      <h3 class="text-lg font-bold">New Journal Entry</h3>
+      <button id="closeModalBtn" class="p-2 rounded hover:bg-neutral-100 dark:hover:bg-neutral-800">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+
+    <form id="journalForm" method="post" action="{{ url_for('journals.journal_create') }}" class="p-5 space-y-4">
+      <!-- Meta -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+        <label class="block">
+          <span class="text-sm font-medium">Date</span>
+          <input type="date" name="date" value="{{ today }}" required class="mt-1 w-full h-11 rounded-xl border p-2.5"/>
+        </label>
+        <label class="block">
+          <span class="text-sm font-medium">Ref No</span>
+          <input type="text" name="ref" value="{{ ref }}" required class="mt-1 w-full h-11 rounded-xl border p-2.5"/>
+        </label>
+        <label class="block">
+          <span class="text-sm font-medium">Source</span>
+          <select name="source" class="mt-1 w-full h-11 rounded-xl border p-2.5">
+            <option>Manual</option><option>AR</option><option>AP</option><option>Bank</option><option>Payroll</option>
+          </select>
+        </label>
+        <label class="block">
+          <span class="text-sm font-medium">Currency</span>
+          <input type="text" name="currency" value="{{ base_currency or 'GHS' }}" class="mt-1 w-full h-11 rounded-xl border p-2.5"/>
+        </label>
+        <label class="block">
+          <span class="text-sm font-medium">FX Rate</span>
+          <input type="text" name="fx_rate" value="1.0000" class="mt-1 w-full h-11 rounded-xl border p-2.5"/>
+        </label>
+        <label class="block md:col-span-2 lg:col-span-3 xl:col-span-5">
+          <span class="text-sm font-medium">Memo</span>
+          <textarea name="memo" placeholder="Enter a memo for this entry..." class="mt-1 w-full min-h-20 rounded-xl border p-2.5"></textarea>
+        </label>
+      </div>
+
+      <!-- Lines -->
+      <section class="rounded-xl border border-neutral-200 dark:border-neutral-800 overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead class="text-xs uppercase bg-neutral-50 dark:bg-neutral-800">
+              <tr class="text-slate-600 dark:text-slate-300">
+                <th class="px-5 py-3 text-left min-w-[180px]">Account</th>
+                <th class="px-5 py-3 text-left min-w-[160px]">Partner</th>
+                <th class="px-5 py-3 text-left min-w-[240px]">Description</th>
+                <th class="px-5 py-3 text-right min-w-[140px]">Debit</th>
+                <th class="px-5 py-3 text-right min-w-[140px]">Credit</th>
+                <th class="w-12"></th>
+              </tr>
+            </thead>
+            <tbody id="linesBody" class="divide-y">
+            </tbody>
+          </table>
+        </div>
+        <div class="p-3 bg-neutral-50 dark:bg-neutral-800 border-t border-neutral-200 dark:border-neutral-800">
+          <button type="button" id="btnAdd" class="h-10 px-3 rounded-full font-semibold text-primary hover:bg-primary/10 flex items-center gap-1">
+            <span class="material-symbols-outlined">add</span> Add Row
+          </button>
+        </div>
+      </section>
+
+      <!-- Footer -->
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <div class="flex items-baseline gap-4">
+          <span class="text-sm text-slate-600 dark:text-slate-300">Totals</span>
+          <span class="text-lg font-bold">Debit: <span id="sumDr">0.00</span></span>
+          <span class="text-lg font-bold">Credit: <span id="sumCr">0.00</span></span>
+        </div>
+        <div class="flex gap-2">
+          <button name="action" value="draft" class="h-11 px-6 rounded-full border font-bold">Save Draft</button>
+          <button id="postBtn" name="action" value="post" class="h-11 px-6 rounded-full bg-primary text-white font-bold hover:bg-primary/90">Post</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  // ===== Modal open/close
+  const modal = document.getElementById('journalModal');
+  const openBtn = document.getElementById('openModalBtn');
+  const closeBtn = document.getElementById('closeModalBtn');
+  const backdrop = document.getElementById('modalBackdrop');
+  const showModal = () => modal.classList.remove('hidden');
+  const hideModal = () => modal.classList.add('hidden');
+  openBtn.addEventListener('click', showModal);
+  closeBtn.addEventListener('click', hideModal);
+  backdrop.addEventListener('click', hideModal);
+  document.addEventListener('keydown', (e)=>{ if(e.key==='Escape') hideModal(); });
+
+  // ===== Lines table
+  function rowTemplate({account="", partner="", desc="", debit="", credit=""}={}) {
+    return `
+      <tr class="bg-white dark:bg-neutral-900">
+        <td class="px-5 py-3"><input name="account[]" value="${account}" placeholder="e.g., 1010 - Cash" class="w-full border-0 focus:ring-0 p-0 bg-transparent"/></td>
+        <td class="px-5 py-3"><input name="partner[]" value="${partner}" placeholder="Optional partner" class="w-full border-0 focus:ring-0 p-0 bg-transparent"/></td>
+        <td class="px-5 py-3"><input name="desc[]" value="${desc}" placeholder="Line item description" class="w-full border-0 focus:ring-0 p-0 bg-transparent"/></td>
+        <td class="px-5 py-3 text-right"><input name="debit[]" value="${debit}" inputmode="decimal" placeholder="0.00" class="w-full text-right border-0 focus:ring-0 p-0 bg-transparent amount"/></td>
+        <td class="px-5 py-3 text-right"><input name="credit[]" value="${credit}" inputmode="decimal" placeholder="0.00" class="w-full text-right border-0 focus:ring-0 p-0 bg-transparent amount"/></td>
+        <td class="px-3 py-3 text-center">
+          <button type="button" class="text-slate-400 hover:text-red-600 delBtn"><span class="material-symbols-outlined">delete</span></button>
+        </td>
+      </tr>`;
+  }
+  const bodyEl = document.getElementById('linesBody');
+  const addBtn = document.getElementById('btnAdd');
+  const sumDr = document.getElementById('sumDr');
+  const sumCr = document.getElementById('sumCr');
+  const postBtn = document.getElementById('postBtn');
+
+  function addRow(prefill={}){ bodyEl.insertAdjacentHTML('beforeend', rowTemplate(prefill)); }
+  // seed sample + one empty
+  addRow({account:"1010 - Cash and Bank", desc:"Initial capital deposit", debit:"5000.00"});
+  addRow({account:"3010 - Common Stock", desc:"Owner's investment", credit:"5000.00"});
+  addRow();
+
+  function toNum(v){ v=(v||"").toString().replace(/,/g,'').trim(); return v?parseFloat(v):0; }
+  function recalc(){
+    let dr=0, cr=0;
+    bodyEl.querySelectorAll('tr').forEach(tr=>{
+      const d = toNum(tr.querySelector('input[name="debit[]"]').value);
+      const c = toNum(tr.querySelector('input[name="credit[]"]').value);
+      dr += d; cr += c;
+    });
+    sumDr.textContent = dr.toFixed(2);
+    sumCr.textContent = cr.toFixed(2);
+    const ok = Math.abs(dr - cr) < 0.005 && dr > 0;
+    postBtn.disabled = !ok;
+    postBtn.classList.toggle('opacity-60', !ok);
+    postBtn.classList.toggle('cursor-not-allowed', !ok);
+  }
+  bodyEl.addEventListener('input', (e)=>{
+    if(e.target.classList.contains('amount')){
+      e.target.addEventListener('blur', (ev)=>{
+        const n = toNum(ev.target.value);
+        ev.target.value = n? n.toFixed(2) : "";
+        recalc();
+      }, {once:true});
+    }
+    recalc();
+  });
+  bodyEl.addEventListener('click', (e)=>{
+    if(e.target.closest('.delBtn')){
+      e.target.closest('tr').remove();
+      recalc();
+    }
+  });
+  addBtn.addEventListener('click', ()=>addRow());
+  recalc();
+</script>
+</body>
+</html>

@@ -1,0 +1,113 @@
+<div class="card p-3 mb-3">
+  <div class="row g-3">
+    <div class="col-12 col-md-4">
+      <div class="stat-tile">
+        <div class="d-flex align-items-center gap-3">
+          <div class="stat-icon bg-primary-subtle text-primary"><i class="bi bi-piggy-bank"></i></div>
+          <div>
+            <div class="muted small">SUSU Total</div>
+            <div class="stat-value">GHS {{ "{:,.2f}".format(susu_total or 0) }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-md-4">
+      <div class="stat-tile">
+        <div class="d-flex align-items-center gap-3">
+          <div class="stat-icon bg-info-subtle text-info"><i class="bi bi-cash-stack"></i></div>
+          <div>
+            <div class="muted small">SUSU Withdrawn</div>
+            <div class="stat-value">GHS {{ "{:,.2f}".format(susu_withdrawn or 0) }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-md-4">
+      <div class="stat-tile">
+        <div class="d-flex align-items-center gap-3">
+          <div class="stat-icon bg-success-subtle text-success"><i class="bi bi-wallet2"></i></div>
+          <div>
+            <div class="muted small">SUSU Amount Left</div>
+            <div class="stat-value">GHS {{ "{:,.2f}".format(susu_left or 0) }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card p-3 mb-3">
+  <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+    <div>
+      <div class="fw-semibold">SUSU Payment History</div>
+      <div class="small muted">
+        {{ susu_payments|length }} payments - GHS {{ "{:,.2f}".format(susu_payments|sum(attribute='amount') or 0) }}
+        {% if showing_limit %}<span class="ms-1">(Showing latest 300)</span>{% endif %}
+      </div>
+    </div>
+  </div>
+  <div class="table-wrap">
+    <table class="table table-sm mb-0">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Amount</th>
+          <th>Method</th>
+          <th>Note</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if susu_payments and susu_payments|length > 0 %}
+          {% for payment in susu_payments %}
+          <tr>
+            <td>{{ payment.date[:10] }}</td>
+            <td>GHS {{ "{:,.2f}".format(payment.amount or 0) }}</td>
+            <td>{{ payment.method or "N/A" }}</td>
+            <td>{{ payment.note or "N/A" }}</td>
+          </tr>
+          {% endfor %}
+        {% else %}
+          <tr><td colspan="4" class="text-muted">No SUSU payments recorded yet.</td></tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="card p-3">
+  <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+    <div>
+      <div class="fw-semibold">SUSU Withdrawals</div>
+      <div class="small muted">
+        {{ susu_withdrawals|length }} withdrawals - GHS {{ "{:,.2f}".format(susu_withdrawals|sum(attribute='amount') or 0) }}
+        {% if showing_limit %}<span class="ms-1">(Showing latest 300)</span>{% endif %}
+      </div>
+    </div>
+  </div>
+  <div class="table-wrap">
+    <table class="table table-sm mb-0">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Amount</th>
+          <th>Method</th>
+          <th>Note</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if susu_withdrawals and susu_withdrawals|length > 0 %}
+          {% for withdrawal in susu_withdrawals %}
+          <tr>
+            <td>{{ withdrawal.date[:10] }}</td>
+            <td>GHS {{ "{:,.2f}".format(withdrawal.amount or 0) }}</td>
+            <td>{{ withdrawal.method or "N/A" }}</td>
+            <td>{{ withdrawal.note or "N/A" }}</td>
+          </tr>
+          {% endfor %}
+        {% else %}
+          <tr><td colspan="4" class="text-muted">No SUSU withdrawals recorded yet.</td></tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>

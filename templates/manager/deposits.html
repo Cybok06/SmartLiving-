@@ -1,0 +1,666 @@
+{# templates/manager/deposits.html #}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Manager Deposits</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <!-- Bootstrap 5 + Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <style>
+    :root{ --ink:#0f172a; --muted:#64748b; --ring:#e9eef5; --soft:#f7fafc; --brand:#0d6efd; }
+    body{ background:#f6f8fb; color:var(--ink); }
+    .card { border-radius: 14px; box-shadow: 0 6px 24px rgba(0,0,0,0.06); }
+    .preview { max-width: 160px; max-height: 160px; border: 1px dashed #ced4da; border-radius: 10px; object-fit: contain; }
+    .pill { display:inline-flex; align-items:center; gap:.4rem; padding:.25rem .6rem; border-radius:999px; font-size:.75rem; background:#f1f3f5; }
+    .table td, .table th{ vertical-align: middle; }
+    .iconify{ width:18px; height:18px; }
+    .spinner-inline{ width:1rem; height:1rem; border:.2rem solid rgba(255,255,255,.35); border-top-color:#fff; border-radius:50%; animation:spin .8s linear infinite; display:none; }
+    .stat-amount { font-size: 1.25rem; font-weight: 700; }
+    .kpi-card{ border:1px solid #eef2f7; }
+    .kpi-icon{
+      width:44px; height:44px; border-radius:12px;
+      display:flex; align-items:center; justify-content:center;
+      font-size:1.25rem;
+    }
+    .chart-card{
+      border:1px solid #eef2f7; border-radius:14px; padding:12px;
+      background:#fff; box-shadow:0 6px 24px rgba(2,6,23,.04);
+    }
+    .chart-title{ font-weight:600; margin-bottom:.5rem; color:#0f172a; }
+    .chart-wrap{ position:relative; min-height:220px; }
+    .chart-skeleton{
+      position:absolute; inset:0; border-radius:12px;
+      background:linear-gradient(90deg,#f1f5f9,#e2e8f0,#f1f5f9);
+      animation: shimmer 1.2s infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes shimmer{
+      0%{ background-position:0 0; }
+      100%{ background-position:200% 0; }
+    }
+    .method-badge i{ margin-right:.25rem }
+  </style>
+</head>
+<body>
+  {% include 'side_bar.html' %}
+
+<div class="container py-4">
+
+  {# Standard flash messages (for non-AJAX flows / fallback) #}
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div class="mb-3">
+        {% for category, message in messages %}
+          <div class="alert alert-{{ 'danger' if category in ['danger','error'] else category }} mb-2">
+            <i class="bi bi-info-circle me-2"></i>{{ message }}
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
+
+  {# AJAX-only alert #}
+  <div id="ajaxAlert" class="alert d-none mb-3" role="alert"></div>
+
+  <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+    <h3 class="m-0">
+      <i class="bi bi-bank2 me-2"></i>Manager Deposits
+    </h3>
+    <div>
+      <span class="pill me-2"><i class="bi bi-person-badge"></i> Manager: <strong>{{ manager_name }}</strong></span>
+      <span class="pill"><i class="bi bi-geo"></i> Branch: <strong>{{ branch_name }}</strong></span>
+    </div>
+  </div>
+
+  <!-- ===== Analytics Filters ===== -->
+  <form class="card mb-3" method="GET" action="{{ url_for('manager_deposits.form_and_list') }}">
+    <div class="card-body row g-3 align-items-end">
+      <div class="col-12 col-md-4">
+        <label class="form-label">Branch</label>
+        <select class="form-select" disabled>
+          <option>{{ branch_name }}</option>
+        </select>
+      </div>
+      <div class="col-6 col-md-4">
+        <label class="form-label">Start date</label>
+        <input type="date" name="start" value="{{ custom_start }}" class="form-control">
+      </div>
+      <div class="col-6 col-md-4">
+        <label class="form-label">End date</label>
+        <input type="date" name="end" value="{{ custom_end }}" class="form-control">
+      </div>
+      <div class="col-12 col-md-3 d-flex gap-2">
+        <button class="btn btn-primary w-100">
+          <i class="bi bi-funnel me-1"></i> Apply
+        </button>
+        <a class="btn btn-outline-secondary w-100"
+           href="{{ url_for('manager_deposits.form_and_list') }}">
+          Reset
+        </a>
+      </div>
+    </div>
+  </form>
+
+  <!-- ===== Analytics Header ===== -->
+  <div class="row g-3 mb-3">
+    <div class="col-12 col-md-4">
+      <div class="card kpi-card h-100">
+        <div class="card-body d-flex align-items-center justify-content-between">
+          <div>
+            <div class="text-uppercase small muted">Today</div>
+            <div class="stat-amount">GHS {{ "%.2f"|format(analytics.today_total|float) }}</div>
+            <div class="small muted">Approved deposits</div>
+          </div>
+          <div class="kpi-icon bg-primary-subtle text-primary">
+            <i class="bi bi-calendar-day"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-md-4">
+      <div class="card kpi-card h-100">
+        <div class="card-body d-flex align-items-center justify-content-between">
+          <div>
+            <div class="text-uppercase small muted">This Week</div>
+            <div class="stat-amount">GHS {{ "%.2f"|format(analytics.week_total|float) }}</div>
+            <div class="small muted">Approved deposits</div>
+          </div>
+          <div class="kpi-icon bg-success-subtle text-success">
+            <i class="bi bi-calendar-week"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-md-4">
+      <div class="card kpi-card h-100">
+        <div class="card-body d-flex align-items-center justify-content-between">
+          <div>
+            <div class="text-uppercase small muted">This Month</div>
+            <div class="stat-amount">GHS {{ "%.2f"|format(analytics.month_total|float) }}</div>
+            <div class="small muted">Approved deposits</div>
+          </div>
+          <div class="kpi-icon bg-warning-subtle text-warning">
+            <i class="bi bi-calendar3"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-md-6 col-lg-4">
+      <div class="card kpi-card h-100">
+        <div class="card-body">
+          <div class="text-uppercase small muted">Custom Range</div>
+          <div class="stat-amount">GHS {{ "%.2f"|format(analytics.custom_total|float) }}</div>
+          <div class="small muted">
+            Approved deposits
+            {% if analytics.custom_start and analytics.custom_end %}
+              ({{ analytics.custom_start }} → {{ analytics.custom_end }})
+            {% endif %}
+            {% if analytics.custom_count %}
+              -  {{ analytics.custom_count }} items
+            {% endif %}
+          </div>
+          {% if analytics.custom_error %}
+            <div class="text-danger small mt-1">{{ analytics.custom_error }}</div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Charts ===== -->
+  <div class="card mb-4">
+    <div class="card-body">
+      <div class="d-flex align-items-center justify-content-between flex-wrap mb-2">
+        <h5 class="m-0">Deposit Analytics</h5>
+        <div class="small muted">Approved deposits</div>
+      </div>
+      <div id="analyticsEmpty" class="text-muted d-none">
+        No approved deposits yet for this period.
+      </div>
+      <div id="analyticsCharts" class="row g-3">
+        <div class="col-12 col-lg-6">
+          <div class="chart-card">
+            <div class="chart-title">Deposits by Branch (This Month)</div>
+            <div class="chart-wrap">
+              <div class="chart-skeleton"></div>
+              <canvas id="branchChart" height="220"></canvas>
+            </div>
+          </div>
+        </div>
+        <div class="col-12 col-lg-6">
+          <div class="chart-card">
+            <div class="chart-title">Daily Deposits Trend (Last 14 days)</div>
+            <div class="chart-wrap">
+              <div class="chart-skeleton"></div>
+              <canvas id="trendChart" height="220"></canvas>
+            </div>
+          </div>
+        </div>
+        <div class="col-12 col-lg-4">
+          <div class="chart-card">
+            <div class="chart-title">Deposits by Method</div>
+            <div class="chart-wrap">
+              <div class="chart-skeleton"></div>
+              <canvas id="methodChart" height="220"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Form Card -->
+  <div class="card mb-4">
+    <div class="card-body">
+      <form id="depositForm"
+            action="{{ url_for('manager_deposits.submit_deposit') }}"
+            method="POST"
+            enctype="multipart/form-data"
+            class="row g-3">
+
+        <!-- Amount -->
+        <div class="col-12 col-md-4">
+          <label class="form-label">Amount (GHS)</label>
+          <div class="input-group">
+            <span class="input-group-text">GHS</span>
+            <input type="number" name="amount" id="amount" step="0.01" min="0.01" class="form-control" required>
+          </div>
+          <div class="form-text">Enter the exact amount you deposited.</div>
+        </div>
+
+        <!-- Method Type -->
+        <div class="col-12 col-md-4">
+          <label class="form-label">Method</label>
+          <select name="method_type" id="method_type" class="form-select" required>
+            <option value="" selected disabled>-- Select --</option>
+            <option value="Bank">Bank</option>
+            <option value="Mobile Money">Mobile Money</option>
+            <option value="Cash">Cash</option>
+          </select>
+          <div class="form-text">
+            Choose how the money was deposited.
+          </div>
+        </div>
+
+        <!-- Account / Wallet (Bank, MoMo, Cash) -->
+        <div class="col-12 col-md-4" id="bankAccountWrapper">
+          <label class="form-label" id="bank_account_label">Account / Wallet</label>
+          <select name="bank_account_id" id="bank_account_id" class="form-select">
+            <option value="">-- Select Account / Wallet --</option>
+            {# Options will be populated dynamically in JS based on method_type #}
+          </select>
+          <div class="form-text" id="bank_account_help">
+            Select the account, wallet or cash account the deposit was made into.
+          </div>
+        </div>
+
+        <!-- Method Name / Cash office (only for Cash) -->
+        <div class="col-12 col-md-6" id="methodNameWrapper">
+          <label class="form-label" id="method_name_label">Cash Office / Location (optional)</label>
+          <input type="text"
+                 name="method_name"
+                 id="method_name"
+                 class="form-control"
+                 placeholder="e.g., Main Cash Office / Teller">
+          <div class="form-text" id="method_name_help">
+            Optional. You may specify the cash office or teller name.
+          </div>
+        </div>
+
+        <!-- Reference -->
+        <div class="col-12 col-md-6">
+          <label class="form-label">Reference (optional)</label>
+          <input type="text" name="reference" class="form-control" placeholder="Txn ID / Slip number">
+        </div>
+
+        <!-- Notes -->
+        <div class="col-12 col-md-6">
+          <label class="form-label">Notes (optional)</label>
+          <input type="text" name="notes" class="form-control" placeholder="Any extra info">
+        </div>
+
+        <!-- Receipt Upload -->
+        <div class="col-12 col-md-6">
+          <label class="form-label">Upload Receipt (Image/PDF)</label>
+          <input type="file" name="receipt" id="receipt" accept=".png,.jpg,.jpeg,.webp,.pdf" class="form-control" required>
+          <div class="form-text">Allowed: png, jpg, jpeg, webp, pdf</div>
+        </div>
+
+        <!-- Preview -->
+        <div class="col-12 col-md-6 d-flex align-items-end">
+          <img id="preview" class="preview d-none" alt="preview">
+          <span id="pdfNote" class="ms-3 text-muted d-none">
+            <i class="bi bi-file-earmark-pdf me-1"></i>PDF selected (no preview)
+          </span>
+        </div>
+
+        <!-- Buttons -->
+        <div class="col-12 d-flex gap-2">
+          <button id="submitBtn" class="btn btn-primary px-4" type="submit">
+            <span class="btn-label"><i class="bi bi-cloud-upload me-2"></i>Submit Deposit</span>
+            <span class="spinner-inline ms-2" id="btnSpinner"></span>
+          </button>
+          <button type="reset" class="btn btn-outline-secondary">
+            <i class="bi bi-eraser me-1"></i>Clear
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Recent Submissions -->
+  <div class="card">
+    <div class="card-body">
+      <div class="d-flex align-items-center justify-content-between mb-2">
+        <h5 class="m-0"><i class="bi bi-clock-history me-2"></i>Recent Submissions</h5>
+      </div>
+
+      <div class="table-responsive">
+        <table class="table table-sm align-middle">
+          <thead class="table-light">
+          <tr>
+            <th>#</th>
+            <th>Date</th>
+            <th>Amount</th>
+            <th>Method</th>
+            <th>Ref</th>
+            <th>Receipt</th>
+            <th>Status</th>
+          </tr>
+          </thead>
+          <tbody>
+          {% if recent %}
+            {% for r in recent %}
+              <tr>
+                <td>{{ loop.index }}</td>
+                <td>
+                  {% if r.created_at %}
+                    {{ r.created_at.strftime('%Y-%m-%d %H:%M') if r.created_at.__class__.__name__ == 'datetime' else r.created_at }}
+                  {% else %}-{% endif %}
+                </td>
+                <td>
+                  <span class="fw-semibold">GHS {{ "%.2f"|format((r.amount or 0)|float) }}</span>
+                </td>
+                <td>
+                  {% set mt = (r.method_type or '') %}
+                  {% set badge = 'secondary' %}
+                  {% set icon  = 'wallet' %}
+                  {% if mt == 'Bank' %}{% set badge='primary' %}{% set icon='bank' %}{% endif %}
+                  {% if mt == 'Mobile Money' %}{% set badge='success' %}{% set icon='phone' %}{% endif %}
+                  {% if mt == 'Cash' %}{% set badge='warning' %}{% set icon='cash-coin' %}{% endif %}
+
+                  <span class="badge bg-{{ badge }} method-badge">
+                    <i class="bi bi-{{ icon }}"></i>{{ mt or '--' }}
+                  </span>
+                  {% if r.method_name %}
+                    <small class="text-muted">({{ r.method_name }})</small>
+                  {% endif %}
+                </td>
+                <td>{{ r.reference or "--" }}</td>
+                <td>
+                  {% if r.receipt_path %}
+                    <a class="btn btn-outline-secondary btn-sm" target="_blank"
+                       href="{{ url_for('serve_uploaded_file', filename=r.receipt_path) }}">
+                      <i class="bi bi-box-arrow-up-right"></i> Open
+                    </a>
+                  {% else %}
+                    --
+                  {% endif %}
+                </td>
+                <td>
+                  {% set st=(r.status or 'submitted') %}
+                  {% set sb='secondary' %}
+                  {% if st=='approved' %}{% set sb='success' %}{% endif %}
+                  {% if st=='rejected' %}{% set sb='danger' %}{% endif %}
+                  <span class="badge bg-{{ sb }}"><i class="bi bi-dot"></i>{{ st|capitalize }}</span>
+                </td>
+              </tr>
+            {% endfor %}
+          {% else %}
+            <tr>
+              <td colspan="7" class="text-center text-muted py-3">
+                <i class="bi bi-inbox"></i> No submissions yet.
+              </td>
+            </tr>
+          {% endif %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+  const ANALYTICS = JSON.parse('{{ analytics|tojson|safe }}');
+
+  function fmtMoney(v){ return `GHS ${Number(v || 0).toFixed(2)}`; }
+  const hasAny =
+    (ANALYTICS.month_total || 0) > 0 ||
+    (ANALYTICS.week_total || 0) > 0 ||
+    (ANALYTICS.today_total || 0) > 0 ||
+    (ANALYTICS.by_branch || []).length > 0;
+
+  const emptyEl = document.getElementById('analyticsEmpty');
+  const chartsEl = document.getElementById('analyticsCharts');
+  if (!hasAny) {
+    if (emptyEl) emptyEl.classList.remove('d-none');
+    if (chartsEl) chartsEl.classList.add('d-none');
+  }
+
+  const branchLabels = (ANALYTICS.by_branch || []).map(b => b.branch);
+  const branchTotals = (ANALYTICS.by_branch || []).map(b => Number(b.total || 0));
+  const trendLabels = (ANALYTICS.daily_trend || []).map(d => d.date);
+  const trendTotals = (ANALYTICS.daily_trend || []).map(d => Number(d.total || 0));
+  const methodLabels = (ANALYTICS.by_method || []).map(m => m.method);
+  const methodTotals = (ANALYTICS.by_method || []).map(m => Number(m.total || 0));
+
+  if (branchLabels.length && document.getElementById('branchChart')) {
+    new Chart(document.getElementById('branchChart'), {
+      type: 'bar',
+      data: {
+        labels: branchLabels,
+        datasets: [{
+          label: 'Deposits (GHS)',
+          data: branchTotals,
+          backgroundColor: '#0d6efd',
+          borderRadius: 8,
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { display: false }, tooltip: { callbacks: { label: (ctx) => fmtMoney(ctx.raw) } } },
+        scales: { y: { beginAtZero: true, ticks: { callback: (v) => `GHS ${v}` } } }
+      }
+    });
+  }
+
+  if (trendLabels.length && document.getElementById('trendChart')) {
+    new Chart(document.getElementById('trendChart'), {
+      type: 'line',
+      data: {
+        labels: trendLabels,
+        datasets: [{
+          label: 'Daily Deposits',
+          data: trendTotals,
+          borderColor: '#198754',
+          backgroundColor: 'rgba(25,135,84,0.15)',
+          fill: true,
+          tension: 0.35,
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { display: false }, tooltip: { callbacks: { label: (ctx) => fmtMoney(ctx.raw) } } },
+        scales: { y: { beginAtZero: true, ticks: { callback: (v) => `GHS ${v}` } } }
+      }
+    });
+  }
+
+  if (methodLabels.length && document.getElementById('methodChart')) {
+    new Chart(document.getElementById('methodChart'), {
+      type: 'doughnut',
+      data: {
+        labels: methodLabels,
+        datasets: [{
+          data: methodTotals,
+          backgroundColor: ['#0d6efd', '#20c997', '#ffc107', '#6c757d'],
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { position: 'bottom' }, tooltip: { callbacks: { label: (ctx) => `${ctx.label}: ${fmtMoney(ctx.raw)}` } } }
+      }
+    });
+  }
+
+  document.querySelectorAll('.chart-skeleton').forEach(el => el.style.display = 'none');
+
+  // Make all accounts (bank + momo + cash) available to JS as a JSON array
+  const BANK_ACCOUNTS = JSON.parse('{{ bank_accounts|tojson|safe }}');
+
+  // Controls
+  const form               = document.getElementById('depositForm');
+  const input              = document.getElementById('receipt');
+  const img                = document.getElementById('preview');
+  const pdfNote            = document.getElementById('pdfNote');
+  const submitBtn          = document.getElementById('submitBtn');
+  const btnSpinner         = document.getElementById('btnSpinner');
+  const methodType         = document.getElementById('method_type');
+  const methodName         = document.getElementById('method_name');
+  const methodNameWrapper  = document.getElementById('methodNameWrapper');
+  const methodNameLabel    = document.getElementById('method_name_label');
+  const methodNameHelp     = document.getElementById('method_name_help');
+  const bankAccountWrapper = document.getElementById('bankAccountWrapper');
+  const bankAccountSelect  = document.getElementById('bank_account_id');
+  const ajaxAlert          = document.getElementById('ajaxAlert');
+
+  // File preview
+  input.addEventListener('change', () => {
+    img.classList.add('d-none');
+    pdfNote.classList.add('d-none');
+    const file = input.files && input.files[0];
+    if (!file) return;
+    const ext = file.name.split('.').pop().toLowerCase();
+    if (ext === 'pdf') {
+      pdfNote.classList.remove('d-none');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = e => {
+      img.src = e.target.result;
+      img.classList.remove('d-none');
+    };
+    reader.readAsDataURL(file);
+  });
+
+  function rebuildAccountOptions() {
+    const methodVal = methodType.value; // "Bank" | "Mobile Money" | "Cash" | ""
+    let allowedTypes = [];
+
+    if (methodVal === 'Bank') {
+      allowedTypes = ['bank'];
+    } else if (methodVal === 'Mobile Money') {
+      allowedTypes = ['mobile_money'];
+    } else if (methodVal === 'Cash') {
+      allowedTypes = ['cash'];
+    }
+
+    bankAccountSelect.innerHTML = '';
+    const placeholder = document.createElement('option');
+    placeholder.value = '';
+    placeholder.textContent = '-- Select Account / Wallet --';
+    bankAccountSelect.appendChild(placeholder);
+
+    if (!allowedTypes.length) {
+      return;
+    }
+
+    BANK_ACCOUNTS.forEach(acc => {
+      const t = (acc.account_type || 'bank').toLowerCase();
+      if (allowedTypes.includes(t)) {
+        const opt = document.createElement('option');
+        opt.value = acc.id;
+        opt.textContent = acc.label;
+        bankAccountSelect.appendChild(opt);
+      }
+    });
+  }
+
+  function updateMethodUI() {
+    const val = methodType.value;
+
+    // Reset visibility & requirements
+    bankAccountWrapper.classList.add('d-none');
+    methodNameWrapper.classList.add('d-none');
+    methodName.required = false;
+    bankAccountSelect.required = false;
+    bankAccountSelect.value = '';
+
+    if (val === 'Bank' || val === 'Mobile Money' || val === 'Cash') {
+      rebuildAccountOptions();
+      bankAccountWrapper.classList.remove('d-none');
+      bankAccountSelect.required = true;
+
+      if (val === 'Cash') {
+        methodNameWrapper.classList.remove('d-none');
+        methodNameLabel.textContent = 'Cash Office / Location (optional)';
+        methodName.placeholder = 'e.g., Main Cash Office / Teller';
+        methodNameHelp.textContent = 'Optional. You may specify the cash office or teller name.';
+        methodName.required = false;
+      }
+    }
+  }
+
+  methodType.addEventListener('change', updateMethodUI);
+  // Initialize on load
+  updateMethodUI();
+
+  function showAjaxAlert(type, messages) {
+    if (!ajaxAlert) return;
+    ajaxAlert.classList.remove('d-none', 'alert-success', 'alert-danger', 'alert-warning');
+    ajaxAlert.classList.add('alert', type === 'success' ? 'alert-success' : 'alert-danger');
+
+    if (Array.isArray(messages)) {
+      ajaxAlert.innerHTML = '<i class="bi bi-info-circle me-2"></i>' + messages.join('<br>');
+    } else {
+      ajaxAlert.innerHTML = '<i class="bi bi-info-circle me-2"></i>' + messages;
+    }
+  }
+
+  function hideAjaxAlert() {
+    if (!ajaxAlert) return;
+    ajaxAlert.classList.add('d-none');
+    ajaxAlert.innerHTML = '';
+  }
+
+  function setSubmitting(isSubmitting) {
+    if (isSubmitting) {
+      submitBtn.disabled = true;
+      btnSpinner.style.display = 'inline-block';
+    } else {
+      submitBtn.disabled = false;
+      btnSpinner.style.display = 'none';
+    }
+  }
+
+  // AJAX submit
+  form.addEventListener('submit', function (e) {
+    e.preventDefault(); // prevent normal page reload
+    hideAjaxAlert();
+    setSubmitting(true);
+
+    const formData = new FormData(form);
+
+    fetch(form.action, {
+      method: 'POST',
+      body: formData,
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest'
+      }
+    })
+      .then(async (res) => {
+        let data;
+        try {
+          data = await res.json();
+        } catch (err) {
+          data = null;
+        }
+
+        if (!data) {
+          throw new Error('Unexpected response from server.');
+        }
+
+        if (!res.ok || !data.ok) {
+          const errors = data.errors || ['Deposit submission failed.'];
+          showAjaxAlert('error', errors);
+          throw new Error('Validation / server error');
+        }
+
+        // Success
+        showAjaxAlert('success', data.message || 'Deposit submitted successfully.');
+        form.reset();
+        img.classList.add('d-none');
+        pdfNote.classList.add('d-none');
+        // Reset method UI
+        updateMethodUI();
+      })
+      .catch((err) => {
+        if (!ajaxAlert.classList.contains('d-none')) {
+          // already showing specific errors
+          return;
+        }
+        showAjaxAlert('error', err.message || 'Something went wrong. Please try again.');
+      })
+      .finally(() => {
+        setSubmitting(false);
+      });
+  });
+</script>
+  {% include 'app_footer.html' %}
+
+</body>
+</html>
